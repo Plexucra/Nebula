@@ -1,0 +1,14 @@
+.order-list { display: flex; flex-direction: column; gap: 8px; }
+.order-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.panel.locked { opacity: 0.85; }
+.panel:not(:first-child) { margin-top: 16px; }

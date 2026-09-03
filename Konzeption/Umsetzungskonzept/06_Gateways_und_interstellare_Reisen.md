@@ -9,7 +9,7 @@
 Gateway
   id, systemId, discoveredBy: playerId | null, discoveredAt,
   activatedBy: playerId | null, activatedAt,
-  reachableSystemIds: [systemId]   // ca. 5-10, siehe Mechanik/08_... §1
+  reachableSystemIds: [systemId]   // 3-6, siehe Mechanik/08_... §1
 
 GatewayAccessRule
   gatewayId, targetPlayerId | null (null = Standardregel),
@@ -81,3 +81,49 @@ Galaxiekarte (Hauptnavigationspunkt)
     Galaxie-Kontext, Fokus auf Erforschung/Kolonisation, siehe
     09_Navigation_..._und_Onboarding.md)
 ```
+
+## 5. Galaxiegenerator (Frontend-Prototyp)
+
+Der aktuelle Frontend-Prototyp (`frontend/`) enthält bereits einen
+deterministischen, rein geometrischen Generator für die
+Gateway-Topologie (`core/sim/data/galaxy-generator.ts`), der die
+Vorgaben aus `Mechanik/08_...` §1 erfüllt:
+
+```text
+1. Systeme mit annähernd gleichmäßigem Mindestabstand zueinander
+   platzieren (Poisson-Disk-artiges Sampling per Rejection-Verfahren) –
+   vermeidet sowohl Ballungen als auch große Lücken.
+2. EINE einzige, galaxieweit einheitliche Gateway-Reichweite bestimmen
+   (Bisektion auf eine Ziel-Durchschnittsnachbarnzahl von 4,5). Zwei
+   Systeme sind Nachbarn genau dann, wenn ihr Abstand ≤ dieser
+   Reichweite ist – keine Verbindung nach Rang ("die 6 nächsten"),
+   sondern eine echte, für jedes System gleiche Entfernungsgrenze. Die
+   Nachbarnzahl 3-6 pro System ist damit FOLGE der Systemplatzierung
+   aus Schritt 1, nicht das primäre Auswahlkriterium.
+3. Nur als seltene Korrektur an Dichte-Ausreißern: Kappung bei Grad 6
+   (nächste 6 behalten) bzw. Auffüllung bei Grad < 3 (nächste
+   unverbundene Systeme ergänzen, auch leicht außerhalb der
+   Reichweite).
+4. Zusammenhang des Gesamtgraphen erzwingen (kürzeste Kante zwischen
+   getrennten Komponenten).
+5. Sektorale Handelsstationen per Greedy-k-Center auf dem Graphen
+   platzieren, bis Ø ≤ 2 und Max ≤ 3 Sprünge zur nächsten Station
+   erfüllt sind.
+6. Zentralster Knoten (geometrisch nächster zur Kartenmitte) wird als
+   Heimatsystem vorgeschlagen.
+```
+
+Über 10 Seeds × 4 Systemzahlen (16/20/24/32 = 40 Kombinationen)
+stichprobenartig verifiziert: Gradgrenzen, Zusammenhang und
+Handelsstations-Kriterien werden zuverlässig eingehalten, die
+tatsächliche Durchschnittsnachbarnzahl liegt dabei fast immer sehr nah
+an den angestrebten 4,5.
+
+**Bekannte Prototyp-Vereinfachung gegenüber diesem Dokument:** Der
+Prototyp kennt (noch) keine anderen Spieler. Die `isVisibleTo`-Logik
+aus §3 ist deshalb vereinfacht: Die Aktivierung des **eigenen** Gateways
+macht sofort die komplette bereits generierte Galaxiekarte (alle
+Systeme + alle Routen) bekannt, nicht nur die unmittelbaren Nachbarn –
+in einer echten Mehrspieler-Umsetzung müsste weiterhin gelten, dass ein
+fremdes System erst nach Aktivierung *seines eigenen* Gateways
+sichtbar wird.

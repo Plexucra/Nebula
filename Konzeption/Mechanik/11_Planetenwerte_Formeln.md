@@ -38,6 +38,20 @@ bestimmte Truppenstärke pro Bevölkerung ≈ 100 %
 massive Überstationierung → weit über 100 % möglich
 ```
 
+**Loyalitätssockel:** Eine wirklich loyale Bevölkerung hält notfalls
+auch ohne stationierte Truppen selbst Ordnung (§8: "hohe Loyalität →
+weniger notwendige Truppen"). Sicherheit ist deshalb das Maximum aus
+Garnisonswert und einem festen Anteil der aktuellen Loyalität:
+
+```text
+Sicherheit = max(garnisonsbasierte Sicherheit, Loyalität × 0,3)
+```
+
+Bei 100 % Loyalität liegt der Sockel damit bei 30 % – eine Garnison
+bleibt für höhere Werte weiterhin nötig, macht eine frisch gegründete,
+noch unbewaffnete, aber loyale Kolonie aber nicht automatisch zu einem
+0-%-Sicherheitsrisiko.
+
 Wichtige Trennung:
 
 ```text

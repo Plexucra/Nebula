@@ -1,0 +1,419 @@
+@if (colony(); as c) {
+  <div class="page-head">
+    <span class="eyebrow"><a routerLink="/planeten">← Planeten</a> · {{ planet()?.name }} · {{ planet()?.size }}</span>
+    <h1>{{ c.name }} @if (c.isHomeworld) { <span class="tag good">Heimatwelt</span> }</h1>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn" [class.active]="tab() === 'uebersicht'" (click)="setTab('uebersicht')">Übersicht</button>
+    <button class="tab-btn" [class.active]="tab() === 'bebauung'" (click)="setTab('bebauung')">Bebauung</button>
+    <button class="tab-btn" [class.active]="tab() === 'verteidigung'" (click)="setTab('verteidigung')">Verteidigung</button>
+    <button class="tab-btn" [class.active]="tab() === 'produktion'" (click)="setTab('produktion')">Produktion</button>
+    <button class="tab-btn" [class.active]="tab() === 'bodentruppen'" (click)="setTab('bodentruppen')">Bodentruppen</button>
+    <button class="tab-btn" [class.active]="tab() === 'bevoelkerung'" (click)="setTab('bevoelkerung')">Bevölkerung</button>
+    <button class="tab-btn" [class.active]="tab() === 'handel'" (click)="setTab('handel')">Handel</button>
+  </nav>
+
+  @if (error()) { <div class="error">{{ error() }}</div> }
+
+  @switch (tab()) {
+
+    @case ('uebersicht') {
+      <div class="grid-2">
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Planetenwerte</h2></div>
+          <div class="panel-body stat-grid">
+            @if (stats(); as s) {
+              <div class="stat-block">
+                <div class="stat-block-head"><span>Infrastruktur</span><span class="mono">{{ s.infrastructurePct | number:'1.0-0' }}%</span></div>
+                <div class="stat-bar big"><span [style.width.%]="s.infrastructurePct > 100 ? 100 : s.infrastructurePct"></span></div>
+                <p class="hint">Trägt die Bevölkerung – kein direkter Produktionsbonus.</p>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-head"><span>Sicherheit</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.securityPct | number:'1.0-0' }}%</span></div>
+                <div class="stat-bar big" [class.blackout]="powerCoverage() < 0.999"><span [style.width.%]="s.securityPct > 100 ? 100 : s.securityPct"></span></div>
+                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Aus stationierten Bodentruppen relativ zur Bevölkerung, mindestens 30% der Loyalität als Sockel. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-head"><span>Lebensstandard</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.standardOfLivingPct | number:'1.0-0' }}%</span></div>
+                <div class="stat-bar big" [class.blackout]="powerCoverage() < 0.999"><span [style.width.%]="s.standardOfLivingPct > 100 ? 100 : s.standardOfLivingPct"></span></div>
+                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Geglättete Deckung des Konsumbedarfs am Systemmarkt. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-head"><span>Loyalität</span><span class="mono">{{ s.loyaltyPct | number:'1.0-0' }}%</span></div>
+                <div class="stat-bar big"><span [style.width.%]="s.loyaltyPct"></span></div>
+                <p class="hint">Politischer Langzeitwert, bei 100% gedeckelt. {{ c.isHomeworld ? 'Heimatwelt-Bonus aktiv.' : '' }}</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Himmelskörper</h2></div>
+          <div class="panel-body">
+            @if (planet(); as p) {
+              <dl class="fact-list">
+                <div><dt>Planetentyp</dt><dd>{{ planetTypeLabel(p.type) }}</dd></div>
+                <div><dt>Größe</dt><dd>{{ p.size }}</dd></div>
+                <div><dt>Bebauungskapazität</dt><dd>{{ p.buildCapacity }} <span class="hint">(Faktor {{ overbuild() | number:'1.2-2' }}×)</span></dd></div>
+              </dl>
+              <div class="divider"></div>
+              <span class="eyebrow">Fördergüte</span>
+              <div class="conc-list">
+                @for (rc of p.resourceConcentration; track rc.resourceTypeId) {
+                  <div class="conc-row">
+                    <span>{{ rc.resourceTypeId.replace('res_','') }}</span>
+                    <div class="stat-bar"><span [style.width.%]="rc.concentration"></span></div>
+                    <span class="mono">{{ rc.concentration }}%</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @case ('bebauung') {
+      <div class="panel corner-frame">
+        <div class="panel-header">
+          <h2>Bebauung</h2>
+          <span class="tag" [class.warn]="overbuild() > 1" [class.good]="overbuild() <= 1">Überbebauungsfaktor {{ overbuild() | number:'1.2-2' }}×</span>
+        </div>
+        <div class="panel-body building-list">
+          @for (bt of buildingTypes; track bt.id) {
+            @if (bt.category !== 'PlanetaryDefense') {
+              <div class="building-row">
+                <div class="building-info">
+                  <strong>{{ bt.name }}</strong>
+                  @if (bt.id === 'b_powergrid' && powerCoverage() < 0.999) {
+                    <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Elerium-Zellen</span>
+                  }
+                  <span class="hint">{{ bt.description }}</span>
+                </div>
+                <div class="building-level">
+                  <span class="eyebrow">Stufe</span>
+                  <span class="mono big">{{ buildingLevel(bt.id) }}</span>
+                  <span class="hint">/ {{ bt.maxLevel }}</span>
+                </div>
+                @if (buildingFor(bt.id)?.pendingOrder; as order) {
+                  <div class="building-progress">
+                    <span class="tag warn">Ausbau → Stufe {{ order.targetLevel }}</span>
+                    <span class="mono">{{ countdown(order.completesAt - clock.now()) }}</span>
+                    <button class="ghost small" (click)="cancelBuilding(buildingFor(bt.id)!.id)" [disabled]="busy() === 'cancel:' + buildingFor(bt.id)!.id">Abbrechen</button>
+                  </div>
+                } @else {
+                  <div class="building-actions">
+                    @if (buildingLevel(bt.id) < bt.maxLevel) {
+                      <span class="hint mono">{{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }}h</span>
+                    }
+                    <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || buildingLevel(bt.id) >= bt.maxLevel">
+                      {{ busy() === 'build:' + bt.id ? 'Beauftrage…' : 'Ausbauen' }}
+                    </button>
+                    @if (buildingLevel(bt.id) > 0) {
+                      <button class="ghost small danger" (click)="demolish(buildingFor(bt.id)!.id)" [disabled]="busy() === 'demolish:' + buildingFor(bt.id)?.id">Rückbau (50%)</button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    @case ('verteidigung') {
+      <div class="panel corner-frame">
+        <div class="panel-header"><h2>Planetare Abwehr</h2></div>
+        <div class="panel-body">
+          @for (bt of buildingTypes; track bt.id) {
+            @if (bt.category === 'PlanetaryDefense') {
+              <p>{{ bt.description }}</p>
+              <div class="building-row">
+                <div class="building-level">
+                  <span class="eyebrow">Stufe</span>
+                  <span class="mono big">{{ buildingLevel(bt.id) }}</span>
+                  <span class="hint">/ {{ bt.maxLevel }}</span>
+                </div>
+
+                @if (buildingFor(bt.id)?.pendingOrder; as order) {
+                  <div class="building-progress">
+                    <span class="tag warn">Ausbau → Stufe {{ order.targetLevel }}</span>
+                    <span class="mono">{{ countdown(order.completesAt - clock.now()) }}</span>
+                  </div>
+                } @else {
+                  <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || buildingLevel(bt.id) >= bt.maxLevel">Ausbauen</button>
+                }
+
+                @if (buildingLevel(bt.id) > 0) {
+                  @switch (buildingFor(bt.id)?.activationState) {
+                    @case ('Active') {
+                      <div class="building-progress">
+                        <span class="tag good">Aktiv</span>
+                        <button class="ghost small" (click)="deactivateDefense(buildingFor(bt.id)!.id)">Deaktivieren</button>
+                      </div>
+                    }
+                    @case ('Activating') {
+                      <div class="building-progress">
+                        <span class="tag warn">Aktivierung läuft</span>
+                        <span class="mono">{{ countdown((buildingFor(bt.id)?.activationCompletesAt ?? 0) - clock.now()) }}</span>
+                      </div>
+                    }
+                    @default {
+                      <button class="small" (click)="activateDefense(buildingFor(bt.id)!.id)" [disabled]="busy() === 'activate:' + buildingFor(bt.id)?.id">Aktivieren (12h Anlaufzeit)</button>
+                    }
+                  }
+                }
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    @case ('produktion') {
+      <div class="grid-2">
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Neuer Fertigungsauftrag</h2></div>
+          <div class="panel-body form-row">
+            <select [(ngModel)]="newProductionProductId">
+              @for (p of productTypes; track p.id) {
+                <option [value]="p.id">{{ p.name }} (T{{ p.tier }}) — Spez. Stufe {{ specLevel(p.id) }}</option>
+              }
+            </select>
+            <input type="number" min="1" [(ngModel)]="newProductionQty" />
+            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1">Auftrag starten</button>
+          </div>
+          @if (buildingLevel('b_industry') < 1) { <p class="hint">Benötigt einen Industriekomplex.</p> }
+          @if (powerCoverage() < 0.999) { <p class="hint blackout">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Elerium-Zellen versorgt ist.</p> }
+
+          <div class="panel-body queue-list">
+            @for (entry of productionQueue(); track entry.id) {
+              <div class="queue-row">
+                <span>{{ productName(entry.productTypeId) }}</span>
+                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.quantity) * 100"></span></div>
+                <span class="mono">{{ entry.producedSoFar }}/{{ entry.quantity }}</span>
+                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
+                <button class="ghost small danger" (click)="cancelProduction(entry.id)">Abbrechen</button>
+              </div>
+            } @empty { <p class="empty-hint">Keine laufenden Aufträge.</p> }
+          </div>
+        </div>
+
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Lager &amp; Spezialisierung</h2></div>
+          <div class="panel-body">
+            <span class="eyebrow">Lagerbestand</span>
+            <div class="wh-list">
+              @for (w of warehouse(); track w.productTypeId) {
+                <div class="wh-row"><span>{{ productName(w.productTypeId) }}</span><span class="mono">{{ w.quantity | number:'1.0-0' }}</span></div>
+              } @empty { <p class="empty-hint">Leer.</p> }
+            </div>
+            <div class="divider"></div>
+            <span class="eyebrow">Spezialisierung</span>
+            <div class="wh-list">
+              @for (s of specializations(); track s.productTypeId) {
+                <div class="spec-row">
+                  <span>{{ productName(s.productTypeId) }}</span>
+                  <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
+                  <span class="mono">Stufe {{ s.currentLevel }}</span>
+                </div>
+              } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel corner-frame">
+        <div class="panel-header">
+          <h2>Dauerproduktion</h2>
+          <span class="hint">Produziert automatisch bis zum Ziel-Lagerbestand nach, solange Ausgangsstoffe vorhanden sind – pausiert bei Mangel, läuft bei Nachschub ohne erneute Bestätigung weiter. Ein lokaler Preis &gt; 0 pflegt zusätzlich eine einzelne Verkaufsorder am Systemmarkt (max. 50 Einheiten, der Rest bleibt im Lager).</span>
+        </div>
+        <div class="panel-body form-row">
+          <select [(ngModel)]="newAutoProductId">
+            @for (p of productTypes; track p.id) {
+              <option [value]="p.id">{{ p.name }} (T{{ p.tier }})</option>
+            }
+          </select>
+          <input type="number" min="1" placeholder="Ziel-Lagerbestand" [(ngModel)]="newAutoMaxStock" />
+          <input type="number" min="0" step="0.5" placeholder="Lokaler Preis (0 = kein Verkauf)" [(ngModel)]="newAutoLocalPrice" />
+          <button class="primary small" (click)="submitAutoProduction()" [disabled]="busy() === 'auto' || buildingLevel('b_industry') < 1">Dauerauftrag starten</button>
+        </div>
+        @if (buildingLevel('b_industry') < 1) { <p class="hint">Benötigt einen Industriekomplex.</p> }
+
+        <div class="panel-body queue-list">
+          @for (order of autoProductionOrders(); track order.id) {
+            <div class="queue-row auto-queue-row">
+              <span>{{ productName(order.productTypeId) }}</span>
+              <span class="mono">Lager: {{ stockOf(order.productTypeId) }}</span>
+              <input type="number" min="1" class="mono" title="Ziel-Lagerbestand"
+                [ngModel]="autoDraft[order.productTypeId] ?? order.maxStock"
+                (ngModelChange)="autoDraft[order.productTypeId] = $event" />
+              <input type="number" min="0" step="0.5" class="mono" title="Lokaler Preis"
+                [ngModel]="autoPriceDraft[order.productTypeId] ?? order.localPrice"
+                (ngModelChange)="autoPriceDraft[order.productTypeId] = $event" />
+              <button class="ghost small" (click)="updateAutoProduction(order.productTypeId, autoDraft[order.productTypeId] ?? order.maxStock, autoPriceDraft[order.productTypeId] ?? order.localPrice)" [disabled]="busy() === 'auto:' + order.productTypeId">Ändern</button>
+              <button class="ghost small danger" (click)="cancelAutoProduction(order.productTypeId)" [disabled]="busy() === 'auto:' + order.productTypeId">Stoppen</button>
+              @if (order.localPrice > 0) {
+                <span class="tag good">Verkauf zu {{ order.localPrice }}/Einheit</span>
+              }
+            </div>
+          } @empty { <p class="empty-hint">Keine Dauerproduktion aktiv.</p> }
+        </div>
+      </div>
+    }
+
+    @case ('bodentruppen') {
+      <div class="grid-2">
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Rekrutierung</h2></div>
+          <div class="panel-body form-row">
+            <select [(ngModel)]="newUnitProductId">
+              @for (u of groundUnitTypes; track u.id) {
+                <option [value]="u.id">{{ u.name }}</option>
+              }
+            </select>
+            <input type="number" min="1" [(ngModel)]="newUnitQty" />
+            <button class="primary small" (click)="submitRecruitment()" [disabled]="busy() === 'recruit' || buildingLevel('b_academy') < 1 || (stats()?.loyaltyPct ?? 0) <= 50">Rekrutieren</button>
+          </div>
+          @if (buildingLevel('b_academy') < 1) { <p class="hint">Benötigt ein Ausbildungszentrum.</p> }
+          @if ((stats()?.loyaltyPct ?? 0) <= 50) { <p class="hint">Rekrutierung erfordert Loyalität &gt; 50% (aktuell {{ stats()?.loyaltyPct | number:'1.0-0' }}%).</p> }
+
+          <div class="panel-body queue-list">
+            @for (entry of recruitmentQueue(); track entry.id) {
+              <div class="queue-row">
+                <span>{{ productName(entry.unitProductTypeId) }}</span>
+                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.count) * 100"></span></div>
+                <span class="mono">{{ entry.producedSoFar }}/{{ entry.count }}</span>
+                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
+                <button class="ghost small danger" (click)="cancelRecruitment(entry.id)">Abbrechen</button>
+              </div>
+            } @empty { <p class="empty-hint">Keine laufende Rekrutierung.</p> }
+          </div>
+        </div>
+
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Garnison</h2></div>
+          <div class="panel-body wh-list">
+            @for (u of (groundForces()?.units ?? []); track u.unitProductTypeId) {
+              <div class="wh-row">
+                <span>{{ productName(u.unitProductTypeId) }}</span>
+                @if (u.unitProductTypeId === 'p_soldier') {
+                  <span class="mono">{{ u.activeCount }} kommandieren Drohnen
+                    @if (u.reserveCount > 0) { · {{ u.reserveCount }} ohne Drohne }</span>
+                } @else {
+                  <span class="mono">{{ u.activeCount }} aktiv
+                    @if (u.reserveCount > 0) { · {{ u.reserveCount }} unkommandiert (Reserve) }</span>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Keine Bodentruppen stationiert.</p> }
+          </div>
+          <p class="hint">Soldaten besitzen keine eigene Kampfwirkung – sie stecken nicht in den Drohnen,
+            sondern kommandieren automatisch verfügbare autonome Drohnen aus der Ferne und machen diese
+            dadurch kampffähig. Nur aktive (kommandierte) Drohnen zählen zur Sicherheit der Kolonie – dazu
+            kommt ein Sockel von 30% der Loyalität, auch ganz ohne Garnison.</p>
+        </div>
+      </div>
+    }
+
+    @case ('bevoelkerung') {
+      <div class="grid-2">
+        <div class="panel corner-frame span-2">
+          <div class="panel-header"><h2>Bevölkerung</h2></div>
+          <div class="panel-body">
+            <div class="big-stat">
+              <span class="mono value">{{ population()?.currentCount ?? 0 | number:'1.0-0' }}</span>
+              <span class="trend"
+                [class.blackout]="powerCoverage() < 0.999"
+                [class.good]="powerCoverage() >= 0.999 && (population()?.growthRatePerInterval ?? 0) >= 0"
+                [class.bad]="powerCoverage() >= 0.999 && (population()?.growthRatePerInterval ?? 0) < 0">
+                {{ (population()?.growthRatePerInterval ?? 0) >= 0 ? '▲' : '▼' }} {{ population()?.growthRatePerInterval ?? 0 | number:'1.1-1' }} / Tick
+                @if (powerCoverage() < 0.999) { · kein Wachstum (Blackout) }
+              </span>
+            </div>
+            <div class="stat-bar big"><span [style.width.%]="capacityUsagePct() > 100 ? 100 : capacityUsagePct()"></span></div>
+            <dl class="fact-list">
+              <div><dt>Wohnkapazität</dt><dd class="mono">{{ housingCapacity() | number:'1.0-0' }} Plätze <span class="hint">({{ capacityUsagePct() | number:'1.0-0' }}% belegt)</span></dd></div>
+              <div><dt>Energieversorgung</dt><dd class="mono" [class.warn]="powerCoverage() < 0.999 && powerCoverage() >= 0.5" [class.bad]="powerCoverage() < 0.5">{{ powerCoverage() * 100 | number:'1.0-0' }}%
+                <span class="hint">(Energienetz-Anteil an der Wohnkapazität, Elerium-Zellen im Lager nötig)</span></dd></div>
+              <div><dt>Historischer Höchststand</dt><dd class="mono">{{ moneyState()?.historicalPeakPopulation ?? 0 | number:'1.0-0' }}
+                <span class="hint">(neue Credits entstehen nur oberhalb dieses Werts)</span></dd></div>
+            </dl>
+            @if (capacityUsagePct() >= 100) {
+              <p class="hint bad">Wohnkapazität erschöpft – die Bevölkerung schrumpft leicht, bis Wohnkomplex und/oder Energienetz ausgebaut werden.</p>
+            } @else if (capacityUsagePct() >= 85) {
+              <p class="hint warn">Wohnkapazität wird knapp – Wohnkomplex und/oder Energienetz bald ausbauen, um weiteres Wachstum zu ermöglichen.</p>
+            } @else {
+              <p class="hint">Noch genug Platz für weiteres Wachstum. Kapazität kommt aus Wohnkomplex + Energienetz (Tab „Bebauung").</p>
+            }
+            @if (powerCoverage() < 0.999) {
+              <p class="hint warn">Energienetz-Blackout: zu wenig Elerium-Zellen im Lager – mindert den Kapazitätsbeitrag des Energienetzes anteilig. Elerium-115 abbauen und zu Elerium-Zellen verarbeiten (Tab „Produktion").</p>
+            }
+          </div>
+        </div>
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Bevölkerungs-Wallet</h2></div>
+          <div class="panel-body">
+            <div class="big-stat"><span class="mono value">{{ popWallet()?.balance ?? 0 | number:'1.0-0' }}</span><span class="hint">Credits</span></div>
+            <p class="hint">Kaufkraft der Kolonialbevölkerung – gespeist aus Löhnen und Bevölkerungswachstum, ausgegeben für Konsumgüter am Systemmarkt.</p>
+          </div>
+        </div>
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Zufriedenheit</h2></div>
+          <div class="panel-body">
+            <div class="big-stat"><span class="mono value" [class.blackout]="powerCoverage() < 0.999">{{ satisfactionPct() | number:'1.0-0' }}%</span><span class="hint">Wachstumsgeschwindigkeit</span></div>
+            <div class="stat-bar big"><span [style.width.%]="satisfactionPct() > 100 ? 100 : satisfactionPct()"></span></div>
+            <dl class="fact-list">
+              <div><dt>Lebensstandard</dt><dd class="mono" [class.blackout]="powerCoverage() < 0.999">{{ stats()?.standardOfLivingPct | number:'1.0-0' }}%</dd></div>
+              <div><dt>Sicherheit</dt><dd class="mono" [class.blackout]="powerCoverage() < 0.999">{{ stats()?.securityPct | number:'1.0-0' }}%</dd></div>
+            </dl>
+            @if (powerCoverage() < 0.999) {
+              <p class="hint blackout">Durch Blackout halbiert (Lebensstandard, Sicherheit) – siehe Wohnkapazität oben.</p>
+            }
+            <p class="hint">Aus Lebensstandard × Sicherheit – steuert direkt, wie schnell die Bevölkerung wächst (100% = Referenzgeschwindigkeit). Niedriger Lebensstandard oder Sicherheit &lt; 40% bremsen zusätzlich die Loyalität.</p>
+          </div>
+        </div>
+      </div>
+    }
+
+    @case ('handel') {
+      <div class="grid-2">
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Verkaufsorder erstellen</h2></div>
+          <div class="panel-body form-row">
+            <select [(ngModel)]="newOrderProductId">
+              <option value="">Produkt wählen…</option>
+              @for (w of warehouse(); track w.productTypeId) {
+                <option [value]="w.productTypeId">{{ productName(w.productTypeId) }} ({{ w.quantity }} verfügbar)</option>
+              }
+            </select>
+            <input type="number" min="1" [(ngModel)]="newOrderQty" placeholder="Menge" />
+            <input type="number" min="1" [(ngModel)]="newOrderPrice" placeholder="Preis/Einheit" />
+            <button class="primary small" (click)="submitSellOrder()" [disabled]="busy() === 'sellorder'">Anbieten</button>
+          </div>
+        </div>
+
+        <div class="panel corner-frame">
+          <div class="panel-header"><h2>Systemmarkt</h2></div>
+          <div class="panel-body wh-list">
+            @for (o of sellOrdersAll(); track o.id) {
+              <div class="order-row">
+                <span>{{ productName(o.productTypeId) }}</span>
+                <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
+                <span class="hint">{{ o.sellerId === playerId ? 'eigene Order' : o.sellerName }}</span>
+                @if (o.sellerId === playerId) {
+                  <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Keine offenen Orders in diesem System.</p> }
+          </div>
+        </div>
+      </div>
+    }
+  }
+} @else {
+  <div class="empty-state">
+    <span class="eyebrow">Unbekannte Kolonie</span>
+    <a routerLink="/planeten">Zurück zur Übersicht</a>
+  </div>
+}

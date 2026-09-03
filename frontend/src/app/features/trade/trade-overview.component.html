@@ -1,0 +1,44 @@
+<div class="page-head">
+  <span class="eyebrow">Wirtschaft</span>
+  <h1>Handel</h1>
+</div>
+
+<div class="panel corner-frame">
+  <div class="panel-header">
+    <h2>Systemmarkt — Aurelia-System</h2>
+    <span class="hint">Orders werden je Kolonie im Handel-Tab erstellt</span>
+  </div>
+  <div class="panel-body order-list">
+    @for (o of orders(); track o.id) {
+      <div class="order-row">
+        <span>{{ productName(o.productTypeId) }}</span>
+        <span class="mono">{{ o.remainingQuantity }} Einh.</span>
+        <span class="mono">{{ o.pricePerUnit | number:'1.0-2' }} Cr/Einh.</span>
+        <span class="hint">{{ sellerColony(o.depotColonyId) }}</span>
+        <a class="ghost small" [routerLink]="['/planeten', o.depotColonyId]">Öffnen</a>
+      </div>
+    } @empty {
+      <p class="empty-hint">Noch keine Verkaufsorders im System. Legen Sie im Handel-Tab einer Kolonie eine
+        Order an, sobald Sie Überschüsse produzieren.</p>
+    }
+  </div>
+</div>
+
+<div class="panel corner-frame" [class.locked]="!gatewayActive()">
+  <div class="panel-header"><h2>Sektorale Handelsstation</h2></div>
+  <div class="panel-body empty-state">
+    @if (gatewayActive()) {
+      @if (nearestTradeHub(); as hub) {
+        <p><strong>{{ hub.system.name }}</strong> ist Ihre nächstgelegene sektorale Handelsstation —
+          {{ hub.hops }} Gateway-Sprung(e) entfernt. Zugang ist grundsätzlich möglich, sobald Frachter
+          dorthin entsandt werden. Handel auf dieser Ebene folgt in einer späteren Ausbaustufe.</p>
+      } @else {
+        <p>Keine sektorale Handelsstation im bekannten Netz gefunden.</p>
+      }
+    } @else {
+      <span class="eyebrow">🔒 Gesperrt</span>
+      <p>Der überregionale Handel über sektorale Handelsstationen der Handelsgilde wird erst mit der
+        Aktivierung Ihres Gateways relevant.</p>
+    }
+  </div>
+</div>

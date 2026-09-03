@@ -32,9 +32,12 @@ Kontermatrix gilt für Raum- und Bodenkampf.
 
 ```text
 Reisezeit per Trägerschiff ≈ 10 × Reisezeit per Gateway
+Gateway-Reisezeit = 2 Spielstunden pro Sprung → Träger ≈ 20 Spielstunden pro Sprung
 ```
 
-Faktor 10 ist erster Arbeitswert, kein Balancewert.
+Faktor 10 und der Gateway-Basiswert sind erste Arbeitswerte, kein
+finales Balancing (konkretisiert in `08_Gateway_und_Zollmechanik.md`
+§4).
 
 ## 4. Flottenunterhalt
 

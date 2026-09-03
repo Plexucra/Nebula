@@ -15,7 +15,8 @@ PlanetResourceConcentration
   planetId, resourceTypeId, concentration (0..∞, unerschöpflich)
 
 ProductType
-  id, name, category (Ship|ConsumerGood|BuildingMaterial),
+  id, name, category (Ship|GroundUnit|ConsumerGood|BuildingMaterial|
+    RawResource|Fuel),
   tier (0 = Rohstoff, steigt Richtung Endprodukt),
   recipe: [{ inputProductTypeId, quantity }]   // leer bei Rohstoffen
   resourceProfile: [{ resourceTypeId, weight }]
@@ -23,6 +24,10 @@ ProductType
     (→ Produktionsaufwand = baseProductionTime × baseWorkforceRequired,
     siehe Mechanik/04_... §2 – dieser Wert wird auch militärisch
     verwendet, sofern category=Ship)
+  massKg, volumeM3
+    (Masse/Volumen je Einheit – Platzhalterwerte für die künftige
+    Frachtkapazität, siehe 03_Flotten_Schiffe_und_Werften.md §1; bislang
+    nicht in die Frachtlogik eingebunden)
 
 Specialization
   colonyId, productTypeId, currentLevel, currentThroughput,

@@ -1,0 +1,120 @@
+<div class="page-head">
+  <span class="eyebrow">Wirtschaft</span>
+  <h1>Produktion</h1>
+</div>
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Kolonien</h2></div>
+  <div class="panel-body colony-summary">
+    @for (c of colonies(); track c.id) {
+      <a class="summary-row" [routerLink]="['/planeten', c.id]" [queryParams]="{ tab: 'produktion' }">
+        <span>{{ c.name }}</span>
+        <span class="mono">{{ queueLength(c.id) }} Aufträge in Warteschlange</span>
+        <span class="mono">{{ warehouseCount(c.id) }} Warentypen im Lager</span>
+      </a>
+    } @empty { <p class="empty-hint">Keine Kolonien.</p> }
+  </div>
+</div>
+
+<div class="panel corner-frame tree-panel">
+  <div class="panel-header">
+    <h2>Produktionskette</h2>
+    <span class="hint">Rohstoff → Zwischenprodukt → Baugruppe → Endprodukt</span>
+  </div>
+  <div class="panel-body">
+    @for (tier of tiers; track tier) {
+      <div class="tier-block">
+        <span class="eyebrow">Stufe {{ tier }}</span>
+        <div class="tier-grid">
+          @for (p of productsByTier(tier); track p.id) {
+            <div class="product-card">
+              <div class="product-card-head">
+                <span class="product-image">{{ productIcon(p.id) }}</span>
+                <div>
+                  <strong>{{ p.name }}</strong>
+                  <span class="tag">{{ p.category }}</span>
+                </div>
+              </div>
+              @if (p.recipe.length > 0) {
+                <div class="recipe">
+                  @for (r of p.recipe; track r.inputProductTypeId) {
+                    <span class="recipe-item">{{ r.quantity }}× {{ productName(r.inputProductTypeId) }}</span>
+                  }
+                </div>
+              } @else {
+                <span class="recipe-item">Extraktion aus Planetenkonzentration</span>
+              }
+              <div class="product-facts">
+                <span title="Arbeitskraft pro paralleler Produktionseinheit">👷 {{ p.baseWorkforceRequired }}</span>
+                <span title="Basiszeit pro Einheit">⏱ {{ p.baseProductionHours }}h</span>
+                <span title="Masse pro Einheit – künftig Frachterlimit">⚖ {{ formatMass(p.massKg) }}</span>
+                <span title="Volumen pro Einheit – künftig Frachterlimit">📐 {{ formatVolume(p.volumeM3) }}</span>
+              </div>
+              @if (isIndustryProduct(p)) {
+                <button class="small" type="button" (click)="openModal(p)">
+                  Produzieren
+                  @if (activeColonyCount(p.id) > 0) { <span class="hint">· in {{ activeColonyCount(p.id) }} Kolonie(n) aktiv</span> }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (selectedProduct(); as product) {
+  <div class="modal-backdrop" (click)="closeModal()">
+    <div class="panel corner-frame modal-panel" (click)="$event.stopPropagation()">
+      <div class="panel-header">
+        <h2>{{ productIcon(product.id) }} {{ product.name }} produzieren</h2>
+        <button class="ghost small" type="button" (click)="closeModal()">✕</button>
+      </div>
+      <div class="panel-body">
+        <p class="hint">
+          Kolonie wählen, um dort einen Dauerauftrag zu starten: Es wird automatisch bis zum
+          hinterlegten Ziel-Lagerbestand nachproduziert, solange Ausgangsstoffe vorhanden sind.
+          Fehlen sie, pausiert die Produktion und wird bei Nachschub ohne erneute Bestätigung fortgesetzt.
+          Bereits laufende parallele Fertigungsaufträge (Kolonie → Produktion) bleiben davon unberührt.
+          Ein lokaler Preis &gt; 0 hält zusätzlich eine einzelne Verkaufsorder am Systemmarkt offen, die bei
+          neuer Ware automatisch aufgestockt (bis max. 50 Einheiten, der Rest bleibt im Lager) und bei
+          Preisänderung neu bepreist wird.
+        </p>
+        @if (error()) { <div class="error">{{ error() }}</div> }
+        <div class="modal-colony-list">
+          @for (row of modalRows(); track row.colonyId) {
+            <div class="modal-colony-row">
+              <div class="modal-colony-name">
+                <strong>{{ row.colonyName }}</strong>
+                <span class="mono hint">Lager: {{ row.stock }}</span>
+              </div>
+              @if (row.industryLevel < 1) {
+                <span class="hint">Benötigt Industriekomplex</span>
+              } @else {
+                <div class="modal-colony-actions">
+                  <label class="hint">Ziel-Lagerbestand
+                    <input type="number" min="1" [(ngModel)]="draftMaxStock[row.colonyId]" />
+                  </label>
+                  <label class="hint">Lokaler Preis
+                    <input type="number" min="0" step="0.5" placeholder="0 = kein Verkauf" [(ngModel)]="draftLocalPrice[row.colonyId]" />
+                  </label>
+                  <button class="small" type="button" [disabled]="busy() === row.colonyId" (click)="startOrUpdate(row.colonyId)">
+                    {{ row.orderMaxStock !== undefined ? 'Ändern' : 'Starten' }}
+                  </button>
+                  @if (row.orderMaxStock !== undefined) {
+                    <span class="tag good">aktiv · Ziel {{ row.orderMaxStock }}</span>
+                    @if (row.orderLocalPrice) {
+                      <span class="tag">Verkauf zu {{ row.orderLocalPrice }}/Einheit</span>
+                    }
+                    <button class="ghost small danger" type="button" [disabled]="busy() === row.colonyId" (click)="stop(row.colonyId)">Stoppen</button>
+                  }
+                </div>
+              }
+            </div>
+          } @empty { <p class="empty-hint">Keine Kolonien.</p> }
+        </div>
+      </div>
+    </div>
+  </div>
+}

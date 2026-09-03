@@ -1,0 +1,120 @@
+<div class="page-head">
+  <span class="eyebrow">Kartografie</span>
+  <h1>Galaxiekarte</h1>
+</div>
+
+@if (error()) { <div class="error">{{ error() }}</div> }
+
+<div class="grid-2">
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>{{ homeSystem()?.name }}</h2></div>
+    <div class="panel-body">
+      <svg viewBox="0 0 300 300" class="orbit-svg">
+        <circle cx="150" cy="150" r="4" class="star" />
+        @for (planet of planets(); track planet.id) {
+          <circle cx="150" cy="150" [attr.r]="orbitRadius(planet)" class="orbit-ring" />
+          <circle
+            [attr.cx]="planetX(planet)"
+            [attr.cy]="planetY(planet)"
+            r="6"
+            class="planet-dot"
+          />
+          <text [attr.x]="planetX(planet)" [attr.y]="planetY(planet) + 18" class="planet-label" text-anchor="middle">{{ planet.name }}</text>
+        }
+      </svg>
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Gateway</h2></div>
+    <div class="panel-body gateway-body">
+      @switch (gateway()?.state) {
+        @case ('Hidden') {
+          <span class="tag warn">Unentdeckt</span>
+          <p class="hint">Ihre Wissenschaftler erforschen weiterhin das Heimatsystem. Der Ausbau Ihrer
+            Kolonien und das Bevölkerungswachstum bringen die Entdeckung des Gateways näher.</p>
+        }
+        @case ('Discovered') {
+          <span class="tag good">Entdeckt</span>
+          <p class="hint">Das Gateway wurde lokalisiert. Nach Aktivierung wird Ihr System Teil des
+            galaktischen Netzwerks — und für andere Kommandanten sichtbar.</p>
+          <button class="primary small" [disabled]="busy()" (click)="activateGateway()">Gateway aktivieren</button>
+        }
+        @case ('Activating') {
+          <span class="tag warn">Aktivierung läuft</span>
+          <span class="mono">{{ countdown((gateway()?.activatingCompletesAt ?? 0) - clock.now()) }}</span>
+        }
+        @case ('Active') {
+          <span class="tag good">Aktiv seit Systemeintritt</span>
+          <p class="hint">Direkt über Ihr Gateway erreichbar: {{ gateway()?.reachableSystemIds?.length }} Nachbarsysteme.
+            Insgesamt bekannt: {{ visibleSystems().length }} Systeme.</p>
+          <div class="divider"></div>
+          <span class="eyebrow">Politisches Gewicht in diesem System</span>
+          @for (w of weights(); track w.playerId) {
+            <div class="weight-row"><span>{{ w.playerName }}</span><span class="mono">{{ w.weight }}</span></div>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>
+
+@if (gateway()?.state === 'Active') {
+  <div class="panel corner-frame star-map-panel">
+    <div class="panel-header">
+      <h2>Galaxiekarte — bekanntes Gateway-Netz</h2>
+      <div class="legend">
+        <span class="legend-item"><i class="dot home"></i>Heimatsystem</span>
+        <span class="legend-item"><i class="dot neighbor"></i>Direkt erreichbar</span>
+        <span class="legend-item"><i class="dot hub"></i>Handelsstation</span>
+        <span class="legend-item"><i class="dot far"></i>Mehrere Sprünge</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="star-map-layout">
+        <svg viewBox="0 0 100 100" class="star-map-svg">
+          @for (route of routes(); track route.a + route.b) {
+            @if (systemById(route.a); as sa) {
+              @if (systemById(route.b); as sb) {
+                <line [attr.x1]="sa.x * 100" [attr.y1]="sa.y * 100"
+                      [attr.x2]="sb.x * 100" [attr.y2]="sb.y * 100" class="link-line" />
+              }
+            }
+          }
+          @for (sys of visibleSystems(); track sys.id) {
+            <circle
+              [attr.cx]="sys.x * 100" [attr.cy]="sys.y * 100"
+              [attr.r]="sys.isHomeSystem ? 3.4 : sys.isTradeHub ? 2.8 : 2.1"
+              class="sys-node"
+              [class.home]="sys.isHomeSystem"
+              [class.hub]="sys.isTradeHub && !sys.isHomeSystem"
+              [class.neighbor]="!sys.isHomeSystem && isDirectNeighbor(sys.id)"
+              [class.selected]="selectedSystem()?.id === sys.id"
+              (click)="select(sys)"
+            />
+            <text [attr.x]="sys.x * 100" [attr.y]="sys.y * 100 - 4" class="sys-label" text-anchor="middle">{{ sys.name }}</text>
+          }
+        </svg>
+
+        <div class="sys-detail">
+          @if (selectedSystem(); as s) {
+            <h3>{{ s.name }}</h3>
+            <span class="tag" [class.good]="s.isTradeHub">{{ s.factionFlavor }}</span>
+            @if (!s.isHomeSystem) {
+              <p class="hint">
+                {{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ homeSystem()?.name }} entfernt.
+                {{ isDirectNeighbor(s.id) ? ' Direkt über Ihr Gateway ansteuerbar.' : ' Nur über Zwischensysteme oder per Trägerschiff erreichbar.' }}
+              </p>
+            } @else {
+              <p class="hint">Ihr Heimatsystem.</p>
+            }
+            <p class="hint">Detailkolonisation und Diplomatie in fremden Systemen folgen in einer
+              späteren Ausbaustufe.</p>
+          } @else {
+            <p class="empty-hint">Wählen Sie ein System auf der Karte.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

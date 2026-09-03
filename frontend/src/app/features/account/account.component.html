@@ -1,0 +1,82 @@
+<div class="page-head">
+  <span class="eyebrow">Kommandokonto</span>
+  <h1>{{ player()?.name }}</h1>
+</div>
+
+<div class="panel corner-frame balance-panel">
+  <div class="panel-body">
+    <span class="eyebrow">Guthaben</span>
+    <div class="balance">{{ wallet()?.balance ?? 0 | number:'1.0-0' }} <span class="unit">Credits</span></div>
+    <p class="hint">Credits zirkulieren zwischen Kommandant und Bevölkerung – es gibt keine klassische Steuer und
+      keinen automatischen Gelddrucker. Neues Geld entsteht ausschließlich, wenn eine Kolonie einen neuen
+      historischen Bevölkerungshöchststand erreicht.</p>
+  </div>
+</div>
+
+<div class="grid-2 breakdown-grid">
+  <div class="panel corner-frame">
+    <div class="panel-header">
+      <h2>Zuletzt ausgegeben</h2>
+      <span class="hint">Letzte {{ recentTransactions().length }} Buchungen</span>
+    </div>
+    <div class="panel-body">
+      <div class="breakdown-list">
+        @for (row of expenseBreakdown(); track row.reason) {
+          <div class="breakdown-row">
+            <span class="reason">{{ row.label }} <span class="hint">({{ row.count }}×)</span></span>
+            <div class="stat-bar"><span class="bad" [style.width.%]="shareOf(row.total, expenseBreakdown())"></span></div>
+            <span class="mono amount bad">−{{ row.total | number:'1.0-0' }}</span>
+          </div>
+        } @empty {
+          <p class="empty-hint">Keine Ausgaben in letzter Zeit.</p>
+        }
+      </div>
+      @if (expenseBreakdown().length) {
+        <div class="breakdown-total"><span>Gesamt</span><span class="mono bad">−{{ totalExpense() | number:'1.0-0' }}</span></div>
+      }
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header">
+      <h2>Zuletzt eingenommen</h2>
+      <span class="hint">Letzte {{ recentTransactions().length }} Buchungen</span>
+    </div>
+    <div class="panel-body">
+      <div class="breakdown-list">
+        @for (row of incomeBreakdown(); track row.reason) {
+          <div class="breakdown-row">
+            <span class="reason">{{ row.label }} <span class="hint">({{ row.count }}×)</span></span>
+            <div class="stat-bar"><span class="good" [style.width.%]="shareOf(row.total, incomeBreakdown())"></span></div>
+            <span class="mono amount good">+{{ row.total | number:'1.0-0' }}</span>
+          </div>
+        } @empty {
+          <p class="empty-hint">Keine Einnahmen in letzter Zeit.</p>
+        }
+      </div>
+      @if (incomeBreakdown().length) {
+        <div class="breakdown-total"><span>Gesamt</span><span class="mono good">+{{ totalIncome() | number:'1.0-0' }}</span></div>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Transaktionsverlauf</h2></div>
+  <div class="panel-body">
+    <div class="tx-list">
+      @for (tx of transactions(); track tx.id) {
+        <div class="tx-row">
+          <span class="tag" [class.good]="isIncome(tx.toWalletId)" [class.bad]="!isIncome(tx.toWalletId)">{{ reasonLabel(tx.reason) }}</span>
+          <span class="note">{{ tx.note }}</span>
+          <span class="mono amount" [class.good]="isIncome(tx.toWalletId)" [class.bad]="!isIncome(tx.toWalletId)">
+            {{ isIncome(tx.toWalletId) ? '+' : '−' }}{{ tx.amount | number:'1.0-2' }}
+          </span>
+          <span class="mono time">{{ tx.at | date:'HH:mm:ss' }}</span>
+        </div>
+      } @empty {
+        <p class="empty-hint">Noch keine Transaktionen.</p>
+      }
+    </div>
+  </div>
+</div>

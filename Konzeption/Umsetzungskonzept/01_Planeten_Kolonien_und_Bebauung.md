@@ -70,6 +70,17 @@ OverbuildCostJob (bei jeder Building-Änderung auf einem Planeten):
   Σ buildPointsUsed aller Colonies auf dem Planet neu berechnen,
   planetweiten Malus + individuellen Verursacheranteil je Colony
   aktualisieren
+
+PowerUpkeepJob (je Tick je Colony mit Energienetz-Stufe > 0):
+  need = powergridLevel × ELERIUM_UPKEEP_PER_LEVEL × vergangene Spielstunden
+  covered = min(need, Lagerbestand Elerium-Zelle der Colony)
+  Lagerbestand -= covered
+  coverageRatio = geglättet Richtung (covered / need)  // 1 = voll versorgt
+  → mindert den Kapazitätsbeitrag des Energienetzes zur Wohnkapazität
+    (nicht den des Wohnkomplexes) proportional zu coverageRatio – kein
+    hartes Ein/Aus, sondern anteiliger "Blackout". Elerium-115 ist
+    derselbe seltene Stoff, der auch Antriebsmodule speist (siehe
+    02_Produktion_Rohstoffe_und_Lager.md).
 ```
 
 ## 4. Menüführung

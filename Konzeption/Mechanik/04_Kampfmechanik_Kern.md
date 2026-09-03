@@ -146,11 +146,23 @@ Kontermultiplikatoren, Haltbarkeit aus Produktionsaufwand, Restschaden,
 zusätzlich die Soldaten-/Waffenträger-Regeln aus
 `05_Bodentruppen_und_Bodenkrieg.md`.
 
+## Kontermatrix (entschieden)
+
+```text
+Schiffe (siehe 03_..., §2):
+  Korvette schlägt Kreuzer, Kreuzer schlägt Zerstörer, Zerstörer schlägt Korvette.
+
+Waffenträger (Bodentruppen, siehe 05_..., §3), analog zur Schiffslogik:
+  Leichter Waffenträger schlägt Schweren,
+  Schwerer Waffenträger schlägt Mittleren,
+  Mittlerer Waffenträger schlägt Leichten.
+```
+
+Soldaten besitzen keine eigene Kampfwirkung und damit keine
+Konterrichtung (siehe `05_...`, §3).
+
 ## Offene Zahlenfragen
 
-- Konkrete Schiffsklassen- und Waffenträger-Kontermatrix (welche Klasse
-  kontert welche, sofern noch nicht vollständig für alle Kombinationen
-  festgelegt).
 - Spätere Simulation/Balancing-Prüfung des neutralen 20-%-Schadenswerts.
 - Zielauswahl-Detailfragen, sofern über die reine
   Produktionsaufwand-Proportionalität hinaus noch etwas benötigt wird.

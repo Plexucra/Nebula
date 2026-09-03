@@ -1,0 +1,30 @@
+<div class="page-head">
+  <span class="eyebrow">Militär</span>
+  <h1>Bodentruppen</h1>
+</div>
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Garnisonen</h2></div>
+  <div class="panel-body garrison-grid">
+    @for (colony of colonies(); track colony.id) {
+      <a class="garrison-card" [routerLink]="['/planeten', colony.id]">
+        <div class="card-head">
+          <strong>{{ colony.name }}</strong>
+          <span class="tag" [class.good]="loyalty(colony.id) > 50" [class.bad]="loyalty(colony.id) <= 50">
+            Loyalität {{ loyalty(colony.id) | number:'1.0-0' }}%
+          </span>
+        </div>
+        @if (garrison(colony.id).length > 0) {
+          <div class="units">
+            @for (u of garrison(colony.id); track u.unitProductTypeId) {
+              <span class="unit-chip">{{ productName(u.unitProductTypeId) }} × {{ u.activeCount }}</span>
+            }
+          </div>
+        } @else {
+          <p class="empty-hint">Keine Bodentruppen stationiert.</p>
+        }
+        <span class="hint">Rekrutierung im Bodentruppen-Tab der Kolonie →</span>
+      </a>
+    }
+  </div>
+</div>

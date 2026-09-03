@@ -1,0 +1,72 @@
+<div class="page-head">
+  <span class="eyebrow">Heimatsystem</span>
+  <h1>Meine Kolonien</h1>
+</div>
+
+<div class="colony-grid">
+  @for (colony of colonies(); track colony.id) {
+    <a class="panel corner-frame colony-card" [routerLink]="['/planeten', colony.id]">
+      <div class="card-top">
+        <div>
+          <h3>{{ colony.name }}</h3>
+          <span class="planet-tag">{{ planetName(colony) }}</span>
+          @if (colony.isHomeworld) { <span class="tag good">Heimatwelt</span> }
+        </div>
+        <div class="pop">
+          <span class="pop-value">{{ population(colony.id)()?.currentCount ?? 0 | number:'1.0-0' }}</span>
+          <span class="eyebrow">Einwohner</span>
+        </div>
+      </div>
+
+      @if (stats(colony.id); as s) {
+        <div class="stat-row">
+          <div class="stat-item">
+            <span class="label">Infra</span>
+            <div class="stat-bar"><span [style.width.%]="s()!.infrastructurePct"></span></div>
+          </div>
+          <div class="stat-item">
+            <span class="label">Sicherheit</span>
+            <div class="stat-bar"><span [style.width.%]="s()!.securityPct"></span></div>
+          </div>
+          <div class="stat-item">
+            <span class="label">Lebensstd.</span>
+            <div class="stat-bar"><span [style.width.%]="s()!.standardOfLivingPct"></span></div>
+          </div>
+          <div class="stat-item">
+            <span class="label">Loyalität</span>
+            <div class="stat-bar"><span [style.width.%]="s()!.loyaltyPct"></span></div>
+          </div>
+        </div>
+      }
+    </a>
+  }
+</div>
+
+<div class="panel corner-frame system-panel">
+  <div class="panel-header">
+    <h2>Aurelia-System · unbesiedelte Himmelskörper</h2>
+  </div>
+  <div class="panel-body">
+    @if (error()) { <div class="error">{{ error() }}</div> }
+    @if (uncolonizedPlanets().length === 0) {
+      <p class="empty-hint">Alle Planeten dieses Systems sind bereits kolonisiert.</p>
+    } @else {
+      <div class="planet-list">
+        @for (planet of uncolonizedPlanets(); track planet.id) {
+          <div class="planet-row">
+            <div>
+              <strong>{{ planet.name }}</strong>
+              <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }} · Bebauungskapazität {{ planet.buildCapacity }}</span>
+            </div>
+            <button
+              class="primary small"
+              type="button"
+              [disabled]="busyPlanetId() === planet.id"
+              (click)="colonize(planet.id)"
+            >{{ busyPlanetId() === planet.id ? 'Gründe…' : 'Kolonisieren (800 Cr)' }}</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

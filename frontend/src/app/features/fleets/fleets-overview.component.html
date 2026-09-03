@@ -1,0 +1,65 @@
+<div class="page-head">
+  <span class="eyebrow">Militär</span>
+  <h1>Flotten</h1>
+</div>
+
+@if (error()) { <div class="error">{{ error() }}</div> }
+
+@for (colony of colonies(); track colony.id) {
+  <div class="panel corner-frame colony-block">
+    <div class="panel-header">
+      <h2>{{ colony.name }}</h2>
+      <a class="ghost small" [routerLink]="['/planeten', colony.id]">Kolonie öffnen</a>
+    </div>
+    <div class="panel-body split">
+
+      <div class="shipyard">
+        <span class="eyebrow">Werft — Stufe {{ shipyardLevel(colony.id) }}</span>
+        @if (shipyardLevel(colony.id) < 1) {
+          <p class="hint">Keine Werft vorhanden. Im Bebauungs-Tab der Kolonie ausbauen.</p>
+        } @else {
+          <div class="form-row">
+            <select [(ngModel)]="selFor(colony).productId">
+              @for (s of shipTypes; track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+            <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
+            <button class="primary small" [disabled]="busy() === colony.id" (click)="queueShip(colony)">Bauen</button>
+          </div>
+
+          <div class="queue-list">
+            @for (entry of shipyardQueue(colony.id); track entry.id) {
+              <div class="queue-row">
+                <span>{{ productName(entry.shipProductTypeId) }}</span>
+                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.quantity) * 100"></span></div>
+                <span class="mono">{{ entry.producedSoFar }}/{{ entry.quantity }}</span>
+                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
+                <button class="ghost small danger" (click)="cancelOrder(colony.id, entry.id)">Abbrechen</button>
+              </div>
+            } @empty { <p class="empty-hint">Keine Bauaufträge.</p> }
+          </div>
+        }
+      </div>
+
+      <div class="fleets">
+        <span class="eyebrow">Stationierte Flotten</span>
+        @for (fleet of fleetsAt(colony.id); track fleet.id) {
+          <div class="fleet-card">
+            <strong>{{ fleet.name }}</strong>
+            <span class="tag">{{ fleet.status === 'Stationed' ? 'Stationiert' : 'Im Bau' }}</span>
+            <div class="ship-composition">
+              @for (g of fleet.ships; track g.shipProductTypeId) {
+                <span class="ship-chip">{{ shipClass(g.shipProductTypeId) }} × {{ g.quantity }}</span>
+              }
+            </div>
+            <div class="fleet-actions">
+              <button class="ghost small" disabled title="Bewegung folgt in einer späteren Ausbaustufe">Bewegen</button>
+              <button class="ghost small" disabled title="Blockade folgt in einer späteren Ausbaustufe">Blockade</button>
+            </div>
+          </div>
+        } @empty { <p class="empty-hint">Keine Flotte im Orbit.</p> }
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,67 @@
+.colony-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.colony-card {
+  display: block;
+  padding: 16px 18px;
+  color: inherit;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--line-accent);
+    box-shadow: 0 0 20px rgba(62, 226, 255, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+
+  h3 { margin: 0 0 4px; font-size: 15px; }
+}
+
+.planet-tag {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.pop {
+  text-align: right;
+  .pop-value { display: block; font-family: var(--font-mono); font-size: 18px; color: var(--accent-soft); }
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 14px;
+}
+
+.stat-item {
+  .label { display: block; font-size: 10px; color: var(--text-faint); margin-bottom: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
+}
+
+.system-panel { margin-top: 6px; }
+
+.planet-list { display: flex; flex-direction: column; gap: 10px; }
+
+.planet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+
+  strong { display: block; font-size: 13.5px; }
+  .eyebrow { font-size: 10px; letter-spacing: 0.06em; }
+}

@@ -1,0 +1,48 @@
+.colony-block { margin-bottom: 16px; }
+
+.split {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+  select { flex: 1; }
+  input { width: 80px; }
+}
+
+.queue-list { display: flex; flex-direction: column; gap: 8px; }
+.queue-row {
+  display: grid;
+  grid-template-columns: 1fr 100px auto auto auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.fleets { display: flex; flex-direction: column; gap: 10px; }
+.fleet-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--bg-inset);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ship-composition { display: flex; flex-wrap: wrap; gap: 6px; }
+.ship-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-mid);
+}
+.fleet-actions { display: flex; gap: 8px; }

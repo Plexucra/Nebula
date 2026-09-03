@@ -93,6 +93,12 @@ besitzen, eine alte friedliche Kernwelt hohe Loyalität und
 vergleichsweise niedrige Sicherheit. Soldaten erzeugen nicht automatisch
 Loyalität.
 
+Umgekehrt gilt aber auch: Eine wirklich loyale Bevölkerung sorgt bis zu
+einem gewissen Grad selbst für Ordnung, auch ganz ohne stationierte
+Truppen – Sicherheit hat deshalb einen kleinen Sockel proportional zur
+Loyalität (konkreter Wert siehe `Mechanik/11_...`, §3). Für hohe
+Sicherheitswerte bleibt eine aktive Garnison trotzdem nötig.
+
 Loyalität besitzt zwei besondere Startbedingungen:
 
 - Der **Heimatplanet** besitzt einen starken strukturellen

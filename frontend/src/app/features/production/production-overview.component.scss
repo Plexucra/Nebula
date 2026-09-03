@@ -1,0 +1,112 @@
+.colony-summary { display: flex; flex-direction: column; gap: 8px; }
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text-hi);
+  font-size: 13px;
+  background: var(--bg-inset);
+}
+.summary-row:hover { border-color: var(--line-accent); }
+
+.tree-panel { margin-top: 16px; }
+.tier-block { margin-bottom: 20px; }
+.tier-block:last-child { margin-bottom: 0; }
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.product-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--bg-inset);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  strong { font-size: 13px; }
+}
+.recipe { display: flex; flex-direction: column; gap: 2px; }
+.recipe-item { font-size: 11px; color: var(--text-dim); }
+
+.product-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  > div { display: flex; flex-direction: column; gap: 3px; }
+}
+.product-image {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+}
+.product-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.product-card button.small { align-self: flex-start; margin-top: 2px; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 10, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-colony-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.modal-colony-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+.modal-colony-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-colony-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10.5px;
+  }
+
+  input[type="number"] { width: 90px; }
+}

@@ -7,7 +7,10 @@
 
 ```text
 GroundUnitType
-  id, class (Soldier|LightWalker|MediumWalker|HeavyWalker),
+  id, class (Soldier|LightDrone|MediumDrone|HeavyDrone),
+  // "Drone" statt "Walker": unbemannte, von Soldaten aus der Ferne
+  // kommandierte Einheiten (siehe Mechanik/05_..., §3 "autonome
+  // Waffenträger") – Soldaten stecken nicht in den Drohnen drin.
   productionAspect (Basiszeit × Arbeitskräfte, für Konter-/
   Haltbarkeitsberechnung, siehe Mechanik/04_...),
   transportSlotUsage (0,05 / 1 / 1 / 20, siehe Mechanik/05_... §6)
@@ -88,3 +91,20 @@ Planetenoberfläche-Ansicht (pro Planet, nicht pro Kolonie)
 ├─ gelandete GroundForceGroups aller Spieler (sichtbar je nach
 │   Aufklärung/Exposition, siehe 05_Kampf_...)
 └─ Bewegungsbefehl zu einer Kolonie auf demselben Planeten
+
+## 5. Besatzungslogik (im Frontend-Prototyp bereits umgesetzt)
+
+Der Frontend-Prototyp (`frontend/`) implementiert §3-4 aus
+`Mechanik/05_...` bereits: Soldaten und Waffenträger werden getrennt
+rekrutiert/produziert, landen zunächst in `reserveCount`, und eine
+`recalcCrewing`-Routine verteilt verfügbare Kommandokapazität nach
+jeder Änderung proportional (gleiches Besetzungsverhältnis für alle
+drei Klassen, Platzhalterwert 1 Soldat pro 5 Waffenträger – siehe
+Mechanik/05_..., §4) auf Leicht/Mittel/Schwer und bestimmt daraus
+`activeCount` (besetzt, kampffähig) vs. `reserveCount` (unbesetzt) je
+Bestand. Nur aktive Waffenträger fließen in die Sicherheits-Kennzahl
+der Kolonie ein (Mechanik/11_...); Soldaten selbst tragen nichts zur
+Sicherheit bei.
+Noch nicht umgesetzt: Verlust zugeordneter Soldaten bei Zerstörung
+eines aktiven Waffenträgers (setzt das noch fehlende Kampfsystem
+voraus, siehe `05_Kampf_Blockaden_und_Kriegszustand.md`).

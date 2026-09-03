@@ -1,0 +1,133 @@
+<div class="page-head">
+  <span class="eyebrow">Beobachtung</span>
+  <h1>Statistiken</h1>
+</div>
+
+@if (!latest()) {
+  <div class="panel corner-frame">
+    <div class="panel-body empty-state">
+      <span class="eyebrow">Noch keine Daten</span>
+      <p>Der erste Messpunkt wird kurz nach Spielstart aufgezeichnet und danach alle 10 Sekunden
+        ergänzt. Einfach kurz warten.</p>
+    </div>
+  </div>
+} @else {
+  <p class="meta-line">
+    {{ history().length }} Messpunkte seit {{ first()?.at | date:'HH:mm:ss' }} ·
+    zuletzt aktualisiert {{ latest()?.at | date:'HH:mm:ss' }}
+  </p>
+
+  <div class="tile-grid">
+    <app-sparkline-tile
+      title="Gesamtbevölkerung"
+      [value]="((latest()?.totalPopulation ?? 0) | number:'1.0-0') ?? ''"
+      [series]="populationSeries()"
+      hint="Spieler + alle NPC-Kolonien" />
+    <app-sparkline-tile
+      title="Geldmenge (Credits)"
+      [value]="((latest()?.totalCredits ?? 0) | number:'1.0-0') ?? ''"
+      [series]="creditsSeries()"
+      hint="Summe aller Wallets – validiert den geschlossenen Geldkreislauf" />
+    <app-sparkline-tile
+      title="Aktive Kolonien"
+      [value]="((latest()?.colonyCount ?? 0) | number:'1.0-0') ?? ''"
+      [series]="colonyCountSeries()" />
+    <app-sparkline-tile
+      title="Gefährdete Kolonien"
+      [value]="((latest()?.strugglingColonyCount ?? 0) | number:'1.0-0') ?? ''"
+      [series]="strugglingSeries()"
+      [tone]="(latest()?.strugglingColonyCount ?? 0) > 0 ? 'danger' : 'good'"
+      hint="Lebensstandard < 30% oder Loyalität < 20%" />
+    <app-sparkline-tile
+      title="Offene Marktorders"
+      [value]="((latest()?.openSellOrderCount ?? 0) | number:'1.0-0') ?? ''"
+      [series]="sellOrderSeries()"
+      hint="Marktliquidität über alle Systeme" />
+  </div>
+
+  <h2 class="section-title">Durchschnittliche Planetenwerte</h2>
+  <div class="tile-grid">
+    <app-sparkline-tile title="Infrastruktur" [value]="((latest()?.avgInfrastructurePct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="infraSeries()" />
+    <app-sparkline-tile title="Sicherheit" [value]="((latest()?.avgSecurityPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="securitySeries()" />
+    <app-sparkline-tile title="Lebensstandard" [value]="((latest()?.avgStandardOfLivingPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="standardSeries()" />
+    <app-sparkline-tile title="Loyalität" [value]="((latest()?.avgLoyaltyPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="loyaltySeries()" />
+  </div>
+
+  <div class="panel corner-frame npc-panel">
+    <div class="panel-header">
+      <h2>Meine Kolonien ({{ colonyRows.length }})</h2>
+      <span class="hint">Guthaben der Kolonialbevölkerung – gespeist aus Löhnen, ausgegeben für Konsumgüter</span>
+    </div>
+    <div class="panel-body">
+      <div class="npc-table own-colony-table">
+        <div class="npc-row npc-row-head">
+          <span>Kolonie</span>
+          <span>Planet</span>
+          <span>Bevölkerung</span>
+          <span>Credits</span>
+          <span>Lebensstd.</span>
+          <span>Loyalität</span>
+          <span>Status</span>
+        </div>
+        @for (row of colonyRows; track row.colony.id) {
+          <div class="npc-row">
+            <span>{{ row.colony.name }} @if (row.colony.isHomeworld) { <span class="tag good">Heimatwelt</span> }</span>
+            <span>{{ row.planetName() }}</span>
+            <span class="mono">{{ row.population()?.currentCount ?? 0 | number:'1.0-0' }}</span>
+            <span class="mono">{{ row.wallet()?.balance ?? 0 | number:'1.0-0' }}</span>
+            <span class="mono">{{ row.stats()?.standardOfLivingPct ?? 0 | number:'1.0-0' }}%</span>
+            <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
+            <span>
+              @if (isStruggling(row.stats())) {
+                <span class="tag bad">gefährdet</span>
+              } @else {
+                <span class="tag good">stabil</span>
+              }
+            </span>
+          </div>
+        } @empty {
+          <p class="empty-hint">Noch keine eigenen Kolonien.</p>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="panel corner-frame npc-panel">
+    <div class="panel-header">
+      <h2>NPC-Kolonien ({{ npcRows.length }})</h2>
+      <span class="hint">Nicht-kriegerisch: bauen nie Kampfschiffe oder Bodentruppen</span>
+    </div>
+    <div class="panel-body">
+      <div class="npc-table">
+        <div class="npc-row npc-row-head">
+          <span>Name</span>
+          <span>Kolonie</span>
+          <span>Bevölkerung</span>
+          <span>Credits</span>
+          <span>Lebensstd.</span>
+          <span>Loyalität</span>
+          <span>Spezialisierung</span>
+          <span>Status</span>
+        </div>
+        @for (row of npcRows; track row.npc.id) {
+          <div class="npc-row">
+            <span>{{ row.npc.name }}</span>
+            <span>{{ row.colony()?.name ?? '—' }}</span>
+            <span class="mono">{{ row.population()?.currentCount ?? 0 | number:'1.0-0' }}</span>
+            <span class="mono">{{ row.wallet()?.balance ?? 0 | number:'1.0-0' }}</span>
+            <span class="mono">{{ row.stats()?.standardOfLivingPct ?? 0 | number:'1.0-0' }}%</span>
+            <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
+            <span>{{ productName(row.npc.specialtyProductId) }}</span>
+            <span>
+              @if (isStruggling(row.stats())) {
+                <span class="tag bad">gefährdet</span>
+              } @else {
+                <span class="tag good">stabil</span>
+              }
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

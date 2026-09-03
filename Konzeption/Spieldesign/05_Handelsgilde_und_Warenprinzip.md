@@ -27,6 +27,11 @@ Struktur der Galaxie verbunden. Es gibt **keine automatische
 Marktverbindung**, bei der Waren nach Vertragsschluss unsichtbar
 zwischen zwei Handelsposten übertragen werden.
 
+Be- und Entladen selbst sind **instantan** (begrenzt nur durch
+Frachter-Ladekapazität und verfügbaren Bestand) – die einzige
+Zeitkomponente eines Transports ist die Reisezeit selbst (siehe
+`Mechanik/08_Gateway_und_Zollmechanik.md` §4-5).
+
 Eine Ausnahme bildet lediglich die lokale Abwicklung innerhalb eines
 Planeten bzw. der letzte, organisatorisch nicht weiter ausgespielte
 Transportabschnitt zur Bevölkerung (siehe §7).
@@ -189,10 +194,11 @@ Markt faktisch privatisieren kann.
   Handelsposten gekämpft oder blockiert werden?
 - Wie werden neutrale Einrichtungen der Handelsgilde militärisch
   geschützt (siehe §13)?
-- Wie weit darf die nächste sektorale Handelsstation maximal entfernt
-  sein, und wie entstehen neue Handelsstationen, wenn die Galaxie
-  wächst? Können mehrere sektorale Handelsstationen direkt miteinander
-  verbunden sein?
+- Maximale Entfernung zur nächsten sektoralen Handelsstation:
+  entschieden auf durchschnittlich ca. 2, maximal 3 Gateway-Sprünge
+  (siehe `Mechanik/08_Gateway_und_Zollmechanik.md` §1). Weiterhin offen:
+  wie entstehen neue Handelsstationen, wenn die Galaxie wächst? Können
+  mehrere sektorale Handelsstationen direkt miteinander verbunden sein?
 - Welche Möglichkeiten gibt es für Schmuggel, und welche Rolle spielen
   Versicherungen für Handelsflotten?
 - Können Spieler existieren, deren wirtschaftliche Hauptrolle praktisch

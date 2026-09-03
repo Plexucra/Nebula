@@ -1,0 +1,84 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.stage {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 40px 20px;
+}
+
+.wordmark {
+  text-align: center;
+  max-width: 560px;
+
+  h1 {
+    font-size: clamp(48px, 9vw, 84px);
+    margin: 10px 0;
+    background: linear-gradient(180deg, var(--text-hi), var(--accent-soft));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 60px var(--accent-glow);
+    letter-spacing: 0.12em;
+  }
+}
+
+.tagline {
+  color: var(--text-mid);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card {
+  width: min(420px, 92vw);
+  padding: 28px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  h2 {
+    margin: 2px 0 10px;
+    font-size: 20px;
+  }
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+
+  input { width: 100%; }
+}
+
+.error {
+  color: var(--danger);
+  font-size: 12.5px;
+  border: 1px solid rgba(255, 77, 94, 0.35);
+  background: rgba(255, 77, 94, 0.08);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+button.primary {
+  margin-top: 6px;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}

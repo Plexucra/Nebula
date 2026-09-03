@@ -12,9 +12,10 @@ Wallet
   ownerType (Player|Population), ownerId, balance
 
 Transaction (Audit-Log, append-only)
-  id, fromWalletId | null (null = Geldschöpfung), toWalletId | null
-  (null = Vernichtung – im Regelfall nicht verwendet), amount, reason
-  (Wage|Consumption|FleetUpkeep|GatewayFee|Trade|MoneyCreation), at
+  id, fromWalletId | null (null = Geldschöpfung ODER Einzahlung in den
+  Ausgleichsfonds, s. §7), toWalletId | null (null = Vernichtung ODER
+  Abgabe in den Ausgleichsfonds), amount, reason
+  (Wage|Consumption|FleetUpkeep|GatewayFee|Trade|MoneyCreation|Tax|Subsidy), at
 
 PopulationMoneySupplyState (je Planet – Höchststand-Regel)
   planetId, historicalPeakPopulation, lastPopulation
@@ -84,7 +85,52 @@ Berechnungspipeline je Zeitintervall:
    → fließt in GatewayWeightSnapshot (siehe 06_...)
 ```
 
-## 6. Menüführung
+## 6. WealthTaxAndRedistributionJob (Ausgleichsfonds)
+
+*Grundlage: `Konzeption/06_Geldsystem.md` §8, `Mechanik/10_...` §7.*
+
+Läuft einmal pro Spieltag (24 Spielstunden), galaxieweit über Spieler
+und alle NPCs. Sammelt zwei feste Abgaben ein und schüttet den
+kompletten Betrag im selben Lauf wieder aus – es gibt keinen
+persistenten Fondsstand zwischen zwei Läufen.
+
+```text
+WEALTH_TAX_THRESHOLD = 1000
+WEALTH_TAX_RATE      = 0.001   // 0,1 % / Tag
+COLONY_TAX_RATE      = 0.01    // 1 % / Tag
+
+pot = 0
+for wallet in Wallets where ownerType == Player:
+    if wallet.balance > WEALTH_TAX_THRESHOLD:
+        tax = wallet.balance × WEALTH_TAX_RATE
+        wallet.balance -= tax
+        pot += tax
+        log Transaction(from=wallet, to=null, reason=Tax, note="Vermögenssteuer")
+
+for colony in Colonies:
+    popWallet = wallet(Population, colony.id)
+    tax = popWallet.balance × COLONY_TAX_RATE
+    popWallet.balance -= tax
+    pot += tax
+    log Transaction(from=popWallet, to=null, reason=Tax, note="Kolonialabgabe")
+
+totalPopulation = sum(Population.currentCount)
+if totalPopulation > 0 and pot > 0:
+    perCapita = pot / totalPopulation
+    for colony in Colonies:
+        popWallet = wallet(Population, colony.id)
+        n = Population(colony.id).currentCount
+        share = n × perCapita
+        popWallet.balance += share
+        log Transaction(from=null, to=popWallet, reason=Subsidy, note="Ausgleichsfonds")
+```
+
+Wichtig: Die Ausschüttung geht ausschließlich an
+Bevölkerungs-/Population-Wallets, nie an Spieler-/Kommandanten-Wallets
+– sonst würde der Fonds Kommandanten-Hortung indirekt wieder belohnen
+(siehe offene Frage in `Konzeption/06_Geldsystem.md`).
+
+## 7. Menüführung
 
 ```text
 Kolonie-Detailansicht → Tab "Bevölkerung"

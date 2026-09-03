@@ -1,0 +1,35 @@
+<div class="page-head">
+  <span class="eyebrow">Politik</span>
+  <h1>Diplomatie &amp; Krieg</h1>
+</div>
+
+@if (!gatewayActive()) {
+  <div class="panel corner-frame locked-panel">
+    <div class="panel-body empty-state">
+      <span class="eyebrow">🔒 Gesperrt</span>
+      <h2>Kein Kontakt zu anderen Mächten</h2>
+      <p>Ihr Heimatsystem ist noch nicht an das galaktische Gateway-Netz angeschlossen. Vor der
+        Gateway-Aktivierung gibt es keine erreichbaren fremden Parteien, mit denen Krieg oder Frieden
+        möglich wäre. Aktivieren Sie Ihr Gateway über die Galaxiekarte, sobald Sie bereit für den Kontakt
+        mit der galaktischen Gemeinschaft sind.</p>
+    </div>
+  </div>
+} @else {
+  <div class="grid-3">
+    <div class="panel corner-frame">
+      <div class="panel-header"><h2>Aktive Kriege</h2></div>
+      <div class="panel-body empty-state">
+        <p>Noch keine anderen Kommandanten in Reichweite. Mehrspieler-Diplomatie folgt in einer
+          späteren Ausbaustufe dieses Prototyps.</p>
+      </div>
+    </div>
+    <div class="panel corner-frame">
+      <div class="panel-header"><h2>Friedensangebote</h2></div>
+      <div class="panel-body empty-state"><p>Keine ausstehenden Angebote.</p></div>
+    </div>
+    <div class="panel corner-frame">
+      <div class="panel-header"><h2>Blockadenkarte</h2></div>
+      <div class="panel-body empty-state"><p>Keine aktiven Blockaden in Ihrem System.</p></div>
+    </div>
+  </div>
+}

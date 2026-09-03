@@ -101,10 +101,17 @@ emergente Folge.
 
 ## 5. Was vorerst nicht eingeführt wird
 
-Steuern, frei einstellbare Steuersätze, ein simulierter Arbeitsmarkt,
-frei verhandelbare Löhne, künstlicher Geldverfall, Vermögenssteuer,
-regelmäßige Zentralbankzahlungen, automatische Geldvernichtung bei Tod,
-klassische Money Sinks allein zur Inflationskontrolle.
+Frei einstellbare oder progressive Steuersätze, ein simulierter
+Arbeitsmarkt, frei verhandelbare Löhne, künstlicher Geldverfall,
+automatische Geldvernichtung bei Tod, klassische Money Sinks allein zur
+Inflationskontrolle.
+
+Zwei feste, nicht spielerseitig einstellbare Abgaben existieren seit
+dem Ausgleichsfonds (§8): eine Vermögenssteuer auf große
+Spieler-/Kommandanten-Guthaben und eine Kolonialabgabe auf
+Bevölkerungs-Wallets. Beide fließen vollständig in eine tägliche
+galaxieweite Umverteilung zurück, sind also kein Money Sink im
+klassischen Sinn (§8).
 
 ## 6. Stresstests: beobachtete Dynamiken (bewusst zunächst zugelassen)
 
@@ -119,7 +126,10 @@ beobachtet werden:
 - **Geldhortung:** Altspieler können enorme Creditbestände ansammeln und
   nicht ausgeben. Gehortetes Geld erzeugt jedoch selbst keine Produktion
   – Produktion benötigt laufende Arbeitszahlungen, Flotten benötigen
-  Unterhalt, Handel benötigt Liquidität.
+  Unterhalt, Handel benötigt Liquidität. Seit dem Ausgleichsfonds (§8)
+  wird sehr große Hortung zusätzlich aktiv gedämpft, statt nur indirekt
+  unattraktiv zu sein – sowohl auf Spieler- als auch auf
+  Kolonieebene.
 - **Flotten als Geldverteilungsmaschine:** Ein Spieler könnte eine
   Flotte stationieren, dort Unterhalt ausschütten lassen und
   anschließend selbst Konsumgüter an diese Bevölkerung verkaufen – kein
@@ -153,7 +163,62 @@ Szenarien und Messgrößen). Erst anhand solcher Simulationen sollte
 entschieden werden, ob das geschlossene Kreislaufmodell zusätzliche
 Korrekturen benötigt.
 
+## 8. Ausgleichsfonds: tägliche Vermögenssteuer und Umverteilung
+
+Das reine Kreislaufmodell (§1–4) verhindert Geldvernichtung, aber nicht
+Geldkonzentration: Ohne Gegenkraft können einzelne
+Spieler-/Kommandanten-Guthaben und einzelne Kolonien über die
+Spielzeit beliebig groß gegenüber dem Rest der Galaxie werden (§6,
+"Geldhortung"). Der Ausgleichsfonds ist eine bewusste, aber milde
+Gegenkraft dazu – kein Money Sink, da nichts vernichtet wird, sondern
+eine Umverteilung.
+
+**Abgaben (täglich, siehe `Mechanik/10_...` für die genauen Sätze):**
+
+- Jedes Spieler-/Kommandanten-Wallet (Mensch wie NPC) oberhalb einer
+  Guthabenschwelle zahlt einen kleinen Anteil seines Guthabens in den
+  Fonds.
+- Jede Kolonie zahlt zusätzlich unabhängig von ihrem Kontostand einen
+  kleinen Anteil ihres Bevölkerungs-Wallets in den Fonds.
+
+**Ausschüttung (täglich, vollständig):**
+
+Der gesamte Fondsinhalt wird noch am selben Tag komplett wieder
+ausgeschüttet – an die Bevölkerungs-Wallets **aller** Kolonien der
+Galaxie, nicht an die Spieler-Wallets, und zwar proportional zur
+jeweiligen Einwohnerzahl (pro Kopf). Der Fonds ist also nie dauerhaft
+gefüllt, sondern nur ein täglicher Umlaufmechanismus.
+
+**Warum pro Kopf und nicht pro Wallet-Guthaben:** Eine Ausschüttung
+nach Guthaben würde bereits reiche Kolonien weiter bevorzugen und den
+Ausgleichseffekt aufheben. Pro Kopf ausgeschüttet bekommen dagegen
+gerade kleine, neue oder abgelegene Kolonien einen spürbaren,
+regelmäßigen Kaufkraftschub relativ zu ihrer Größe.
+
+**Erzählerische Einordnung:** Mechanisch ist das eine Steuer- und
+Transferzahlung, erzählerisch lässt sie sich als galaxieweiter
+Ausgleich zwischen Systemen lesen – Familien, die sich finanziell über
+Systemgrenzen hinweg unterstützen, dazu grenzüberschreitender Konsum
+bei Gütern und Dienstleistungen, die sich nicht an einen Ort binden
+lassen (Unterhaltungselektronik, Versicherungen, Kommunikationsdienste
+o. Ä.). Diese Rahmung ist bewusst vage gehalten, um spätere narrative
+Ausgestaltung (z. B. eine sichtbare Institution, die den Fonds
+verwaltet) nicht vorwegzunehmen.
+
+**Abgrenzung zu §5:** Die beiden festen Sätze sind kein Ersatz für ein
+allgemeines, spielerseitig einstellbares Steuersystem – sie sind fixe
+Simulationskonstanten ohne Spielereinfluss.
+
 ## Offene konzeptionelle Fragen
 
 - Bleibt die Wegwerf-Kolonie-Dynamik (§4) tatsächlich unproblematisch,
   sobald Kolonialkosten feststehen?
+- Ausgleichsfonds (§8): Sollte die Ausschüttung langfristig auch
+  Spieler-Wallets erreichen (z. B. anteilig), oder bleibt sie bewusst
+  auf Bevölkerungs-Wallets beschränkt, um Kommandanten-Hortung nicht
+  indirekt wieder zu belohnen?
+- Ausgleichsfonds (§8): Sind 0,1 %/Tag (Spieler, Schwelle 1.000
+  Credits) und 1 %/Tag (Kolonie, ohne Schwelle) auf lange Sicht die
+  richtige Balance, oder verschieben sie zu viel/zu wenig Kaufkraft im
+  Vergleich zu Löhnen und Unterhalt? Erfordert eine quantitative Prüfung
+  analog §7.

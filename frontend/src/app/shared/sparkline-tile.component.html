@@ -1,0 +1,20 @@
+<div class="tile" [class.good]="tone() === 'good'" [class.warn]="tone() === 'warn'" [class.danger]="tone() === 'danger'">
+  <div class="tile-head">
+    <span class="eyebrow">{{ title() }}</span>
+    @if (series().length > 1) {
+      <span class="trend" [class.up]="trend() === 'up'" [class.down]="trend() === 'down'">
+        {{ trend() === 'up' ? '▲' : trend() === 'down' ? '▼' : '–' }}
+      </span>
+    }
+  </div>
+  <div class="tile-value mono">{{ value() }}<span class="unit">{{ unit() }}</span></div>
+  @if (series().length > 1) {
+    <svg viewBox="0 0 100 32" class="spark" preserveAspectRatio="none">
+      <path [attr.d]="geometry().path" class="spark-line" />
+      <circle [attr.cx]="geometry().lastX" [attr.cy]="geometry().lastY" r="2.4" class="spark-dot" />
+    </svg>
+  } @else {
+    <p class="spark-empty">Sammle Daten…</p>
+  }
+  @if (hint()) { <p class="tile-hint">{{ hint() }}</p> }
+</div>

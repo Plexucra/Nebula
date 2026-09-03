@@ -1,0 +1,46 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">NEBULA</span>
+      <span class="brand-sub">{{ player()?.name }}</span>
+    </div>
+
+    <div class="status-strip">
+      <a class="status-chip clickable" routerLink="/konto" title="Transaktionsverlauf ansehen">
+        <span class="eyebrow">Credits</span>
+        <span class="mono value">{{ wallet()?.balance ?? 0 | number: '1.0-0' }}</span>
+      </a>
+      <div class="status-chip">
+        <span class="eyebrow">Gateway</span>
+        <span class="value" [class.good]="gatewayActive()" [class.warn]="!gatewayActive()">
+          {{ gatewayActive() ? 'Aktiv' : (gateway()?.state === 'Activating' ? 'Aktivierung läuft' : gateway()?.state === 'Discovered' ? 'Entdeckt' : 'Unentdeckt') }}
+        </span>
+      </div>
+      <button class="ghost small" type="button" (click)="resetGame()" title="Simulation zurücksetzen">⟲ Reset</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <nav class="sidenav">
+      @for (item of navItems; track item.path) {
+        <a
+          class="nav-item"
+          [class.locked]="isLocked(item)"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [title]="isLocked(item) ? item.lockedHint : ''"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+          @if (isLocked(item)) {
+            <span class="nav-lock">🔒</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

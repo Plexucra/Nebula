@@ -8,9 +8,32 @@
 ## 1. Gateway-Reichweite
 
 ```text
-Erste Größenordnung: ca. 5–10 erreichbare Systeme pro Gateway.
-Kein Balancewert.
+Jedes Gateway verbindet mindestens 3, höchstens 6 Nachbarsysteme direkt.
+Der gesamte Gateway-Graph der Galaxie ist zusammenhängend (kein isoliertes System).
 ```
+
+Konkretisiert die frühere Größenordnung "ca. 5-10" auf einen festen
+Bereich, der sich prozedural erzeugen und prüfen lässt (siehe
+Umsetzungskonzept/06_..., Galaxiegenerator). 3-6 statt 5-10, damit die
+Anzahl der Nachbarn spürbar variiert (manche Systeme sind
+Durchgangsknoten mit vielen Verbindungen, manche liegen abgelegen mit
+nur drei) und die Grafenerzeugung auch bei kleineren Galaxien robust
+bleibt.
+
+### Sektorale Handelsstationen: Erreichbarkeit
+
+```text
+Sektorale Handelsstationen werden so in den Gateway-Graphen platziert,
+dass jedes System im Schnitt ca. 2, maximal 3 Gateway-Sprünge von der
+nächstgelegenen Handelsstation entfernt liegt.
+```
+
+Beantwortet die in `Konzeption/05_Handelsgilde_und_Warenprinzip.md`
+("Offene konzeptionelle Fragen") offene Frage nach der maximalen
+Entfernung zur nächsten Station. Platzierung erfolgt algorithmisch
+(Greedy-k-Center auf dem Gateway-Graphen: iterativ das jeweils am
+weitesten von allen bisherigen Stationen entfernte System als neue
+Station wählen, bis Durchschnitt und Maximum eingehalten sind).
 
 ## 2. Gateway-Gewicht (politische Kontrolle)
 
@@ -35,10 +58,16 @@ Welt A: 10 Mrd. Einwohner × 20 % Loyalität ≈ Welt B: 2 Mrd. Einwohner × 100
 
 ## 3. Standardzoll und individuelle Verträge
 
-Beispielstruktur:
-
 ```text
 Standardzoll (kein Vertrag):  8 % pro Frachter
+```
+
+Entschieden als tatsächlicher Startwert (nicht mehr nur Beispiel) –
+gilt einheitlich für alle Spieler ohne individuellen Vertrag. Beispiel
+für individuelle Verträge (noch nicht implementiert, siehe
+Umsetzungskonzept/06_..., §6):
+
+```text
 Spieler X (Vertrag):          0 %
 Spieler Y (Vertrag):          2 %
 Spieler Z (Vertrag):          5 %
@@ -50,25 +79,38 @@ Spieler Z (Vertrag):          5 %
   (gegenseitige Abhängigkeit von der jeweils anderen Route), höherer
   Standardzoll für entfernte Transitspieler.
 
-## 4. Trägerschiff-Reisezeit (Referenz)
+## 4. Reisezeit (Basiswert entschieden)
 
 ```text
-Reisezeit per Trägerschiff ≈ 10 × Reisezeit per Gateway
+Gateway-Reise:      2 Spielstunden pro durchquertem Gateway-Sprung
+Trägerschiff-Reise: 10 × Gateway-Reisezeit ≈ 20 Spielstunden pro Sprung
 ```
 
-(identisch zu `03_Schiffsklassen_und_Kontersystem.md` §3, hier als
-Referenz für Gateway-bezogene Zeitvergleiche.)
+Erster Arbeitswert (kein finales Balancing), aber jetzt ein konkreter
+Basiswert statt nur des 10×-Verhältnisses aus
+`03_Schiffsklassen_und_Kontersystem.md` §3. Reisezeit ist **rein
+sprunganzahl-basiert**, nicht von der geometrischen Distanz auf der
+Galaxiekarte abhängig – konsistent mit der bereits sprungbasierten
+Gateway-Reichweite (§1) und der Handelsstations-Erreichbarkeit.
+
+## 5. Be- und Entladen von Frachtern
+
+```text
+Be-/Entladen an einem Handelsposten/Depot ist instantan
+(keine eigene Zeitkomponente) – begrenzt einzig durch die
+Ladekapazität des Frachters und den verfügbaren Warenbestand.
+```
+
+Konzeption/05_Handelsgilde_und_Warenprinzip.md §2 nennt Verladen als
+Teil des Transportvorgangs, aber nicht als eigenen Zeitfaktor – anders
+als Reisezeit, Gebühren oder Blockaden. Die Reisezeit (§4) bleibt damit
+die einzige Zeitkomponente eines Handelstransports.
 
 ## Offene Zahlenfragen
 
 - Wie wird die Alien-KI-„Sympathie"/Legitimität eines Spielers exakt
   bewertet – reicht das reine Gateway-Gewicht, oder fließen weitere
   Faktoren ein?
-- Wie groß ist die tatsächliche Reichweite eines Gateways, wie viele
-  direkte Verbindungen besitzt ein typisches System (finaler Wert)?
-- Wie groß ist der tatsächliche Zeit- und Kostenunterschied zwischen
-  Gateway- und Trägerreise (finaler Faktor, aktuell nur Größenordnung
-  10×)?
 - Wie viele Schiffe kann ein Trägerschiff aufnehmen?
 - Was geschieht bei exakt gleichem Gateway-Gewicht mehrerer Spieler im
   selben System?

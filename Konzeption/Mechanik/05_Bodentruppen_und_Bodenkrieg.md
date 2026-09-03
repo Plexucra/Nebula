@@ -96,10 +96,16 @@ Kontermatrix in `04_Kampfmechanik_Kern.md` §4).
 
 ## 4. Aktivierung von Waffenträgern
 
-- Verfügbare Soldaten werden **proportional** auf leicht/mittel/schwer
-  verteilt.
+- Verfügbare Kommandokapazität wird **proportional** auf leicht/mittel/
+  schwer verteilt.
 - Für alle drei Klassen gilt dasselbe Soldaten-zu-Waffenträger-
-  Besetzungsverhältnis (genaue Zahl noch offen).
+  Besetzungsverhältnis – aber umgekehrt zur ursprünglichen Annahme:
+  **ein Soldat kommandiert mehrere Waffenträger per Fernsteuerung**,
+  nicht umgekehrt (er sitzt nicht selbst in einem Waffenträger).
+  Platzhalterwert (Umsetzungskonzept-Prototyp): **1 Soldat kommandiert
+  bis zu 5 Waffenträger**, an einer einzigen Stelle konfigurierbar – wie
+  andere hier offen markierte Werte kein Balancingergebnis, sondern ein
+  Startwert zum Weiterentwickeln.
 - Treffen während eines laufenden Gefechts zusätzliche Soldaten ein,
   können sie Reserve-Waffenträger aktivieren; treffen zusätzliche
   Waffenträger ein und bestehen Reserve-Soldaten, werden diese
@@ -268,7 +274,9 @@ allgemeine Konfliktschadensberechnung (§2) beschädigt/zerstört werden.
 
 ## Offene Zahlenfragen
 
-- Genaues Soldaten-zu-Waffenträger-Besetzungsverhältnis.
+- Soldaten-zu-Waffenträger-Besetzungsverhältnis: vorläufig auf 1 Soldat
+  pro 5 Waffenträger gesetzt (siehe §4) – finaler Balancingwert
+  weiterhin offen.
 - Genaue Rekrutierungskurve zwischen 50 % und 100 % Loyalität.
 - Exakte Schadenskurven für Infrastruktur/Produktion/Ressourcen/
   Verteidigungsanlagen zwischen den Referenzpunkten aus §2.
