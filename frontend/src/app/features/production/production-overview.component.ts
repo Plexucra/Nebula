@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Id, ProductType } from '../../core/models';
+import { Id, ProductType, ProductionQueueEntry } from '../../core/models';
 
 /** Explizite Icons für die bekanntesten/prominentesten Produkte (Rohstoffe, Schiffe, Bodeneinheiten). */
 const PRODUCT_ICON: Record<string, string> = {
@@ -52,8 +52,7 @@ interface ModalRow {
   colonyName: string;
   industryLevel: number;
   stock: number;
-  orderMaxStock: number | undefined;
-  orderLocalPrice: number | undefined;
+  existingEntry: ProductionQueueEntry | undefined;
 }
 
 @Component({
@@ -72,8 +71,9 @@ export class ProductionOverviewComponent {
   protected readonly tiers = [0, 1, 2, 3, 4, 5, 6];
 
   protected readonly selectedProduct = signal<ProductType | null>(null);
-  protected readonly draftMaxStock: Record<Id, number> = {};
-  protected readonly draftLocalPrice: Record<Id, number> = {};
+  protected readonly draftQty: Record<Id, number> = {};
+  protected readonly draftAutoMissing: Record<Id, boolean> = {};
+  protected readonly draftRequeue: Record<Id, boolean> = {};
   protected readonly busy = signal<Id | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -81,20 +81,28 @@ export class ProductionOverviewComponent {
     const product = this.selectedProduct();
     if (!product) return [];
     return this.colonies().map(c => {
-      const order = this.api.autoProductionOrders(c.id)().find(o => o.productTypeId === product.id);
+      const existingEntry = this.api.productionQueue(c.id)().find(e => e.productTypeId === product.id);
       return {
         colonyId: c.id,
         colonyName: c.name,
         industryLevel: this.api.buildings(c.id)().find(b => b.typeId === 'b_industry')?.level ?? 0,
         stock: this.api.warehouse(c.id)().find(w => w.productTypeId === product.id)?.quantity ?? 0,
-        orderMaxStock: order?.maxStock,
-        orderLocalPrice: order?.localPrice,
+        existingEntry,
       };
     });
   });
 
   protected queueLength(colonyId: string): number { return this.api.productionQueue(colonyId)().length; }
   protected warehouseCount(colonyId: string): number { return this.api.warehouse(colonyId)().length; }
+
+  protected queueStatusLabel(entry: { status: string }): string {
+    switch (entry.status) {
+      case 'running': return 'läuft';
+      case 'stopped': return 'gestoppt';
+      case 'done': return 'fertig';
+      default: return 'wartet';
+    }
+  }
 
   protected productsByTier(tier: number): ProductType[] {
     return this.productTypes.filter(p => p.tier === tier);
@@ -126,15 +134,16 @@ export class ProductionOverviewComponent {
   }
 
   protected activeColonyCount(productTypeId: Id): number {
-    return this.api.autoProductionOrdersForProduct(productTypeId)().length;
+    return this.colonies().filter(c =>
+      this.api.productionQueue(c.id)().some(e => e.productTypeId === productTypeId && e.status !== 'done')).length;
   }
 
   protected openModal(product: ProductType): void {
     this.error.set(null);
     for (const c of this.colonies()) {
-      const existing = this.api.autoProductionOrders(c.id)().find(o => o.productTypeId === product.id);
-      this.draftMaxStock[c.id] = existing?.maxStock ?? DEFAULT_MAX_STOCK;
-      this.draftLocalPrice[c.id] = existing?.localPrice ?? 0;
+      this.draftQty[c.id] = DEFAULT_MAX_STOCK;
+      this.draftAutoMissing[c.id] = true;
+      this.draftRequeue[c.id] = false;
     }
     this.selectedProduct.set(product);
   }
@@ -155,17 +164,20 @@ export class ProductionOverviewComponent {
     }
   }
 
-  protected startOrUpdate(colonyId: Id): void {
+  protected queueHere(colonyId: Id): void {
     const product = this.selectedProduct();
     if (!product) return;
-    const maxStock = this.draftMaxStock[colonyId];
-    const localPrice = this.draftLocalPrice[colonyId] ?? 0;
-    void this.run(colonyId, () => this.api.setAutoProductionTarget(colonyId, product.id, maxStock, localPrice));
+    const qty = this.draftQty[colonyId] ?? DEFAULT_MAX_STOCK;
+    const autoMissing = this.draftAutoMissing[colonyId] ?? true;
+    const requeue = this.draftRequeue[colonyId] ?? false;
+    void this.run(colonyId, () => this.api.queueProduction(colonyId, product.id, qty, autoMissing, requeue));
   }
 
-  protected stop(colonyId: Id): void {
-    const product = this.selectedProduct();
-    if (!product) return;
-    void this.run(colonyId, () => this.api.cancelAutoProductionTarget(colonyId, product.id));
+  protected resumeHere(colonyId: Id, entryId: Id): void {
+    void this.run(colonyId, () => this.api.resumeProduction(colonyId, entryId));
+  }
+
+  protected cancelHere(colonyId: Id, entryId: Id): void {
+    void this.run(colonyId, () => this.api.cancelProduction(colonyId, entryId));
   }
 }

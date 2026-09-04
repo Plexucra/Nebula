@@ -1,4 +1,5 @@
 import { Id } from './common.model';
+import { ChainPlan, ProductionQueueStatus } from './production.model';
 
 /**
  * "Drone" statt "Walker": die drei autonomen Waffenträgerklassen sind
@@ -49,12 +50,17 @@ export interface GroundForceGroup {
   units: GroundForceUnitStack[];
 }
 
+/** Sequentieller Rekrutierungs-Auftrag, siehe `ProductionQueueEntry` und Konzeption/Umsetzungskonzept/10_...md. */
 export interface RecruitmentQueueEntry {
   id: Id;
   colonyId: Id;
   unitProductTypeId: Id;
-  count: number;
-  producedSoFar: number;
-  startedAt: number;
-  nextUnitCompletesAt: number;
+  quantity: number;
+  autoProduceMissing: boolean;
+  requeueOnComplete: boolean;
+  status: ProductionQueueStatus;
+  stoppedReasonCode: number | null;
+  plan: ChainPlan;
+  startedAt: number | null;
+  endsAt: number | null;
 }

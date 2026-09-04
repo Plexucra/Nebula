@@ -66,6 +66,7 @@
           <span>Bevölkerung</span>
           <span>Credits</span>
           <span>Lebensstd.</span>
+          <span>Deckung Grundgüter</span>
           <span>Loyalität</span>
           <span>Status</span>
         </div>
@@ -76,10 +77,18 @@
             <span class="mono">{{ row.population()?.currentCount ?? 0 | number:'1.0-0' }}</span>
             <span class="mono">{{ row.wallet()?.balance ?? 0 | number:'1.0-0' }}</span>
             <span class="mono">{{ row.stats()?.standardOfLivingPct ?? 0 | number:'1.0-0' }}%</span>
+            <span class="coverage-cell">
+              @for (good of coverageGoods; track good.id) {
+                <span class="coverage-chip" [class.low]="coveragePct(row.coverage(), good.id) < 50" [title]="good.label + ': ' + coveragePct(row.coverage(), good.id) + '% gedeckt'">
+                  {{ good.short }} {{ coveragePct(row.coverage(), good.id) }}%
+                </span>
+              }
+            </span>
             <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
             <span>
+              @if (isBlackout(row.powerCoverage())) { <span class="tag blackout" title="Energienetz nicht ausreichend versorgt – Produktion läuft nur mit 10%, Sicherheit/Lebensstandard halbiert.">Blackout</span> }
               @if (isStruggling(row.stats())) {
-                <span class="tag bad">gefährdet</span>
+                <span class="tag bad" [title]="strugglingReason(row.stats())">gefährdet</span>
               } @else {
                 <span class="tag good">stabil</span>
               }
@@ -105,6 +114,7 @@
           <span>Bevölkerung</span>
           <span>Credits</span>
           <span>Lebensstd.</span>
+          <span>Deckung Grundgüter</span>
           <span>Loyalität</span>
           <span>Spezialisierung</span>
           <span>Status</span>
@@ -116,11 +126,19 @@
             <span class="mono">{{ row.population()?.currentCount ?? 0 | number:'1.0-0' }}</span>
             <span class="mono">{{ row.wallet()?.balance ?? 0 | number:'1.0-0' }}</span>
             <span class="mono">{{ row.stats()?.standardOfLivingPct ?? 0 | number:'1.0-0' }}%</span>
+            <span class="coverage-cell">
+              @for (good of coverageGoods; track good.id) {
+                <span class="coverage-chip" [class.low]="coveragePct(row.coverage(), good.id) < 50" [title]="good.label + ': ' + coveragePct(row.coverage(), good.id) + '% gedeckt'">
+                  {{ good.short }} {{ coveragePct(row.coverage(), good.id) }}%
+                </span>
+              }
+            </span>
             <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
             <span>{{ productName(row.npc.specialtyProductId) }}</span>
             <span>
+              @if (isBlackout(row.powerCoverage())) { <span class="tag blackout" title="Energienetz nicht ausreichend versorgt – Produktion läuft nur mit 10%, Sicherheit/Lebensstandard halbiert.">Blackout</span> }
               @if (isStruggling(row.stats())) {
-                <span class="tag bad">gefährdet</span>
+                <span class="tag bad" [title]="strugglingReason(row.stats())">gefährdet</span>
               } @else {
                 <span class="tag good">stabil</span>
               }

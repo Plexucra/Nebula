@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  AutoProductionOrder, Building, BuildingType, Colony, Fleet, Gateway, GatewayWeightEntry, GroundForceGroup,
+  Building, BuildingType, Colony, Fleet, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
   GroundUnitTypeDef, Id, Npc, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
   ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
@@ -24,12 +24,31 @@ import {
  * `Promise`-basiert, wie ein echter Netzwerkaufruf.
  */
 export interface GameApi {
+  /** Der aktuell EINGELOGGTE Kommandant in diesem Browser-Tab, `null` = abgemeldet (siehe Startseite). */
   readonly player: Signal<Player | null>;
   readonly wallet: Signal<Wallet | undefined>;
 
-  /** Legt Kommandant + Heimatkolonie neu an (nur wenn noch kein Player existiert). */
-  startNewGame(commanderName: string, homeworldName: string): Promise<void>;
-  /** Setzt die gesamte lokale Simulation zurück (löscht den Autosave). */
+  // --- Konto / Anmeldung ---------------------------------------------------
+  /**
+   * Alle in der gemeinsamen Galaxie registrierten Kommandanten (für die
+   * Login-Auswahl) – reaktiv, da `registerPlayer` sie zur Laufzeit erweitert.
+   * Beim allerersten Start dieses Browsers wird automatisch genau einer
+   * registriert (aber nicht eingeloggt), siehe `SimulatedGameApiService`.
+   */
+  players(): Signal<Player[]>;
+  /** Meldet den gewählten Kommandanten an. Wechselt dabei weg von einem eventuell zuvor angemeldeten anderen. */
+  login(playerId: Id): Promise<void>;
+  /** Meldet ab, OHNE Daten zu löschen – ein erneutes `login` mit derselben Id setzt exakt dort fort. */
+  logout(): Promise<void>;
+  /**
+   * Registriert einen neuen Kommandanten in der bestehenden, gemeinsamen
+   * Galaxie und loggt ihn direkt ein. Bringt dabei ein komplett neues
+   * Heimatsystem samt Heimatplanet in die Galaxie ein (siehe
+   * `createAdditionalPlayerSeed`) – die Galaxie selbst (NPCs, andere
+   * Kommandanten, Systemmarkt) bleibt unverändert bestehen.
+   */
+  registerPlayer(commanderName: string, homeworldName: string): Promise<void>;
+  /** Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) – danach wieder Startseite mit genau einem neu registrierten Standard-Kommandanten. */
   resetGame(): Promise<void>;
 
   // --- Katalog (statisch, synchron) --------------------------------------
@@ -42,6 +61,8 @@ export interface GameApi {
   colonies(): Signal<Colony[]>;
   colony(id: Id): Signal<Colony | undefined>;
   colonyStats(id: Id): Signal<PlanetStats | undefined>;
+  /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, kein Snapshot-Feld. */
+  consumptionCoverage(colonyId: Id): Signal<Record<Id, number>>;
   planet(id: Id): Signal<Planet | undefined>;
   planetsInSystem(systemId: Id): Signal<Planet[]>;
   colonizePlanet(planetId: Id): Promise<Colony>;
@@ -59,22 +80,25 @@ export interface GameApi {
   /** 0..1: wie viel des Elerium-Bedarfs des Energienetzes zuletzt gedeckt war (1 = voll versorgt, kein Energienetz = 1). */
   powerCoverage(colonyId: Id): Signal<number>;
 
-  // --- Produktion -----------------------------------------------------------
+  // --- Produktion (sequentielle Warteschlange, siehe Konzeption/Umsetzungskonzept/
+  //     10_Sequentielle_Produktionsauftraege_und_Ereignissystem.md) ------------
   warehouse(colonyId: Id): Signal<WarehouseEntry[]>;
   specializations(colonyId: Id): Signal<Specialization[]>;
   productionQueue(colonyId: Id): Signal<ProductionQueueEntry[]>;
-  queueProduction(colonyId: Id, productTypeId: Id, quantity: number): Promise<void>;
-  cancelProduction(colonyId: Id, entryId: Id): Promise<void>;
-  /** Dauerproduktion je Kolonie – siehe `setAutoProductionTarget`. */
-  autoProductionOrders(colonyId: Id): Signal<AutoProductionOrder[]>;
-  /** Dieselben Daten, gefiltert nach Produkt statt Kolonie – für die Kolonie-Auswahl beim Starten. */
-  autoProductionOrdersForProduct(productTypeId: Id): Signal<AutoProductionOrder[]>;
   /**
-   * Legt einen Dauerauftrag an oder ändert dessen Ziel-Lagerbestand, falls bereits vorhanden.
-   * `localPrice` > 0 pflegt automatisch eine einzelne Verkaufsorder am Systemmarkt (0 = keine).
+   * Reiht einen sequentiellen Auftrag ein (pro Kolonie läuft immer nur
+   * höchstens ein Auftrag gleichzeitig). `autoProduceMissing` löst die
+   * komplette Produktkette einmalig vorausberechnet auf (§2 im Dokument
+   * oben); ohne dieses Flag muss der DIREKTE Rezept-Bedarf bereits im Lager
+   * liegen, sonst hält die Warteschlange an (`status: 'stopped'`, siehe
+   * `resumeProduction`). `requeueOnComplete` reiht denselben Auftrag nach
+   * Fertigstellung automatisch ans Ende der Warteschlange neu ein.
    */
-  setAutoProductionTarget(colonyId: Id, productTypeId: Id, maxStock: number, localPrice?: number): Promise<void>;
-  cancelAutoProductionTarget(colonyId: Id, productTypeId: Id): Promise<void>;
+  queueProduction(colonyId: Id, productTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
+  /** "Fortsetzen"-Button: prüft einen angehaltenen Auftrag erneut und startet ihn, falls jetzt ausführbar. */
+  resumeProduction(colonyId: Id, entryId: Id): Promise<void>;
+  /** Bei laufendem Auftrag anteilige Gutschrift nach verstrichener Zeit (abgerundet je Schritt), siehe Dokument §4. */
+  cancelProduction(colonyId: Id, entryId: Id): Promise<void>;
 
   // --- Bevölkerung / Geld -----------------------------------------------------
   population(colonyId: Id): Signal<Population | undefined>;
@@ -86,13 +110,15 @@ export interface GameApi {
   // --- Flotten ------------------------------------------------------------
   fleets(): Signal<Fleet[]>;
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]>;
-  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number): Promise<void>;
+  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
+  resumeShipOrder(colonyId: Id, entryId: Id): Promise<void>;
   cancelShipOrder(colonyId: Id, entryId: Id): Promise<void>;
 
   // --- Bodentruppen -------------------------------------------------------
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined>;
   recruitmentQueue(colonyId: Id): Signal<RecruitmentQueueEntry[]>;
-  queueRecruitment(colonyId: Id, unitProductTypeId: Id, count: number): Promise<void>;
+  queueRecruitment(colonyId: Id, unitProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
+  resumeRecruitment(colonyId: Id, entryId: Id): Promise<void>;
   cancelRecruitment(colonyId: Id, entryId: Id): Promise<void>;
 
   // --- Gateway / Galaxie ----------------------------------------------------
@@ -106,9 +132,20 @@ export interface GameApi {
 
   // --- Handel ---------------------------------------------------------------
   sellOrders(systemId: Id): Signal<SellOrder[]>;
-  createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void>;
+  /**
+   * `autoRelist: true` ("Anbieten" im Lagerbestand) legt beim vollständigen
+   * Verkauf im selben Vorgang automatisch eine neue Order mit identischer
+   * Menge/Preis an, siehe Dokument §6.
+   */
+  createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
   cancelSellOrder(orderId: Id): Promise<void>;
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
+
+  // --- Benachrichtigungen (siehe Dokument §5) -------------------------------
+  notifications(): Signal<GameNotification[]>;
+  unreadNotificationCount(): Signal<number>;
+  markNotificationRead(id: Id): Promise<void>;
+  markAllNotificationsRead(): Promise<void>;
 
   // --- NPCs / Universums-Statistik ------------------------------------------
   /** Alle NPC-"Spieler" der Galaxie (nicht-kriegerisch, siehe Npc-Modell). */

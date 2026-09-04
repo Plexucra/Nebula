@@ -12,11 +12,11 @@
 
     <label>
       Kommandant
-      <input type="text" name="commander" [(ngModel)]="commanderName" maxlength="28" required autocomplete="off" />
+      <input type="text" name="commander" [(ngModel)]="commanderName" maxlength="28" required autocomplete="off" placeholder="Name eingeben" />
     </label>
     <label>
       Heimatkolonie
-      <input type="text" name="homeworld" [(ngModel)]="homeworldName" maxlength="28" required autocomplete="off" />
+      <input type="text" name="homeworld" [(ngModel)]="homeworldName" maxlength="28" required autocomplete="off" placeholder="Name eingeben" />
     </label>
 
     @if (error()) {
@@ -27,7 +27,9 @@
       {{ busy() ? 'Initialisiere Heimatsystem…' : 'Herrschaft antreten' }}
     </button>
 
-    <p class="hint">Ihr Heimatsystem ist zunächst isoliert und unauffindbar. Alles, was Sie hier
-      aufbauen, wird lokal in diesem Browser simuliert.</p>
+    <p class="hint">Ein komplett neues Heimatsystem entsteht für Sie in der bestehenden Galaxie – zunächst
+      isoliert und unauffindbar für alle anderen Kommandanten.</p>
+
+    <button type="button" class="ghost small back-link" (click)="back.emit()">← Zurück</button>
   </form>
 </div>

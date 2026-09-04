@@ -1,4 +1,5 @@
 import { Id } from './common.model';
+import { ChainPlan, ProductionQueueStatus } from './production.model';
 
 export type ShipClass = 'Corvette' | 'Destroyer' | 'Cruiser' | 'Freighter' | 'Carrier' | 'TroopTransport';
 
@@ -38,12 +39,17 @@ export interface Fleet {
   ships: FleetShipGroup[];
 }
 
+/** Sequentieller Werft-Auftrag, siehe `ProductionQueueEntry` und Konzeption/Umsetzungskonzept/10_...md. */
 export interface ShipyardQueueEntry {
   id: Id;
   colonyId: Id;
   shipProductTypeId: Id;
   quantity: number;
-  producedSoFar: number;
-  startedAt: number;
-  nextUnitCompletesAt: number;
+  autoProduceMissing: boolean;
+  requeueOnComplete: boolean;
+  status: ProductionQueueStatus;
+  stoppedReasonCode: number | null;
+  plan: ChainPlan;
+  startedAt: number | null;
+  endsAt: number | null;
 }

@@ -37,15 +37,30 @@ export class FleetsOverviewComponent {
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;
   }
-  protected shipClass(id: Id): string {
-    return this.api.shipTypes().find(s => s.productTypeId === id)?.class ?? '';
+
+  selection: Record<Id, { productId: Id; qty: number; autoProduceMissing: boolean; requeueOnComplete: boolean }> = {};
+
+  protected selFor(colony: Colony): { productId: Id; qty: number; autoProduceMissing: boolean; requeueOnComplete: boolean } {
+    if (!this.selection[colony.id]) {
+      this.selection[colony.id] = { productId: this.shipTypes[0]?.id ?? '', qty: 1, autoProduceMissing: true, requeueOnComplete: false };
+    }
+    return this.selection[colony.id];
   }
 
-  selection: Record<Id, { productId: Id; qty: number }> = {};
+  protected queueProgressPct(entry: { status: string; startedAt: number | null; endsAt: number | null }): number {
+    if (entry.status !== 'running' || entry.startedAt === null || entry.endsAt === null) return 0;
+    const total = entry.endsAt - entry.startedAt;
+    if (total <= 0) return 100;
+    return Math.min(100, Math.max(0, ((this.clock.now() - entry.startedAt) / total) * 100));
+  }
 
-  protected selFor(colony: Colony): { productId: Id; qty: number } {
-    if (!this.selection[colony.id]) this.selection[colony.id] = { productId: this.shipTypes[0]?.id ?? '', qty: 1 };
-    return this.selection[colony.id];
+  protected queueStatusLabel(entry: { status: string }): string {
+    switch (entry.status) {
+      case 'running': return 'läuft';
+      case 'stopped': return 'gestoppt';
+      case 'done': return 'fertig';
+      default: return 'wartet';
+    }
   }
 
   protected async queueShip(colony: Colony): Promise<void> {
@@ -53,12 +68,16 @@ export class FleetsOverviewComponent {
     this.error.set(null);
     this.busy.set(colony.id);
     try {
-      await this.api.queueShip(colony.id, sel.productId, sel.qty);
+      await this.api.queueShip(colony.id, sel.productId, sel.qty, sel.autoProduceMissing, sel.requeueOnComplete);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Auftrag fehlgeschlagen.');
     } finally {
       this.busy.set(null);
     }
+  }
+
+  protected async resumeOrder(colonyId: Id, entryId: Id): Promise<void> {
+    await this.api.resumeShipOrder(colonyId, entryId);
   }
 
   protected async cancelOrder(colonyId: Id, entryId: Id): Promise<void> {

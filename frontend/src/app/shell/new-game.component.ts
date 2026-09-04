@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../core/sim/game-api.token';
 
@@ -13,8 +13,10 @@ import { GAME_API } from '../core/sim/game-api.token';
 export class NewGameComponent {
   private readonly api = inject(GAME_API);
 
-  protected commanderName = 'Kommandant Vega';
-  protected homeworldName = 'Neu-Terra';
+  @Output() readonly back = new EventEmitter<void>();
+
+  protected commanderName = '';
+  protected homeworldName = '';
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -22,7 +24,7 @@ export class NewGameComponent {
     this.error.set(null);
     this.busy.set(true);
     try {
-      await this.api.startNewGame(this.commanderName, this.homeworldName);
+      await this.api.registerPlayer(this.commanderName, this.homeworldName);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Unbekannter Fehler.');
     } finally {

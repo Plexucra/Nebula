@@ -41,39 +41,13 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  align-items: center;
+  text-align: center;
 
   h2 {
     margin: 2px 0 10px;
     font-size: 20px;
   }
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-
-  input { width: 100%; }
-}
-
-.error {
-  color: var(--danger);
-  font-size: 12.5px;
-  border: 1px solid rgba(255, 77, 94, 0.35);
-  background: rgba(255, 77, 94, 0.08);
-  border-radius: var(--radius);
-  padding: 8px 10px;
-}
-
-button.primary {
-  margin-top: 6px;
-  padding: 12px;
-  font-size: 13px;
 }
 
 .hint {
@@ -83,4 +57,12 @@ button.primary {
   line-height: 1.5;
 }
 
-.back-link { align-self: flex-start; margin-top: 4px; }
+.start-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+
+  button { width: 100%; padding: 12px; font-size: 13px; }
+}

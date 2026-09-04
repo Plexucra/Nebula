@@ -38,6 +38,15 @@ export interface ProductType {
   massKg: number;
   /** Volumen pro Einheit in m³ – künftig neben `massKg` begrenzender Faktor für Frachterladung. */
   volumeM3: number;
+  /**
+   * Eleriumbedarf pro Charge in Gramm Rohäquivalent (Prozessenergie plus im
+   * Produkt gebundenes Elerium), siehe `Nebula_Flache_Produktliste_...md`
+   * §1.1. Reiner Datenwert – wird aktuell NICHT als Produktionsvoraussetzung
+   * geprüft oder verbraucht (wie bei `category: 'Facility'` eine bewusste
+   * Lücke für einen späteren Schritt; einzige aktive Elerium-Verbrauchsstelle
+   * bleibt der PowerUpkeepJob des Energienetzes).
+   */
+  eleriumG: number;
   /** Kurzbeschreibung für UI-Tooltips. */
   description: string;
 }

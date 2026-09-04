@@ -172,93 +172,102 @@
     }
 
     @case ('produktion') {
-      <div class="grid-2">
-        <div class="panel corner-frame">
-          <div class="panel-header"><h2>Neuer Fertigungsauftrag</h2></div>
-          <div class="panel-body form-row">
+      <div class="panel corner-frame">
+        <div class="panel-header">
+          <h2>Produktion</h2>
+          <span class="hint">Pro Kolonie läuft immer nur ein Auftrag gleichzeitig – neue Aufträge warten in der Liste. „Nicht vorhandene Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette (Zeit + Rohstoffe); ist das Häkchen nicht gesetzt und die direkten Vorprodukte fehlen, hält die Warteschlange an und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung wieder ans Ende der Liste.</span>
+        </div>
+        @if (buildingLevel('b_industry') < 1) { <p class="hint panel-hint">Benötigt einen Industriekomplex.</p> }
+        @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Elerium-Zellen versorgt ist.</p> }
+
+        <div class="panel-body">
+          <span class="eyebrow">Neuer Auftrag</span>
+          <div class="form-row">
             <select [(ngModel)]="newProductionProductId">
               @for (p of productTypes; track p.id) {
                 <option [value]="p.id">{{ p.name }} (T{{ p.tier }}) — Spez. Stufe {{ specLevel(p.id) }}</option>
               }
             </select>
             <input type="number" min="1" [(ngModel)]="newProductionQty" />
-            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1">Auftrag starten</button>
+            <label class="checkbox-inline" title="Fehlende Vorprodukte werden vorausberechnet in denselben Auftrag mit eingerechnet, statt die Warteschlange bei Mangel anzuhalten.">
+              <input type="checkbox" [(ngModel)]="newProductionAutoMissing" /> Nicht vorhandene Vorprodukte automatisch mitproduzieren
+            </label>
+            <label class="checkbox-inline" title="Reiht denselben Auftrag nach Fertigstellung automatisch erneut ans Ende der Warteschlange ein.">
+              <input type="checkbox" [(ngModel)]="newProductionRequeue" /> Nach Erfolg erneut einreihen
+            </label>
+            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1">Auftrag einreihen</button>
           </div>
-          @if (buildingLevel('b_industry') < 1) { <p class="hint">Benötigt einen Industriekomplex.</p> }
-          @if (powerCoverage() < 0.999) { <p class="hint blackout">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Elerium-Zellen versorgt ist.</p> }
 
-          <div class="panel-body queue-list">
+          <div class="queue-list">
             @for (entry of productionQueue(); track entry.id) {
-              <div class="queue-row">
-                <span>{{ productName(entry.productTypeId) }}</span>
-                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.quantity) * 100"></span></div>
-                <span class="mono">{{ entry.producedSoFar }}/{{ entry.quantity }}</span>
-                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
-                <button class="ghost small danger" (click)="cancelProduction(entry.id)">Abbrechen</button>
-              </div>
-            } @empty { <p class="empty-hint">Keine laufenden Aufträge.</p> }
-          </div>
-        </div>
-
-        <div class="panel corner-frame">
-          <div class="panel-header"><h2>Lager &amp; Spezialisierung</h2></div>
-          <div class="panel-body">
-            <span class="eyebrow">Lagerbestand</span>
-            <div class="wh-list">
-              @for (w of warehouse(); track w.productTypeId) {
-                <div class="wh-row"><span>{{ productName(w.productTypeId) }}</span><span class="mono">{{ w.quantity | number:'1.0-0' }}</span></div>
-              } @empty { <p class="empty-hint">Leer.</p> }
-            </div>
-            <div class="divider"></div>
-            <span class="eyebrow">Spezialisierung</span>
-            <div class="wh-list">
-              @for (s of specializations(); track s.productTypeId) {
-                <div class="spec-row">
-                  <span>{{ productName(s.productTypeId) }}</span>
-                  <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
-                  <span class="mono">Stufe {{ s.currentLevel }}</span>
+              <div class="queue-entry" [class.stopped]="entry.status === 'stopped'">
+                <div class="queue-row" (click)="toggleQueueEntry(entry.id)">
+                  <span>{{ productName(entry.productTypeId) }} × {{ entry.quantity }}</span>
+                  <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
+                  <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
+                  <span class="mono">
+                    @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
+                    @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
+                  </span>
+                  @if (entry.status === 'stopped') {
+                    <button class="ghost small" (click)="resumeProduction(entry.id); $event.stopPropagation()">Fortsetzen</button>
+                  }
+                  <button class="ghost small danger" (click)="cancelProduction(entry.id); $event.stopPropagation()">Abbrechen</button>
                 </div>
-              } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
-            </div>
+                @if (expandedQueueEntry() === entry.id) {
+                  <div class="chain-plan">
+                    <span class="hint">Gesamtdauer: {{ entry.plan.totalHours | number:'1.1-1' }} h</span>
+                    @for (step of entry.plan.steps; track step.productTypeId) {
+                      <div class="chain-step">
+                        <span>{{ productName(step.productTypeId) }}</span>
+                        <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
+                        <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
+                        <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
+                        <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Keine Aufträge in der Warteschlange.</p> }
           </div>
         </div>
       </div>
 
       <div class="panel corner-frame">
-        <div class="panel-header">
-          <h2>Dauerproduktion</h2>
-          <span class="hint">Produziert automatisch bis zum Ziel-Lagerbestand nach, solange Ausgangsstoffe vorhanden sind – pausiert bei Mangel, läuft bei Nachschub ohne erneute Bestätigung weiter. Ein lokaler Preis &gt; 0 pflegt zusätzlich eine einzelne Verkaufsorder am Systemmarkt (max. 50 Einheiten, der Rest bleibt im Lager).</span>
-        </div>
-        <div class="panel-body form-row">
-          <select [(ngModel)]="newAutoProductId">
-            @for (p of productTypes; track p.id) {
-              <option [value]="p.id">{{ p.name }} (T{{ p.tier }})</option>
-            }
-          </select>
-          <input type="number" min="1" placeholder="Ziel-Lagerbestand" [(ngModel)]="newAutoMaxStock" />
-          <input type="number" min="0" step="0.5" placeholder="Lokaler Preis (0 = kein Verkauf)" [(ngModel)]="newAutoLocalPrice" />
-          <button class="primary small" (click)="submitAutoProduction()" [disabled]="busy() === 'auto' || buildingLevel('b_industry') < 1">Dauerauftrag starten</button>
-        </div>
-        @if (buildingLevel('b_industry') < 1) { <p class="hint">Benötigt einen Industriekomplex.</p> }
-
-        <div class="panel-body queue-list">
-          @for (order of autoProductionOrders(); track order.id) {
-            <div class="queue-row auto-queue-row">
-              <span>{{ productName(order.productTypeId) }}</span>
-              <span class="mono">Lager: {{ stockOf(order.productTypeId) }}</span>
-              <input type="number" min="1" class="mono" title="Ziel-Lagerbestand"
-                [ngModel]="autoDraft[order.productTypeId] ?? order.maxStock"
-                (ngModelChange)="autoDraft[order.productTypeId] = $event" />
-              <input type="number" min="0" step="0.5" class="mono" title="Lokaler Preis"
-                [ngModel]="autoPriceDraft[order.productTypeId] ?? order.localPrice"
-                (ngModelChange)="autoPriceDraft[order.productTypeId] = $event" />
-              <button class="ghost small" (click)="updateAutoProduction(order.productTypeId, autoDraft[order.productTypeId] ?? order.maxStock, autoPriceDraft[order.productTypeId] ?? order.localPrice)" [disabled]="busy() === 'auto:' + order.productTypeId">Ändern</button>
-              <button class="ghost small danger" (click)="cancelAutoProduction(order.productTypeId)" [disabled]="busy() === 'auto:' + order.productTypeId">Stoppen</button>
-              @if (order.localPrice > 0) {
-                <span class="tag good">Verkauf zu {{ order.localPrice }}/Einheit</span>
+        <div class="panel-header"><h2>Lagerbestand</h2></div>
+        <div class="panel-body">
+          <div class="wh-list">
+            @for (w of warehouse(); track w.productTypeId) {
+              <div class="wh-row">
+                <span>{{ productName(w.productTypeId) }}</span>
+                <span class="mono">{{ w.quantity | number:'1.0-0' }}</span>
+                <button class="ghost small" (click)="toggleStockSale(w.productTypeId)">Anbieten</button>
+              </div>
+              @if (stockSaleOpen() === w.productTypeId) {
+                <div class="form-row stock-sale-form">
+                  <input type="number" min="1" [max]="w.quantity" placeholder="Menge" [(ngModel)]="stockSaleDraftQty[w.productTypeId]" />
+                  <input type="number" min="0" step="0.5" placeholder="Preis/Einheit" [(ngModel)]="stockSaleDraftPrice[w.productTypeId]" />
+                  <button class="primary small" (click)="submitStockSale(w.productTypeId)" [disabled]="busy() === ('stocksale:' + w.productTypeId)">Verkaufsorder einstellen</button>
+                </div>
               }
-            </div>
-          } @empty { <p class="empty-hint">Keine Dauerproduktion aktiv.</p> }
+            } @empty { <p class="empty-hint">Leer.</p> }
+          </div>
+        </div>
+      </div>
+
+      <div class="panel corner-frame">
+        <div class="panel-header"><h2>Spezialisierung</h2></div>
+        <div class="panel-body">
+          <div class="wh-list">
+            @for (s of specializations(); track s.productTypeId) {
+              <div class="spec-row">
+                <span>{{ productName(s.productTypeId) }}</span>
+                <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
+                <span class="mono">Stufe {{ s.currentLevel }}</span>
+              </div>
+            } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
+          </div>
         </div>
       </div>
     }
@@ -274,6 +283,12 @@
               }
             </select>
             <input type="number" min="1" [(ngModel)]="newUnitQty" />
+            <label class="checkbox-inline" title="Fehlende Vorprodukte werden vorausberechnet in denselben Auftrag mit eingerechnet, statt die Warteschlange bei Mangel anzuhalten.">
+              <input type="checkbox" [(ngModel)]="newUnitAutoMissing" /> Vorprodukte automatisch mitproduzieren
+            </label>
+            <label class="checkbox-inline" title="Reiht denselben Auftrag nach Fertigstellung automatisch erneut ans Ende der Warteschlange ein.">
+              <input type="checkbox" [(ngModel)]="newUnitRequeue" /> Nach Erfolg erneut einreihen
+            </label>
             <button class="primary small" (click)="submitRecruitment()" [disabled]="busy() === 'recruit' || buildingLevel('b_academy') < 1 || (stats()?.loyaltyPct ?? 0) <= 50">Rekrutieren</button>
           </div>
           @if (buildingLevel('b_academy') < 1) { <p class="hint">Benötigt ein Ausbildungszentrum.</p> }
@@ -282,10 +297,16 @@
           <div class="panel-body queue-list">
             @for (entry of recruitmentQueue(); track entry.id) {
               <div class="queue-row">
-                <span>{{ productName(entry.unitProductTypeId) }}</span>
-                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.count) * 100"></span></div>
-                <span class="mono">{{ entry.producedSoFar }}/{{ entry.count }}</span>
-                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
+                <span>{{ productName(entry.unitProductTypeId) }} × {{ entry.quantity }}</span>
+                <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
+                <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
+                <span class="mono">
+                  @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
+                  @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
+                </span>
+                @if (entry.status === 'stopped') {
+                  <button class="ghost small" (click)="resumeRecruitment(entry.id)">Fortsetzen</button>
+                }
                 <button class="ghost small danger" (click)="cancelRecruitment(entry.id)">Abbrechen</button>
               </div>
             } @empty { <p class="empty-hint">Keine laufende Rekrutierung.</p> }

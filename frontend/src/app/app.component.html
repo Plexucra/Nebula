@@ -2,5 +2,9 @@
 @if (player()) {
   <app-shell />
 } @else {
-  <app-new-game />
+  @switch (authView()) {
+    @case ('login') { <app-login (back)="showStart()" /> }
+    @case ('register') { <app-new-game (back)="showStart()" /> }
+    @default { <app-start (chooseLogin)="showLogin()" (chooseRegister)="showRegister()" /> }
+  }
 }

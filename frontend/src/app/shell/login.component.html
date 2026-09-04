@@ -1,0 +1,35 @@
+<div class="stage">
+  <div class="wordmark">
+    <span class="eyebrow">Persistentes Strategie-Universum</span>
+    <h1>NEBULA</h1>
+    <p class="tagline">Ungleich verteilte Ressourcen. Regionale Spezialisierung. Handel, Diplomatie und Krieg
+      um die Kontrolle der Gateways.</p>
+  </div>
+
+  <div class="panel corner-frame card">
+    <div class="eyebrow">Anmeldung</div>
+    <h2>Kommandant wählen</h2>
+
+    @if (error()) {
+      <div class="error">{{ error() }}</div>
+    }
+
+    <div class="user-list">
+      @for (p of players(); track p.id) {
+        <button
+          type="button"
+          class="user-row"
+          [disabled]="busy() !== null"
+          (click)="selectPlayer(p.id)"
+        >
+          <span class="user-name">{{ p.name }}</span>
+          <span class="user-action">{{ busy() === p.id ? 'Meldet an…' : 'Anmelden' }}</span>
+        </button>
+      } @empty {
+        <p class="empty-hint">Noch kein Kommandant registriert.</p>
+      }
+    </div>
+
+    <button type="button" class="ghost small back-link" (click)="back.emit()">← Zurück</button>
+  </div>
+</div>

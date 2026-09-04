@@ -39,7 +39,6 @@
   color: var(--text-dim);
   letter-spacing: 0.04em;
 }
-
 .status-strip {
   display: flex;
   align-items: center;
@@ -68,6 +67,73 @@
     &:hover { background: var(--bg-inset); }
   }
 }
+
+.notification-bell-wrap { position: relative; }
+.notification-bell { position: relative; font-size: 15px; }
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: var(--bg-void);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+.notification-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+  overflow: hidden;
+}
+.notification-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.notification-list {
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+
+  &:hover { background: var(--bg-inset); }
+  &.unread { background: rgba(62, 226, 255, 0.05); }
+  &.Warnung .notification-icon { color: var(--amber); }
+  &.Problem .notification-icon { color: var(--danger); }
+}
+.notification-icon { flex: 0 0 auto; font-size: 14px; }
+.notification-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.notification-message { font-size: 12px; color: var(--text-hi); }
+.notification-meta { font-size: 10.5px; color: var(--text-faint); font-family: var(--font-mono); }
 
 .body {
   flex: 1 1 auto;

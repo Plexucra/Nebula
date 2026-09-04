@@ -16,7 +16,33 @@
           {{ gatewayActive() ? 'Aktiv' : (gateway()?.state === 'Activating' ? 'Aktivierung läuft' : gateway()?.state === 'Discovered' ? 'Entdeckt' : 'Unentdeckt') }}
         </span>
       </div>
+      <div class="notification-bell-wrap">
+        <button class="ghost small notification-bell" type="button" (click)="toggleNotificationPanel()" title="Benachrichtigungen">
+          🔔
+          @if (unreadNotificationCount() > 0) { <span class="notification-badge">{{ unreadNotificationCount() }}</span> }
+        </button>
+        @if (notificationPanelOpen()) {
+          <div class="notification-panel">
+            <div class="notification-panel-head">
+              <span>Benachrichtigungen</span>
+              <button class="ghost small" type="button" (click)="markAllRead()" [disabled]="unreadNotificationCount() === 0">Alle gelesen</button>
+            </div>
+            <div class="notification-list">
+              @for (n of notifications(); track n.id) {
+                <div class="notification-row" [class]="n.type" [class.unread]="!n.read" (click)="markRead(n.id)">
+                  <span class="notification-icon">{{ notificationIcon(n.type) }}</span>
+                  <div class="notification-body">
+                    <span class="notification-message">{{ n.message }}</span>
+                    <span class="notification-meta">#{{ n.code }} · {{ formatAge(n.createdAt) }}</span>
+                  </div>
+                </div>
+              } @empty { <p class="empty-hint">Keine Benachrichtigungen.</p> }
+            </div>
+          </div>
+        }
+      </div>
       <button class="ghost small" type="button" (click)="resetGame()" title="Simulation zurücksetzen">⟲ Reset</button>
+      <button class="ghost small" type="button" (click)="logout()" title="Abmelden – Spielstand bleibt erhalten">⏻ Abmelden</button>
     </div>
   </header>
 

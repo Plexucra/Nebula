@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { GAME_API } from '../core/sim/game-api.token';
+import { Id, NotificationType } from '../core/models';
+import { UiClockService } from '../core/ui/ui-clock.service';
 
 interface NavItem {
   path: string;
@@ -20,6 +22,7 @@ interface NavItem {
 })
 export class AppShellComponent {
   protected readonly api = inject(GAME_API);
+  protected readonly clock = inject(UiClockService);
 
   protected readonly player = this.api.player;
   protected readonly wallet = this.api.wallet;
@@ -27,6 +30,39 @@ export class AppShellComponent {
   private readonly homeSystemId = this.api.player()?.homeSystemId ?? '';
   protected readonly gateway = this.api.gateway(this.homeSystemId);
   protected readonly gatewayActive = () => this.gateway()?.state === 'Active';
+
+  protected readonly notifications = this.api.notifications();
+  protected readonly unreadNotificationCount = this.api.unreadNotificationCount();
+  protected readonly notificationPanelOpen = signal(false);
+
+  protected toggleNotificationPanel(): void {
+    this.notificationPanelOpen.update(v => !v);
+  }
+
+  protected async markRead(id: Id): Promise<void> {
+    await this.api.markNotificationRead(id);
+  }
+
+  protected async markAllRead(): Promise<void> {
+    await this.api.markAllNotificationsRead();
+  }
+
+  protected notificationIcon(type: NotificationType): string {
+    switch (type) {
+      case 'Problem': return '⛔';
+      case 'Warnung': return '⚠';
+      default: return 'ℹ';
+    }
+  }
+
+  protected formatAge(createdAt: number): string {
+    const seconds = Math.max(0, Math.floor((this.clock.now() - createdAt) / 1000));
+    if (seconds < 60) return `vor ${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `vor ${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    return `vor ${hours}h`;
+  }
 
   protected readonly navItems: NavItem[] = [
     { path: '/planeten', label: 'Planeten', icon: '◉' },
@@ -44,8 +80,14 @@ export class AppShellComponent {
     return !!item.lockedHint && !this.gatewayActive();
   }
 
+  /** Löscht die GESAMTE gemeinsame Galaxie – auch die aller anderen Kommandanten, nicht nur den eigenen Fortschritt. */
   protected async resetGame(): Promise<void> {
-    if (!confirm('Simulation wirklich zurücksetzen? Der gesamte Fortschritt geht verloren.')) return;
+    if (!confirm('Die komplette Galaxie wirklich zurücksetzen? Der Fortschritt ALLER Kommandanten geht unwiderruflich verloren.')) return;
     await this.api.resetGame();
+  }
+
+  /** Meldet nur ab – der Spielstand bleibt erhalten und ist beim nächsten Login desselben Kommandanten wieder da. */
+  protected async logout(): Promise<void> {
+    await this.api.logout();
   }
 }

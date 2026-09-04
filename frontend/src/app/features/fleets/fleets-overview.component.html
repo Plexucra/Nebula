@@ -25,16 +25,28 @@
               }
             </select>
             <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
+            <label class="checkbox-inline">
+              <input type="checkbox" [(ngModel)]="selFor(colony).autoProduceMissing" /> Vorprodukte automatisch mitproduzieren
+            </label>
+            <label class="checkbox-inline">
+              <input type="checkbox" [(ngModel)]="selFor(colony).requeueOnComplete" /> Nach Erfolg erneut einreihen
+            </label>
             <button class="primary small" [disabled]="busy() === colony.id" (click)="queueShip(colony)">Bauen</button>
           </div>
 
           <div class="queue-list">
             @for (entry of shipyardQueue(colony.id); track entry.id) {
               <div class="queue-row">
-                <span>{{ productName(entry.shipProductTypeId) }}</span>
-                <div class="stat-bar"><span [style.width.%]="(entry.producedSoFar / entry.quantity) * 100"></span></div>
-                <span class="mono">{{ entry.producedSoFar }}/{{ entry.quantity }}</span>
-                <span class="mono">{{ countdown(entry.nextUnitCompletesAt - clock.now()) }}</span>
+                <span>{{ productName(entry.shipProductTypeId) }} × {{ entry.quantity }}</span>
+                <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
+                <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
+                <span class="mono">
+                  @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
+                  @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
+                </span>
+                @if (entry.status === 'stopped') {
+                  <button class="ghost small" (click)="resumeOrder(colony.id, entry.id)">Fortsetzen</button>
+                }
                 <button class="ghost small danger" (click)="cancelOrder(colony.id, entry.id)">Abbrechen</button>
               </div>
             } @empty { <p class="empty-hint">Keine Bauaufträge.</p> }
@@ -50,7 +62,7 @@
             <span class="tag">{{ fleet.status === 'Stationed' ? 'Stationiert' : 'Im Bau' }}</span>
             <div class="ship-composition">
               @for (g of fleet.ships; track g.shipProductTypeId) {
-                <span class="ship-chip">{{ shipClass(g.shipProductTypeId) }} × {{ g.quantity }}</span>
+                <span class="ship-chip">{{ productName(g.shipProductTypeId) }} × {{ g.quantity }}</span>
               }
             </div>
             <div class="fleet-actions">

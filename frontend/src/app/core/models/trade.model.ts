@@ -14,6 +14,14 @@ export interface SellOrder {
   remainingQuantity: number;
   pricePerUnit: number;
   createdAt: number;
+  /**
+   * true = sobald diese Order durch einen Kauf vollständig verkauft ist
+   * (`remainingQuantity` erreicht 0), wird im selben Vorgang eine neue Order
+   * mit identischer `quantity`/`pricePerUnit` angelegt (siehe "Anbieten" im
+   * Lagerbestand, Konzeption/Umsetzungskonzept/10_...md, §6). Von Hand über
+   * `createSellOrder` erzeugte Einzel-Orders lassen dieses Feld `false`.
+   */
+  autoRelist: boolean;
 }
 
 export interface BuyOrder {

@@ -35,7 +35,6 @@ export class ColonyDetailComponent {
   protected readonly warehouse = this.api.warehouse(this.colonyId);
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
-  protected readonly autoProductionOrders = this.api.autoProductionOrders(this.colonyId);
   protected readonly groundForces = this.api.groundForces(this.colonyId);
   protected readonly recruitmentQueue = this.api.recruitmentQueue(this.colonyId);
   protected readonly sellOrdersAll = this.api.sellOrders(this.colony()?.systemId ?? '');
@@ -53,16 +52,16 @@ export class ColonyDetailComponent {
 
   protected newProductionProductId = this.productTypes[0]?.id ?? '';
   protected newProductionQty = 10;
-  protected newAutoProductId = this.productTypes[0]?.id ?? '';
-  protected newAutoMaxStock = 50;
-  protected newAutoLocalPrice = 0;
-  protected readonly autoDraft: Partial<Record<Id, number>> = {};
-  protected readonly autoPriceDraft: Partial<Record<Id, number>> = {};
+  protected newProductionAutoMissing = true;
+  protected newProductionRequeue = false;
   protected newUnitProductId = this.groundUnitTypes[0]?.id ?? '';
   protected newUnitQty = 5;
+  protected newUnitAutoMissing = true;
+  protected newUnitRequeue = false;
   protected newOrderProductId = '';
   protected newOrderQty = 10;
   protected newOrderPrice = 5;
+  protected readonly expandedQueueEntry = signal<Id | null>(null);
 
   protected countdown = formatCountdown;
 
@@ -107,9 +106,9 @@ export class ColonyDetailComponent {
     return s ? F.growthConditionFactor(s.standardOfLivingPct, s.securityPct) * 100 : 0;
   }
 
-  protected productName(id: Id): string {
+  protected readonly productName = (id: Id): string => {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;
-  }
+  };
 
   protected planetTypeLabel(type: PlanetType): string {
     return planetTypeLabel(type);
@@ -148,28 +147,68 @@ export class ColonyDetailComponent {
   }
 
   protected submitProduction(): void {
-    void this.run('production', () => this.api.queueProduction(this.colonyId, this.newProductionProductId, this.newProductionQty));
+    void this.run('production', () => this.api.queueProduction(
+      this.colonyId, this.newProductionProductId, this.newProductionQty,
+      this.newProductionAutoMissing, this.newProductionRequeue));
+  }
+  protected resumeProduction(entryId: Id): void {
+    void this.run(`resumeprod:${entryId}`, () => this.api.resumeProduction(this.colonyId, entryId));
   }
   protected cancelProduction(entryId: Id): void {
     void this.run(`cancelprod:${entryId}`, () => this.api.cancelProduction(this.colonyId, entryId));
   }
 
-  protected stockOf(productTypeId: Id): number {
+  protected readonly stockOf = (productTypeId: Id): number => {
     return this.warehouse().find(w => w.productTypeId === productTypeId)?.quantity ?? 0;
+  };
+
+  protected toggleQueueEntry(entryId: Id): void {
+    this.expandedQueueEntry.update(cur => cur === entryId ? null : entryId);
   }
 
-  protected submitAutoProduction(): void {
-    void this.run('auto', () => this.api.setAutoProductionTarget(this.colonyId, this.newAutoProductId, this.newAutoMaxStock, this.newAutoLocalPrice));
+  protected queueProgressPct(entry: { status: string; startedAt: number | null; endsAt: number | null }): number {
+    if (entry.status !== 'running' || entry.startedAt === null || entry.endsAt === null) return 0;
+    const total = entry.endsAt - entry.startedAt;
+    if (total <= 0) return 100;
+    return Math.min(100, Math.max(0, ((this.clock.now() - entry.startedAt) / total) * 100));
   }
-  protected updateAutoProduction(productTypeId: Id, maxStock: number, localPrice: number): void {
-    void this.run(`auto:${productTypeId}`, () => this.api.setAutoProductionTarget(this.colonyId, productTypeId, maxStock, localPrice));
+
+  protected queueStatusLabel(entry: { status: string }): string {
+    switch (entry.status) {
+      case 'running': return 'läuft';
+      case 'stopped': return 'gestoppt';
+      case 'done': return 'fertig';
+      default: return 'wartet';
+    }
   }
-  protected cancelAutoProduction(productTypeId: Id): void {
-    void this.run(`auto:${productTypeId}`, () => this.api.cancelAutoProductionTarget(this.colonyId, productTypeId));
+
+  protected readonly stockSaleDraftQty: Partial<Record<Id, number>> = {};
+  protected readonly stockSaleDraftPrice: Partial<Record<Id, number>> = {};
+  protected readonly stockSaleOpen = signal<Id | null>(null);
+
+  protected toggleStockSale(productTypeId: Id): void {
+    this.stockSaleOpen.update(cur => cur === productTypeId ? null : productTypeId);
+    if (this.stockSaleDraftQty[productTypeId] === undefined) this.stockSaleDraftQty[productTypeId] = Math.floor(this.stockOf(productTypeId));
+    if (this.stockSaleDraftPrice[productTypeId] === undefined) this.stockSaleDraftPrice[productTypeId] = 5;
+  }
+
+  protected submitStockSale(productTypeId: Id): void {
+    const qty = this.stockSaleDraftQty[productTypeId] ?? 0;
+    const price = this.stockSaleDraftPrice[productTypeId] ?? 0;
+    if (qty <= 0 || price <= 0) return;
+    void this.run(`stocksale:${productTypeId}`, async () => {
+      await this.api.createSellOrder(this.colonyId, productTypeId, qty, price, true);
+      this.stockSaleOpen.set(null);
+    });
   }
 
   protected submitRecruitment(): void {
-    void this.run('recruit', () => this.api.queueRecruitment(this.colonyId, this.newUnitProductId, this.newUnitQty));
+    void this.run('recruit', () => this.api.queueRecruitment(
+      this.colonyId, this.newUnitProductId, this.newUnitQty,
+      this.newUnitAutoMissing, this.newUnitRequeue));
+  }
+  protected resumeRecruitment(entryId: Id): void {
+    void this.run(`resumerecruit:${entryId}`, () => this.api.resumeRecruitment(this.colonyId, entryId));
   }
   protected cancelRecruitment(entryId: Id): void {
     void this.run(`cancelrecruit:${entryId}`, () => this.api.cancelRecruitment(this.colonyId, entryId));

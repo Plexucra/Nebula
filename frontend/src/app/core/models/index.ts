@@ -14,3 +14,4 @@ export * from './trade.model';
 export * from './player.model';
 export * from './npc.model';
 export * from './stats.model';
+export * from './notification.model';

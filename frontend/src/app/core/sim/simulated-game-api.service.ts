@@ -1,8 +1,8 @@
 import { Injectable, Signal, computed, signal } from '@angular/core';
 import {
-  AutoProductionOrder, Building, BuildingType, Colony, ColonyPowerState, Fleet, Gateway, GatewayWeightEntry, GroundForceGroup,
-  GroundUnitTypeDef, Id, Npc, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
-  ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  Building, BuildingType, ChainPlan, ChainPlanStep, Colony, ColonyPowerState, Fleet, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
+  GroundUnitTypeDef, Id, NotificationType, Npc, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
+  ProductType, ProductionQueueEntry, ProductionQueueStatus, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, TransactionReason,
   UniverseStatSnapshot, Wallet, WarehouseEntry,
 } from '../models';
@@ -13,10 +13,22 @@ import { PRODUCT_CATALOG, findProductType } from './data/product-catalog';
 import { BUILDING_CATALOG, findBuildingType } from './data/building-catalog';
 import { SHIP_CATALOG } from './data/ship-catalog';
 import { GROUND_UNIT_CATALOG } from './data/ground-unit-catalog';
-import { createWorldSeed, WorldSeed } from './data/world-seed';
+import { createAdditionalPlayerSeed, createWorldSeed, AdditionalPlayerSeed, WorldSeed } from './data/world-seed';
 import * as F from './engine/formulas';
 
+/**
+ * EIN gemeinsam geteilter Galaxie-Zustand für alle registrierten
+ * Kommandanten (siehe `Player`) – kein Konzept "pro Nutzer eine eigene
+ * Galaxie" mehr: Registrieren fügt der bestehenden Galaxie einen neuen
+ * Kommandanten samt neuem Heimatsystem hinzu (`createAdditionalPlayerSeed`),
+ * NPCs/Systeme/Märkte bleiben dabei unverändert bestehen.
+ */
 const STORAGE_KEY = 'nebula_sim_v1';
+/** Zeiger auf den in diesem Browser-Tab aktuell angemeldeten Kommandanten – Session-Info, kein Teil des Weltzustands. */
+const ACTIVE_PLAYER_STORAGE_KEY = 'nebula_active_player';
+/** Namen des einzigen, beim allerersten Start automatisch registrierten Kommandanten (siehe `bootstrapFreshWorld`). */
+const DEFAULT_COMMANDER_NAME = 'Kommandant Vega';
+const DEFAULT_HOMEWORLD_NAME = 'Neu-Terra';
 const TICK_MS = 1000;
 const TICK_GAME_HOURS = TICK_MS / REAL_MS_PER_GAME_HOUR;
 const SPECIALIZATION_DECAY_GRACE_MS = 16000;
@@ -66,6 +78,18 @@ const NPC_AI_INTERVAL_MS = 5000;
 const STATS_SNAPSHOT_INTERVAL_MS = 10000;
 const STATS_HISTORY_LIMIT = 400;
 /**
+ * Der 1s-Tick verändert Wirtschaftswerte (Löhne, Konsum, Bevölkerung,
+ * Statistik) kontinuierlich – ein voller State-Serialize bei JEDEM Tick wäre
+ * für eine künftige Client/Server-Trennung genau das Muster, das den Server
+ * über einen Websocket mit "ständig großen Tick-Daten" überlasten würde
+ * (siehe Konzeption/Umsetzungskonzept/10_..., Abschnitt Ereignisbasierung).
+ * Diskrete Nutzeraktionen (Gebäude in Auftrag geben, Produktion starten, ...)
+ * persistieren weiterhin sofort über ihre eigenen `persist()`-Aufrufe direkt
+ * an der jeweiligen Kommando-Methode; nur der tickgetriebene Persist wird
+ * auf dieses Intervall gedrosselt (siehe `schedulePersistFromTick`).
+ */
+const TICK_PERSIST_INTERVAL_MS = 4000;
+/**
  * Ausgleichsfonds gegen Geldhortung (Konzeption/Spieldesign/06_..., §8;
  * Mechanik/10_..., §7): täglich zahlen große Spieler-/Kommandanten-Wallets
  * und jede Kolonie eine feste Abgabe in einen galaxieweiten Topf, der im
@@ -76,13 +100,10 @@ const GAME_DAY_MS = hoursToMs(24);
 const WEALTH_TAX_THRESHOLD = 1000;
 const WEALTH_TAX_RATE = 0.001;
 const COLONY_TAX_RATE = 0.01;
-/**
- * Obergrenze für die von der Dauerproduktion automatisch nachgezogene
- * Verkaufsorder (siehe `syncAutoProductionSellOrders`): ohne Deckel würde
- * bei aktivem `localPrice` jede produzierte Einheit sofort in den Verkauf
- * wandern und das lokale Lager nie befüllt.
- */
-const AUTO_SELL_ORDER_CAP = 50;
+/** Platzhalter für einen noch nicht berechneten `ChainPlan` (Auftrag wartet in der Warteschlange), siehe `planChain`. */
+const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true };
+/** Benachrichtigungscode "Auftragswarteschlange mangels Vorprodukten angehalten", siehe Konzeption/Umsetzungskonzept/10_...md, §5. */
+const NOTIFICATION_CODE_QUEUE_STOPPED = 503;
 /**
  * PowerUpkeepJob (Umsetzungskonzept/01_..., §3): laufender
  * Eleriumenergiezelle-Verbrauch des Energienetzes, pro Stufe und
@@ -108,10 +129,11 @@ const BLACKOUT_PRODUCTION_FACTOR = 0.1;
 const BLACKOUT_STAT_FACTOR = 0.5;
 
 interface Snapshot {
-  version: 1;
-  player: Player | null;
+  version: 2;
+  players: Player[];
   systems: System[];
-  knownSystemIds: Id[];
+  /** Pro Kommandant separat geführt (Fog of War) – siehe `_knownSystemIds`. */
+  knownSystemIdsByPlayer: Record<Id, Id[]>;
   planets: Planet[];
   colonies: Colony[];
   planetStats: PlanetStats[];
@@ -123,7 +145,6 @@ interface Snapshot {
   buildings: Building[];
   specializations: Specialization[];
   productionQueue: ProductionQueueEntry[];
-  autoProductionOrders: AutoProductionOrder[];
   warehouse: WarehouseEntry[];
   gateways: Gateway[];
   fleets: Fleet[];
@@ -134,6 +155,7 @@ interface Snapshot {
   consumptionBudget: Record<string, number>;
   npcs: Npc[];
   universeStats: UniverseStatSnapshot[];
+  notifications: GameNotification[];
 }
 
 /**
@@ -148,9 +170,14 @@ interface Snapshot {
  */
 @Injectable({ providedIn: 'root' })
 export class SimulatedGameApiService implements GameApi {
-  private readonly _player = signal<Player | null>(null);
+  /** Alle registrierten Kommandanten der gemeinsamen Galaxie (siehe Klassendoku oben). */
+  private readonly _players = signal<Player[]>([]);
+  /** Wer in DIESEM Browser-Tab gerade eingeloggt ist – Session-Zustand, kein Teil des Weltzustands (siehe `ACTIVE_PLAYER_STORAGE_KEY`). */
+  private readonly _activePlayerId = signal<Id | null>(null);
   private readonly _systems = signal<System[]>([]);
-  private readonly _knownSystemIds = signal<Set<Id>>(new Set());
+  /** Bekannte Systeme PRO Kommandant (Fog of War) – ein neu registrierter Kommandant kennt nur sein eigenes Heimatsystem, auch wenn andere längst die ganze Galaxie kartiert haben. */
+  private readonly _knownSystemIds = signal<Map<Id, Set<Id>>>(new Map());
+  private knownSystemIdsFor(playerId: Id | undefined): Set<Id> { return this._knownSystemIds().get(playerId ?? '') ?? new Set(); }
   private readonly _planets = signal<Planet[]>([]);
   private readonly _colonies = signal<Colony[]>([]);
   private readonly _planetStats = signal<PlanetStats[]>([]);
@@ -162,8 +189,23 @@ export class SimulatedGameApiService implements GameApi {
   private readonly _buildings = signal<Building[]>([]);
   private readonly _specializations = signal<Specialization[]>([]);
   private readonly _productionQueue = signal<ProductionQueueEntry[]>([]);
-  private readonly _autoProductionOrders = signal<AutoProductionOrder[]>([]);
   private readonly _warehouse = signal<WarehouseEntry[]>([]);
+  /**
+   * `colonyId:productTypeId` → Menge, im Gleichschritt mit `_warehouse`
+   * gepflegt (siehe `rebuildWarehouseIndex`/`addToWarehouse`). Vermeidet die
+   * frühere Alternative – bei jeder Mengenabfrage `_warehouse().find(...)`,
+   * also ein linearer Scan über ALLE Lagerbestände der gesamten Galaxie pro
+   * Aufruf – die bei tiefen, vielköpfigen Produktionsketten (siehe
+   * Dauerproduktions-Baum: schnell 100+ Aufträge, mehrfach pro Tick je ein
+   * Rezept-Eingang geprüft) zum Performance-Engpass werden kann.
+   */
+  private readonly warehouseIndex = new Map<Id, number>();
+  private warehouseKey(colonyId: Id, productTypeId: Id): Id { return `${colonyId}:${productTypeId}`; }
+  private warehouseQty(colonyId: Id, productTypeId: Id): number { return this.warehouseIndex.get(this.warehouseKey(colonyId, productTypeId)) ?? 0; }
+  private rebuildWarehouseIndex(list: WarehouseEntry[]): void {
+    this.warehouseIndex.clear();
+    for (const w of list) this.warehouseIndex.set(this.warehouseKey(w.colonyId, w.productTypeId), w.quantity);
+  }
   private readonly _gateways = signal<Gateway[]>([]);
   private readonly _fleets = signal<Fleet[]>([]);
   private readonly _shipyardQueue = signal<ShipyardQueueEntry[]>([]);
@@ -172,6 +214,16 @@ export class SimulatedGameApiService implements GameApi {
   private readonly _sellOrders = signal<SellOrder[]>([]);
   private readonly _npcs = signal<Npc[]>([]);
   private readonly _universeStats = signal<UniverseStatSnapshot[]>([]);
+  /** Benachrichtigungssystem, siehe Konzeption/Umsetzungskonzept/10_...md, §5. Neueste zuerst gepflegt (siehe `notify`). */
+  private readonly _notifications = signal<GameNotification[]>([]);
+  /**
+   * Zuletzt in `runConsumption` ermittelte Deckung (0..1,5, 1 = Bedarf exakt
+   * gedeckt) je Grundkonsumgut und Kolonie – rein abgeleiteter Diagnosewert
+   * für die Statistik-Seite ("woran hakt es beim Lebensstandard genau"),
+   * nicht Teil des Spielstands (kein Snapshot-Feld, wird jeden Tick neu
+   * berechnet statt persistiert).
+   */
+  private readonly _consumptionCoverage = signal<Record<Id, Record<Id, number>>>({});
 
   /** rein internes Buchführungs-Detail (Spezialisierungs-Verfall), kein Modellfeld. */
   private readonly lastProducedAt = new Map<string, number>();
@@ -189,36 +241,88 @@ export class SimulatedGameApiService implements GameApi {
   private lastNpcAiAt = 0;
   private lastStatsSnapshotAt = 0;
   private lastWealthRedistributionAt = 0;
+  private lastPersistAt = 0;
 
-  readonly player = this._player.asReadonly();
-  readonly wallet = computed(() => this.findWallet('Player', this._player()?.id ?? ''));
+  /** Der aktuell EINGELOGGTE Kommandant (null = abgemeldet, siehe `_activePlayerId`) – gleiche Signalform wie zuvor, jetzt aus der gemeinsamen Spielerliste aufgelöst. */
+  readonly player = computed(() => this._players().find(p => p.id === this._activePlayerId()) ?? null);
+  readonly wallet = computed(() => this.findWallet('Player', this.player()?.id ?? ''));
 
   constructor() {
-    const loaded = this.tryLoad();
-    if (!loaded) {
-      // kein Autosave vorhanden -> Splash-Screen (siehe app-shell) fragt nach Namen
+    const loadedWorld = this.tryLoad();
+    if (!loadedWorld) {
+      // Allererster Start dieses Browsers: genau EIN Kommandant wird automatisch
+      // registriert (siehe Klassendoku) – sichtbar in `players()`, aber noch
+      // nicht eingeloggt. Die Startseite (siehe app.component) zeigt Login/Registrieren.
+      this.bootstrapFreshWorld();
+    }
+    const activePlayerId = localStorage.getItem(ACTIVE_PLAYER_STORAGE_KEY);
+    if (activePlayerId && this._players().some(p => p.id === activePlayerId)) {
+      this._activePlayerId.set(activePlayerId);
     }
     setInterval(() => this.runTick(), TICK_MS);
+    // Fängt den durch TICK_PERSIST_INTERVAL_MS gedrosselten Persist ab: ohne
+    // diesen Flush könnten beim Schließen/Wechseln des Tabs bis zu
+    // TICK_PERSIST_INTERVAL_MS an tickgetriebenem Fortschritt (Löhne, Konsum,
+    // Bevölkerungswachstum) verloren gehen. 'visibilitychange' statt/zusätzlich
+    // zu 'beforeunload', weil Mobile-Browser Tabs oft ohne beforeunload beenden.
+    // Ungebunden an einen eingeloggten Nutzer – die Welt simuliert unabhängig
+    // davon weiter (siehe `runTick`), auch andere Kommandanten/NPCs laufen.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && this._players().length > 0) this.persist();
+    });
+    window.addEventListener('beforeunload', () => {
+      if (this._players().length > 0) this.persist();
+    });
   }
 
   // ==========================================================================
-  // Bootstrap
+  // Bootstrap / Konten
   // ==========================================================================
 
-  async startNewGame(commanderName: string, homeworldName: string): Promise<void> {
+  players(): Signal<Player[]> {
+    return this._players.asReadonly();
+  }
+
+  async registerPlayer(commanderName: string, homeworldName: string): Promise<void> {
     await this.latency();
-    if (this._player()) return;
-    const seed: WorldSeed = createWorldSeed(commanderName.trim() || 'Unbekannter Kommandant', homeworldName.trim() || 'Heimatwelt');
-    this.hydrate(seed);
+    const name = commanderName.trim() || 'Unbekannter Kommandant';
+    const homeworld = homeworldName.trim() || 'Heimatwelt';
+    const seed = createAdditionalPlayerSeed(this._systems(), name, homeworld);
+    this.appendPlayer(seed);
+    this._activePlayerId.set(seed.player.id);
+    localStorage.setItem(ACTIVE_PLAYER_STORAGE_KEY, seed.player.id);
     this.persist();
   }
 
+  async login(playerId: Id): Promise<void> {
+    await this.latency();
+    if (!this._players().some(p => p.id === playerId)) throw new Error('Unbekannter Kommandant.');
+    this.persist(); // ausstehenden tickgetriebenen Fortschritt vor dem Wechsel sichern
+    this._activePlayerId.set(playerId);
+    localStorage.setItem(ACTIVE_PLAYER_STORAGE_KEY, playerId);
+  }
+
+  async logout(): Promise<void> {
+    await this.latency();
+    this.persist();
+    this._activePlayerId.set(null);
+    localStorage.removeItem(ACTIVE_PLAYER_STORAGE_KEY);
+  }
+
+  /** Kompletter Fabrik-Reset: löscht die GESAMTE gemeinsame Galaxie (alle Kommandanten!) und registriert danach wieder genau einen Standard-Kommandanten, wie beim allerersten Start. */
   async resetGame(): Promise<void> {
     await this.latency();
     localStorage.removeItem(STORAGE_KEY);
-    this._player.set(null);
+    localStorage.removeItem(ACTIVE_PLAYER_STORAGE_KEY);
+    this._activePlayerId.set(null);
+    this.bootstrapFreshWorld();
+  }
+
+  /** Setzt alle In-Memory-Signale auf eine leere Galaxie zurück – Baustein für `bootstrapFreshWorld`. */
+  private clearInMemoryState(): void {
+    this._players.set([]);
     this._systems.set([]);
-    this._knownSystemIds.set(new Set());
+    this._knownSystemIds.set(new Map());
     this._planets.set([]);
     this._colonies.set([]);
     this._planetStats.set([]);
@@ -230,8 +334,8 @@ export class SimulatedGameApiService implements GameApi {
     this._buildings.set([]);
     this._specializations.set([]);
     this._productionQueue.set([]);
-    this._autoProductionOrders.set([]);
     this._warehouse.set([]);
+    this.warehouseIndex.clear();
     this._gateways.set([]);
     this._fleets.set([]);
     this._shipyardQueue.set([]);
@@ -240,18 +344,28 @@ export class SimulatedGameApiService implements GameApi {
     this._sellOrders.set([]);
     this._npcs.set([]);
     this._universeStats.set([]);
+    this._consumptionCoverage.set({});
+    this._notifications.set([]);
     this.lastProducedAt.clear();
     this.consumptionBudget.clear();
     this.rawStandardOfLiving.clear();
     this.lastNpcAiAt = 0;
     this.lastStatsSnapshotAt = 0;
     this.lastWealthRedistributionAt = 0;
+    this.lastPersistAt = 0;
+  }
+
+  /** Erzeugt eine komplett neue Galaxie (NPCs, 24 Systeme) mit genau einem Standard-Kommandanten – für den allerersten Start UND für `resetGame`. */
+  private bootstrapFreshWorld(): void {
+    this.clearInMemoryState();
+    this.hydrate(createWorldSeed(DEFAULT_COMMANDER_NAME, DEFAULT_HOMEWORLD_NAME));
+    this.persist();
   }
 
   private hydrate(seed: WorldSeed): void {
-    this._player.set(seed.player);
+    this._players.set([seed.player]);
     this._systems.set(seed.systems);
-    this._knownSystemIds.set(new Set([seed.player.homeSystemId]));
+    this._knownSystemIds.set(new Map([[seed.player.id, new Set([seed.player.homeSystemId])]]));
     this._planets.set(seed.planets);
     this._colonies.set(seed.colonies);
     this._planetStats.set(seed.planetStats);
@@ -260,9 +374,42 @@ export class SimulatedGameApiService implements GameApi {
     this._wallets.set(seed.wallets);
     this._buildings.set(seed.buildings);
     this._warehouse.set(seed.warehouse);
+    this.rebuildWarehouseIndex(seed.warehouse);
+    this._productionQueue.set(seed.productionQueue);
     this._gateways.set(seed.gateways);
     this._npcs.set(seed.npcs);
     this._fleets.set(seed.fleets);
+    // Start-Auftragsliste kommt direkt über `.set()` statt über `queueProduction`
+    // herein, das sonst automatisch den nächsten wartenden Eintrag anstößt.
+    for (const colonyId of new Set(seed.productionQueue.map(e => e.colonyId))) this.tryStartNextProductionEntry(colonyId);
+  }
+
+  /**
+   * Fügt einen NEU registrierten Kommandanten samt neuem Heimatsystem in die
+   * BESTEHENDE Galaxie ein (siehe `createAdditionalPlayerSeed`), statt eine
+   * neue Galaxie zu erzeugen – NPCs, andere Kommandanten und der Systemmarkt
+   * bleiben unverändert bestehen.
+   */
+  private appendPlayer(seed: AdditionalPlayerSeed): void {
+    this._systems.update(list => [...list, seed.newSystem]);
+    this._gateways.update(list => [...list, seed.newGateway]);
+    this._gateways.update(list => list.map(g => g.systemId === seed.linkedSystemId
+      ? { ...g, reachableSystemIds: [...g.reachableSystemIds, seed.newSystem.id] }
+      : g));
+    this._players.update(list => [...list, seed.player]);
+    this._knownSystemIds.update(map => new Map(map).set(seed.player.id, new Set([seed.newSystem.id])));
+    this._planets.update(list => [...list, ...seed.planets]);
+    this._colonies.update(list => [...list, seed.colony]);
+    this._planetStats.update(list => [...list, seed.planetStats]);
+    this._populations.update(list => [...list, seed.population]);
+    this._moneySupplyStates.update(list => [...list, seed.moneySupplyState]);
+    this._wallets.update(list => [...list, ...seed.wallets]);
+    this._buildings.update(list => [...list, ...seed.buildings]);
+    this._warehouse.update(list => [...list, ...seed.warehouse]);
+    this.rebuildWarehouseIndex(this._warehouse());
+    this._productionQueue.update(list => [...list, ...seed.productionQueue]);
+    this._fleets.update(list => [...list, seed.fleet]);
+    this.tryStartNextProductionEntry(seed.colony.id);
   }
 
   // ==========================================================================
@@ -279,13 +426,17 @@ export class SimulatedGameApiService implements GameApi {
   // ==========================================================================
 
   colonies(): Signal<Colony[]> {
-    return computed(() => this._colonies().filter(c => c.ownerId === this._player()?.id));
+    return computed(() => this._colonies().filter(c => c.ownerId === this.player()?.id));
   }
   colony(id: Id): Signal<Colony | undefined> {
     return computed(() => this._colonies().find(c => c.id === id));
   }
   colonyStats(id: Id): Signal<PlanetStats | undefined> {
     return computed(() => this._planetStats().find(s => s.colonyId === id));
+  }
+  /** Deckung (0..1,5) je Grundkonsumgut, siehe `_consumptionCoverage`. Leeres Objekt vor dem ersten Tick. */
+  consumptionCoverage(colonyId: Id): Signal<Record<Id, number>> {
+    return computed(() => this._consumptionCoverage()[colonyId] ?? {});
   }
   planet(id: Id): Signal<Planet | undefined> {
     return computed(() => this._planets().find(p => p.id === id));
@@ -427,7 +578,8 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   // ==========================================================================
-  // Produktion
+  // Produktion (sequentielle Warteschlange, siehe Konzeption/Umsetzungskonzept/
+  // 10_Sequentielle_Produktionsauftraege_und_Ereignissystem.md)
   // ==========================================================================
 
   warehouse(colonyId: Id): Signal<WarehouseEntry[]> {
@@ -440,7 +592,7 @@ export class SimulatedGameApiService implements GameApi {
     return computed(() => this._productionQueue().filter(q => q.colonyId === colonyId));
   }
 
-  async queueProduction(colonyId: Id, productTypeId: Id, quantity: number): Promise<void> {
+  async queueProduction(colonyId: Id, productTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void> {
     await this.latency();
     if (quantity <= 0) throw new Error('Menge muss größer als 0 sein.');
     const product = findProductType(productTypeId);
@@ -450,14 +602,22 @@ export class SimulatedGameApiService implements GameApi {
     if (this.getBuildingLevel(colonyId, 'b_industry') < 1) {
       throw new Error('Ohne Industriekomplex ist keine Fertigung möglich.');
     }
-    this.consumeRecipeInputs(colonyId, product, quantity);
-
-    const msPerUnit = this.computeProductionMs(colonyId, product, 'b_industry');
     const entry: ProductionQueueEntry = {
-      id: nextId('pq'), colonyId, productTypeId, quantity, producedSoFar: 0,
-      startedAt: now(), nextUnitCompletesAt: now() + msPerUnit,
+      id: nextId('pq'), colonyId, productTypeId, quantity, autoProduceMissing, requeueOnComplete,
+      status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
     };
     this._productionQueue.update(list => [...list, entry]);
+    this.tryStartNextProductionEntry(colonyId);
+    this.persist();
+  }
+
+  /** "Fortsetzen"-Button: prüft einen angehaltenen Auftrag erneut und startet ihn, falls jetzt ausführbar. */
+  async resumeProduction(colonyId: Id, entryId: Id): Promise<void> {
+    await this.latency();
+    const entry = this._productionQueue().find(e => e.id === entryId && e.colonyId === colonyId);
+    if (!entry || entry.status !== 'stopped') return;
+    this._productionQueue.update(list => list.map(e => e.id === entryId ? { ...e, status: 'queued', stoppedReasonCode: null } : e));
+    this.tryStartNextProductionEntry(colonyId);
     this.persist();
   }
 
@@ -465,56 +625,9 @@ export class SimulatedGameApiService implements GameApi {
     await this.latency();
     const entry = this._productionQueue().find(e => e.id === entryId && e.colonyId === colonyId);
     if (!entry) return;
-    const product = findProductType(entry.productTypeId);
-    const remaining = entry.quantity - entry.producedSoFar;
-    for (const input of product.recipe) {
-      this.addToWarehouse(colonyId, input.inputProductTypeId, input.quantity * remaining);
-    }
+    this.creditPartialChainProgress(colonyId, entry, qty => this.addToWarehouse(colonyId, entry.productTypeId, qty));
     this._productionQueue.update(list => list.filter(e => e.id !== entryId));
-    this.persist();
-  }
-
-  autoProductionOrders(colonyId: Id): Signal<AutoProductionOrder[]> {
-    return computed(() => this._autoProductionOrders().filter(o => o.colonyId === colonyId));
-  }
-  autoProductionOrdersForProduct(productTypeId: Id): Signal<AutoProductionOrder[]> {
-    return computed(() => this._autoProductionOrders().filter(o => o.productTypeId === productTypeId));
-  }
-
-  async setAutoProductionTarget(colonyId: Id, productTypeId: Id, maxStock: number, localPrice = 0): Promise<void> {
-    await this.latency();
-    if (!Number.isFinite(maxStock) || maxStock <= 0) throw new Error('Maximalbestand muss größer als 0 sein.');
-    if (!Number.isFinite(localPrice) || localPrice < 0) throw new Error('Lokaler Preis darf nicht negativ sein.');
-    const product = findProductType(productTypeId);
-    if (product.category === 'Ship' || product.category === 'GroundUnit') {
-      throw new Error('Schiffe und Bodeneinheiten werden über Werft bzw. Ausbildungszentrum in Auftrag gegeben.');
-    }
-    if (this.getBuildingLevel(colonyId, 'b_industry') < 1) {
-      throw new Error('Ohne Industriekomplex ist keine Fertigung möglich.');
-    }
-    const roundedMaxStock = Math.floor(maxStock);
-    const roundedPrice = Math.round(localPrice * 100) / 100;
-    const existing = this._autoProductionOrders().find(o => o.colonyId === colonyId && o.productTypeId === productTypeId);
-    if (existing) {
-      if (roundedPrice <= 0) this.withdrawLinkedSellOrder(existing);
-      this._autoProductionOrders.update(list => list.map(o => o.id === existing.id
-        ? { ...o, maxStock: roundedMaxStock, localPrice: roundedPrice, linkedSellOrderId: roundedPrice <= 0 ? null : o.linkedSellOrderId }
-        : o));
-    } else {
-      const order: AutoProductionOrder = {
-        id: nextId('apo'), colonyId, productTypeId, maxStock: roundedMaxStock, nextUnitCompletesAt: now(),
-        localPrice: roundedPrice, linkedSellOrderId: null,
-      };
-      this._autoProductionOrders.update(list => [...list, order]);
-    }
-    this.persist();
-  }
-
-  async cancelAutoProductionTarget(colonyId: Id, productTypeId: Id): Promise<void> {
-    await this.latency();
-    const order = this._autoProductionOrders().find(o => o.colonyId === colonyId && o.productTypeId === productTypeId);
-    if (order) this.withdrawLinkedSellOrder(order);
-    this._autoProductionOrders.update(list => list.filter(o => !(o.colonyId === colonyId && o.productTypeId === productTypeId)));
+    this.tryStartNextProductionEntry(colonyId);
     this.persist();
   }
 
@@ -533,7 +646,7 @@ export class SimulatedGameApiService implements GameApi {
   }
   transactions(): Signal<Transaction[]> {
     return computed(() => {
-      const walletIds = new Set(this._wallets().filter(w => w.ownerType === 'Player' && w.ownerId === this._player()?.id).map(w => w.id));
+      const walletIds = new Set(this._wallets().filter(w => w.ownerType === 'Player' && w.ownerId === this.player()?.id).map(w => w.id));
       return this._transactions().filter(t => (t.fromWalletId && walletIds.has(t.fromWalletId)) || (t.toWalletId && walletIds.has(t.toWalletId))).slice(-200).reverse();
     });
   }
@@ -548,26 +661,33 @@ export class SimulatedGameApiService implements GameApi {
   // ==========================================================================
 
   fleets(): Signal<Fleet[]> {
-    return computed(() => this._fleets().filter(f => f.ownerId === this._player()?.id));
+    return computed(() => this._fleets().filter(f => f.ownerId === this.player()?.id));
   }
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]> {
     return computed(() => this._shipyardQueue().filter(q => q.colonyId === colonyId));
   }
 
-  async queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number): Promise<void> {
+  async queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void> {
     await this.latency();
     if (quantity <= 0) throw new Error('Menge muss größer als 0 sein.');
     const product = findProductType(shipProductTypeId);
     if (product.category !== 'Ship') throw new Error('Kein Schiffstyp.');
     if (this.getBuildingLevel(colonyId, 'b_shipyard') < 1) throw new Error('Ohne Werft können keine Schiffe gebaut werden.');
-    this.consumeRecipeInputs(colonyId, product, quantity);
-
-    const msPerUnit = this.computeProductionMs(colonyId, product, 'b_shipyard');
     const entry: ShipyardQueueEntry = {
-      id: nextId('sy'), colonyId, shipProductTypeId, quantity, producedSoFar: 0,
-      startedAt: now(), nextUnitCompletesAt: now() + msPerUnit,
+      id: nextId('sy'), colonyId, shipProductTypeId, quantity, autoProduceMissing, requeueOnComplete,
+      status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
     };
     this._shipyardQueue.update(list => [...list, entry]);
+    this.tryStartNextShipyardEntry(colonyId);
+    this.persist();
+  }
+
+  async resumeShipOrder(colonyId: Id, entryId: Id): Promise<void> {
+    await this.latency();
+    const entry = this._shipyardQueue().find(e => e.id === entryId && e.colonyId === colonyId);
+    if (!entry || entry.status !== 'stopped') return;
+    this._shipyardQueue.update(list => list.map(e => e.id === entryId ? { ...e, status: 'queued', stoppedReasonCode: null } : e));
+    this.tryStartNextShipyardEntry(colonyId);
     this.persist();
   }
 
@@ -575,10 +695,9 @@ export class SimulatedGameApiService implements GameApi {
     await this.latency();
     const entry = this._shipyardQueue().find(e => e.id === entryId && e.colonyId === colonyId);
     if (!entry) return;
-    const product = findProductType(entry.shipProductTypeId);
-    const remaining = entry.quantity - entry.producedSoFar;
-    for (const input of product.recipe) this.addToWarehouse(colonyId, input.inputProductTypeId, input.quantity * remaining);
+    this.creditPartialChainProgress(colonyId, entry, qty => this.addShipToFleet(colonyId, entry.shipProductTypeId, qty));
     this._shipyardQueue.update(list => list.filter(e => e.id !== entryId));
+    this.tryStartNextShipyardEntry(colonyId);
     this.persist();
   }
 
@@ -593,22 +712,29 @@ export class SimulatedGameApiService implements GameApi {
     return computed(() => this._recruitmentQueue().filter(q => q.colonyId === colonyId));
   }
 
-  async queueRecruitment(colonyId: Id, unitProductTypeId: Id, count: number): Promise<void> {
+  async queueRecruitment(colonyId: Id, unitProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void> {
     await this.latency();
-    if (count <= 0) throw new Error('Menge muss größer als 0 sein.');
+    if (quantity <= 0) throw new Error('Menge muss größer als 0 sein.');
     const product = findProductType(unitProductTypeId);
     if (product.category !== 'GroundUnit') throw new Error('Kein Bodentruppen-Typ.');
     if (this.getBuildingLevel(colonyId, 'b_academy') < 1) throw new Error('Ohne Ausbildungszentrum keine Rekrutierung möglich.');
     const stats = this._planetStats().find(s => s.colonyId === colonyId);
     if (!stats || stats.loyaltyPct <= 50) throw new Error('Rekrutierung erfordert eine Loyalität über 50%.');
-    this.consumeRecipeInputs(colonyId, product, count);
-
-    const msPerUnit = this.computeProductionMs(colonyId, product, 'b_academy');
     const entry: RecruitmentQueueEntry = {
-      id: nextId('rq'), colonyId, unitProductTypeId, count, producedSoFar: 0,
-      startedAt: now(), nextUnitCompletesAt: now() + msPerUnit,
+      id: nextId('rq'), colonyId, unitProductTypeId, quantity, autoProduceMissing, requeueOnComplete,
+      status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
     };
     this._recruitmentQueue.update(list => [...list, entry]);
+    this.tryStartNextRecruitmentEntry(colonyId);
+    this.persist();
+  }
+
+  async resumeRecruitment(colonyId: Id, entryId: Id): Promise<void> {
+    await this.latency();
+    const entry = this._recruitmentQueue().find(e => e.id === entryId && e.colonyId === colonyId);
+    if (!entry || entry.status !== 'stopped') return;
+    this._recruitmentQueue.update(list => list.map(e => e.id === entryId ? { ...e, status: 'queued', stoppedReasonCode: null } : e));
+    this.tryStartNextRecruitmentEntry(colonyId);
     this.persist();
   }
 
@@ -616,10 +742,9 @@ export class SimulatedGameApiService implements GameApi {
     await this.latency();
     const entry = this._recruitmentQueue().find(e => e.id === entryId && e.colonyId === colonyId);
     if (!entry) return;
-    const product = findProductType(entry.unitProductTypeId);
-    const remaining = entry.count - entry.producedSoFar;
-    for (const input of product.recipe) this.addToWarehouse(colonyId, input.inputProductTypeId, input.quantity * remaining);
+    this.creditPartialChainProgress(colonyId, entry, qty => this.addUnitToGarrison(colonyId, entry.unitProductTypeId, qty));
     this._recruitmentQueue.update(list => list.filter(e => e.id !== entryId));
+    this.tryStartNextRecruitmentEntry(colonyId);
     this.persist();
   }
 
@@ -645,7 +770,7 @@ export class SimulatedGameApiService implements GameApi {
 
   gatewayWeights(systemId: Id): Signal<GatewayWeightEntry[]> {
     return computed(() => {
-      const player = this._player();
+      const player = this.player();
       if (!player) return [];
       const weight = this._colonies()
         .filter(c => c.systemId === systemId && c.ownerId === player.id)
@@ -661,7 +786,7 @@ export class SimulatedGameApiService implements GameApi {
 
   visibleSystems(): Signal<System[]> {
     return computed(() => {
-      const known = this._knownSystemIds();
+      const known = this.knownSystemIdsFor(this.player()?.id);
       return this._systems().filter(s => known.has(s.id));
     });
   }
@@ -671,7 +796,7 @@ export class SimulatedGameApiService implements GameApi {
 
   galaxyRoutes(): Signal<{ a: Id; b: Id }[]> {
     return computed(() => {
-      const known = this._knownSystemIds();
+      const known = this.knownSystemIdsFor(this.player()?.id);
       const seen = new Set<string>();
       const routes: { a: Id; b: Id }[] = [];
       for (const gateway of this._gateways()) {
@@ -696,18 +821,18 @@ export class SimulatedGameApiService implements GameApi {
     return computed(() => this._sellOrders().filter(o => o.systemId === systemId && o.remainingQuantity > 0));
   }
 
-  async createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void> {
+  async createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist = false): Promise<void> {
     await this.latency();
     if (quantity <= 0 || pricePerUnit <= 0) throw new Error('Menge und Preis müssen größer als 0 sein.');
     const colony = this._colonies().find(c => c.id === colonyId);
     if (!colony) throw new Error('Unbekannte Kolonie.');
-    const stock = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === productTypeId)?.quantity ?? 0;
+    const stock = this.warehouseQty(colonyId, productTypeId);
     if (stock < quantity) throw new Error('Nicht genug Lagerbestand für diese Order.');
     this.addToWarehouse(colonyId, productTypeId, -quantity);
     const order: SellOrder = {
       id: nextId('so'), systemId: colony.systemId, locationType: 'Depot', depotColonyId: colonyId,
       sellerId: colony.ownerId, sellerName: this.ownerDisplayName(colony.ownerId), productTypeId, quantity, remainingQuantity: quantity,
-      pricePerUnit, createdAt: now(),
+      pricePerUnit, createdAt: now(), autoRelist,
     };
     this._sellOrders.update(list => [...list, order]);
     this.persist();
@@ -733,12 +858,31 @@ export class SimulatedGameApiService implements GameApi {
     const cost = Math.round(quantity * order.pricePerUnit);
     if (!wallet || wallet.balance < cost) throw new Error('Nicht genug Credits.');
     const sellerWallet = this.findWallet('Player', order.sellerId);
-    this._sellOrders.update(list => list
-      .map(o => o.id === orderId ? { ...o, remainingQuantity: o.remainingQuantity - quantity } : o)
-      .filter(o => o.remainingQuantity > 0));
+    this.settleSellOrderPurchase(order, quantity);
     this.addToWarehouse(deliverToColonyId, order.productTypeId, quantity);
     if (sellerWallet) this.recordTx(wallet.id, sellerWallet.id, cost, 'Trade', `Kauf ${quantity}× am Markt`);
     this.persist();
+  }
+
+  /**
+   * Zieht `quantity` von einer Verkaufsorder ab. Erreicht `remainingQuantity`
+   * dadurch 0, wird die Order entfernt – bei `autoRelist: true` im selben
+   * Vorgang durch eine neue Order mit identischer Menge/Preis ersetzt (siehe
+   * "Anbieten" im Lagerbestand, Konzeption/Umsetzungskonzept/10_...md, §6).
+   * Gemeinsam genutzt von `buyFromOrder` und `runConsumption`.
+   */
+  private settleSellOrderPurchase(order: SellOrder, quantity: number): void {
+    const remaining = order.remainingQuantity - quantity;
+    if (remaining > 0) {
+      this._sellOrders.update(list => list.map(o => o.id === order.id ? { ...o, remainingQuantity: remaining } : o));
+      return;
+    }
+    if (order.autoRelist) {
+      const fresh: SellOrder = { ...order, id: nextId('so'), remainingQuantity: order.quantity, createdAt: now() };
+      this._sellOrders.update(list => list.map(o => o.id === order.id ? fresh : o));
+    } else {
+      this._sellOrders.update(list => list.filter(o => o.id !== order.id));
+    }
   }
 
   // ==========================================================================
@@ -759,19 +903,61 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   // ==========================================================================
+  // Benachrichtigungen
+  // ==========================================================================
+
+  /**
+   * `_notifications` ist EINE gemeinsame Liste über die ganze Galaxie (jeder
+   * Eintrag hängt an einer `colonyId`) – gefiltert auf die Kolonien des
+   * aktuell eingeloggten Kommandanten, damit ein Konto nie die
+   * Benachrichtigungen eines anderen zu sehen bekommt.
+   */
+  private notificationsForActivePlayer(): GameNotification[] {
+    const myColonyIds = new Set(this._colonies().filter(c => c.ownerId === this.player()?.id).map(c => c.id));
+    return this._notifications().filter(n => n.colonyId === null || myColonyIds.has(n.colonyId));
+  }
+
+  notifications(): Signal<GameNotification[]> {
+    return computed(() => this.notificationsForActivePlayer());
+  }
+  unreadNotificationCount(): Signal<number> {
+    return computed(() => this.notificationsForActivePlayer().filter(n => !n.read).length);
+  }
+
+  async markNotificationRead(id: Id): Promise<void> {
+    await this.latency();
+    this._notifications.update(list => list.map(n => n.id === id ? { ...n, read: true } : n));
+    this.persist();
+  }
+
+  async markAllNotificationsRead(): Promise<void> {
+    await this.latency();
+    const myIds = new Set(this.notificationsForActivePlayer().map(n => n.id));
+    this._notifications.update(list => list.map(n => myIds.has(n.id) && !n.read ? { ...n, read: true } : n));
+    this.persist();
+  }
+
+  /** Neueste zuerst, siehe `GameNotification`. */
+  private notify(type: NotificationType, code: number, message: string, colonyId: Id | null = null): void {
+    const entry: GameNotification = { id: nextId('ntf'), code, type, message, colonyId, createdAt: now(), read: false };
+    this._notifications.update(list => [entry, ...list]);
+  }
+
+  // ==========================================================================
   // Tick-Loop / Hintergrundjobs
   // ==========================================================================
 
   private runTick(): void {
-    if (!this._player()) return;
+    // NICHT an einen eingeloggten Nutzer gebunden: die gemeinsame Galaxie
+    // (alle Kommandanten + NPCs) simuliert immer weiter, unabhängig davon,
+    // wer gerade in diesem Browser-Tab eingeloggt ist oder ob niemand es ist.
+    if (this._players().length === 0) return;
     const t = now();
     this.processBuildingCompletions(t);
     this.consumePowerUpkeep();
     this.processDefenseActivations(t);
     this.processGatewayActivation(t);
     this.processProductionQueue(t);
-    this.processAutoProduction(t);
-    this.syncAutoProductionSellOrders();
     this.processShipyardCompletions(t);
     this.processRecruitmentCompletions(t);
     this.decaySpecializations(t);
@@ -782,6 +968,12 @@ export class SimulatedGameApiService implements GameApi {
     this.runWealthRedistributionIfDue(t);
     this.runNpcAiIfDue(t);
     this.recordStatsSnapshotIfDue(t);
+    this.schedulePersistFromTick(t);
+  }
+
+  /** Siehe `TICK_PERSIST_INTERVAL_MS`: drosselt nur den tickgetriebenen Persist, nicht die sofortigen Aufrufe an den Kommando-Methoden. */
+  private schedulePersistFromTick(t: number): void {
+    if (t - this.lastPersistAt < TICK_PERSIST_INTERVAL_MS) return;
     this.persist();
   }
 
@@ -810,161 +1002,232 @@ export class SimulatedGameApiService implements GameApi {
       ? { ...g, state: 'Active', activatedAt: t, activatingCompletesAt: null }
       : g));
     // Aktivierung des eigenen Gateways macht die komplette bereits
-    // etablierte galaktische Kartografie bekannt (alle Systeme + Routen),
-    // nicht nur die unmittelbaren Nachbarn – ein direkt ansteuerbares Ziel
-    // ist davon unabhängig weiterhin nur ein Nachbar im Gateway-Netz.
-    this._knownSystemIds.update(known => new Set([...known, ...this._systems().map(s => s.id)]));
-  }
-
-  private processProductionQueue(t: number): void {
-    let queue = this._productionQueue();
-    let changed = false;
-    const next: ProductionQueueEntry[] = [];
-    for (let entry of queue) {
-      let safety = 0;
-      while (entry.nextUnitCompletesAt <= t && entry.producedSoFar < entry.quantity && safety < 500) {
-        this.addToWarehouse(entry.colonyId, entry.productTypeId, 1);
-        this.registerProduced(entry.colonyId, entry.productTypeId);
-        const product = findProductType(entry.productTypeId);
-        const msPerUnit = this.computeProductionMs(entry.colonyId, product, 'b_industry');
-        entry = { ...entry, producedSoFar: entry.producedSoFar + 1, nextUnitCompletesAt: entry.nextUnitCompletesAt + msPerUnit };
-        changed = true;
-        safety++;
-      }
-      if (entry.producedSoFar < entry.quantity) next.push(entry);
+    // etablierte galaktische Kartografie für DIESEN Kommandanten bekannt
+    // (alle Systeme + Routen), nicht nur die unmittelbaren Nachbarn – ein
+    // direkt ansteuerbares Ziel ist davon unabhängig weiterhin nur ein
+    // Nachbar im Gateway-Netz. Gateways gehören immer zu genau einem
+    // Heimatsystem, daher lässt sich der Besitzer eindeutig darüber finden.
+    const owner = this._players().find(p => p.homeSystemId === due.systemId);
+    if (owner) {
+      const allSystemIds = new Set(this._systems().map(s => s.id));
+      this._knownSystemIds.update(map => new Map(map).set(owner.id, allSystemIds));
     }
-    if (changed) this._productionQueue.set(next);
   }
 
   /**
-   * Dauerproduktion: füllt den Lagerbestand bis `maxStock` auf, solange
-   * Ausgangsstoffe vorhanden sind. Fehlen sie oder ist das Ziel erreicht,
-   * bleibt `nextUnitCompletesAt` in der Vergangenheit stehen (kein
-   * Nachholen verpasster Zeit) – bei Nachschub bzw. Lagerabbau greift der
-   * nächste Tick sofort wieder zu.
+   * Berechnet einmalig die komplette Produktionskette für `quantity` Einheiten
+   * von `productTypeId` (siehe Konzeption/Umsetzungskonzept/
+   * 10_Sequentielle_Produktionsauftraege_und_Ereignissystem.md, §2): Bedarf
+   * wird in Reihenfolge fallender Produkt-Ebene durch den Rezeptbaum
+   * propagiert (jede Ebene ist strikt niedriger als ihre Eltern, also reicht
+   * eine einmalige Sortierung statt echter Graph-Traversierung), an jeder
+   * Stelle wird zuerst der aktuelle Lagerbestand abgezogen (nur EINMAL
+   * verrechnet, auch wenn ein Produkt – "Zwilling" – von mehreren Zweigen
+   * gleichzeitig gebraucht wird, weil die Bedarfsmenge vor dem Lagerabgleich
+   * vollständig aufsummiert ist) und nur der tatsächliche Fehlbetrag löst
+   * weiteren Bedarf bei den eigenen Rezept-Eingängen aus. Das Wurzelprodukt
+   * selbst wird NIE aus dem Lager gedeckt (`quantity` bedeutet immer "so
+   * viele NEU bauen", nicht "so viele insgesamt vorhalten").
+   * `feasible = false` heißt: ohne "automatisch mitproduzieren" nicht
+   * ausführbar, weil mindestens ein Nicht-Wurzel-Schritt einen ungedeckten
+   * Fehlbetrag hat.
    */
-  private processAutoProduction(t: number): void {
-    const orders = this._autoProductionOrders();
-    if (orders.length === 0) return;
-    let changed = false;
-    const next: AutoProductionOrder[] = [];
-    for (let entry of orders) {
-      const product = findProductType(entry.productTypeId);
-      let safety = 0;
-      while (entry.nextUnitCompletesAt <= t && safety < 500) {
-        const stock = this._warehouse().find(w => w.colonyId === entry.colonyId && w.productTypeId === entry.productTypeId)?.quantity ?? 0;
-        if (stock >= entry.maxStock || !this.canAffordRecipeInputs(entry.colonyId, product, 1)) break;
-        this.consumeRecipeInputs(entry.colonyId, product, 1);
-        this.addToWarehouse(entry.colonyId, entry.productTypeId, 1);
-        this.registerProduced(entry.colonyId, entry.productTypeId);
-        const msPerUnit = this.computeProductionMs(entry.colonyId, product, 'b_industry');
-        entry = { ...entry, nextUnitCompletesAt: entry.nextUnitCompletesAt + msPerUnit };
-        changed = true;
-        safety++;
-      }
-      next.push(entry);
-    }
-    if (changed) this._autoProductionOrders.set(next);
-  }
+  private planChain(colonyId: Id, productTypeId: Id, quantity: number, facilityTypeId: 'b_industry' | 'b_shipyard' | 'b_academy'): ChainPlan {
+    const reachable = new Set<Id>();
+    const discover = (pid: Id): void => {
+      if (reachable.has(pid)) return;
+      reachable.add(pid);
+      for (const input of findProductType(pid).recipe) discover(input.inputProductTypeId);
+    };
+    discover(productTypeId);
+    const orderedByTierDesc = [...reachable].sort((a, b) => findProductType(b).tier - findProductType(a).tier);
 
-  /**
-   * Pflegt für jeden Dauerauftrag mit `localPrice > 0` genau eine Verkaufsorder
-   * am Systemmarkt: frisch produzierter Lagerbestand wird in ihre Menge
-   * übernommen, ein geänderter `localPrice` wird nachgezogen. Wurde die Order
-   * komplett verkauft (oder extern storniert), wird bei erneutem Warenzugang
-   * automatisch eine neue eröffnet.
-   */
-  private syncAutoProductionSellOrders(): void {
-    const orders = this._autoProductionOrders();
-    if (orders.length === 0) return;
-    let ordersChanged = false;
-    const next: AutoProductionOrder[] = [];
-    for (let entry of orders) {
-      if (entry.localPrice <= 0) { next.push(entry); continue; }
-      let linked = entry.linkedSellOrderId ? this._sellOrders().find(o => o.id === entry.linkedSellOrderId) : undefined;
-      if (entry.linkedSellOrderId && !linked) { entry = { ...entry, linkedSellOrderId: null }; ordersChanged = true; }
-      if (linked && linked.pricePerUnit !== entry.localPrice) {
-        const price = entry.localPrice;
-        this._sellOrders.update(list => list.map(o => o.id === linked!.id ? { ...o, pricePerUnit: price } : o));
-      }
-      const stock = this._warehouse().find(w => w.colonyId === entry.colonyId && w.productTypeId === entry.productTypeId)?.quantity ?? 0;
-      if (stock > 0) {
-        if (linked) {
-          const moveQty = Math.max(0, Math.min(stock, AUTO_SELL_ORDER_CAP - linked.remainingQuantity));
-          if (moveQty > 0) {
-            this.addToWarehouse(entry.colonyId, entry.productTypeId, -moveQty);
-            const linkedId = linked.id;
-            this._sellOrders.update(list => list.map(o => o.id === linkedId
-              ? { ...o, quantity: o.quantity + moveQty, remainingQuantity: o.remainingQuantity + moveQty }
-              : o));
-          }
-        } else {
-          const colony = this._colonies().find(c => c.id === entry.colonyId);
-          if (colony) {
-            const moveQty = Math.min(stock, AUTO_SELL_ORDER_CAP);
-            this.addToWarehouse(entry.colonyId, entry.productTypeId, -moveQty);
-            const newOrder: SellOrder = {
-              id: nextId('so'), systemId: colony.systemId, locationType: 'Depot', depotColonyId: entry.colonyId,
-              sellerId: colony.ownerId, sellerName: this.ownerDisplayName(colony.ownerId),
-              productTypeId: entry.productTypeId, quantity: moveQty, remainingQuantity: moveQty,
-              pricePerUnit: entry.localPrice, createdAt: now(),
-            };
-            this._sellOrders.update(list => [...list, newOrder]);
-            entry = { ...entry, linkedSellOrderId: newOrder.id };
-            ordersChanged = true;
-          }
+    const totalDemand = new Map<Id, number>([[productTypeId, quantity]]);
+    const rawSteps: ChainPlanStep[] = [];
+    for (const pid of orderedByTierDesc) {
+      const needed = totalDemand.get(pid) ?? 0;
+      if (needed <= 0) continue;
+      const product = findProductType(pid);
+      const isRoot = pid === productTypeId;
+      const fromWarehouse = isRoot ? 0 : Math.min(needed, this.warehouseQty(colonyId, pid));
+      const toProduce = needed - fromWarehouse;
+      if (toProduce > 0) {
+        for (const input of product.recipe) {
+          totalDemand.set(input.inputProductTypeId, (totalDemand.get(input.inputProductTypeId) ?? 0) + input.quantity * toProduce);
         }
       }
-      next.push(entry);
+      const hours = toProduce > 0 ? toProduce * this.computeProductionHours(colonyId, product, facilityTypeId) : 0;
+      rawSteps.push({ productTypeId: pid, quantityNeeded: needed, quantityFromWarehouse: fromWarehouse, quantityToProduce: toProduce, hours });
     }
-    if (ordersChanged) this._autoProductionOrders.set(next);
+    const steps = rawSteps.reverse(); // Rohstoffe zuerst, Wurzel zuletzt (für die aufklappbare Detailansicht)
+    const totalHours = steps.reduce((sum, s) => sum + s.hours, 0);
+    const feasible = steps.every((s, i) => i === steps.length - 1 || s.quantityToProduce === 0);
+    return { totalHours, steps, feasible };
   }
 
-  /** Zieht eine ggf. mit einem Dauerauftrag verknüpfte Verkaufsorder zurück und gibt unverkauften Bestand ins Lager zurück. */
-  private withdrawLinkedSellOrder(order: AutoProductionOrder): void {
-    if (!order.linkedSellOrderId) return;
-    const linked = this._sellOrders().find(o => o.id === order.linkedSellOrderId);
-    if (!linked) return;
-    if (linked.remainingQuantity > 0) this.addToWarehouse(order.colonyId, order.productTypeId, linked.remainingQuantity);
-    this._sellOrders.update(list => list.filter(o => o.id !== linked.id));
+  /**
+   * Schreibt bei Abbruch eines laufenden Auftrags einen anteiligen Teilerfolg
+   * gut: pro Kettenschritt wird `floor(quantityToProduce × verstrichener
+   * Zeitanteil)` gutgeschrieben (Abrundung – ein zu 90% fertiges Einzelmodul
+   * zählt als 0, nicht als 0,9), der bereits aus dem Lager entnommene, aber
+   * nicht mehr benötigte Anteil wird zurückerstattet. `creditRoot` bestimmt,
+   * wohin der Wurzelschritt-Anteil gebucht wird (Lager bei Produktion, Flotte
+   * bei Schiffen, Garnison bei Rekrutierung) – alle anderen Schritte landen
+   * immer im Lager. Kein Effekt bei `queued`/`stopped` (dort wurde noch
+   * nichts aus dem Lager entnommen).
+   */
+  private creditPartialChainProgress(
+    colonyId: Id,
+    entry: { status: ProductionQueueStatus; startedAt: number | null; endsAt: number | null; plan: ChainPlan },
+    creditRoot: (quantity: number) => void,
+  ): void {
+    if (entry.status !== 'running' || entry.startedAt === null || entry.endsAt === null) return;
+    const elapsedFraction = F.clamp((now() - entry.startedAt) / Math.max(entry.endsAt - entry.startedAt, 1), 0, 1);
+    entry.plan.steps.forEach((step, i) => {
+      const isRoot = i === entry.plan.steps.length - 1;
+      const refund = Math.floor(step.quantityFromWarehouse * (1 - elapsedFraction));
+      if (refund > 0) this.addToWarehouse(colonyId, step.productTypeId, refund);
+      const credited = Math.floor(step.quantityToProduce * elapsedFraction);
+      if (credited > 0) {
+        if (isRoot) creditRoot(credited); else this.addToWarehouse(colonyId, step.productTypeId, credited);
+      }
+    });
+  }
+
+  // --- Produktion: sequentielle Ausführung -----------------------------------
+
+  private tryStartNextProductionEntry(colonyId: Id): void {
+    const queue = this._productionQueue().filter(e => e.colonyId === colonyId);
+    if (queue.some(e => e.status === 'running')) return;
+    const next = queue.find(e => e.status === 'queued');
+    if (next) this.startProductionEntry(next);
+  }
+
+  private startProductionEntry(entry: ProductionQueueEntry): void {
+    const plan = this.planChain(entry.colonyId, entry.productTypeId, entry.quantity, 'b_industry');
+    if (!plan.feasible && !entry.autoProduceMissing) {
+      this._productionQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'stopped', stoppedReasonCode: NOTIFICATION_CODE_QUEUE_STOPPED } : e));
+      this.notify('Problem', NOTIFICATION_CODE_QUEUE_STOPPED, `Produktionswarteschlange angehalten: nicht genug Vorprodukte für "${findProductType(entry.productTypeId).name}" vorhanden.`, entry.colonyId);
+      return;
+    }
+    for (const step of plan.steps) {
+      if (step.quantityFromWarehouse > 0) this.addToWarehouse(entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
+    }
+    const startedAt = now();
+    const endsAt = startedAt + hoursToMs(plan.totalHours);
+    this._productionQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'running', startedAt, endsAt } : e));
+  }
+
+  private completeProductionEntry(entry: ProductionQueueEntry): void {
+    this.addToWarehouse(entry.colonyId, entry.productTypeId, entry.quantity);
+    this.registerProduced(entry.colonyId, entry.productTypeId, entry.quantity);
+    if (entry.requeueOnComplete) {
+      const fresh: ProductionQueueEntry = {
+        id: nextId('pq'), colonyId: entry.colonyId, productTypeId: entry.productTypeId, quantity: entry.quantity,
+        autoProduceMissing: entry.autoProduceMissing, requeueOnComplete: true,
+        status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
+      };
+      this._productionQueue.update(list => [...list.filter(e => e.id !== entry.id), fresh]);
+    } else {
+      this._productionQueue.update(list => list.filter(e => e.id !== entry.id));
+    }
+    this.tryStartNextProductionEntry(entry.colonyId);
+  }
+
+  /** Ereignisbasiert: einziger Zeitvergleich je laufendem Auftrag statt einer Pro-Einheit-Schleife. */
+  private processProductionQueue(t: number): void {
+    const due = this._productionQueue().filter(e => e.status === 'running' && e.endsAt !== null && e.endsAt <= t);
+    for (const entry of due) this.completeProductionEntry(entry);
+  }
+
+  // --- Werft: sequentielle Ausführung -----------------------------------------
+
+  private tryStartNextShipyardEntry(colonyId: Id): void {
+    const queue = this._shipyardQueue().filter(e => e.colonyId === colonyId);
+    if (queue.some(e => e.status === 'running')) return;
+    const next = queue.find(e => e.status === 'queued');
+    if (next) this.startShipyardEntry(next);
+  }
+
+  private startShipyardEntry(entry: ShipyardQueueEntry): void {
+    const plan = this.planChain(entry.colonyId, entry.shipProductTypeId, entry.quantity, 'b_shipyard');
+    if (!plan.feasible && !entry.autoProduceMissing) {
+      this._shipyardQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'stopped', stoppedReasonCode: NOTIFICATION_CODE_QUEUE_STOPPED } : e));
+      this.notify('Problem', NOTIFICATION_CODE_QUEUE_STOPPED, `Werft-Warteschlange angehalten: nicht genug Vorprodukte für "${findProductType(entry.shipProductTypeId).name}" vorhanden.`, entry.colonyId);
+      return;
+    }
+    for (const step of plan.steps) {
+      if (step.quantityFromWarehouse > 0) this.addToWarehouse(entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
+    }
+    const startedAt = now();
+    const endsAt = startedAt + hoursToMs(plan.totalHours);
+    this._shipyardQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'running', startedAt, endsAt } : e));
+  }
+
+  private completeShipyardEntry(entry: ShipyardQueueEntry): void {
+    this.addShipToFleet(entry.colonyId, entry.shipProductTypeId, entry.quantity);
+    this.registerProduced(entry.colonyId, entry.shipProductTypeId, entry.quantity);
+    if (entry.requeueOnComplete) {
+      const fresh: ShipyardQueueEntry = {
+        id: nextId('sy'), colonyId: entry.colonyId, shipProductTypeId: entry.shipProductTypeId, quantity: entry.quantity,
+        autoProduceMissing: entry.autoProduceMissing, requeueOnComplete: true,
+        status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
+      };
+      this._shipyardQueue.update(list => [...list.filter(e => e.id !== entry.id), fresh]);
+    } else {
+      this._shipyardQueue.update(list => list.filter(e => e.id !== entry.id));
+    }
+    this.tryStartNextShipyardEntry(entry.colonyId);
   }
 
   private processShipyardCompletions(t: number): void {
-    let queue = this._shipyardQueue();
-    let changed = false;
-    const next: ShipyardQueueEntry[] = [];
-    for (let entry of queue) {
-      let safety = 0;
-      while (entry.nextUnitCompletesAt <= t && entry.producedSoFar < entry.quantity && safety < 500) {
-        this.addShipToFleet(entry.colonyId, entry.shipProductTypeId, 1);
-        const product = findProductType(entry.shipProductTypeId);
-        const msPerUnit = this.computeProductionMs(entry.colonyId, product, 'b_shipyard');
-        entry = { ...entry, producedSoFar: entry.producedSoFar + 1, nextUnitCompletesAt: entry.nextUnitCompletesAt + msPerUnit };
-        changed = true;
-        safety++;
-      }
-      if (entry.producedSoFar < entry.quantity) next.push(entry);
+    const due = this._shipyardQueue().filter(e => e.status === 'running' && e.endsAt !== null && e.endsAt <= t);
+    for (const entry of due) this.completeShipyardEntry(entry);
+  }
+
+  // --- Ausbildungszentrum: sequentielle Ausführung ----------------------------
+
+  private tryStartNextRecruitmentEntry(colonyId: Id): void {
+    const queue = this._recruitmentQueue().filter(e => e.colonyId === colonyId);
+    if (queue.some(e => e.status === 'running')) return;
+    const next = queue.find(e => e.status === 'queued');
+    if (next) this.startRecruitmentEntry(next);
+  }
+
+  private startRecruitmentEntry(entry: RecruitmentQueueEntry): void {
+    const plan = this.planChain(entry.colonyId, entry.unitProductTypeId, entry.quantity, 'b_academy');
+    if (!plan.feasible && !entry.autoProduceMissing) {
+      this._recruitmentQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'stopped', stoppedReasonCode: NOTIFICATION_CODE_QUEUE_STOPPED } : e));
+      this.notify('Problem', NOTIFICATION_CODE_QUEUE_STOPPED, `Rekrutierungs-Warteschlange angehalten: nicht genug Vorprodukte für "${findProductType(entry.unitProductTypeId).name}" vorhanden.`, entry.colonyId);
+      return;
     }
-    if (changed) this._shipyardQueue.set(next);
+    for (const step of plan.steps) {
+      if (step.quantityFromWarehouse > 0) this.addToWarehouse(entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
+    }
+    const startedAt = now();
+    const endsAt = startedAt + hoursToMs(plan.totalHours);
+    this._recruitmentQueue.update(list => list.map(e => e.id === entry.id ? { ...e, plan, status: 'running', startedAt, endsAt } : e));
+  }
+
+  private completeRecruitmentEntry(entry: RecruitmentQueueEntry): void {
+    this.addUnitToGarrison(entry.colonyId, entry.unitProductTypeId, entry.quantity);
+    this.registerProduced(entry.colonyId, entry.unitProductTypeId, entry.quantity);
+    if (entry.requeueOnComplete) {
+      const fresh: RecruitmentQueueEntry = {
+        id: nextId('rq'), colonyId: entry.colonyId, unitProductTypeId: entry.unitProductTypeId, quantity: entry.quantity,
+        autoProduceMissing: entry.autoProduceMissing, requeueOnComplete: true,
+        status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
+      };
+      this._recruitmentQueue.update(list => [...list.filter(e => e.id !== entry.id), fresh]);
+    } else {
+      this._recruitmentQueue.update(list => list.filter(e => e.id !== entry.id));
+    }
+    this.tryStartNextRecruitmentEntry(entry.colonyId);
   }
 
   private processRecruitmentCompletions(t: number): void {
-    let queue = this._recruitmentQueue();
-    let changed = false;
-    const next: RecruitmentQueueEntry[] = [];
-    for (let entry of queue) {
-      let safety = 0;
-      while (entry.nextUnitCompletesAt <= t && entry.producedSoFar < entry.count && safety < 500) {
-        this.addUnitToGarrison(entry.colonyId, entry.unitProductTypeId, 1);
-        const product = findProductType(entry.unitProductTypeId);
-        const msPerUnit = this.computeProductionMs(entry.colonyId, product, 'b_academy');
-        entry = { ...entry, producedSoFar: entry.producedSoFar + 1, nextUnitCompletesAt: entry.nextUnitCompletesAt + msPerUnit };
-        changed = true;
-        safety++;
-      }
-      if (entry.producedSoFar < entry.count) next.push(entry);
-    }
-    if (changed) this._recruitmentQueue.set(next);
+    const due = this._recruitmentQueue().filter(e => e.status === 'running' && e.endsAt !== null && e.endsAt <= t);
+    for (const entry of due) this.completeRecruitmentEntry(entry);
   }
 
   private decaySpecializations(t: number): void {
@@ -1029,6 +1292,7 @@ export class SimulatedGameApiService implements GameApi {
       let remaining = budget;
       let coverageSum = 0;
       let weightSum = 0;
+      const coverageByGood: Record<Id, number> = {};
       for (const goodId of CONSUMER_GOODS_ORDER) {
         const need = population.currentCount * CONSUMER_NEED_PER_CAPITA[goodId];
         if (need <= 0) continue;
@@ -1045,17 +1309,19 @@ export class SimulatedGameApiService implements GameApi {
           if (qty <= 0) continue;
           const cost = qty * order.pricePerUnit;
           const sellerWallet = this.findWallet('Player', order.sellerId);
-          this._sellOrders.update(list => list.map(o => o.id === order.id ? { ...o, remainingQuantity: o.remainingQuantity - qty } : o));
+          this.settleSellOrderPurchase(order, qty);
           if (sellerWallet) this.recordTx(popWallet.id, sellerWallet.id, cost, 'Consumption', `Konsum ${goodId}`);
           spend += cost;
           bought += qty;
         }
         remaining -= spend;
         const coverage = F.clamp(bought / need, 0, 1.5);
+        coverageByGood[goodId] = coverage;
         const weight = goodId === 'p_grundnahrung' ? 2 : 1;
         coverageSum += coverage * weight;
         weightSum += weight;
       }
+      this._consumptionCoverage.update(map => ({ ...map, [colony.id]: coverageByGood }));
       const prevRaw = this.rawStandardOfLiving.get(colony.id) ?? stats.standardOfLivingPct;
       const newStandard = weightSum > 0 ? (coverageSum / weightSum) * 100 : prevRaw;
       const smoothedRaw = prevRaw * 0.7 + newStandard * 0.3;
@@ -1165,7 +1431,7 @@ export class SimulatedGameApiService implements GameApi {
       const prevRatio = states.find(p => p.colonyId === colony.id)?.coverageRatio ?? 1;
       if (level <= 0) return { colonyId: colony.id, coverageRatio: 1 };
       const need = level * ELERIUM_UPKEEP_PER_POWERGRID_LEVEL * TICK_GAME_HOURS;
-      const stock = this._warehouse().find(w => w.colonyId === colony.id && w.productTypeId === POWERGRID_FUEL_PRODUCT_ID)?.quantity ?? 0;
+      const stock = this.warehouseQty(colony.id, POWERGRID_FUEL_PRODUCT_ID);
       const covered = Math.min(need, stock);
       if (covered > 0) this.addToWarehouse(colony.id, POWERGRID_FUEL_PRODUCT_ID, -covered);
       const instantRatio = need > 0 ? covered / need : 1;
@@ -1277,45 +1543,26 @@ export class SimulatedGameApiService implements GameApi {
     void this.queueBuilding(colonyId, 'b_industry').catch(() => {});
   }
 
+  /**
+   * NPCs stellen genau wie Spieler EINEN Auftrag mit "automatisch
+   * mitproduzieren" + "nach Erfolg erneut einreihen" – `planChain`
+   * übernimmt die komplette, ggf. mehrstufige Kette in einer Berechnung
+   * (siehe Konzeption/Umsetzungskonzept/10_...md, §8). Ersetzt die frühere,
+   * eigene rekursive "eine Kettenschicht pro KI-Tick"-Logik, die jetzt
+   * überflüssig ist.
+   */
   private npcMaybeQueueFoodChain(colonyId: Id): void {
     if (this.getBuildingLevel(colonyId, 'b_industry') < 1) return;
-    this.tryQueueChain(colonyId, FOOD_TARGET_PRODUCT_ID, FOOD_TARGET_STOCK, MAX_CHAIN_DEPTH);
-  }
-
-  /**
-   * Generischer "produziere das nächste fehlende Kettenglied"-Helfer für
-   * die NPC-KI: Reicht der Lagerbestand von `productId` nicht, wird
-   * rekursiv die erste Rezept-Zutat mit zu wenig Bestand gesucht und
-   * STATTDESSEN in Auftrag gegeben (eine Ebene pro Aufruf) – kein
-   * vollständiges implizites Durchfertigen aller Stufen auf einmal (siehe
-   * Nebula_Planetentypen_..., §13, noch nicht umgesetzt), aber genug,
-   * damit die NPC-KI eine mehrstufige Kette schrittweise selbst
-   * hochzieht, ohne jede Ebene einzeln verdrahten zu müssen. Gibt `true`
-   * zurück, wenn irgendwo in der Kette bereits produziert wird/wurde.
-   */
-  private tryQueueChain(colonyId: Id, productId: Id, targetStock: number, depth: number): boolean {
-    if (depth <= 0) return false;
-    if (this._productionQueue().some(q => q.colonyId === colonyId && q.productTypeId === productId)) return true;
-    const stock = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === productId)?.quantity ?? 0;
-    if (stock >= targetStock) return false;
-    const product = findProductType(productId);
-    for (const input of product.recipe) {
-      const inputStock = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === input.inputProductTypeId)?.quantity ?? 0;
-      const need = input.quantity * targetStock;
-      if (inputStock < need) {
-        return this.tryQueueChain(colonyId, input.inputProductTypeId, Math.max(need, CHAIN_BATCH_MIN), depth - 1);
-      }
-    }
-    void this.queueProduction(colonyId, productId, targetStock).catch(() => {});
-    return true;
+    if (this._productionQueue().some(q => q.colonyId === colonyId && q.productTypeId === FOOD_TARGET_PRODUCT_ID)) return;
+    void this.queueProduction(colonyId, FOOD_TARGET_PRODUCT_ID, FOOD_TARGET_STOCK, true, true).catch(() => {});
   }
 
   private npcMaybeQueueSpecialty(colonyId: Id, productId: Id): void {
     if (this.getBuildingLevel(colonyId, 'b_industry') < 1) return;
     if (this._productionQueue().some(q => q.colonyId === colonyId && q.productTypeId === productId)) return;
-    const stock = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === productId)?.quantity ?? 0;
+    const stock = this.warehouseQty(colonyId, productId);
     if (stock >= 60) return;
-    void this.queueProduction(colonyId, productId, 15).catch(() => {});
+    void this.queueProduction(colonyId, productId, 15, true, true).catch(() => {});
   }
 
   /**
@@ -1334,7 +1581,7 @@ export class SimulatedGameApiService implements GameApi {
       const isFood = productId === FOOD_TARGET_PRODUCT_ID;
       const reserve = isFood ? 2 : 10;
       const minListing = isFood ? 3 : 5;
-      const stock = this._warehouse().find(w => w.colonyId === colony.id && w.productTypeId === productId)?.quantity ?? 0;
+      const stock = this.warehouseQty(colony.id, productId);
       const surplus = Math.floor(stock - reserve);
       if (surplus < minListing) continue;
       const listedRemaining = this._sellOrders()
@@ -1344,7 +1591,7 @@ export class SimulatedGameApiService implements GameApi {
       const product = findProductType(productId);
       const basePrice = 3 + product.tier * 2.5;
       const price = Math.round(basePrice * (0.85 + this.npcPriceJitter(npc.id) * 0.3) * 100) / 100;
-      void this.createSellOrder(colony.id, productId, surplus, price).catch(() => {});
+      void this.createSellOrder(colony.id, productId, surplus, price, true).catch(() => {});
     }
   }
 
@@ -1395,7 +1642,7 @@ export class SimulatedGameApiService implements GameApi {
   // ==========================================================================
 
   private requirePlayer(): Player {
-    const p = this._player();
+    const p = this.player();
     if (!p) throw new Error('Kein aktiver Kommandant.');
     return p;
   }
@@ -1407,9 +1654,11 @@ export class SimulatedGameApiService implements GameApi {
     return colony.ownerId;
   }
 
+  /** Löst JEDEN Besitzer auf (nicht nur den aktuell eingeloggten Kommandanten) – z. B. für Verkäufernamen am gemeinsamen Systemmarkt. */
   private ownerDisplayName(ownerId: Id): string {
-    if (this._player()?.id === ownerId) return this._player()!.name;
-    return this._npcs().find(n => n.id === ownerId)?.name ?? 'Unbekannt';
+    return this._players().find(p => p.id === ownerId)?.name
+      ?? this._npcs().find(n => n.id === ownerId)?.name
+      ?? 'Unbekannt';
   }
 
   private findWallet(ownerType: 'Player' | 'Population', ownerId: Id): Wallet | undefined {
@@ -1421,7 +1670,7 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   private homeworldPopulationWalletId(): Id | null {
-    const player = this._player();
+    const player = this.player();
     if (!player) return null;
     return this.popWalletIdForColony(player.homeworldColonyId);
   }
@@ -1444,28 +1693,32 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   private addToWarehouse(colonyId: Id, productTypeId: Id, delta: number): void {
+    const key = this.warehouseKey(colonyId, productTypeId);
     this._warehouse.update(list => {
       const idx = list.findIndex(w => w.colonyId === colonyId && w.productTypeId === productTypeId);
       if (idx === -1) {
         if (delta <= 0) return list;
+        this.warehouseIndex.set(key, delta);
         return [...list, { colonyId, productTypeId, quantity: delta }];
       }
+      const quantity = Math.max(0, list[idx].quantity + delta);
+      this.warehouseIndex.set(key, quantity);
       const next = [...list];
-      next[idx] = { ...next[idx], quantity: Math.max(0, next[idx].quantity + delta) };
+      next[idx] = { ...next[idx], quantity };
       return next;
     });
   }
 
   private canAffordRecipeInputs(colonyId: Id, product: ProductType, quantity: number): boolean {
     return product.recipe.every(input => {
-      const have = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === input.inputProductTypeId)?.quantity ?? 0;
+      const have = this.warehouseQty(colonyId, input.inputProductTypeId);
       return have >= input.quantity * quantity;
     });
   }
 
   private consumeRecipeInputs(colonyId: Id, product: ProductType, quantity: number): void {
     for (const input of product.recipe) {
-      const have = this._warehouse().find(w => w.colonyId === colonyId && w.productTypeId === input.inputProductTypeId)?.quantity ?? 0;
+      const have = this.warehouseQty(colonyId, input.inputProductTypeId);
       const need = input.quantity * quantity;
       if (have < need) {
         throw new Error(`Nicht genug ${findProductType(input.inputProductTypeId).name} im Lager (benötigt ${need}, vorhanden ${have}).`);
@@ -1476,7 +1729,8 @@ export class SimulatedGameApiService implements GameApi {
     }
   }
 
-  private computeProductionMs(colonyId: Id, product: ProductType, facilityTypeId: 'b_industry' | 'b_shipyard' | 'b_academy'): number {
+  /** Produktionszeit EINER Einheit in Spielstunden, zu den aktuellen Geschwindigkeitsfaktoren der Kolonie. Kern von `computeProductionMs` und `planChain`. */
+  private computeProductionHours(colonyId: Id, product: ProductType, facilityTypeId: 'b_industry' | 'b_shipyard' | 'b_academy'): number {
     const population = this._populations().find(p => p.colonyId === colonyId)?.currentCount ?? 100;
     const level = this.getBuildingLevel(colonyId, facilityTypeId);
     // Soldaten sind laut Mechanik/05_..., §5 "nicht durch Produktspezialisierung
@@ -1493,31 +1747,35 @@ export class SimulatedGameApiService implements GameApi {
     }
     const blackoutFactor = this.isBlackout(colonyId) ? BLACKOUT_PRODUCTION_FACTOR : 1;
     const speed = F.workforceFactor(population) * F.buildingLevelSpeedFactor(level) * F.specializationSpeedFactor(spec) * concFactor * blackoutFactor;
-    const hours = product.baseProductionHours / Math.max(speed, 0.05);
-    return hoursToMs(hours);
+    return product.baseProductionHours / Math.max(speed, 0.05);
   }
 
-  private registerProduced(colonyId: Id, productTypeId: Id): void {
+  private computeProductionMs(colonyId: Id, product: ProductType, facilityTypeId: 'b_industry' | 'b_shipyard' | 'b_academy'): number {
+    return hoursToMs(this.computeProductionHours(colonyId, product, facilityTypeId));
+  }
+
+  /** `count` = Anzahl auf einmal gutgeschriebener Einheiten (ein sequentieller Auftrag schließt `quantity` Einheiten in einem Schritt ab statt einzeln, siehe `completeProductionEntry`). */
+  private registerProduced(colonyId: Id, productTypeId: Id, count = 1): void {
     // Soldaten sind laut Mechanik/05_..., §5 nicht spezialisierbar.
-    if (productTypeId === 'p_soldier') return;
+    if (productTypeId === 'p_soldier' || count <= 0) return;
     const key = `${colonyId}:${productTypeId}`;
     this.lastProducedAt.set(key, now());
     const existing = this._specializations().find(s => s.colonyId === colonyId && s.productTypeId === productTypeId);
-    if (!existing) {
-      this._specializations.update(list => [...list, { colonyId, productTypeId, currentLevel: 0, experience: 1, thresholdForNextLevel: 5 }]);
-      return;
-    }
-    let experience = existing.experience + 1;
-    let level = existing.currentLevel;
-    let threshold = existing.thresholdForNextLevel;
-    if (experience >= threshold && level < 10) {
+    let level = existing?.currentLevel ?? 0;
+    let experience = (existing?.experience ?? 0) + count;
+    let threshold = existing?.thresholdForNextLevel ?? 5;
+    while (experience >= threshold && level < 10) {
       level += 1;
-      experience = 0;
+      experience -= threshold;
       threshold = Math.round(5 * Math.pow(1.5, level));
     }
-    this._specializations.update(list => list.map(s => s.colonyId === colonyId && s.productTypeId === productTypeId
-      ? { ...s, currentLevel: level, experience, thresholdForNextLevel: threshold }
-      : s));
+    if (!existing) {
+      this._specializations.update(list => [...list, { colonyId, productTypeId, currentLevel: level, experience, thresholdForNextLevel: threshold }]);
+    } else {
+      this._specializations.update(list => list.map(s => s.colonyId === colonyId && s.productTypeId === productTypeId
+        ? { ...s, currentLevel: level, experience, thresholdForNextLevel: threshold }
+        : s));
+    }
   }
 
   private addShipToFleet(colonyId: Id, shipProductTypeId: Id, quantity: number): void {
@@ -1623,12 +1881,15 @@ export class SimulatedGameApiService implements GameApi {
   // ==========================================================================
 
   private persist(): void {
-    if (!this._player()) return;
+    if (this._players().length === 0) return;
+    this.lastPersistAt = now();
+    const knownSystemIdsByPlayer: Record<Id, Id[]> = {};
+    for (const [playerId, ids] of this._knownSystemIds()) knownSystemIdsByPlayer[playerId] = [...ids];
     const snapshot: Snapshot = {
-      version: 1,
-      player: this._player(),
+      version: 2,
+      players: this._players(),
       systems: this._systems(),
-      knownSystemIds: [...this._knownSystemIds()],
+      knownSystemIdsByPlayer,
       planets: this._planets(),
       colonies: this._colonies(),
       planetStats: this._planetStats(),
@@ -1640,7 +1901,6 @@ export class SimulatedGameApiService implements GameApi {
       buildings: this._buildings(),
       specializations: this._specializations(),
       productionQueue: this._productionQueue(),
-      autoProductionOrders: this._autoProductionOrders(),
       warehouse: this._warehouse(),
       gateways: this._gateways(),
       fleets: this._fleets(),
@@ -1651,6 +1911,7 @@ export class SimulatedGameApiService implements GameApi {
       consumptionBudget: Object.fromEntries(this.consumptionBudget),
       npcs: this._npcs(),
       universeStats: this._universeStats(),
+      notifications: this._notifications(),
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -1664,10 +1925,12 @@ export class SimulatedGameApiService implements GameApi {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const snap = JSON.parse(raw) as Snapshot;
-      if (!snap.player) return false;
-      this._player.set(snap.player);
+      if (!snap.players?.length) return false;
+      this._players.set(snap.players);
       this._systems.set(snap.systems);
-      this._knownSystemIds.set(new Set(snap.knownSystemIds));
+      this._knownSystemIds.set(new Map(
+        Object.entries(snap.knownSystemIdsByPlayer ?? {}).map(([playerId, ids]) => [playerId, new Set(ids)]),
+      ));
       this._planets.set(snap.planets);
       this._colonies.set(snap.colonies);
       this._planetStats.set(snap.planetStats);
@@ -1678,19 +1941,18 @@ export class SimulatedGameApiService implements GameApi {
       this._transactions.set(snap.transactions);
       this._buildings.set(snap.buildings);
       this._specializations.set(snap.specializations);
-      this._productionQueue.set(snap.productionQueue);
-      this._autoProductionOrders.set((snap.autoProductionOrders ?? []).map(o => ({
-        ...o, localPrice: o.localPrice ?? 0, linkedSellOrderId: o.linkedSellOrderId ?? null,
-      })));
+      this._productionQueue.set(snap.productionQueue ?? []);
       this._warehouse.set(snap.warehouse);
+      this.rebuildWarehouseIndex(snap.warehouse);
       this._gateways.set(snap.gateways);
       this._fleets.set(snap.fleets);
-      this._shipyardQueue.set(snap.shipyardQueue);
+      this._shipyardQueue.set(snap.shipyardQueue ?? []);
       this._groundForceGroups.set(snap.groundForceGroups);
-      this._recruitmentQueue.set(snap.recruitmentQueue);
-      this._sellOrders.set(snap.sellOrders);
+      this._recruitmentQueue.set(snap.recruitmentQueue ?? []);
+      this._sellOrders.set((snap.sellOrders ?? []).map(o => ({ ...o, autoRelist: o.autoRelist ?? false })));
       this._npcs.set(snap.npcs ?? []);
       this._universeStats.set(snap.universeStats ?? []);
+      this._notifications.set(snap.notifications ?? []);
       for (const [k, v] of Object.entries(snap.consumptionBudget ?? {})) this.consumptionBudget.set(k, v);
       return true;
     } catch {

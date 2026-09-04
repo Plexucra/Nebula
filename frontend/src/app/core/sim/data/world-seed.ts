@@ -1,6 +1,6 @@
 import {
-  Building, Colony, Fleet, Gateway, Npc, Planet, PlanetStats, PlanetType, Player, Population,
-  PopulationMoneySupplyState, System, Wallet, WarehouseEntry,
+  Building, ChainPlan, Colony, Fleet, Gateway, Id, Npc, Planet, PlanetStats, PlanetType, Player, Population,
+  PopulationMoneySupplyState, ProductionQueueEntry, System, Wallet, WarehouseEntry,
 } from '../../models';
 import { nextId } from '../id';
 import { now } from '../clock';
@@ -21,9 +21,36 @@ export interface WorldSeed {
   wallets: Wallet[];
   buildings: Building[];
   warehouse: WarehouseEntry[];
+  productionQueue: ProductionQueueEntry[];
   gateways: Gateway[];
   npcs: Npc[];
   fleets: Fleet[];
+}
+
+/** Platzhalter für einen noch nicht berechneten `ChainPlan`, siehe `SimulatedGameApiService.planChain`. */
+const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true };
+
+/**
+ * Dieselben drei Grundkonsumgüter wie `CONSUMER_GOODS_ORDER` in
+ * `simulated-game-api.service.ts` (dort nicht exportiert, um keinen
+ * Zirkelimport zu erzeugen – bei Änderungen dort auch hier nachziehen). Die
+ * Heimatkolonie startet mit sequentiellen Produktionsaufträgen dafür (50
+ * Stück, automatisch mitproduzierte Vorprodukte, nach Fertigstellung erneut
+ * eingereiht – siehe Konzeption/Umsetzungskonzept/10_...md, §8), damit von
+ * Anfang an eine Grundversorgung läuft statt dass die Bevölkerung erst auf
+ * manuell gestartete Produktion wartet. Der lokale Verkauf ist NICHT mehr
+ * Teil des Seeds (bewusste Verhaltensänderung) – der Spieler richtet ihn
+ * selbst über "Anbieten" im Lagerbestand ein.
+ */
+const STARTER_CONSUMER_GOODS: Id[] = ['p_grundnahrung', 'p_grundmedizin', 'p_unterhaltungselektronik'];
+const STARTER_CONSUMER_GOODS_QUANTITY = 50;
+
+function starterProductionQueue(colonyId: Id): ProductionQueueEntry[] {
+  return STARTER_CONSUMER_GOODS.map(productTypeId => ({
+    id: nextId('pq'), colonyId, productTypeId, quantity: STARTER_CONSUMER_GOODS_QUANTITY,
+    autoProduceMissing: true, requeueOnComplete: true,
+    status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
+  }));
 }
 
 /**
@@ -283,6 +310,108 @@ function spawnNpcs(systems: System[], neighborsByIndex: number[][], rnd: Rng, t:
   return { npcs, colonies, planets, planetStats, populations, moneySupplyStates, wallets, buildings, warehouse, fleets };
 }
 
+interface HomeworldBundle {
+  player: Player;
+  /** Der Heimatplaneten-Cluster (`PLANET_NAMES_HOME.length` Himmelskörper, nur der erste ist besiedelt). */
+  planets: Planet[];
+  colony: Colony;
+  planetStats: PlanetStats;
+  population: Population;
+  moneySupplyState: PopulationMoneySupplyState;
+  wallets: Wallet[];
+  buildings: Building[];
+  warehouse: WarehouseEntry[];
+  productionQueue: ProductionQueueEntry[];
+  fleet: Fleet;
+}
+
+/**
+ * Baut EINEN Kommandanten samt Heimatplaneten-Cluster, Startkolonie,
+ * Gebäuden, Wallets und Start-Auftragsliste – unabhängig davon, ob das
+ * zugehörige Heimatsystem Teil einer brandneuen Galaxie ist
+ * (`createWorldSeed`) oder nachträglich in eine bestehende eingefügt wird
+ * (`createAdditionalPlayerSeed`). `homeSystemId` muss vom Aufrufer bereits
+ * feststehen, da sowohl die Heimatplaneten als auch die Kolonie darauf
+ * verweisen.
+ */
+function buildHomeworldBundle(commanderName: string, homeworldName: string, homeSystemId: Id, rnd: Rng, t: number): HomeworldBundle {
+  const player: Player = {
+    id: nextId('ply'),
+    name: commanderName,
+    homeSystemId,
+    homeworldColonyId: '', // wird unten gesetzt
+    createdAt: t,
+  };
+
+  const planets: Planet[] = PLANET_NAMES_HOME.map((name, i) => {
+    // Der Spieler startet auf einem temperierten Biosphärenplaneten
+    // (Nebula_Planetentypen_..., §8) – die übrigen Himmelskörper im
+    // Heimatsystem sind zunächst unbesiedelt und dürfen beliebige Typen sein.
+    const planetType: PlanetType = i === 0 ? 'TemperierterBiosphaerenplanet' : randomPlanetType(rnd);
+    let conc = concentrationProfileForType(planetType, rnd);
+    if (i === 0) conc = applyHomeworldMinimums(conc);
+    return {
+      id: nextId('pla'),
+      systemId: homeSystemId,
+      name,
+      size: (['Klein', 'Mittel', 'Groß', 'Riesig'] as const)[Math.floor(rnd() * 4)],
+      type: planetType,
+      buildCapacity: i === 0 ? 90 : 55 + Math.floor(rnd() * 30),
+      resourceConcentration: conc,
+      orbitIndex: i,
+    };
+  });
+
+  const colony: Colony = {
+    id: nextId('col'),
+    planetId: planets[0].id,
+    systemId: homeSystemId,
+    ownerId: player.id,
+    name: homeworldName,
+    foundedAt: t,
+    isHomeworld: true,
+  };
+  player.homeworldColonyId = colony.id;
+
+  const homePopulationCount = 420;
+  const homePowergridLevel = 4;
+  const homeHabitatLevel = habitatLevelFor(homePopulationCount, homePowergridLevel);
+
+  const planetStats: PlanetStats = {
+    colonyId: colony.id,
+    infrastructurePct: 110,
+    securityPct: 100,
+    standardOfLivingPct: 100,
+    loyaltyPct: 78,
+    lastRecalculatedAt: t,
+  };
+
+  const population: Population = { colonyId: colony.id, currentCount: homePopulationCount, growthRatePerInterval: 0 };
+  const moneySupplyState: PopulationMoneySupplyState = { planetId: planets[0].id, historicalPeakPopulation: homePopulationCount, lastPopulation: homePopulationCount };
+
+  const playerWallet: Wallet = { id: nextId('wal'), ownerType: 'Player', ownerId: player.id, balance: 6500 };
+  const popWallet: Wallet = { id: nextId('wal'), ownerType: 'Population', ownerId: colony.id, balance: 900 };
+
+  const buildings: Building[] = [
+    buildInstance(colony.id, 'b_habitat', homeHabitatLevel),
+    buildInstance(colony.id, 'b_powergrid', homePowergridLevel),
+    buildInstance(colony.id, 'b_industry', 2),
+    buildInstance(colony.id, 'b_shipyard', 1),
+    buildInstance(colony.id, 'b_academy', 1),
+  ];
+  const warehouse: WarehouseEntry[] = [eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_HOME)];
+
+  // Frachter ab Spielbeginn – ohne eigene Transportkapazität ist kein
+  // Handel über die eigene Kolonie hinaus möglich (Konzeption/05_..., §9).
+  const fleet = freighterFleet(player.id, colony.id, homeSystemId, `Handelsflotte ${colony.name}`);
+
+  return {
+    player, planets, colony, planetStats, population, moneySupplyState,
+    wallets: [playerWallet, popWallet], buildings, warehouse,
+    productionQueue: starterProductionQueue(colony.id), fleet,
+  };
+}
+
 export function createWorldSeed(commanderName: string, homeworldName: string): WorldSeed {
   const rnd = seededRandom(1337);
   const t = now();
@@ -295,32 +424,7 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
   const tradeHubSet = new Set(galaxy.tradeHubIndices);
   const homeIndex = galaxy.centralIndex;
 
-  const player: Player = {
-    id: nextId('ply'),
-    name: commanderName,
-    homeSystemId: systemIds[homeIndex],
-    homeworldColonyId: '', // wird unten gesetzt
-    createdAt: t,
-  };
-
-  const homePlanets: Planet[] = PLANET_NAMES_HOME.map((name, i) => {
-    // Der Spieler startet auf einem temperierten Biosphärenplaneten
-    // (Nebula_Planetentypen_..., §8) – die übrigen Himmelskörper im
-    // Heimatsystem sind zunächst unbesiedelt und dürfen beliebige Typen sein.
-    const planetType: PlanetType = i === 0 ? 'TemperierterBiosphaerenplanet' : randomPlanetType(rnd);
-    let conc = concentrationProfileForType(planetType, rnd);
-    if (i === 0) conc = applyHomeworldMinimums(conc);
-    return {
-      id: nextId('pla'),
-      systemId: player.homeSystemId,
-      name,
-      size: (['Klein', 'Mittel', 'Groß', 'Riesig'] as const)[Math.floor(rnd() * 4)],
-      type: planetType,
-      buildCapacity: i === 0 ? 90 : 55 + Math.floor(rnd() * 30),
-      resourceConcentration: conc,
-      orbitIndex: i,
-    };
-  });
+  const home = buildHomeworldBundle(commanderName, homeworldName, systemIds[homeIndex], rnd, t);
 
   const systems: System[] = galaxy.positions.map((pos, i) => {
     const isHome = i === homeIndex;
@@ -330,7 +434,7 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
       name: isHome ? 'Aurelia-System' : names[i % names.length],
       x: pos.x,
       y: pos.y,
-      planetIds: isHome ? homePlanets.map(p => p.id) : [],
+      planetIds: isHome ? home.planets.map(p => p.id) : [],
       gatewayId: gatewayIds[i],
       isHomeSystem: isHome,
       isTradeHub: isHub,
@@ -341,49 +445,6 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
           : FACTION_FLAVORS[Math.floor(rnd() * FACTION_FLAVORS.length)],
     };
   });
-
-  const homeworld: Colony = {
-    id: nextId('col'),
-    planetId: homePlanets[0].id,
-    systemId: player.homeSystemId,
-    ownerId: player.id,
-    name: homeworldName,
-    foundedAt: t,
-    isHomeworld: true,
-  };
-  player.homeworldColonyId = homeworld.id;
-
-  const homePopulationCount = 420;
-  const homePowergridLevel = 4;
-  const homeHabitatLevel = habitatLevelFor(homePopulationCount, homePowergridLevel);
-
-  const homeStats: PlanetStats = {
-    colonyId: homeworld.id,
-    infrastructurePct: 110,
-    securityPct: 100,
-    standardOfLivingPct: 100,
-    loyaltyPct: 78,
-    lastRecalculatedAt: t,
-  };
-
-  const homePopulation: Population = { colonyId: homeworld.id, currentCount: homePopulationCount, growthRatePerInterval: 0 };
-  const homeMoneyState: PopulationMoneySupplyState = { planetId: homePlanets[0].id, historicalPeakPopulation: homePopulationCount, lastPopulation: homePopulationCount };
-
-  const playerWallet: Wallet = { id: nextId('wal'), ownerType: 'Player', ownerId: player.id, balance: 6500 };
-  const popWallet: Wallet = { id: nextId('wal'), ownerType: 'Population', ownerId: homeworld.id, balance: 900 };
-
-  const startBuildings: Building[] = [
-    buildInstance(homeworld.id, 'b_habitat', homeHabitatLevel),
-    buildInstance(homeworld.id, 'b_powergrid', homePowergridLevel),
-    buildInstance(homeworld.id, 'b_industry', 2),
-    buildInstance(homeworld.id, 'b_shipyard', 1),
-    buildInstance(homeworld.id, 'b_academy', 1),
-  ];
-  const startWarehouse: WarehouseEntry[] = [eleriumReserveEntry(homeworld.id, SEALED_ELERIUM_RESERVE_HOME)];
-
-  // Frachter ab Spielbeginn – ohne eigene Transportkapazität ist kein
-  // Handel über die eigene Kolonie hinaus möglich (Konzeption/05_..., §9).
-  const playerFleet = freighterFleet(player.id, homeworld.id, player.homeSystemId, `Handelsflotte ${homeworld.name}`);
 
   // --- Gateways --------------------------------------------------------------
   // Das Gateway existiert bereits im Heimatsystem (Konzeption/08_..., §1),
@@ -414,18 +475,123 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
   const npcData = spawnNpcs(systems, galaxy.neighbors, rnd, t);
 
   return {
-    player,
+    player: home.player,
     systems,
-    planets: [...homePlanets, ...npcData.planets],
-    colonies: [homeworld, ...npcData.colonies],
-    planetStats: [homeStats, ...npcData.planetStats],
-    populations: [homePopulation, ...npcData.populations],
-    moneySupplyStates: [homeMoneyState, ...npcData.moneySupplyStates],
-    wallets: [playerWallet, popWallet, ...npcData.wallets],
-    buildings: [...startBuildings, ...npcData.buildings],
-    warehouse: [...startWarehouse, ...npcData.warehouse],
+    planets: [...home.planets, ...npcData.planets],
+    colonies: [home.colony, ...npcData.colonies],
+    planetStats: [home.planetStats, ...npcData.planetStats],
+    populations: [home.population, ...npcData.populations],
+    moneySupplyStates: [home.moneySupplyState, ...npcData.moneySupplyStates],
+    wallets: [...home.wallets, ...npcData.wallets],
+    buildings: [...home.buildings, ...npcData.buildings],
+    warehouse: [...home.warehouse, ...npcData.warehouse],
+    productionQueue: home.productionQueue,
     npcs: npcData.npcs,
-    fleets: [playerFleet, ...npcData.fleets],
+    fleets: [home.fleet, ...npcData.fleets],
     gateways,
   };
+}
+
+export interface AdditionalPlayerSeed {
+  player: Player;
+  newSystem: System;
+  newGateway: Gateway;
+  /** Bestehendes System, mit dem das neue Heimatsystem kartografisch verbunden wird (siehe Klassendoku unten). */
+  linkedSystemId: Id;
+  planets: Planet[];
+  colony: Colony;
+  planetStats: PlanetStats;
+  population: Population;
+  moneySupplyState: PopulationMoneySupplyState;
+  wallets: Wallet[];
+  buildings: Building[];
+  warehouse: WarehouseEntry[];
+  productionQueue: ProductionQueueEntry[];
+  fleet: Fleet;
+}
+
+/**
+ * Fügt EINEN weiteren Kommandanten in eine bereits bestehende Galaxie ein
+ * ("Registrieren", siehe `SimulatedGameApiService.registerPlayer`): bringt
+ * dabei ein komplett neues Heimatsystem samt Heimatplaneten-Cluster mit,
+ * nach demselben Muster wie das allererste Heimatsystem in
+ * `createWorldSeed` – nur zusätzlich zur bestehenden Galaxie statt als deren
+ * Ursprung. NPCs, andere Kommandanten, Systeme und der Markt bleiben
+ * unangetastet.
+ *
+ * Das neue System startet – wie jedes Heimatsystem – "entdeckt, aber nicht
+ * aktiviert" (siehe `createWorldSeed`-Kommentar zu Gateways) und wird
+ * kartografisch mit dem nächstgelegenen bestehenden System verbunden. Kein
+ * Versuch, es korrekt in das ursprüngliche Voronoi-Nachbarschaftsnetz von
+ * `generateGalaxy` einzuflechten – für den Prototyp reicht eine einzelne
+ * Verbindung, damit das System auf der Karte nicht als Insel wirkt.
+ */
+export function createAdditionalPlayerSeed(existingSystems: System[], commanderName: string, homeworldName: string): AdditionalPlayerSeed {
+  const rnd: Rng = Math.random;
+  const t = now();
+
+  const position = pickIsolatedPosition(existingSystems, rnd);
+  const linkedSystem = nearestSystem(existingSystems, position);
+
+  const systemId = nextId('sys');
+  const gatewayId = nextId('gw');
+  const home = buildHomeworldBundle(commanderName, homeworldName, systemId, rnd, t);
+
+  const usedNames = new Set(existingSystems.map(s => s.name));
+  const availableNames = SYSTEM_NAME_POOL.filter(n => !usedNames.has(n));
+  const systemName = availableNames.length > 0
+    ? availableNames[Math.floor(rnd() * availableNames.length)]
+    : `Heimatsystem ${existingSystems.length + 1}`;
+
+  const newSystem: System = {
+    id: systemId,
+    name: systemName,
+    x: position.x,
+    y: position.y,
+    planetIds: home.planets.map(p => p.id),
+    gatewayId,
+    isHomeSystem: true,
+    isTradeHub: false,
+    factionFlavor: 'Heimatsystem',
+  };
+  const newGateway: Gateway = {
+    id: gatewayId,
+    systemId,
+    state: 'Discovered',
+    discoveredAt: t,
+    activatedAt: null,
+    activatingCompletesAt: null,
+    reachableSystemIds: [linkedSystem.id],
+  };
+
+  return {
+    player: home.player, newSystem, newGateway, linkedSystemId: linkedSystem.id,
+    planets: home.planets, colony: home.colony, planetStats: home.planetStats, population: home.population,
+    moneySupplyState: home.moneySupplyState, wallets: home.wallets, buildings: home.buildings,
+    warehouse: home.warehouse, productionQueue: home.productionQueue, fleet: home.fleet,
+  };
+}
+
+/**
+ * Probiert mehrere zufällige Kandidatenpunkte und behält den mit dem
+ * größten Mindestabstand zu allen bestehenden Systemen – einfache
+ * räumliche Streuung ohne den Anspruch der Poisson-Disk-Platzierung aus
+ * `generateGalaxy` (dort für eine feste Systemanzahl vorab optimiert, hier
+ * für einen einzelnen, jederzeit nachträglich eingefügten Punkt unnötig).
+ */
+function pickIsolatedPosition(existingSystems: System[], rnd: Rng): { x: number; y: number } {
+  const margin = 0.08;
+  let best = { x: 0.5, y: 0.5 };
+  let bestMinDist = -1;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const candidate = { x: margin + rnd() * (1 - 2 * margin), y: margin + rnd() * (1 - 2 * margin) };
+    const minDist = existingSystems.reduce((min, s) => Math.min(min, Math.hypot(candidate.x - s.x, candidate.y - s.y)), Infinity);
+    if (minDist > bestMinDist) { bestMinDist = minDist; best = candidate; }
+  }
+  return best;
+}
+
+function nearestSystem(systems: System[], pos: { x: number; y: number }): System {
+  return systems.reduce((nearest, s) =>
+    Math.hypot(pos.x - s.x, pos.y - s.y) < Math.hypot(pos.x - nearest.x, pos.y - nearest.y) ? s : nearest);
 }

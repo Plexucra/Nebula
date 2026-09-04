@@ -10,6 +10,8 @@ interface NpcRow {
   population: Signal<Population | undefined>;
   stats: Signal<PlanetStats | undefined>;
   wallet: Signal<Wallet | undefined>;
+  coverage: Signal<Record<Id, number>>;
+  powerCoverage: Signal<number>;
 }
 
 interface ColonyRow {
@@ -18,7 +20,16 @@ interface ColonyRow {
   population: Signal<Population | undefined>;
   stats: Signal<PlanetStats | undefined>;
   wallet: Signal<Wallet | undefined>;
+  coverage: Signal<Record<Id, number>>;
+  powerCoverage: Signal<number>;
 }
+
+/** Reihenfolge/Kurzlabel für die Deckungsanzeige, siehe `CONSUMER_GOODS_ORDER` im Service (dort nicht exportiert). */
+const COVERAGE_GOODS: { id: Id; short: string; label: string }[] = [
+  { id: 'p_grundnahrung', short: 'N', label: 'Grundnahrung' },
+  { id: 'p_grundmedizin', short: 'M', label: 'Grundmedizin' },
+  { id: 'p_unterhaltungselektronik', short: 'E', label: 'Unterhaltungselektronik' },
+];
 
 @Component({
   selector: 'app-statistics',
@@ -57,6 +68,8 @@ export class StatisticsComponent {
     population: this.api.population(npc.homeColonyId),
     stats: this.api.colonyStats(npc.homeColonyId),
     wallet: this.api.ownerWallet(npc.id),
+    coverage: this.api.consumptionCoverage(npc.homeColonyId),
+    powerCoverage: this.api.powerCoverage(npc.homeColonyId),
   }));
 
   protected readonly colonyRows: ColonyRow[] = this.api.colonies()().map(colony => ({
@@ -65,7 +78,11 @@ export class StatisticsComponent {
     population: this.api.population(colony.id),
     stats: this.api.colonyStats(colony.id),
     wallet: this.api.populationWallet(colony.id),
+    coverage: this.api.consumptionCoverage(colony.id),
+    powerCoverage: this.api.powerCoverage(colony.id),
   }));
+
+  protected readonly coverageGoods = COVERAGE_GOODS;
 
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;
@@ -73,5 +90,23 @@ export class StatisticsComponent {
 
   protected isStruggling(stats: PlanetStats | undefined): boolean {
     return !!stats && (stats.standardOfLivingPct < 30 || stats.loyaltyPct < 20);
+  }
+
+  /** Erklärt den "gefährdet"-Status als Tooltip, statt ihn nur zu behaupten. */
+  protected strugglingReason(stats: PlanetStats | undefined): string {
+    if (!stats) return '';
+    const reasons: string[] = [];
+    if (stats.standardOfLivingPct < 30) reasons.push(`Lebensstandard ${stats.standardOfLivingPct.toFixed(0)}% < 30%`);
+    if (stats.loyaltyPct < 20) reasons.push(`Loyalität ${stats.loyaltyPct.toFixed(0)}% < 20%`);
+    return reasons.join(' · ');
+  }
+
+  protected isBlackout(powerCoverage: number): boolean {
+    return powerCoverage < 0.999;
+  }
+
+  /** Deckungswert in Prozent, gerundet – Helper statt `?? 0` im Template (TS kennt `Record`-Lücken zur Laufzeit nicht). */
+  protected coveragePct(coverage: Record<Id, number>, goodId: Id): number {
+    return Math.round((coverage[goodId] ?? 0) * 100);
   }
 }
