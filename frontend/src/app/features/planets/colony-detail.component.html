@@ -5,18 +5,24 @@
   </div>
 
   <nav class="tabs">
-    <button class="tab-btn" [class.active]="tab() === 'uebersicht'" (click)="setTab('uebersicht')">Übersicht</button>
-    <button class="tab-btn" [class.active]="tab() === 'bebauung'" (click)="setTab('bebauung')">Bebauung</button>
-    <button class="tab-btn" [class.active]="tab() === 'verteidigung'" (click)="setTab('verteidigung')">Verteidigung</button>
-    <button class="tab-btn" [class.active]="tab() === 'produktion'" (click)="setTab('produktion')">Produktion</button>
-    <button class="tab-btn" [class.active]="tab() === 'bodentruppen'" (click)="setTab('bodentruppen')">Bodentruppen</button>
-    <button class="tab-btn" [class.active]="tab() === 'bevoelkerung'" (click)="setTab('bevoelkerung')">Bevölkerung</button>
-    <button class="tab-btn" [class.active]="tab() === 'handel'" (click)="setTab('handel')">Handel</button>
+    <button class="tab-btn" [class.active]="effectiveTab() === 'uebersicht'" (click)="setTab('uebersicht')">Übersicht</button>
+    @if (isOwnColony()) {
+      <button class="tab-btn" [class.active]="effectiveTab() === 'bebauung'" (click)="setTab('bebauung')">Bebauung</button>
+      <button class="tab-btn" [class.active]="effectiveTab() === 'verteidigung'" (click)="setTab('verteidigung')">Verteidigung</button>
+      <button class="tab-btn" [class.active]="effectiveTab() === 'produktion'" (click)="setTab('produktion')">Produktion</button>
+      <button class="tab-btn" [class.active]="effectiveTab() === 'bodentruppen'" (click)="setTab('bodentruppen')">Bodentruppen</button>
+      <button class="tab-btn" [class.active]="effectiveTab() === 'bevoelkerung'" (click)="setTab('bevoelkerung')">Bevölkerung</button>
+    }
+    <button class="tab-btn" [class.active]="effectiveTab() === 'handel'" (click)="setTab('handel')">Handel</button>
   </nav>
+
+  @if (!isOwnColony()) {
+    <p class="hint panel-hint">Fremde Kolonie von {{ ownerDisplay() }} – nur Übersicht und Handel einsehbar.</p>
+  }
 
   @if (error()) { <div class="error">{{ error() }}</div> }
 
-  @switch (tab()) {
+  @switch (effectiveTab()) {
 
     @case ('uebersicht') {
       <div class="grid-2">
@@ -87,9 +93,12 @@
                 <div class="building-info">
                   <strong>{{ bt.name }}</strong>
                   @if (bt.id === 'b_powergrid' && powerCoverage() < 0.999) {
-                    <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Elerium-Zellen</span>
+                    <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Stabilisiertes Elerium</span>
                   }
                   <span class="hint">{{ bt.description }}</span>
+                  @if (bt.id === 'b_powergrid' && buildingLevel(bt.id) > 0) {
+                    <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.2-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
+                  }
                 </div>
                 <div class="building-level">
                   <span class="eyebrow">Stufe</span>
@@ -178,17 +187,15 @@
           <span class="hint">Pro Kolonie läuft immer nur ein Auftrag gleichzeitig – neue Aufträge warten in der Liste. „Nicht vorhandene Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette (Zeit + Rohstoffe); ist das Häkchen nicht gesetzt und die direkten Vorprodukte fehlen, hält die Warteschlange an und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung wieder ans Ende der Liste.</span>
         </div>
         @if (buildingLevel('b_industry') < 1) { <p class="hint panel-hint">Benötigt einen Industriekomplex.</p> }
-        @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Elerium-Zellen versorgt ist.</p> }
+        @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Stabilisiertem Elerium versorgt ist.</p> }
 
         <div class="panel-body">
           <span class="eyebrow">Neuer Auftrag</span>
           <div class="form-row">
-            <select [(ngModel)]="newProductionProductId">
-              @for (p of productTypes; track p.id) {
-                <option [value]="p.id">{{ p.name }} (T{{ p.tier }}) — Spez. Stufe {{ specLevel(p.id) }}</option>
-              }
-            </select>
-            <input type="number" min="1" [(ngModel)]="newProductionQty" />
+            <button type="button" class="product-select-btn" (click)="openProductPicker()">
+              {{ productName(newProductionProductId) }} <span class="hint">— ändern</span>
+            </button>
+            <input type="number" min="1" [(ngModel)]="newProductionQty" (ngModelChange)="refreshNewOrderPreview()" />
             <label class="checkbox-inline" title="Fehlende Vorprodukte werden vorausberechnet in denselben Auftrag mit eingerechnet, statt die Warteschlange bei Mangel anzuhalten.">
               <input type="checkbox" [(ngModel)]="newProductionAutoMissing" /> Nicht vorhandene Vorprodukte automatisch mitproduzieren
             </label>
@@ -198,10 +205,28 @@
             <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1">Auftrag einreihen</button>
           </div>
 
+          <div class="chain-plan new-order-preview">
+            @if (newOrderPreviewLoading()) {
+              <span class="hint calculating">Wird berechnet…</span>
+            } @else if (newOrderPreview()) {
+              @let preview = newOrderPreview()!;
+              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
+              @for (step of preview.steps; track step.productTypeId) {
+                <div class="chain-step">
+                  <span>{{ productName(step.productTypeId) }}</span>
+                  <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
+                  <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
+                  <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
+                  <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                </div>
+              }
+            }
+          </div>
+
           <div class="queue-list">
             @for (entry of productionQueue(); track entry.id) {
               <div class="queue-entry" [class.stopped]="entry.status === 'stopped'">
-                <div class="queue-row" (click)="toggleQueueEntry(entry.id)">
+                <div class="queue-row" (click)="toggleQueueEntry(entry)">
                   <span>{{ productName(entry.productTypeId) }} × {{ entry.quantity }}</span>
                   <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
                   <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
@@ -216,15 +241,19 @@
                 </div>
                 @if (expandedQueueEntry() === entry.id) {
                   <div class="chain-plan">
-                    <span class="hint">Gesamtdauer: {{ entry.plan.totalHours | number:'1.1-1' }} h</span>
-                    @for (step of entry.plan.steps; track step.productTypeId) {
-                      <div class="chain-step">
-                        <span>{{ productName(step.productTypeId) }}</span>
-                        <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
-                        <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
-                        <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
-                        <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
-                      </div>
+                    @if (entry.status !== 'running' && queuePreviewLoading() === entry.id) {
+                      <span class="hint calculating">Wird berechnet…</span>
+                    } @else {
+                      <span class="hint">{{ entry.status === 'running' ? 'Gesamtdauer' : 'Prognose unter aktuellem Lagerbestand — Gesamtdauer' }}: {{ planFor(entry).totalHours | number:'1.1-1' }} h</span>
+                      @for (step of planFor(entry).steps; track step.productTypeId) {
+                        <div class="chain-step">
+                          <span>{{ productName(step.productTypeId) }}</span>
+                          <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
+                          <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
+                          <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
+                          <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                        </div>
+                      }
                     }
                   </div>
                 }
@@ -233,6 +262,13 @@
           </div>
         </div>
       </div>
+
+      <app-product-picker-dialog
+        [products]="productTypes"
+        [open]="productPickerOpen()"
+        (closed)="productPickerOpen.set(false)"
+        (picked)="onProductPicked($event)"
+      />
 
       <div class="panel corner-frame">
         <div class="panel-header"><h2>Lagerbestand</h2></div>
@@ -248,6 +284,9 @@
                 <div class="form-row stock-sale-form">
                   <input type="number" min="1" [max]="w.quantity" placeholder="Menge" [(ngModel)]="stockSaleDraftQty[w.productTypeId]" />
                   <input type="number" min="0" step="0.5" placeholder="Preis/Einheit" [(ngModel)]="stockSaleDraftPrice[w.productTypeId]" />
+                  <label class="checkbox-inline" title="Sobald diese Order komplett aufgekauft wurde, wird sie automatisch mit gleicher Menge/Preis neu eingestellt.">
+                    <input type="checkbox" [(ngModel)]="stockSaleDraftAutoRelist[w.productTypeId]" /> Wiederkehrend anbieten
+                  </label>
                   <button class="primary small" (click)="submitStockSale(w.productTypeId)" [disabled]="busy() === ('stocksale:' + w.productTypeId)">Verkaufsorder einstellen</button>
                 </div>
               }
@@ -264,7 +303,7 @@
               <div class="spec-row">
                 <span>{{ productName(s.productTypeId) }}</span>
                 <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
-                <span class="mono">Stufe {{ s.currentLevel }}</span>
+                <span class="mono">Stufe {{ s.currentLevel }} <span class="hint">(+{{ specSpeedBonusPct(s.currentLevel) }}% Tempo)</span></span>
               </div>
             } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
           </div>
@@ -356,7 +395,7 @@
             <dl class="fact-list">
               <div><dt>Wohnkapazität</dt><dd class="mono">{{ housingCapacity() | number:'1.0-0' }} Plätze <span class="hint">({{ capacityUsagePct() | number:'1.0-0' }}% belegt)</span></dd></div>
               <div><dt>Energieversorgung</dt><dd class="mono" [class.warn]="powerCoverage() < 0.999 && powerCoverage() >= 0.5" [class.bad]="powerCoverage() < 0.5">{{ powerCoverage() * 100 | number:'1.0-0' }}%
-                <span class="hint">(Energienetz-Anteil an der Wohnkapazität, Elerium-Zellen im Lager nötig)</span></dd></div>
+                <span class="hint">(Energienetz-Anteil an der Wohnkapazität, Stabilisiertes Elerium im Lager nötig)</span></dd></div>
               <div><dt>Historischer Höchststand</dt><dd class="mono">{{ moneyState()?.historicalPeakPopulation ?? 0 | number:'1.0-0' }}
                 <span class="hint">(neue Credits entstehen nur oberhalb dieses Werts)</span></dd></div>
             </dl>
@@ -368,7 +407,7 @@
               <p class="hint">Noch genug Platz für weiteres Wachstum. Kapazität kommt aus Wohnkomplex + Energienetz (Tab „Bebauung").</p>
             }
             @if (powerCoverage() < 0.999) {
-              <p class="hint warn">Energienetz-Blackout: zu wenig Elerium-Zellen im Lager – mindert den Kapazitätsbeitrag des Energienetzes anteilig. Elerium-115 abbauen und zu Elerium-Zellen verarbeiten (Tab „Produktion").</p>
+              <p class="hint warn">Energienetz-Blackout: zu wenig Stabilisiertes Elerium im Lager – mindert den Kapazitätsbeitrag des Energienetzes anteilig. Eleriumspuren abbauen und zu Stabilisiertem Elerium verarbeiten (Tab „Produktion").</p>
             }
           </div>
         </div>
@@ -400,30 +439,47 @@
     @case ('handel') {
       <div class="grid-2">
         <div class="panel corner-frame">
-          <div class="panel-header"><h2>Verkaufsorder erstellen</h2></div>
-          <div class="panel-body form-row">
-            <select [(ngModel)]="newOrderProductId">
-              <option value="">Produkt wählen…</option>
-              @for (w of warehouse(); track w.productTypeId) {
-                <option [value]="w.productTypeId">{{ productName(w.productTypeId) }} ({{ w.quantity }} verfügbar)</option>
-              }
-            </select>
-            <input type="number" min="1" [(ngModel)]="newOrderQty" placeholder="Menge" />
-            <input type="number" min="1" [(ngModel)]="newOrderPrice" placeholder="Preis/Einheit" />
-            <button class="primary small" (click)="submitSellOrder()" [disabled]="busy() === 'sellorder'">Anbieten</button>
+          <div class="panel-header">
+            <h2>Planetarer Handel</h2>
+            <span class="hint">Nur Orders dieser Kolonie. Neue Orders über "Anbieten" im Lagerbestand (Tab „Produktion").</span>
           </div>
-        </div>
-
-        <div class="panel corner-frame">
-          <div class="panel-header"><h2>Systemmarkt</h2></div>
           <div class="panel-body wh-list">
-            @for (o of sellOrdersAll(); track o.id) {
+            @for (o of planetOrders(); track o.id) {
               <div class="order-row">
-                <span>{{ productName(o.productTypeId) }}</span>
+                <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
                 <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
                 <span class="hint">{{ o.sellerId === playerId ? 'eigene Order' : o.sellerName }}</span>
                 @if (o.sellerId === playerId) {
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
+                } @else {
+                  <div class="buy-controls">
+                    <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
+                    <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
+                  </div>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Diese Kolonie hat nichts im Angebot.</p> }
+          </div>
+        </div>
+
+        <div class="panel corner-frame">
+          <div class="panel-header">
+            <h2>System Handel</h2>
+            <span class="hint">Übrige Orders im Sternsystem (Systemhandelsposten und andere Kolonien), Lieferung direkt in diese Kolonie.</span>
+          </div>
+          <div class="panel-body wh-list">
+            @for (o of systemOrders(); track o.id) {
+              <div class="order-row">
+                <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
+                <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
+                <span class="hint">{{ o.sellerId === playerId ? 'eigene Order' : o.sellerName }} · {{ depotColonyName(o.depotColonyId) }}</span>
+                @if (o.sellerId === playerId) {
+                  <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
+                } @else {
+                  <div class="buy-controls">
+                    <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
+                    <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
+                  </div>
                 }
               </div>
             } @empty { <p class="empty-hint">Keine offenen Orders in diesem System.</p> }

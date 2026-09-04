@@ -161,6 +161,32 @@ Waffenträger (Bodentruppen, siehe 05_..., §3), analog zur Schiffslogik:
 Soldaten besitzen keine eigene Kampfwirkung und damit keine
 Konterrichtung (siehe `05_...`, §3).
 
+## Umsetzungsstand im Prototyp
+
+Die Kernformeln aus §1–4 sind vollständig umgesetzt
+(`frontend/src/app/core/sim/engine/formulas.ts`,
+`SimulatedGameApiService.resolveBattleTick`). Festgelegte Werte:
+
+- Schadensfaktor `COMBAT_DAMAGE_FACTOR = 0,2`, Haltbarkeitsfaktor
+  `COMBAT_DURABILITY_FACTOR = 1,0` — erfüllt die 20-%-Vorgabe aus §3.
+- Kampftick = 8 Spielstunden (`COMBAT_TICK_HOURS`).
+- Zielauswahl: proportional zum Produktionsaufwand-Anteil je
+  gegnerischem Einheitentyp (kein zusätzlicher Mechanismus nötig).
+
+**Bewusste Vereinfachung ggü. `06_Blockaden_Gefechtsablauf_Aufmarsch.md`**:
+Der Prototyp kennt nur strikte 1-Flotte-gegen-1-Flotte-Raumgefechte
+zwischen zwei im Krieg stehenden Kommandanten (`Diplomatie`, siehe
+`Umsetzungskonzept/11_...md`), ausgelöst durch eine explizite
+„Angreifen"-Aktion zweier im selben System stationierter Flotten. Kein
+Blockade-Anker-Objekt, keine räumliche Hierarchie, keine
+Mobilmachungsrampe, kein Expositionslimit, keine
+Schaden-Redistribution bei Overkill (überschüssiger Schaden verfällt
+einfach), keine Mehrparteien-Gefechte, kein Bodenkampf. Rückzug ist
+umgesetzt als ein finaler einseitiger Schadens-Tick der Gegenseite,
+danach endet das Gefecht sofort (vereinfacht ggü. der dortigen
+Rückzugsregel). Die volle Blockade-/Mobilmachungs-/Expositions-
+Mechanik aus `06_...md` bleibt ein möglicher späterer Ausbauschritt.
+
 ## Offene Zahlenfragen
 
 - Spätere Simulation/Balancing-Prüfung des neutralen 20-%-Schadenswerts.

@@ -1,9 +1,24 @@
-.locked-panel .empty-state { padding: 60px 20px; max-width: 520px; margin: 0 auto; }
-.locked-panel h2 { margin: 10px 0; }
-
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
+  margin-bottom: 14px;
 }
 @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+
+.relation-list, .offer-list, .battle-list, .history-list { display: flex; flex-direction: column; gap: 8px; }
+
+.relation-row, .offer-row, .battle-row, .history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.relation-name { flex: 1 1 auto; font-weight: 600; }
+.offer-row > span:first-child, .battle-row > span:first-child, .history-row > span:first-child { flex: 1 1 auto; }
+
+.small-tag { font-size: 10.5px; }

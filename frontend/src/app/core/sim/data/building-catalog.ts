@@ -31,7 +31,7 @@ export const BUILDING_CATALOG: BuildingType[] = [
     id: 'b_powergrid',
     name: 'Energienetz',
     category: 'Infrastructure',
-    description: 'Energieversorgung für Kolonie und Industrie. Erhöht die planetare Infrastrukturkapazität – benötigt dafür laufend Elerium-Zellen aus dem Kolonielager, sonst Blackout-Abzug.',
+    description: 'Energieversorgung für Kolonie und Industrie. Erhöht die planetare Infrastrukturkapazität – benötigt dafür laufend Stabilisiertes Elerium aus dem Kolonielager, sonst Blackout-Abzug.',
     maxLevel: 20,
     buildPointsPerLevel: 2,
     baseCostPerLevel: 90,

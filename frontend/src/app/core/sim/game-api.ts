@@ -1,8 +1,8 @@
 import { Signal } from '@angular/core';
 import {
-  Building, BuildingType, Colony, Fleet, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
-  GroundUnitTypeDef, Id, Npc, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
-  ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  Battle, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, GameNotification, Gateway,
+  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Npc, PeaceOffer, Planet, PlanetStats, Player, Population,
+  PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
@@ -59,6 +59,8 @@ export interface GameApi {
 
   // --- Planeten / Kolonien ------------------------------------------------
   colonies(): Signal<Colony[]>;
+  /** ALLE Kolonien in einem System, unabhängig vom Besitzer – z. B. um von der Galaxiekarte aus fremde Kolonien für den System Handel zu finden. */
+  coloniesInSystem(systemId: Id): Signal<Colony[]>;
   colony(id: Id): Signal<Colony | undefined>;
   colonyStats(id: Id): Signal<PlanetStats | undefined>;
   /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, kein Snapshot-Feld. */
@@ -79,6 +81,8 @@ export interface GameApi {
   housingCapacity(colonyId: Id): Signal<number>;
   /** 0..1: wie viel des Elerium-Bedarfs des Energienetzes zuletzt gedeckt war (1 = voll versorgt, kein Energienetz = 1). */
   powerCoverage(colonyId: Id): Signal<number>;
+  /** Aktueller Elerium-Energiezelle-Bedarf des Energienetzes pro Spielstunde (0 ohne Energienetz) – unabhängig davon, ob er gerade gedeckt ist (siehe `powerCoverage`). */
+  powerUpkeepPerHour(colonyId: Id): Signal<number>;
 
   // --- Produktion (sequentielle Warteschlange, siehe Konzeption/Umsetzungskonzept/
   //     10_Sequentielle_Produktionsauftraege_und_Ereignissystem.md) ------------
@@ -95,6 +99,12 @@ export interface GameApi {
    * Fertigstellung automatisch ans Ende der Warteschlange neu ein.
    */
   queueProduction(colonyId: Id, productTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
+  /**
+   * Reine Vorschau unter dem aktuellen Lagerbestand, OHNE einen Auftrag
+   * anzulegen – für die "wird berechnet"-Kosten-/Zeit-Prognose im
+   * Neuer-Auftrag-Formular und beim Aufklappen eines wartenden Eintrags.
+   */
+  previewProductionChain(colonyId: Id, productTypeId: Id, quantity: number): Promise<ChainPlan>;
   /** "Fortsetzen"-Button: prüft einen angehaltenen Auftrag erneut und startet ihn, falls jetzt ausführbar. */
   resumeProduction(colonyId: Id, entryId: Id): Promise<void>;
   /** Bei laufendem Auftrag anteilige Gutschrift nach verstrichener Zeit (abgerundet je Schritt), siehe Dokument §4. */
@@ -108,11 +118,51 @@ export interface GameApi {
   transfer(toPlayerName: string, amount: number): Promise<void>;
 
   // --- Flotten ------------------------------------------------------------
+  /** ALLE eigenen Flotten, unabhängig vom Standort (auch unterwegs oder in einem fremden System). */
   fleets(): Signal<Fleet[]>;
+  /** ALLE Flotten der Galaxie, jeden Besitzers (auch anderer Kommandanten und NPCs) – für die Marker auf der Galaxiekarte. Sichtbarkeit fremder Flotten dort clientseitig über `hasVisitedSystem` einschränken. */
+  allFleets(): Signal<Fleet[]>;
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]>;
   queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
   resumeShipOrder(colonyId: Id, entryId: Id): Promise<void>;
   cancelShipOrder(colonyId: Id, entryId: Id): Promise<void>;
+  /**
+   * Fertig gebaute Schiffe landen zunächst wie normale Waren im Lager der
+   * bauenden Kolonie (siehe `warehouse`) – erst dieser Befehl überführt sie
+   * in eine Flotte: entweder in `targetFleetId` (muss eine eigene,
+   * stationierte Flotte AN DIESER KOLONIE sein) oder, wenn `null`, in eine
+   * neu gegründete Flotte dort.
+   */
+  transferShipsToFleet(colonyId: Id, shipProductTypeId: Id, quantity: number, targetFleetId: Id | null): Promise<void>;
+  /** Lädt Ware aus dem Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist, in ihre Fracht – begrenzt durch Lagerbestand UND verbleibende Massen-/Volumenkapazität der Flotte. */
+  loadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
+  /** Entlädt Fracht zurück ins Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist. */
+  unloadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
+  /**
+   * Schickt eine stationierte, eigene Flotte über das (uneingeschränkt
+   * offene, siehe `Gateway`) Netz los – Reisezeit richtet sich nach der
+   * Anzahl Gateway-Sprünge zum Ziel, die intern hop-für-hop abgearbeitet
+   * werden (siehe `Fleet.pendingHops`), nicht als ein einziger
+   * ununterbrechbarer Sprung. Nach jedem einzelnen Sprung (ereignisbasiert,
+   * siehe Konzeption/Umsetzungskonzept/10_...md) gilt das jeweils erreichte
+   * System für diesen Kommandanten fortan als besucht (`hasVisitedSystem`).
+   */
+  moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void>;
+  /**
+   * Bricht eine unterwegs befindliche Flotte ab: der gerade laufende
+   * Gateway-Sprung wird noch zu Ende geflogen, alle weiteren geplanten
+   * Sprünge entfallen – die Flotte bleibt am Ende dieses Sprungs stehen.
+   * Jederzeit möglich, solange die Flotte unterwegs ist (auch mitten in
+   * einer mehrsprungigen Reise) – z. B. falls ein Gateway auf der Route
+   * gesperrt wird.
+   */
+  cancelFleetMove(fleetId: Id): Promise<void>;
+  /** Reine Vorschau (keine Bewegung) für "Bewegen" auf der Galaxiekarte: Sprunganzahl + geschätzte Reisezeit (ms) zu einem Zielsystem – `null`, wenn kein Gateway-Pfad bekannt ist. Dieselbe Berechnung wie `moveFleet`, damit Vorschau und tatsächliche Ankunft nie auseinanderlaufen. */
+  routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null>;
+  /** Landet eine im System angekommene (nicht unterwegs befindliche) Flotte bei einer Kolonie dieses Systems – eigene wie fremde, für Handel am dortigen Planetaren Handelsposten. */
+  landFleet(fleetId: Id, colonyId: Id): Promise<void>;
+  /** Legt von einer Kolonie ab, ohne das System zu verlassen – die Flotte steht dann am Systemhandelsposten. */
+  undockFleet(fleetId: Id): Promise<void>;
 
   // --- Bodentruppen -------------------------------------------------------
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined>;
@@ -122,24 +172,73 @@ export interface GameApi {
   cancelRecruitment(colonyId: Id, entryId: Id): Promise<void>;
 
   // --- Gateway / Galaxie ----------------------------------------------------
+  /** Gateways sind von Anfang an uneingeschränkt offen (keine Erforschung/Aktivierung nötig) – jeder Kommandant kann seine Flotten sofort frei durchs gesamte bekannte Netz bewegen. */
   gateway(systemId: Id): Signal<Gateway | undefined>;
-  activateGateway(systemId: Id): Promise<void>;
   gatewayWeights(systemId: Id): Signal<GatewayWeightEntry[]>;
+  /** ALLE Systeme der Galaxie – die Netzwerktopologie selbst ist öffentlich bekannt (offene Gateways), unabhängig davon, ob man dort schon war. */
   visibleSystems(): Signal<System[]>;
   system(id: Id): Signal<System | undefined>;
-  /** Bekannte Gateway-Routen (dedupliziert) zwischen sichtbaren Systemen. */
+  /** Alle Gateway-Routen (dedupliziert) der gesamten bekannten Galaxie. */
   galaxyRoutes(): Signal<{ a: Id; b: Id }[]>;
+  /**
+   * true, sobald eine eigene Flotte dieses System schon einmal erreicht hat
+   * (siehe `moveFleet`) – erst dann sind dessen Kolonien einsehbar
+   * (`coloniesInSystem` auf der Galaxiekarte). Das Heimatsystem gilt von
+   * Anfang an als besucht.
+   */
+  hasVisitedSystem(systemId: Id): Signal<boolean>;
 
   // --- Handel ---------------------------------------------------------------
   sellOrders(systemId: Id): Signal<SellOrder[]>;
   /**
+   * Verkauf ab Kolonie-Lager (Planetarer Handelsposten der EIGENEN Kolonie).
    * `autoRelist: true` ("Anbieten" im Lagerbestand) legt beim vollständigen
    * Verkauf im selben Vorgang automatisch eine neue Order mit identischer
    * Menge/Preis an, siehe Dokument §6.
    */
   createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
+  /**
+   * Verkauf direkt aus der Fracht einer eigenen, gerade dort befindlichen
+   * Flotte – gelandet bei einer Kolonie (auch fremder!) entsteht eine
+   * `'Depot'`-Order an deren Planetarem Handelsposten, im System ohne
+   * Landung eine `'Station'`-Order am Systemhandelsposten.
+   */
+  createSellOrderFromFleet(fleetId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
   cancelSellOrder(orderId: Id): Promise<void>;
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
+
+  // --- Diplomatie (Mechanik/06_..., vereinfacht, siehe SimulatedGameApiService) ---
+  /** Status gegenüber einem beliebigen anderen Kommandanten – `'Peace'` ohne Beziehungseintrag (impliziter Grundzustand). */
+  diplomaticStatus(otherPlayerId: Id): Signal<DiplomaticStatus>;
+  /** Alle laufenden Kriege des angemeldeten Kommandanten. */
+  activeWars(): Signal<DiplomaticRelation[]>;
+  /** An den angemeldeten Kommandanten gerichtete, noch unbeantwortete Friedensangebote. */
+  incomingPeaceOffers(): Signal<PeaceOffer[]>;
+  /** Vom angemeldeten Kommandanten selbst gestellte, noch offene Friedensangebote. */
+  outgoingPeaceOffers(): Signal<PeaceOffer[]>;
+  /** Einseitig, tritt sofort in Kraft. */
+  declareWar(otherPlayerId: Id): Promise<void>;
+  /**
+   * Einseitiges Angebot, wirksam erst nach Annahme durch den Empfänger
+   * (`respondToPeaceOffer`). Gesperrt während eines laufenden Gefechts und
+   * vor Ablauf einer Mindest-Kriegsdauer seit der Erklärung.
+   */
+  offerPeace(otherPlayerId: Id): Promise<void>;
+  /** Nur der Empfänger darf antworten; Ablehnen löscht das Angebot ersatzlos, der Krieg läuft weiter. */
+  respondToPeaceOffer(offerId: Id, accept: boolean): Promise<void>;
+
+  // --- Raumgefechte (Mechanik/04_..., Kernformeln; vereinfacht ggü. 06_...) ---
+  /** Alle laufenden Gefechte des angemeldeten Kommandanten (Angreifer oder Verteidiger). */
+  activeBattles(): Signal<Battle[]>;
+  battle(id: Id): Signal<Battle | undefined>;
+  /** Beendete Gefechte, neueste zuerst – Kampfprotokoll. */
+  battleHistory(): Signal<Battle[]>;
+  /** Eigene, im selben System stationierte, gegnerische Flotten (im Krieg, mit Schiffen) – Kandidaten für `engageBattle`. */
+  attackableFleetsInSystem(systemId: Id): Signal<Fleet[]>;
+  /** Startet ein 1v1-Gefecht zwischen der eigenen Flotte und einer gegnerischen im selben System – nur im Krieg möglich. */
+  engageBattle(attackerFleetId: Id, defenderFleetId: Id): Promise<void>;
+  /** Zieht die eigene Flotte aus einem laufenden Gefecht zurück – die Gegenseite feuert dabei noch einen letzten Schlag. */
+  retreatFromBattle(battleId: Id): Promise<void>;
 
   // --- Benachrichtigungen (siehe Dokument §5) -------------------------------
   notifications(): Signal<GameNotification[]>;

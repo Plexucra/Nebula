@@ -38,12 +38,26 @@ Damit entsteht ein natürliches Maximum an Spezialisierung/Effizienz nur
 bei tatsächlicher Konzentration, ohne harte Beschränkung auf ein
 Produkt pro Planet.
 
-**Noch offen (keine Werte festgelegt):**
+**Umsetzungsstand im Prototyp** (`engine/formulas.ts`,
+`SimulatedGameApiService.registerProduced`/`decaySpecializations`):
 
-- Genaue mathematische Wachstums-/Zerfallskurve der
-  Spezialisierungsstufen.
-- Konkrete Effizienzgewinne pro Stufe (Zeit, Output, Ressourceneinsatz).
-- Geschwindigkeit, mit der ein Planet die Spezialisierung wechseln kann.
+- XP-Gewinn = tatsächlich verbrauchte Produktionszeit (Spielstunden),
+  nicht Stückzahl – wer ein Produkt exklusiv fertigt, sammelt XP
+  proportional zur dafür aufgewendeten Zeit.
+- Lineare Stufen-Schwelle (`specializationThresholdHours`), kalibriert
+  auf **eine Spielwoche** (168 Spielstunden) ununterbrochener
+  Exklusivproduktion = Stufe 10 = **+100 % Tempo**
+  (`specializationSpeedFactor`, +10 %/Stufe). Bis Stufe 50 (+500 %)
+  entsprechend länger (~23 Spielwochen kumuliert, da jede weitere Stufe
+  selbst mehr kostet) – siehe Rechnung im Code-Kommentar dort.
+- Verfall bei Inaktivität: eigene Kürzungsregel in
+  `decaySpecializations` (siehe dort für Details).
+- Industriekomplex/Werft/Ausbildungszentrum: linearer Tempo-Faktor zur
+  Gebäudestufe (Stufe 2 = doppelt so schnell wie Stufe 1, Stufe 10 =
+  zehnmal so schnell), siehe `buildingLevelSpeedFactor`.
+- Arbeitsteilungs-Effizienzgewinn aus §3 bleibt weiterhin offen (keine
+  gesonderte Formel jenseits der Spezialisierungsstufe selbst
+  implementiert).
 
 ## 3. Arbeitsteilungs-Effizienzgewinn
 
@@ -72,8 +86,8 @@ Keine harte Grenze auf eine Kolonie pro Planet insgesamt, aber:
 
 ## Offene Zahlenfragen
 
-- Wie genau wachsen und verfallen Spezialisierungsboni bzw. -stufen
-  mathematisch?
-- Wie schnell kann ein Planet seine Spezialisierung wechseln?
+- Wachstum ist umgesetzt (siehe §2, „Umsetzungsstand im Prototyp“);
+  Verfall bei Inaktivität ebenfalls (`decaySpecializations`,
+  `SPECIALIZATION_DECAY_GRACE_MS`), aber ohne gesonderte Balancing-Prüfung.
 - Wie viele Produktionsstufen sind bei welcher Spielerzahl sinnvoll?
 - Genaue technische Formel für den Arbeitsteilungs-Effizienzgewinn (§3).

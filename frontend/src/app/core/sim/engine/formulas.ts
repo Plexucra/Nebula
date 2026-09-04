@@ -38,12 +38,45 @@ export function workforceFactor(population: number): number {
   return clamp(population / 400, 0.35, 5);
 }
 
+/**
+ * Produktionsanlagen-Tempo (Industriekomplex/Werft/Ausbildungszentrum):
+ * linear zur Stufe – Stufe 2 ist doppelt so schnell wie Stufe 1, Stufe 10
+ * zehnmal so schnell. Stufe 0 (kein Gebäude) blockiert Produktion komplett
+ * (siehe `computeProductionHours`, `Math.max(speed, 0.05)`-Untergrenze
+ * verhindert dort nur eine Division durch 0, keine tatsächliche Produktion
+ * ohne Gebäude).
+ */
 export function buildingLevelSpeedFactor(level: number): number {
-  return level <= 0 ? 0 : 1 + (level - 1) * 0.15;
+  return level <= 0 ? 0 : level;
 }
 
+/** Tempobonus aus Produktspezialisierung: +10%/Stufe, siehe `specializationThresholdHours` für die Stufen-Kalibrierung. */
 export function specializationSpeedFactor(level: number): number {
-  return 1 + level * 0.08;
+  return 1 + level * 0.1;
+}
+
+/**
+ * XP-Schwelle (in Spezialisierungs-Produktionsstunden, siehe
+ * `SimulatedGameApiService.registerProduced` – XP = tatsächlich verbrauchte
+ * Produktionszeit, nicht Stückzahl) für den Aufstieg von `level` auf
+ * `level + 1`. Linear wachsend (Kosten pro Stufe steigen gleichmäßig, ohne
+ * explosionsartig zu werden), kalibriert auf EINE SPIELWOCHE (nicht real –
+ * die Realzeit-Stauchung über `REAL_MS_PER_GAME_HOUR` ist hier bewusst
+ * irrelevant): wer ein einzelnes Produkt eine Spielwoche lang (7 × 24 = 168
+ * Spielstunden) ununterbrochen exklusiv produziert, erreicht kumuliert
+ * Stufe 10 = +100% Tempo (Faktor 2×, siehe `specializationSpeedFactor`) –
+ * kumulierte Schwelle bis Stufe 10 ist BASE × (1+2+…+10) = BASE × 55 = 168,
+ * also BASE = 168/55 ≈ 3,055. Bei gleicher Formel wären es bis Stufe 50
+ * (+500%) kumuliert BASE × 1275 ≈ 3895 Spielstunden ≈ 162 Spieltage ≈ 23
+ * Spielwochen (≈ 5,4 Spielmonate) – deutlich länger als linear 5× die erste
+ * Woche, weil jede weitere Stufe selbst mehr kostet. In Realzeit entspricht
+ * das bei `REAL_MS_PER_GAME_HOUR` (2500 ms/Spielstunde) durchgehender
+ * Produktion ca. 7 Realminuten bis Stufe 10 bzw. ca. 2,7 Realstunden bis
+ * Stufe 50.
+ */
+const SPECIALIZATION_THRESHOLD_BASE = (7 * 24) / 55;
+export function specializationThresholdHours(level: number): number {
+  return SPECIALIZATION_THRESHOLD_BASE * (level + 1);
 }
 
 /**
@@ -131,4 +164,36 @@ export const CREDITS_PER_NEW_INHABITANT = 8;
  */
 export function productionAspect(baseWorkforceRequired: number, baseProductionHours: number): number {
   return baseWorkforceRequired * baseProductionHours;
+}
+
+/**
+ * Globale Kampf-Faktoren (Mechanik/04_..., §2-3 – Zahlenwert selbst als
+ * "offene Zahlenfrage" markiert, hier festgelegt): Gruppenschaden =
+ * Anzahl × Produktionsaufwand je Einheit × `COMBAT_DAMAGE_FACTOR`,
+ * Haltbarkeit = Produktionsaufwand je Einheit × `COMBAT_DURABILITY_FACTOR`.
+ * Verhältnis 0,2:1 erfüllt die dort genannte Vorgabe "bei neutralem Konter
+ * (×1) verliert eine Seite gegen eine gleich starke Seite pro Tick rund 20%
+ * ihres Werts" – nach 5 Ticks (§Kampftick, `COMBAT_TICK_HOURS`) ist eine
+ * gleich starke, neutrale Streitmacht bei Dauerbeschuss vollständig
+ * vernichtet.
+ */
+export const COMBAT_DAMAGE_FACTOR = 0.2;
+export const COMBAT_DURABILITY_FACTOR = 1;
+
+/** Dauer eines Kampf-Ticks in Spielstunden (Mechanik/04_..., §6). */
+export const COMBAT_TICK_HOURS = 8;
+
+/**
+ * Konter-Multiplikator (Mechanik/03_..., §2 und 04_..., §4): ×2 im
+ * Vorteil (die eigene Klasse kontert die des Ziels), ×0,5 im Nachteil
+ * (wird selbst gekontert), sonst ×1. Symmetrisch aus Angreifer- UND
+ * Verteidiger-`countersClass` ableitbar, hier bewusst nur EINE Richtung
+ * abgefragt (`attackerCountersDefender`) – der Aufrufer prüft die jeweils
+ * andere Richtung für den Fall des Nachteils separat (siehe
+ * `SimulatedGameApiService.resolveBattleTick`).
+ */
+export function counterMultiplier(attackerCountersDefenderClass: boolean, defenderCountersAttackerClass: boolean): number {
+  if (attackerCountersDefenderClass) return 2;
+  if (defenderCountersAttackerClass) return 0.5;
+  return 1;
 }

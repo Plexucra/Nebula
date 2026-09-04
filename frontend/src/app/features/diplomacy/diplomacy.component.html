@@ -3,33 +3,82 @@
   <h1>Diplomatie &amp; Krieg</h1>
 </div>
 
-@if (!gatewayActive()) {
-  <div class="panel corner-frame locked-panel">
-    <div class="panel-body empty-state">
-      <span class="eyebrow">🔒 Gesperrt</span>
-      <h2>Kein Kontakt zu anderen Mächten</h2>
-      <p>Ihr Heimatsystem ist noch nicht an das galaktische Gateway-Netz angeschlossen. Vor der
-        Gateway-Aktivierung gibt es keine erreichbaren fremden Parteien, mit denen Krieg oder Frieden
-        möglich wäre. Aktivieren Sie Ihr Gateway über die Galaxiekarte, sobald Sie bereit für den Kontakt
-        mit der galaktischen Gemeinschaft sind.</p>
+@if (error()) { <div class="error">{{ error() }}</div> }
+
+<div class="grid-3">
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Andere Kommandanten</h2></div>
+    <div class="panel-body relation-list">
+      @for (p of otherPlayers(); track p.id) {
+        <div class="relation-row">
+          <span class="relation-name">{{ p.name }}</span>
+          <span class="tag" [class.warn]="statusWith(p.id) === 'War'" [class.good]="statusWith(p.id) === 'Peace'">
+            {{ statusWith(p.id) === 'War' ? 'Krieg' : 'Frieden' }}
+          </span>
+          @if (statusWith(p.id) === 'Peace') {
+            <button class="ghost small danger" (click)="declareWar(p.id)" [disabled]="busy() === ('war:' + p.id)">Krieg erklären</button>
+          } @else if (hasOutgoingOfferTo(p.id)) {
+            <span class="hint small-tag">Friedensangebot wartet auf Antwort</span>
+          } @else {
+            <button class="ghost small" (click)="offerPeace(p.id)" [disabled]="busy() === ('peace:' + p.id)">Frieden anbieten</button>
+          }
+        </div>
+      } @empty { <p class="empty-hint">Noch keine anderen Kommandanten in der Galaxie.</p> }
     </div>
   </div>
-} @else {
-  <div class="grid-3">
-    <div class="panel corner-frame">
-      <div class="panel-header"><h2>Aktive Kriege</h2></div>
-      <div class="panel-body empty-state">
-        <p>Noch keine anderen Kommandanten in Reichweite. Mehrspieler-Diplomatie folgt in einer
-          späteren Ausbaustufe dieses Prototyps.</p>
-      </div>
-    </div>
-    <div class="panel corner-frame">
-      <div class="panel-header"><h2>Friedensangebote</h2></div>
-      <div class="panel-body empty-state"><p>Keine ausstehenden Angebote.</p></div>
-    </div>
-    <div class="panel corner-frame">
-      <div class="panel-header"><h2>Blockadenkarte</h2></div>
-      <div class="panel-body empty-state"><p>Keine aktiven Blockaden in Ihrem System.</p></div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Friedensangebote</h2></div>
+    <div class="panel-body offer-list">
+      <span class="eyebrow">Eingehend</span>
+      @for (o of incomingPeaceOffers(); track o.id) {
+        <div class="offer-row">
+          <span>{{ playerName(o.fromPlayerId) }} bietet Frieden</span>
+          <button class="primary small" (click)="respond(o.id, true)" [disabled]="busy() === ('respond:' + o.id)">Annehmen</button>
+          <button class="ghost small" (click)="respond(o.id, false)" [disabled]="busy() === ('respond:' + o.id)">Ablehnen</button>
+        </div>
+      } @empty { <p class="empty-hint">Keine eingehenden Angebote.</p> }
+
+      <div class="divider"></div>
+      <span class="eyebrow">Ausgehend</span>
+      @for (o of outgoingPeaceOffers(); track o.id) {
+        <div class="offer-row"><span>An {{ playerName(o.toPlayerId) }} — wartet auf Antwort</span></div>
+      } @empty { <p class="empty-hint">Keine ausgehenden Angebote.</p> }
     </div>
   </div>
-}
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Laufende Gefechte</h2></div>
+    <div class="panel-body battle-list">
+      @for (b of activeBattles(); track b.id) {
+        <div class="battle-row">
+          <span>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</span>
+          <span class="hint">Tick {{ b.ticksResolved }}, nächster in {{ countdown(b.nextTickAt - clock.now()) }}</span>
+          <a class="ghost small" [routerLink]="['/flotten']">Zu den Flotten</a>
+        </div>
+      } @empty { <p class="empty-hint">Keine laufenden Gefechte.</p> }
+    </div>
+  </div>
+</div>
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Kampfprotokoll</h2></div>
+  <div class="panel-body">
+    <div class="history-list">
+      @for (b of battleHistory(); track b.id) {
+        <div class="history-row">
+          <span>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</span>
+          <span class="tag" [class.good]="b.outcome === 'AttackerVictory'" [class.warn]="b.outcome === 'DefenderVictory'">
+            @switch (b.outcome) {
+              @case ('AttackerVictory') { Angreifer siegt }
+              @case ('DefenderVictory') { Verteidiger siegt }
+              @case ('Retreat') { Rückzug }
+              @default { Unentschieden }
+            }
+          </span>
+          <span class="hint mono">{{ b.ticksResolved }} Ticks</span>
+        </div>
+      } @empty { <p class="empty-hint">Noch keine beendeten Gefechte.</p> }
+    </div>
+  </div>
+</div>

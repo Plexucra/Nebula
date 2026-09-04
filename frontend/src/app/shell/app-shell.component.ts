@@ -9,7 +9,6 @@ interface NavItem {
   path: string;
   label: string;
   icon: string;
-  lockedHint?: string;
 }
 
 @Component({
@@ -69,16 +68,12 @@ export class AppShellComponent {
     { path: '/produktion', label: 'Produktion', icon: '⛭' },
     { path: '/flotten', label: 'Flotten', icon: '✈' },
     { path: '/bodentruppen', label: 'Bodentruppen', icon: '⛊' },
-    { path: '/diplomatie', label: 'Diplomatie / Krieg', icon: '⚔', lockedHint: 'Freigeschaltet nach Gateway-Aktivierung' },
+    { path: '/diplomatie', label: 'Diplomatie / Krieg', icon: '⚔' },
     { path: '/galaxie', label: 'Galaxiekarte', icon: '✦' },
     { path: '/handel', label: 'Handel', icon: '⇄' },
     { path: '/konto', label: 'Konto', icon: '◈' },
     { path: '/statistiken', label: 'Statistiken', icon: '▤' },
   ];
-
-  protected isLocked(item: NavItem): boolean {
-    return !!item.lockedHint && !this.gatewayActive();
-  }
 
   /** Löscht die GESAMTE gemeinsame Galaxie – auch die aller anderen Kommandanten, nicht nur den eigenen Fortschritt. */
   protected async resetGame(): Promise<void> {

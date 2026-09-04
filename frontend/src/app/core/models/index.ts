@@ -15,3 +15,5 @@ export * from './player.model';
 export * from './npc.model';
 export * from './stats.model';
 export * from './notification.model';
+export * from './diplomacy.model';
+export * from './combat.model';

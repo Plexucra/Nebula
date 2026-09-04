@@ -5,116 +5,172 @@
 
 @if (error()) { <div class="error">{{ error() }}</div> }
 
-<div class="grid-2">
-  <div class="panel corner-frame">
-    <div class="panel-header"><h2>{{ homeSystem()?.name }}</h2></div>
-    <div class="panel-body">
-      <svg viewBox="0 0 300 300" class="orbit-svg">
-        <circle cx="150" cy="150" r="4" class="star" />
-        @for (planet of planets(); track planet.id) {
-          <circle cx="150" cy="150" [attr.r]="orbitRadius(planet)" class="orbit-ring" />
+<div class="galaxy-shell">
+  <div class="panel corner-frame map-panel">
+    <div class="panel-header">
+      <h2>Bekannte Systeme</h2>
+      <div class="legend">
+        <span class="legend-item"><i class="dot mine"></i>Eigene Flotte</span>
+        <span class="legend-item"><i class="dot colony"></i>Eigene Kolonie</span>
+        <span class="legend-item"><i class="dot enemy"></i>Feindliche Flotte</span>
+      </div>
+    </div>
+    <div class="panel-body map-body">
+      @if (moveModeFleetId()) {
+        @let rp = movePreview();
+        <div class="move-banner">
+          @if (!moveTargetSystemId()) {
+            <span>Zielsystem für <strong>{{ moveModeFleetName() }}</strong> auf der Karte anklicken.</span>
+            <button class="ghost small" (click)="cancelMove()">Abbrechen</button>
+          } @else if (rp) {
+            <span>Ziel <strong>{{ selectedSystem()?.name }}</strong> — {{ rp.hops }} Gateway-Sprung(e), Dauer {{ countdown(rp.ms) }}</span>
+            <button class="primary small" (click)="confirmMove()" [disabled]="busy() === 'move'">Anfliegen</button>
+            <button class="ghost small" (click)="cancelMove()">Abbrechen</button>
+          } @else {
+            <span>Kein bekannter Gateway-Pfad zu diesem Ziel.</span>
+            <button class="ghost small" (click)="cancelMove()">Abbrechen</button>
+          }
+        </div>
+      }
+      <svg #svgEl class="galaxy-svg"
+           [attr.viewBox]="viewBoxAttr()"
+           [class.dragging]="isDragging()"
+           [class.targeting]="!!moveModeFleetId()"
+           (pointerdown)="onPointerDown($event)"
+           (pointermove)="onPointerMove($event)"
+           (pointerup)="onPointerUp($event)"
+           (pointercancel)="onPointerUp($event)"
+           (pointerleave)="onPointerUp($event)"
+           (wheel)="onWheel($event)">
+        @for (route of renderRoutes(); track route.key) {
+          <line [attr.x1]="route.x1" [attr.y1]="route.y1" [attr.x2]="route.x2" [attr.y2]="route.y2" class="link-line" />
+        }
+        @for (sys of systems(); track sys.id) {
+          @let marker = markerFor(sys.id);
+          @if (selectedSystem()?.id === sys.id) {
+            <circle [attr.cx]="sys.x * 100" [attr.cy]="sys.y * 100" [attr.r]="nodeRadius + 0.7" class="selected-ring" />
+          }
           <circle
-            [attr.cx]="planetX(planet)"
-            [attr.cy]="planetY(planet)"
-            r="6"
-            class="planet-dot"
+            [attr.cx]="sys.x * 100" [attr.cy]="sys.y * 100"
+            [attr.r]="nodeRadius"
+            class="sys-node"
+            [class.mine]="marker.colorClass === 'mine'"
+            [class.colony]="marker.colorClass === 'colony'"
+            [class.enemy]="marker.colorClass === 'enemy'"
+            [class.home]="sys.isHomeSystem"
+            [class.hub]="sys.isTradeHub"
+            (click)="onSystemClick(sys)"
           />
-          <text [attr.x]="planetX(planet)" [attr.y]="planetY(planet) + 18" class="planet-label" text-anchor="middle">{{ planet.name }}</text>
+          @if (showLabels() || sys.isHomeSystem || selectedSystem()?.id === sys.id) {
+            <text [attr.x]="sys.x * 100" [attr.y]="sys.y * 100 - nodeRadius - 0.9" class="sys-label" text-anchor="middle">{{ sys.name }}</text>
+          }
+          @if (marker.myShips > 0) {
+            <text [attr.x]="sys.x * 100 + nodeRadius + 0.7" [attr.y]="sys.y * 100 - 0.2" class="ship-count mine">{{ marker.myShips }}</text>
+          }
+          @if (marker.enemyShips > 0) {
+            <text [attr.x]="sys.x * 100 + nodeRadius + 0.7" [attr.y]="sys.y * 100 + 2.1" class="ship-count enemy">{{ marker.enemyShips }}</text>
+          }
         }
       </svg>
+      <p class="hint map-hint">Ziehen zum Verschieben, Scrollrad bzw. 2-Finger-Ziehen zum Zoomen · {{ systems().length }} bekannte Systeme.</p>
     </div>
   </div>
 
-  <div class="panel corner-frame">
-    <div class="panel-header"><h2>Gateway</h2></div>
-    <div class="panel-body gateway-body">
-      @switch (gateway()?.state) {
-        @case ('Hidden') {
-          <span class="tag warn">Unentdeckt</span>
-          <p class="hint">Ihre Wissenschaftler erforschen weiterhin das Heimatsystem. Der Ausbau Ihrer
-            Kolonien und das Bevölkerungswachstum bringen die Entdeckung des Gateways näher.</p>
-        }
-        @case ('Discovered') {
-          <span class="tag good">Entdeckt</span>
-          <p class="hint">Das Gateway wurde lokalisiert. Nach Aktivierung wird Ihr System Teil des
-            galaktischen Netzwerks — und für andere Kommandanten sichtbar.</p>
-          <button class="primary small" [disabled]="busy()" (click)="activateGateway()">Gateway aktivieren</button>
-        }
-        @case ('Activating') {
-          <span class="tag warn">Aktivierung läuft</span>
-          <span class="mono">{{ countdown((gateway()?.activatingCompletesAt ?? 0) - clock.now()) }}</span>
-        }
-        @case ('Active') {
-          <span class="tag good">Aktiv seit Systemeintritt</span>
-          <p class="hint">Direkt über Ihr Gateway erreichbar: {{ gateway()?.reachableSystemIds?.length }} Nachbarsysteme.
-            Insgesamt bekannt: {{ visibleSystems().length }} Systeme.</p>
-          <div class="divider"></div>
-          <span class="eyebrow">Politisches Gewicht in diesem System</span>
-          @for (w of weights(); track w.playerId) {
-            <div class="weight-row"><span>{{ w.playerName }}</span><span class="mono">{{ w.weight }}</span></div>
+  <div class="side-column">
+    <div class="panel corner-frame fleets-panel">
+      <div class="panel-header"><h2>Meine Flotten</h2></div>
+      <div class="panel-body fleet-list">
+        @for (fleet of myFleets(); track fleet.id) {
+          <div class="fleet-row">
+            <div class="fleet-row-head">
+              <strong>{{ fleet.name }}</strong>
+              <span class="mono ship-total">{{ fleetShipCount(fleet) }} Schiffe</span>
+            </div>
+            @if (fleet.status === 'InTransit') {
+              <p class="hint">Unterwegs via {{ fleetRouteNames(fleet).join(' → ') }} — nächster Sprung in {{ countdown(fleet.arrivesAt! - clock.now()) }}</p>
+              <div class="fleet-row-actions">
+                <button class="ghost small danger" (click)="cancelFlight(fleet)" [disabled]="busy() === ('cancelFlight:' + fleet.id)">Abbrechen</button>
+              </div>
+            } @else {
+              <div class="fleet-row-actions">
+                <button class="ghost small" (click)="startMove(fleet)" [disabled]="!!moveModeFleetId()">Bewegen</button>
+                <button class="ghost small" (click)="focusFleetSystem(fleet)">Zum System</button>
+              </div>
+            }
+          </div>
+        } @empty { <p class="empty-hint">Keine eigenen Flotten.</p> }
+      </div>
+    </div>
+
+    <div class="panel corner-frame detail-panel">
+      <div class="panel-header"><h2>{{ selectedSystem()?.name ?? 'System auswählen' }}</h2></div>
+      <div class="panel-body">
+        @if (selectedSystem(); as s) {
+          @let marker = markerFor(s.id);
+          <span class="tag" [class.good]="s.isTradeHub">{{ s.factionFlavor }}</span>
+          @if (s.isHomeSystem) {
+            <p class="hint">Ihr Heimatsystem.</p>
+          } @else {
+            <p class="hint">{{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ homeSystem()?.name }} entfernt.</p>
           }
+          @if (marker.myShips > 0) {
+            <p class="hint">Eigene Flotten hier: <strong class="accent-text">{{ marker.myShips }}</strong> Schiffe.</p>
+          }
+          @if (marker.enemyShips > 0) {
+            <p class="hint">Feindliche Flotten hier: <strong class="danger-text">{{ marker.enemyShips }}</strong> Schiffe.</p>
+          }
+
+          <div class="divider"></div>
+          <span class="eyebrow">Gateway</span>
+          @if (selectedGateway(); as gw) {
+            <p class="hint">Aktiv – direkt erreichbar: {{ gw.reachableCount }} Nachbarsysteme.</p>
+          }
+
+          @if (selectedWeights().length) {
+            <div class="divider"></div>
+            <span class="eyebrow">Politisches Gewicht</span>
+            @for (w of selectedWeights(); track w.playerId) {
+              <div class="weight-row"><span>{{ w.playerName }}</span><span class="mono">{{ w.weight }}</span></div>
+            }
+          }
+
+          <div class="divider"></div>
+          <span class="eyebrow">Kolonien in diesem System</span>
+          @if (hasVisited(s.id)) {
+            @if (eligibleLandingFleets().length) {
+              <div class="landing-picker">
+                @if (eligibleLandingFleets().length > 1) {
+                  <select [(ngModel)]="landingFleetId">
+                    @for (f of eligibleLandingFleets(); track f.id) { <option [value]="f.id">{{ f.name }}</option> }
+                  </select>
+                } @else {
+                  <span class="hint">{{ eligibleLandingFleets()[0].name }} landen bei:</span>
+                }
+              </div>
+            }
+            <div class="system-colony-list">
+              @for (c of coloniesInSelectedSystem(); track c.id) {
+                <div class="system-colony-row">
+                  <a [routerLink]="['/planeten', c.id]">
+                    <span>{{ c.name }}</span>
+                    <span class="hint">{{ ownerDisplay(c.ownerId) }}</span>
+                  </a>
+                  @if (eligibleLandingFleets().length) {
+                    <button class="ghost small" (click)="landAt(c.id)" [disabled]="busy() === ('land:' + c.id)">Landen</button>
+                  }
+                </div>
+              } @empty { <p class="empty-hint">Keine Kolonien in diesem System.</p> }
+            </div>
+            <p class="hint">Handel über den Planetaren bzw. System Handelsposten dieses Systems ist möglich, solange
+              eine eigene Flotte dort ist (Tab „Flotten").</p>
+          } @else {
+            <p class="empty-hint">Noch nicht bereist – eine eigene Flotte muss dieses System erst erreichen
+              (Tab „Flotten" → Bewegen), bevor seine Kolonien hier sichtbar werden.</p>
+          }
+        } @else {
+          <p class="empty-hint">Wählen Sie ein System auf der Karte.</p>
         }
-      }
+      </div>
     </div>
   </div>
 </div>
-
-@if (gateway()?.state === 'Active') {
-  <div class="panel corner-frame star-map-panel">
-    <div class="panel-header">
-      <h2>Galaxiekarte — bekanntes Gateway-Netz</h2>
-      <div class="legend">
-        <span class="legend-item"><i class="dot home"></i>Heimatsystem</span>
-        <span class="legend-item"><i class="dot neighbor"></i>Direkt erreichbar</span>
-        <span class="legend-item"><i class="dot hub"></i>Handelsstation</span>
-        <span class="legend-item"><i class="dot far"></i>Mehrere Sprünge</span>
-      </div>
-    </div>
-    <div class="panel-body">
-      <div class="star-map-layout">
-        <svg viewBox="0 0 100 100" class="star-map-svg">
-          @for (route of routes(); track route.a + route.b) {
-            @if (systemById(route.a); as sa) {
-              @if (systemById(route.b); as sb) {
-                <line [attr.x1]="sa.x * 100" [attr.y1]="sa.y * 100"
-                      [attr.x2]="sb.x * 100" [attr.y2]="sb.y * 100" class="link-line" />
-              }
-            }
-          }
-          @for (sys of visibleSystems(); track sys.id) {
-            <circle
-              [attr.cx]="sys.x * 100" [attr.cy]="sys.y * 100"
-              [attr.r]="sys.isHomeSystem ? 3.4 : sys.isTradeHub ? 2.8 : 2.1"
-              class="sys-node"
-              [class.home]="sys.isHomeSystem"
-              [class.hub]="sys.isTradeHub && !sys.isHomeSystem"
-              [class.neighbor]="!sys.isHomeSystem && isDirectNeighbor(sys.id)"
-              [class.selected]="selectedSystem()?.id === sys.id"
-              (click)="select(sys)"
-            />
-            <text [attr.x]="sys.x * 100" [attr.y]="sys.y * 100 - 4" class="sys-label" text-anchor="middle">{{ sys.name }}</text>
-          }
-        </svg>
-
-        <div class="sys-detail">
-          @if (selectedSystem(); as s) {
-            <h3>{{ s.name }}</h3>
-            <span class="tag" [class.good]="s.isTradeHub">{{ s.factionFlavor }}</span>
-            @if (!s.isHomeSystem) {
-              <p class="hint">
-                {{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ homeSystem()?.name }} entfernt.
-                {{ isDirectNeighbor(s.id) ? ' Direkt über Ihr Gateway ansteuerbar.' : ' Nur über Zwischensysteme oder per Trägerschiff erreichbar.' }}
-              </p>
-            } @else {
-              <p class="hint">Ihr Heimatsystem.</p>
-            }
-            <p class="hint">Detailkolonisation und Diplomatie in fremden Systemen folgen in einer
-              späteren Ausbaustufe.</p>
-          } @else {
-            <p class="empty-hint">Wählen Sie ein System auf der Karte.</p>
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-}

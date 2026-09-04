@@ -11,67 +11,223 @@
       <h2>{{ colony.name }}</h2>
       <a class="ghost small" [routerLink]="['/planeten', colony.id]">Kolonie öffnen</a>
     </div>
-    <div class="panel-body split">
+    <div class="panel-body">
+      <span class="eyebrow">Werft — Stufe {{ shipyardLevel(colony.id) }}</span>
+      @if (shipyardLevel(colony.id) < 1) {
+        <p class="hint">Keine Werft vorhanden. Im Bebauungs-Tab der Kolonie ausbauen.</p>
+      } @else {
+        <div class="form-row">
+          <select [(ngModel)]="selFor(colony).productId">
+            @for (s of shipTypes; track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+          <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
+          <label class="checkbox-inline">
+            <input type="checkbox" [(ngModel)]="selFor(colony).autoProduceMissing" /> Vorprodukte automatisch mitproduzieren
+          </label>
+          <label class="checkbox-inline">
+            <input type="checkbox" [(ngModel)]="selFor(colony).requeueOnComplete" /> Nach Erfolg erneut einreihen
+          </label>
+          <button class="primary small" [disabled]="busy() === ('queueship:' + colony.id)" (click)="queueShip(colony)">Bauen</button>
+        </div>
 
-      <div class="shipyard">
-        <span class="eyebrow">Werft — Stufe {{ shipyardLevel(colony.id) }}</span>
-        @if (shipyardLevel(colony.id) < 1) {
-          <p class="hint">Keine Werft vorhanden. Im Bebauungs-Tab der Kolonie ausbauen.</p>
-        } @else {
-          <div class="form-row">
-            <select [(ngModel)]="selFor(colony).productId">
-              @for (s of shipTypes; track s.id) {
-                <option [value]="s.id">{{ s.name }}</option>
+        <div class="queue-list">
+          @for (entry of shipyardQueue(colony.id); track entry.id) {
+            <div class="queue-row">
+              <span>{{ productName(entry.shipProductTypeId) }} × {{ entry.quantity }}</span>
+              <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
+              <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
+              <span class="mono">
+                @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
+                @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
+              </span>
+              @if (entry.status === 'stopped') {
+                <button class="ghost small" (click)="resumeOrder(colony.id, entry.id)">Fortsetzen</button>
               }
-            </select>
-            <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
-            <label class="checkbox-inline">
-              <input type="checkbox" [(ngModel)]="selFor(colony).autoProduceMissing" /> Vorprodukte automatisch mitproduzieren
-            </label>
-            <label class="checkbox-inline">
-              <input type="checkbox" [(ngModel)]="selFor(colony).requeueOnComplete" /> Nach Erfolg erneut einreihen
-            </label>
-            <button class="primary small" [disabled]="busy() === colony.id" (click)="queueShip(colony)">Bauen</button>
-          </div>
+              <button class="ghost small danger" (click)="cancelOrder(colony.id, entry.id)">Abbrechen</button>
+            </div>
+          } @empty { <p class="empty-hint">Keine Bauaufträge.</p> }
+        </div>
+      }
 
-          <div class="queue-list">
-            @for (entry of shipyardQueue(colony.id); track entry.id) {
-              <div class="queue-row">
-                <span>{{ productName(entry.shipProductTypeId) }} × {{ entry.quantity }}</span>
-                <span class="status-badge" [class]="entry.status">{{ queueStatusLabel(entry) }}</span>
-                <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
-                <span class="mono">
-                  @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
-                  @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
-                </span>
-                @if (entry.status === 'stopped') {
-                  <button class="ghost small" (click)="resumeOrder(colony.id, entry.id)">Fortsetzen</button>
+      <div class="divider"></div>
+      <span class="eyebrow" title="Fertig gebaute Schiffe landen zunächst wie normale Ware im Lager – erst hier werden sie einer Flotte zugeordnet.">Unzugeordnete Schiffe im Lager</span>
+      <div class="wh-list">
+        @for (w of looseShipsAt(colony.id); track w.productTypeId) {
+          <div class="wh-row">
+            <span>{{ productName(w.productTypeId) }}</span>
+            <span class="mono">{{ w.quantity | number:'1.0-0' }}</span>
+            <button class="ghost small" (click)="openTransfer(w.productTypeId, w.quantity)">In Flotte überführen</button>
+          </div>
+          @if (transferDraftQty[w.productTypeId] !== undefined) {
+            <div class="form-row transfer-form">
+              <input type="number" min="1" [max]="w.quantity" [(ngModel)]="transferDraftQty[w.productTypeId]" />
+              <select [(ngModel)]="transferTarget[w.productTypeId]">
+                <option value="new">Neue Flotte</option>
+                @for (f of fleetsStationedAt(colony.id); track f.id) {
+                  <option [value]="f.id">{{ f.name }}</option>
                 }
-                <button class="ghost small danger" (click)="cancelOrder(colony.id, entry.id)">Abbrechen</button>
-              </div>
-            } @empty { <p class="empty-hint">Keine Bauaufträge.</p> }
+              </select>
+              <button class="primary small" (click)="submitTransfer(colony.id, w.productTypeId)" [disabled]="busy() === ('transfer:' + w.productTypeId)">Überführen</button>
+            </div>
+          }
+        } @empty { <p class="empty-hint">Keine unzugeordneten Schiffe.</p> }
+      </div>
+    </div>
+  </div>
+}
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Meine Flotten</h2></div>
+  <div class="panel-body fleet-list">
+    @for (fleet of fleets(); track fleet.id) {
+      <div class="fleet-card">
+        <div class="fleet-head">
+          <strong>{{ fleet.name }}</strong>
+          <span class="tag" [class.warn]="fleet.status === 'InTransit'" [class.good]="fleet.status === 'Stationed'">
+            {{ fleet.status === 'InTransit' ? 'Unterwegs' : 'Stationiert' }}
+          </span>
+        </div>
+
+        <div class="fleet-location hint">
+          @if (fleet.status === 'InTransit') {
+            <span>Unterwegs via {{ fleetRouteNames(fleet).join(' → ') }} — nächster Sprung in {{ countdown(fleet.arrivesAt! - clock.now()) }}</span>
+          } @else if (fleet.locationType === 'ColonyOrbit') {
+            <span>Kolonie: {{ colonyName(fleet.locationColonyId) }}
+              @if (!colonyOwnedByMe(fleet.locationColonyId)) { <span class="tag warn small-tag">fremd</span> }
+            </span>
+          } @else if (fleet.locationPlanetId) {
+            <span>Im Orbit von {{ planetName(fleet.locationPlanetId) }}</span>
+          } @else {
+            <span>System: {{ systemName(fleet.systemId) }} (Systemhandelsposten)</span>
+          }
+        </div>
+
+        <div class="ship-composition">
+          @for (g of fleet.ships; track g.shipProductTypeId) {
+            <span class="ship-chip">{{ productName(g.shipProductTypeId) }} × {{ g.quantity }}</span>
+          }
+        </div>
+
+        @if (fleet.status === 'InTransit') {
+          <div class="fleet-actions">
+            <button class="ghost small danger" (click)="cancelFlight(fleet)" [disabled]="busy() === ('cancelFlight:' + fleet.id)">Abbrechen</button>
           </div>
         }
-      </div>
 
-      <div class="fleets">
-        <span class="eyebrow">Stationierte Flotten</span>
-        @for (fleet of fleetsAt(colony.id); track fleet.id) {
-          <div class="fleet-card">
-            <strong>{{ fleet.name }}</strong>
-            <span class="tag">{{ fleet.status === 'Stationed' ? 'Stationiert' : 'Im Bau' }}</span>
+        @if (battleForFleet(fleet.id); as battle) {
+          <div class="fleet-panel battle-status">
+            <span class="eyebrow">⚔ Laufendes Gefecht</span>
+            <span class="hint">
+              {{ battle.attackerFleetId === fleet.id ? 'Angriff auf' : 'Verteidigung gegen' }}
+              "{{ opposingFleetName(battle, fleet.id) }}"
+              — Tick {{ battle.ticksResolved }}, nächster in {{ countdown(nextBattleTickIn(battle.nextTickAt)) }}
+            </span>
             <div class="ship-composition">
               @for (g of fleet.ships; track g.shipProductTypeId) {
                 <span class="ship-chip">{{ productName(g.shipProductTypeId) }} × {{ g.quantity }}</span>
               }
             </div>
-            <div class="fleet-actions">
-              <button class="ghost small" disabled title="Bewegung folgt in einer späteren Ausbaustufe">Bewegen</button>
-              <button class="ghost small" disabled title="Blockade folgt in einer späteren Ausbaustufe">Blockade</button>
-            </div>
+            @if (lastOwnLossesText(battle, fleet.id); as lossText) {
+              <span class="hint mono">Letzter Tick — eigene Verluste: {{ lossText }}</span>
+            }
+            <button class="ghost small danger" (click)="retreat(battle.id)" [disabled]="busy() === ('retreat:' + battle.id)">Zurückziehen</button>
           </div>
-        } @empty { <p class="empty-hint">Keine Flotte im Orbit.</p> }
+        }
+
+        @if (fleet.status === 'Stationed') {
+          <div class="cargo-manifest">
+            <span class="eyebrow">Fracht</span>
+            @for (c of fleet.cargo; track c.productTypeId) {
+              <div class="cargo-row">
+                <span>{{ productName(c.productTypeId) }}</span>
+                <span class="mono">{{ c.quantity }}</span>
+                @if (fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) {
+                  <input type="number" min="1" [max]="c.quantity" [(ngModel)]="unloadQty[fleet.id + ':' + c.productTypeId]" placeholder="Menge" />
+                  <button class="ghost small" (click)="submitUnload(fleet, c.productTypeId)" [disabled]="busy() === ('unload:' + fleet.id)">Entladen</button>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Kein Frachtgut geladen.</p> }
+            <span class="mono hint">{{ fleetCargoMassKg(fleet) | number:'1.0-0' }} / {{ fleetCapacityMassKg(fleet) | number:'1.0-0' }} kg · {{ fleetCargoVolumeM3(fleet) | number:'1.0-0' }} / {{ fleetCapacityVolumeM3(fleet) | number:'1.0-0' }} m³</span>
+          </div>
+
+          <div class="fleet-actions">
+            <button class="ghost small" (click)="togglePanel(fleet.id, 'move')">Bewegen</button>
+            @if (fleet.locationType === 'ColonyOrbit') {
+              <button class="ghost small" (click)="undock(fleet)" [disabled]="busy() === ('undock:' + fleet.id)">Ablegen</button>
+              @if (colonyOwnedByMe(fleet.locationColonyId)) {
+                <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Laden</button>
+              }
+            } @else {
+              <button class="ghost small" (click)="togglePanel(fleet.id, 'land')">Landen</button>
+            }
+            <button class="ghost small" (click)="togglePanel(fleet.id, 'sell')">Verkaufen</button>
+            @if (!battleForFleet(fleet.id) && attackableFleets(fleet).length > 0) {
+              <button class="ghost small danger" (click)="togglePanel(fleet.id, 'attack')">Angreifen</button>
+            }
+          </div>
+
+          @if (isPanelOpen(fleet.id, 'move')) {
+            <div class="fleet-panel form-row">
+              <select [(ngModel)]="moveDestination[fleet.id]">
+                <option value="">Zielsystem wählen…</option>
+                @for (s of allSystems(); track s.id) {
+                  @if (s.id !== fleet.systemId) { <option [value]="s.id">{{ s.name }}</option> }
+                }
+              </select>
+              <button class="primary small" (click)="submitMove(fleet)" [disabled]="busy() === ('move:' + fleet.id)">Losfliegen</button>
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'land')) {
+            <div class="fleet-panel land-list">
+              @for (c of coloniesInFleetSystem(fleet); track c.id) {
+                <button class="ghost small" (click)="submitLand(fleet, c.id)" [disabled]="busy() === ('land:' + fleet.id)">{{ c.name }} landen</button>
+              } @empty { <p class="empty-hint">Keine bekannten Kolonien in diesem System.</p> }
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'load') && fleet.locationColonyId) {
+            <div class="fleet-panel form-row">
+              <select [(ngModel)]="loadProductId[fleet.id]">
+                <option value="">Ware wählen…</option>
+                @for (p of loadableProducts(fleet); track p.productTypeId) {
+                  <option [value]="p.productTypeId">{{ productName(p.productTypeId) }} ({{ p.stock }} verfügbar)</option>
+                }
+              </select>
+              <input type="number" min="1" [(ngModel)]="loadQty[fleet.id]" placeholder="Menge" />
+              @if (loadProductId[fleet.id]; as pid) { <span class="hint">max. {{ maxLoadable(fleet, pid) }}</span> }
+              <button class="primary small" (click)="submitLoad(fleet)" [disabled]="busy() === ('load:' + fleet.id)">Laden</button>
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'attack')) {
+            <div class="fleet-panel attack-list">
+              @for (target of attackableFleets(fleet); track target.id) {
+                <button class="ghost small danger" (click)="submitAttack(fleet, target.id)" [disabled]="busy() === ('attack:' + fleet.id)">
+                  "{{ target.name }}" ({{ target.ships.length }} Schiffstypen) angreifen
+                </button>
+              } @empty { <p class="empty-hint">Keine angreifbare gegnerische Flotte in diesem System.</p> }
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'sell')) {
+            <div class="fleet-panel form-row">
+              <select [(ngModel)]="sellProductId[fleet.id]">
+                <option value="">Fracht wählen…</option>
+                @for (c of fleet.cargo; track c.productTypeId) {
+                  <option [value]="c.productTypeId">{{ productName(c.productTypeId) }} ({{ c.quantity }} an Bord)</option>
+                }
+              </select>
+              <input type="number" min="1" [(ngModel)]="sellQty[fleet.id]" placeholder="Menge" />
+              <input type="number" min="0" step="0.5" [(ngModel)]="sellPrice[fleet.id]" placeholder="Preis/Einheit" />
+              <label class="checkbox-inline">
+                <input type="checkbox" [ngModel]="sellAutoRelist[fleet.id] ?? true" (ngModelChange)="sellAutoRelist[fleet.id] = $event" /> Wiederkehrend anbieten
+              </label>
+              <button class="primary small" (click)="submitSellFromFleet(fleet)" [disabled]="busy() === ('sell:' + fleet.id)">
+                {{ fleet.locationType === 'ColonyOrbit' ? 'Am Planetaren Handelsposten anbieten' : 'Am Systemhandelsposten anbieten' }}
+              </button>
+            </div>
+          }
+        }
       </div>
-    </div>
+    } @empty { <p class="empty-hint">Keine eigenen Flotten.</p> }
   </div>
-}
+</div>

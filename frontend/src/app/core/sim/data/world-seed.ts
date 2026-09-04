@@ -1,6 +1,6 @@
 import {
-  Building, ChainPlan, Colony, Fleet, Gateway, Id, Npc, Planet, PlanetStats, PlanetType, Player, Population,
-  PopulationMoneySupplyState, ProductionQueueEntry, System, Wallet, WarehouseEntry,
+  Building, ChainPlan, Colony, Fleet, Gateway, GroundForceGroup, Id, Npc, Planet, PlanetStats, PlanetType, Player,
+  Population, PopulationMoneySupplyState, ProductionQueueEntry, System, Wallet, WarehouseEntry,
 } from '../../models';
 import { nextId } from '../id';
 import { now } from '../clock';
@@ -25,29 +25,50 @@ export interface WorldSeed {
   gateways: Gateway[];
   npcs: Npc[];
   fleets: Fleet[];
+  groundForceGroups: GroundForceGroup[];
 }
 
 /** Platzhalter für einen noch nicht berechneten `ChainPlan`, siehe `SimulatedGameApiService.planChain`. */
 const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true };
 
 /**
- * Dieselben drei Grundkonsumgüter wie `CONSUMER_GOODS_ORDER` in
- * `simulated-game-api.service.ts` (dort nicht exportiert, um keinen
- * Zirkelimport zu erzeugen – bei Änderungen dort auch hier nachziehen). Die
- * Heimatkolonie startet mit sequentiellen Produktionsaufträgen dafür (50
- * Stück, automatisch mitproduzierte Vorprodukte, nach Fertigstellung erneut
- * eingereiht – siehe Konzeption/Umsetzungskonzept/10_...md, §8), damit von
- * Anfang an eine Grundversorgung läuft statt dass die Bevölkerung erst auf
- * manuell gestartete Produktion wartet. Der lokale Verkauf ist NICHT mehr
- * Teil des Seeds (bewusste Verhaltensänderung) – der Spieler richtet ihn
- * selbst über "Anbieten" im Lagerbestand ein.
+ * Grundnahrung, das ohne manuelles Zutun laufend benötigte Grundkonsumgut
+ * (Grundmedizin/Unterhaltungselektronik bewusst NICHT dabei – bleiben Sache
+ * des Spielers, siehe unten). Die Heimatkolonie startet mit einem
+ * sequentiellen Produktionsauftrag dafür (automatisch mitproduzierte
+ * Vorprodukte, nach Fertigstellung erneut eingereiht – siehe
+ * Konzeption/Umsetzungskonzept/10_...md, §8), damit von Anfang an eine
+ * Grundversorgung läuft statt dass die Bevölkerung erst auf manuell
+ * gestartete Produktion wartet. Der lokale Verkauf ist NICHT Teil des Seeds
+ * (bewusste Verhaltensänderung) – der Spieler richtet ihn selbst über
+ * "Anbieten" im Lagerbestand ein.
+ *
+ * `CONSUMER_GOODS_ORDER` in `simulated-game-api.service.ts` (Bevölkerungs-
+ * Konsum) führt zusätzlich Grundmedizin/Unterhaltungselektronik – das ist
+ * bewusst KEIN Widerspruch: die Bevölkerung fragt beide weiterhin nach, nur
+ * startet die Kolonie sie nicht automatisch mit, der Spieler richtet sie
+ * bei Bedarf selbst ein (Tab „Produktion").
  */
-const STARTER_CONSUMER_GOODS: Id[] = ['p_grundnahrung', 'p_grundmedizin', 'p_unterhaltungselektronik'];
-const STARTER_CONSUMER_GOODS_QUANTITY = 50;
+const STARTER_CONSUMER_GOODS: Id[] = ['p_grundnahrung'];
+const STARTER_CONSUMER_GOODS_QUANTITY = 5;
+/**
+ * Hält das Energienetz nach Aufbrauchen der versiegelten Startreserve
+ * (`SEALED_ELERIUM_RESERVE_HOME`) laufend nachversorgt, damit kein
+ * Blackout entsteht, sobald sie zur Neige geht – 1 reicht, weil der
+ * laufende Verbrauch selbst sehr gering ist (siehe
+ * `ELERIUM_UPKEEP_PER_POWERGRID_LEVEL` in `simulated-game-api.service.ts`).
+ */
+const STARTER_ELERIUM_QUANTITY = 1;
+/** Anfangsbestand im Lager der Heimatkolonie – überbrückt die Zeit, bis die Start-Auftragsliste (s. o.) das erste Mal nachliefert. */
+const STARTER_WAREHOUSE_STOCK: Partial<Record<Id, number>> = { p_grundnahrung: 50 };
 
 function starterProductionQueue(colonyId: Id): ProductionQueueEntry[] {
-  return STARTER_CONSUMER_GOODS.map(productTypeId => ({
-    id: nextId('pq'), colonyId, productTypeId, quantity: STARTER_CONSUMER_GOODS_QUANTITY,
+  const entries: { productTypeId: Id; quantity: number }[] = [
+    ...STARTER_CONSUMER_GOODS.map(productTypeId => ({ productTypeId, quantity: STARTER_CONSUMER_GOODS_QUANTITY })),
+    { productTypeId: 'p_elerium_stabil', quantity: STARTER_ELERIUM_QUANTITY },
+  ];
+  return entries.map(({ productTypeId, quantity }) => ({
+    id: nextId('pq'), colonyId, productTypeId, quantity,
     autoProduceMissing: true, requeueOnComplete: true,
     status: 'queued', stoppedReasonCode: null, plan: EMPTY_CHAIN_PLAN, startedAt: null, endsAt: null,
   }));
@@ -57,19 +78,22 @@ function starterProductionQueue(colonyId: Id): ProductionQueueEntry[] {
  * Versiegelte Eleriumreserve, mit der jede neu gegründete Kolonie startet
  * (Nebula_Planetentypen_..., §8): "verhindert einen Startstillstand,
  * ersetzt aber keine laufende Förderung" – ohne sie wäre das Energienetz
- * ab dem allerersten Tick im Blackout, da die vierstufige
- * Eleriumenergiezelle-Kette (§9.2) niemand so schnell hochziehen kann.
+ * ab dem allerersten Tick im Blackout, bis die Kolonie die erste Charge
+ * Stabilisiertes Elerium (Ebene 1) produziert hat. Betriebsstoff ist
+ * Stabilisiertes Elerium, nicht die tiefer in der Kette liegende
+ * Eleriumenergiezelle – siehe `POWERGRID_FUEL_PRODUCT_ID` in
+ * `simulated-game-api.service.ts`.
  */
 const SEALED_ELERIUM_RESERVE_HOME = 25;
 const SEALED_ELERIUM_RESERVE_NPC = 10;
 
 function eleriumReserveEntry(colonyId: string, quantity: number): WarehouseEntry {
-  return { colonyId, productTypeId: 'p_elerium_energiezelle', quantity };
+  return { colonyId, productTypeId: 'p_elerium_stabil', quantity };
 }
 
 const PLANET_NAMES_HOME = ['Aurelia Prime', 'Kessar', 'Vantis', 'Thal Minor', 'Rho Cindra'];
 
-const GALAXY_SYSTEM_COUNT = 24;
+const GALAXY_SYSTEM_COUNT = 200;
 const NPC_COUNT = 10;
 
 const SYSTEM_NAME_POOL = [
@@ -80,6 +104,33 @@ const SYSTEM_NAME_POOL = [
   'Solace Rand', 'Nocturn Bucht', 'Amaris', 'Kroven Riff', 'Vela Passage',
   'Tessark', 'Orinth', 'Fahrun Weite',
 ];
+
+/** Bei mehr Systemen als Namen im Pool (z. B. `GALAXY_SYSTEM_COUNT` > `SYSTEM_NAME_POOL.length`) hängt ein Zähler an, statt exakte Namensdopplungen zu erzeugen. */
+function systemNameAt(names: string[], i: number): string {
+  const base = names[i % names.length];
+  const cycle = Math.floor(i / names.length);
+  return cycle === 0 ? base : `${base} ${cycle + 1}`;
+}
+
+/**
+ * Wie `systemNameAt`, nur für den Einzelfall bei `createAdditionalPlayerSeed`
+ * (ein neues System zur Laufzeit statt der gesamten Galaxie auf einmal):
+ * bevorzugt einen im GESAMTEN aktuellen Bestand noch unbenutzten Poolnamen,
+ * sonst denselben Zähler-Mechanismus wie `systemNameAt` statt der früheren
+ * Notlösung `Heimatsystem ${n}` – bei `GALAXY_SYSTEM_COUNT` = 200 ist der
+ * Pool (30 Namen) schon durch die Startgalaxie mehrfach durchzyklt, sodass
+ * "noch unbenutzt" für neu registrierte Kommandanten praktisch nie mehr
+ * zutrifft und sonst JEDES weitere Heimatsystem diese unschöne Notlösung
+ * bekäme statt eines echten Namens.
+ */
+function pickAdditionalSystemName(usedNames: Set<string>, rnd: Rng): string {
+  const strictlyAvailable = SYSTEM_NAME_POOL.filter(n => !usedNames.has(n));
+  if (strictlyAvailable.length > 0) return strictlyAvailable[Math.floor(rnd() * strictlyAvailable.length)];
+  const base = SYSTEM_NAME_POOL[Math.floor(rnd() * SYSTEM_NAME_POOL.length)];
+  let cycle = 2;
+  while (usedNames.has(`${base} ${cycle}`)) cycle++;
+  return `${base} ${cycle}`;
+}
 
 const FACTION_FLAVORS = [
   'unabhängige Kolonisten', 'Grenzsiedlung', 'unerforscht', 'kleine Kolonie',
@@ -104,8 +155,49 @@ function buildInstance(colonyId: string, typeId: string, level: number): Buildin
 
 function freighterFleet(ownerId: string, colonyId: string, systemId: string, name: string): Fleet {
   return {
-    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId,
+    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: null,
     systemId, status: 'Stationed', ships: [{ shipProductTypeId: 'p_freighter', quantity: 1 }],
+    cargo: [], destinationSystemId: null, pendingHops: [], departedAt: null, arrivesAt: null,
+  };
+}
+
+/**
+ * Kleine Startflotte mit je einem Schiff der drei Kampfklassen (Korvette/
+ * Zerstörer/Kreuzer, siehe Mechanik/03_..., §2) – deckt den vollen
+ * Konterkreis ab (Korvette>Kreuzer>Zerstörer>Korvette), damit sich ein
+ * Raumgefecht von Anfang an sinnvoll ausprobieren lässt, ohne erst eine
+ * Werft hochziehen und Schiffe bauen zu müssen.
+ */
+function combatFleet(ownerId: string, colonyId: string, systemId: string, name: string): Fleet {
+  return {
+    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: null,
+    systemId, status: 'Stationed',
+    ships: [
+      { shipProductTypeId: 'p_corvette', quantity: 1 },
+      { shipProductTypeId: 'p_destroyer', quantity: 1 },
+      { shipProductTypeId: 'p_cruiser', quantity: 1 },
+    ],
+    cargo: [], destinationSystemId: null, pendingHops: [], departedAt: null, arrivesAt: null,
+  };
+}
+
+/**
+ * Kleine Boden-Garnison mit Soldaten und je einem Bestand aller drei
+ * Waffenträgerklassen (Mechanik/05_..., §3) – deckt ebenfalls den vollen
+ * Konterkreis ab. 3 aktive Soldaten kommandieren bei `DRONES_PER_SOLDIER = 5`
+ * (`simulated-game-api.service.ts`) genau 15 Drohnen; die 15 gesäten
+ * Drohnen (5 je Klasse) sind damit von Anfang an vollständig aktiv/
+ * kampffähig, ohne dass erst `recalcCrewing` nachjustieren müsste.
+ */
+function starterGroundForceGroup(ownerId: Id, colonyId: Id): GroundForceGroup {
+  return {
+    id: nextId('gfg'), ownerId, colonyId,
+    units: [
+      { unitProductTypeId: 'p_soldier', activeCount: 3, reserveCount: 2 },
+      { unitProductTypeId: 'p_drone_light', activeCount: 5, reserveCount: 0 },
+      { unitProductTypeId: 'p_drone_medium', activeCount: 5, reserveCount: 0 },
+      { unitProductTypeId: 'p_drone_heavy', activeCount: 5, reserveCount: 0 },
+    ],
   };
 }
 
@@ -322,7 +414,9 @@ interface HomeworldBundle {
   buildings: Building[];
   warehouse: WarehouseEntry[];
   productionQueue: ProductionQueueEntry[];
-  fleet: Fleet;
+  /** Handelsflotte (1 Frachter) + Kampfflotte (je 1 Schiff der drei Klassen, siehe `combatFleet`). */
+  fleets: Fleet[];
+  groundForceGroup: GroundForceGroup;
 }
 
 /**
@@ -399,16 +493,24 @@ function buildHomeworldBundle(commanderName: string, homeworldName: string, home
     buildInstance(colony.id, 'b_shipyard', 1),
     buildInstance(colony.id, 'b_academy', 1),
   ];
-  const warehouse: WarehouseEntry[] = [eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_HOME)];
+  const warehouse: WarehouseEntry[] = [
+    eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_HOME),
+    ...Object.entries(STARTER_WAREHOUSE_STOCK).map(([productTypeId, quantity]) => ({ colonyId: colony.id, productTypeId, quantity: quantity! })),
+  ];
 
   // Frachter ab Spielbeginn – ohne eigene Transportkapazität ist kein
   // Handel über die eigene Kolonie hinaus möglich (Konzeption/05_..., §9).
-  const fleet = freighterFleet(player.id, colony.id, homeSystemId, `Handelsflotte ${colony.name}`);
+  const freighter = freighterFleet(player.id, colony.id, homeSystemId, `Handelsflotte ${colony.name}`);
+  // Kampfflotte mit je einem Schiff der drei Klassen (Korvette/Zerstörer/
+  // Kreuzer) – ermöglicht sofortiges Ausprobieren des Kampfsystems ohne
+  // erst eine Werft hochziehen zu müssen (Mechanik/04_..., Konterzyklus).
+  const combat = combatFleet(player.id, colony.id, homeSystemId, `Kampfflotte ${colony.name}`);
+  const groundForceGroup = starterGroundForceGroup(player.id, colony.id);
 
   return {
     player, planets, colony, planetStats, population, moneySupplyState,
     wallets: [playerWallet, popWallet], buildings, warehouse,
-    productionQueue: starterProductionQueue(colony.id), fleet,
+    productionQueue: starterProductionQueue(colony.id), fleets: [freighter, combat], groundForceGroup,
   };
 }
 
@@ -431,7 +533,7 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
     const isHub = tradeHubSet.has(i);
     return {
       id: systemIds[i],
-      name: isHome ? 'Aurelia-System' : names[i % names.length],
+      name: isHome ? 'Aurelia-System' : systemNameAt(names, i),
       x: pos.x,
       y: pos.y,
       planetIds: isHome ? home.planets.map(p => p.id) : [],
@@ -447,29 +549,21 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
   });
 
   // --- Gateways --------------------------------------------------------------
-  // Das Gateway existiert bereits im Heimatsystem (Konzeption/08_..., §1),
-  // gilt hier als bereits gefunden ("Discovered") – ein echtes
-  // Forschungssystem, das die Entdeckung selbst auslöst, ist noch offen
-  // (siehe Konzeption/04_..., §6). Aktivierung bleibt eine bewusste
-  // Spielerentscheidung (Konzeption/08_..., §7: "Isolation bietet
-  // Sicherheit. Öffnung bietet Wohlstand.") statt an einen künstlichen
-  // Fortschrittswert gekoppelt zu sein – das frühe Spiel soll stattdessen
-  // durch den lokalen Produktions-/Handelskreislauf ausgefüllt sein
-  // (Rohstoffe/Konsumgüter bauen und verkaufen), nicht durch Warten auf
-  // eine Zahl. Alle übrigen Systeme gehören zur bereits etablierten
-  // galaktischen Gemeinschaft und gelten narrativ als längst aktiviert.
-  const gateways: Gateway[] = galaxy.positions.map((_, i) => {
-    const isHome = i === homeIndex;
-    return {
-      id: gatewayIds[i],
-      systemId: systemIds[i],
-      state: isHome ? 'Discovered' : 'Active',
-      discoveredAt: isHome ? t : t - 1000,
-      activatedAt: isHome ? null : t - 1000,
-      activatingCompletesAt: null,
-      reachableSystemIds: galaxy.neighbors[i].map(j => systemIds[j]),
-    };
-  });
+  // ALLE Gateways starten von Anfang an uneingeschränkt aktiv – kein
+  // Erforschen/Entdecken/Aktivieren mehr nötig (bewusste Vereinfachung
+  // gegenüber der früher hier dokumentierten Konzeption/08_..., §7: das
+  // frühe Spiel soll nicht durch Warten aufs eigene Gateway ausgebremst
+  // werden, sondern Kommandanten sollen von Beginn an frei mit ihren
+  // Flotten durchs gesamte bekannte Netz reisen können).
+  const gateways: Gateway[] = galaxy.positions.map((_, i) => ({
+    id: gatewayIds[i],
+    systemId: systemIds[i],
+    state: 'Active',
+    discoveredAt: t,
+    activatedAt: t,
+    activatingCompletesAt: null,
+    reachableSystemIds: galaxy.neighbors[i].map(j => systemIds[j]),
+  }));
 
   // --- NPCs ------------------------------------------------------------------
   const npcData = spawnNpcs(systems, galaxy.neighbors, rnd, t);
@@ -487,7 +581,8 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
     warehouse: [...home.warehouse, ...npcData.warehouse],
     productionQueue: home.productionQueue,
     npcs: npcData.npcs,
-    fleets: [home.fleet, ...npcData.fleets],
+    fleets: [...home.fleets, ...npcData.fleets],
+    groundForceGroups: [home.groundForceGroup],
     gateways,
   };
 }
@@ -507,7 +602,8 @@ export interface AdditionalPlayerSeed {
   buildings: Building[];
   warehouse: WarehouseEntry[];
   productionQueue: ProductionQueueEntry[];
-  fleet: Fleet;
+  fleets: Fleet[];
+  groundForceGroup: GroundForceGroup;
 }
 
 /**
@@ -519,8 +615,8 @@ export interface AdditionalPlayerSeed {
  * Ursprung. NPCs, andere Kommandanten, Systeme und der Markt bleiben
  * unangetastet.
  *
- * Das neue System startet – wie jedes Heimatsystem – "entdeckt, aber nicht
- * aktiviert" (siehe `createWorldSeed`-Kommentar zu Gateways) und wird
+ * Das neue System startet – wie jedes Heimatsystem – mit uneingeschränkt
+ * aktivem Gateway (siehe `createWorldSeed`-Kommentar zu Gateways) und wird
  * kartografisch mit dem nächstgelegenen bestehenden System verbunden. Kein
  * Versuch, es korrekt in das ursprüngliche Voronoi-Nachbarschaftsnetz von
  * `generateGalaxy` einzuflechten – für den Prototyp reicht eine einzelne
@@ -538,10 +634,7 @@ export function createAdditionalPlayerSeed(existingSystems: System[], commanderN
   const home = buildHomeworldBundle(commanderName, homeworldName, systemId, rnd, t);
 
   const usedNames = new Set(existingSystems.map(s => s.name));
-  const availableNames = SYSTEM_NAME_POOL.filter(n => !usedNames.has(n));
-  const systemName = availableNames.length > 0
-    ? availableNames[Math.floor(rnd() * availableNames.length)]
-    : `Heimatsystem ${existingSystems.length + 1}`;
+  const systemName = pickAdditionalSystemName(usedNames, rnd);
 
   const newSystem: System = {
     id: systemId,
@@ -557,9 +650,9 @@ export function createAdditionalPlayerSeed(existingSystems: System[], commanderN
   const newGateway: Gateway = {
     id: gatewayId,
     systemId,
-    state: 'Discovered',
+    state: 'Active', // siehe createWorldSeed: alle Gateways starten uneingeschränkt aktiv
     discoveredAt: t,
-    activatedAt: null,
+    activatedAt: t,
     activatingCompletesAt: null,
     reachableSystemIds: [linkedSystem.id],
   };
@@ -568,7 +661,8 @@ export function createAdditionalPlayerSeed(existingSystems: System[], commanderN
     player: home.player, newSystem, newGateway, linkedSystemId: linkedSystem.id,
     planets: home.planets, colony: home.colony, planetStats: home.planetStats, population: home.population,
     moneySupplyState: home.moneySupplyState, wallets: home.wallets, buildings: home.buildings,
-    warehouse: home.warehouse, productionQueue: home.productionQueue, fleet: home.fleet,
+    warehouse: home.warehouse, productionQueue: home.productionQueue, fleets: home.fleets,
+    groundForceGroup: home.groundForceGroup,
   };
 }
 

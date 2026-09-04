@@ -5,21 +5,21 @@
 
 <div class="panel corner-frame">
   <div class="panel-header">
-    <h2>Systemmarkt — Aurelia-System</h2>
-    <span class="hint">Orders werden je Kolonie im Handel-Tab erstellt</span>
+    <h2>System Handel — Aurelia-System</h2>
+    <span class="hint">Neue Orders über "Anbieten" im Lagerbestand einer Kolonie (Tab „Produktion")</span>
   </div>
   <div class="panel-body order-list">
     @for (o of orders(); track o.id) {
       <div class="order-row">
-        <span>{{ productName(o.productTypeId) }}</span>
+        <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
         <span class="mono">{{ o.remainingQuantity }} Einh.</span>
         <span class="mono">{{ o.pricePerUnit | number:'1.0-2' }} Cr/Einh.</span>
         <span class="hint">{{ sellerColony(o.depotColonyId) }}</span>
         <a class="ghost small" [routerLink]="['/planeten', o.depotColonyId]">Öffnen</a>
       </div>
     } @empty {
-      <p class="empty-hint">Noch keine Verkaufsorders im System. Legen Sie im Handel-Tab einer Kolonie eine
-        Order an, sobald Sie Überschüsse produzieren.</p>
+      <p class="empty-hint">Noch keine Verkaufsorders im System. Im Handel-Tab einer Kolonie das
+        Lager öffnen und "Anbieten" nutzen, sobald Überschüsse produziert werden.</p>
     }
   </div>
 </div>

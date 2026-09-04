@@ -285,6 +285,20 @@ input:focus, select:focus {
 
 .empty-hint { color: var(--text-dim); font-size: 13px; }
 
+/**
+ * Sekundärer Erklärtext (Beschreibungen, Fußnoten unter Formularfeldern
+ * usw.) – global statt pro Komponente, da diese Klasse in über einem
+ * Dutzend Komponenten verwendet wird, aber vorher nur in einem Teil davon
+ * lokal definiert war (Rest erbte zufällig die Farbe des Elternelements,
+ * je nach Kontext unterschiedlich hell). `--text-faint` war hier zudem zu
+ * kontrastarm (~2.2:1 auf dunklem Grund, unter WCAG-Minimum) – `--text-dim`
+ * bleibt sichtbar zweitrangig gegenüber normalem Fließtext, aber lesbar.
+ */
+.hint { font-size: 11.5px; line-height: 1.5; color: var(--text-dim); margin: 4px 0 0; }
+.hint.warn { color: var(--amber); }
+.hint.bad { color: var(--danger); }
+.hint.blackout { color: var(--violet); }
+
 .empty-state {
   padding: 40px 20px;
   text-align: center;

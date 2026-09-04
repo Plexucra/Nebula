@@ -49,18 +49,9 @@
   <div class="body">
     <nav class="sidenav">
       @for (item of navItems; track item.path) {
-        <a
-          class="nav-item"
-          [class.locked]="isLocked(item)"
-          [routerLink]="item.path"
-          routerLinkActive="active"
-          [title]="isLocked(item) ? item.lockedHint : ''"
-        >
+        <a class="nav-item" [routerLink]="item.path" routerLinkActive="active">
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
-          @if (isLocked(item)) {
-            <span class="nav-lock">🔒</span>
-          }
         </a>
       }
     </nav>

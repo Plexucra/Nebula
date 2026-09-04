@@ -29,6 +29,41 @@ export function bfsHops(routes: Route[], from: Id): Map<Id, number> {
   return dist;
 }
 
+/**
+ * Kürzester Pfad von `from` zu `to` als geordnete Liste der Zwischen-/Zielsysteme
+ * (OHNE `from` selbst, MIT `to` als letztem Eintrag) – Grundlage für
+ * hop-für-hop abgearbeitete Flüge (`Fleet.pendingHops`, siehe
+ * `simulated-game-api.service.ts`, `moveFleet`). `null`, wenn `to` von
+ * `from` aus nicht erreichbar ist; leeres Array kann nicht vorkommen, da
+ * `to === from` von den Aufrufern vorher ausgeschlossen wird.
+ */
+export function bfsPath(routes: Route[], from: Id, to: Id): Id[] | null {
+  const adj = adjacency(routes);
+  const prev = new Map<Id, Id>();
+  const visited = new Set<Id>([from]);
+  const queue = [from];
+  let head = 0;
+  while (head < queue.length) {
+    const cur = queue[head++];
+    if (cur === to) break;
+    for (const nb of adj.get(cur) ?? []) {
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        prev.set(nb, cur);
+        queue.push(nb);
+      }
+    }
+  }
+  if (!visited.has(to)) return null;
+  const path: Id[] = [];
+  let cur = to;
+  while (cur !== from) {
+    path.unshift(cur);
+    cur = prev.get(cur)!;
+  }
+  return path;
+}
+
 /** Nächstgelegener Knoten aus `candidates` (Sprunganzahl), oder null wenn keiner erreichbar ist. */
 export function nearestByHops(routes: Route[], from: Id, candidates: Id[]): { id: Id; hops: number } | null {
   const dist = bfsHops(routes, from);

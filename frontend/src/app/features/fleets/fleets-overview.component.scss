@@ -1,12 +1,5 @@
 .colony-block { margin-bottom: 16px; }
 
-.split {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 20px;
-}
-@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
-
 .form-row {
   display: flex;
   gap: 8px;
@@ -16,6 +9,7 @@
   select { flex: 1 1 220px; }
   input { flex: 0 0 80px; }
 }
+.transfer-form { margin: 4px 0 10px; }
 
 .checkbox-inline {
   display: flex;
@@ -28,7 +22,7 @@
   input[type='checkbox'] { flex: 0 0 auto; width: auto; }
 }
 
-.queue-list { display: flex; flex-direction: column; gap: 8px; }
+.queue-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .queue-row {
   display: flex;
   align-items: center;
@@ -57,7 +51,19 @@
   &.queued { color: var(--text-faint); }
 }
 
-.fleets { display: flex; flex-direction: column; gap: 10px; }
+.wh-list { display: flex; flex-direction: column; gap: 6px; }
+.wh-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.fleet-list { display: flex; flex-direction: column; gap: 10px; }
 .fleet-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -67,6 +73,10 @@
   flex-direction: column;
   gap: 6px;
 }
+.fleet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fleet-location { margin: 0; }
+.small-tag { padding: 1px 6px; font-size: 9.5px; margin-left: 6px; }
+
 .ship-composition { display: flex; flex-wrap: wrap; gap: 6px; }
 .ship-chip {
   font-size: 11px;
@@ -75,4 +85,42 @@
   border-radius: 999px;
   color: var(--text-mid);
 }
-.fleet-actions { display: flex; gap: 8px; }
+
+.cargo-manifest {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+}
+.cargo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+
+  > span:first-child { flex: 1 1 auto; }
+  input { width: 70px; }
+}
+
+.fleet-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.fleet-panel {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-panel-raised);
+
+  &.form-row { margin: 0; }
+}
+.land-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.attack-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.battle-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-color: var(--danger);
+}

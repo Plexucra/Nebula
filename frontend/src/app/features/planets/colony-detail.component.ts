@@ -3,17 +3,21 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { BuildingType, Id, PlanetType } from '../../core/models';
+import { BuildingType, ChainPlan, Id, PlanetType, ProductionQueueEntry } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
+import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import * as F from '../../core/sim/engine/formulas';
 
 type Tab = 'uebersicht' | 'bebauung' | 'verteidigung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
+/** Platzhalter, solange eine Vorschau noch nicht (neu) berechnet wurde – siehe `refreshNewOrderPreview`/`toggleQueueEntry`. */
+const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true };
+
 @Component({
   selector: 'app-colony-detail',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, FormsModule],
+  imports: [RouterLink, DecimalPipe, FormsModule, ProductPickerDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './colony-detail.component.html',
   styleUrl: './colony-detail.component.scss',
@@ -40,28 +44,65 @@ export class ColonyDetailComponent {
   protected readonly sellOrdersAll = this.api.sellOrders(this.colony()?.systemId ?? '');
   protected readonly housingCapacity = this.api.housingCapacity(this.colonyId);
   protected readonly powerCoverage = this.api.powerCoverage(this.colonyId);
+  protected readonly powerUpkeepPerHour = this.api.powerUpkeepPerHour(this.colonyId);
 
   protected readonly playerId = this.api.player()?.id ?? '';
+  protected readonly allPlayers = this.api.players();
+  protected readonly npcsAll = this.api.npcs();
   protected readonly tab = signal<Tab>(this.initialTab());
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  private static readonly OWNER_ONLY_TABS: Tab[] = ['bebauung', 'verteidigung', 'produktion', 'bodentruppen', 'bevoelkerung'];
+
+  /** Nur die eigene Kolonie erlaubt Bau/Produktion/Truppen/Verwaltung – fremde Kolonien (siehe „System Handel") sind nur für Übersicht/Handel einsehbar. */
+  protected isOwnColony(): boolean {
+    return this.colony()?.ownerId === this.playerId;
+  }
+
+  /** Fällt für Besitzer-only-Tabs auf „Übersicht" zurück, sobald die Kolonie nicht (mehr) der eigenen gehört. */
+  protected effectiveTab(): Tab {
+    const t = this.tab();
+    return (ColonyDetailComponent.OWNER_ONLY_TABS as readonly Tab[]).includes(t) && !this.isOwnColony() ? 'uebersicht' : t;
+  }
+
+  protected ownerDisplay(): string {
+    const ownerId = this.colony()?.ownerId;
+    if (!ownerId) return 'Unbekannt';
+    return this.allPlayers().find(p => p.id === ownerId)?.name
+      ?? this.npcsAll().find(n => n.id === ownerId)?.name
+      ?? 'Unbekannt';
+  }
 
   protected readonly buildingTypes = this.api.buildingTypes();
   protected readonly productTypes = this.api.productTypes().filter(p => p.category !== 'Ship' && p.category !== 'GroundUnit');
   protected readonly groundUnitTypes = this.api.productTypes().filter(p => p.category === 'GroundUnit');
 
+  /** Nur Orders, die diese Kolonie selbst eingestellt hat – "Planetarer Handel", siehe Handel-Tab. */
+  protected readonly planetOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId === this.colonyId);
+  /** "System Handel": alle übrigen Orders im System (Systemhandelsposten + Depots anderer Kolonien) – die dieser Kolonie selbst stehen schon unter "Planetarer Handel", eine Dopplung dort wäre verwirrend. */
+  protected readonly systemOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId !== this.colonyId);
+
   protected newProductionProductId = this.productTypes[0]?.id ?? '';
-  protected newProductionQty = 10;
+  protected newProductionQty = 1;
   protected newProductionAutoMissing = true;
   protected newProductionRequeue = false;
+  protected readonly productPickerOpen = signal(false);
+  /** Reine Vorschau (keine Auftragsanlage) für das Neuer-Auftrag-Formular, siehe `refreshNewOrderPreview`. */
+  protected readonly newOrderPreview = signal<ChainPlan | null>(null);
+  protected readonly newOrderPreviewLoading = signal(false);
+
   protected newUnitProductId = this.groundUnitTypes[0]?.id ?? '';
   protected newUnitQty = 5;
   protected newUnitAutoMissing = true;
   protected newUnitRequeue = false;
-  protected newOrderProductId = '';
-  protected newOrderQty = 10;
-  protected newOrderPrice = 5;
+
   protected readonly expandedQueueEntry = signal<Id | null>(null);
+  /** Vorschau-Pläne für noch nicht laufende (wartende/gestoppte) Warteschlangeneinträge – deren `entry.plan` ist bis zum Start ein Platzhalter, siehe `toggleQueueEntry`. */
+  protected readonly queuePreview: Partial<Record<Id, ChainPlan>> = {};
+  protected readonly queuePreviewLoading = signal<Id | null>(null);
+
+  protected readonly buyDraftQty: Partial<Record<Id, number>> = {};
 
   protected countdown = formatCountdown;
 
@@ -118,6 +159,11 @@ export class ColonyDetailComponent {
     return this.specializations().find(s => s.productTypeId === productTypeId)?.currentLevel ?? 0;
   }
 
+  /** Tempo-Bonus durch Spezialisierung in %, siehe `F.specializationSpeedFactor`: 100% = doppelte Geschwindigkeit = nur noch die halbe Zeit. */
+  protected specSpeedBonusPct(level: number): number {
+    return Math.round((F.specializationSpeedFactor(level) - 1) * 100);
+  }
+
   private async run(key: string, action: () => Promise<unknown>): Promise<void> {
     this.error.set(null);
     this.busy.set(key);
@@ -162,8 +208,46 @@ export class ColonyDetailComponent {
     return this.warehouse().find(w => w.productTypeId === productTypeId)?.quantity ?? 0;
   };
 
-  protected toggleQueueEntry(entryId: Id): void {
-    this.expandedQueueEntry.update(cur => cur === entryId ? null : entryId);
+  protected openProductPicker(): void {
+    this.productPickerOpen.set(true);
+  }
+  protected onProductPicked(productTypeId: Id): void {
+    this.productPickerOpen.set(false);
+    this.newProductionProductId = productTypeId;
+    this.refreshNewOrderPreview();
+  }
+
+  /** "Wird berechnet"-Prognose fürs Neuer-Auftrag-Formular – reine Vorschau, legt keinen Auftrag an (siehe `GameApi.previewProductionChain`). */
+  protected refreshNewOrderPreview(): void {
+    if (!this.newProductionProductId || this.newProductionQty <= 0) { this.newOrderPreview.set(null); return; }
+    const productTypeId = this.newProductionProductId;
+    const quantity = this.newProductionQty;
+    this.newOrderPreviewLoading.set(true);
+    this.api.previewProductionChain(this.colonyId, productTypeId, quantity).then(plan => {
+      // Falls Produkt/Menge inzwischen weitergeklickt wurden, dieses veraltete Ergebnis verwerfen.
+      if (productTypeId !== this.newProductionProductId || quantity !== this.newProductionQty) return;
+      this.newOrderPreview.set(plan);
+      this.newOrderPreviewLoading.set(false);
+    });
+  }
+
+  protected toggleQueueEntry(entry: ProductionQueueEntry): void {
+    if (this.expandedQueueEntry() === entry.id) {
+      this.expandedQueueEntry.set(null);
+      return;
+    }
+    this.expandedQueueEntry.set(entry.id);
+    if (entry.status === 'running') return; // entry.plan ist bereits der verbindliche, beim Start berechnete Plan
+    this.queuePreviewLoading.set(entry.id);
+    this.api.previewProductionChain(entry.colonyId, entry.productTypeId, entry.quantity).then(plan => {
+      this.queuePreview[entry.id] = plan;
+      if (this.queuePreviewLoading() === entry.id) this.queuePreviewLoading.set(null);
+    });
+  }
+
+  /** Für den aufgeklappten Eintrag anzuzeigender Plan: bei laufenden Aufträgen der verbindliche `entry.plan`, sonst die zuletzt berechnete Vorschau. */
+  protected planFor(entry: ProductionQueueEntry): ChainPlan {
+    return entry.status === 'running' ? entry.plan : (this.queuePreview[entry.id] ?? EMPTY_CHAIN_PLAN);
   }
 
   protected queueProgressPct(entry: { status: string; startedAt: number | null; endsAt: number | null }): number {
@@ -184,20 +268,26 @@ export class ColonyDetailComponent {
 
   protected readonly stockSaleDraftQty: Partial<Record<Id, number>> = {};
   protected readonly stockSaleDraftPrice: Partial<Record<Id, number>> = {};
+  protected readonly stockSaleDraftAutoRelist: Partial<Record<Id, boolean>> = {};
   protected readonly stockSaleOpen = signal<Id | null>(null);
 
   protected toggleStockSale(productTypeId: Id): void {
+    const opening = this.stockSaleOpen() !== productTypeId;
     this.stockSaleOpen.update(cur => cur === productTypeId ? null : productTypeId);
-    if (this.stockSaleDraftQty[productTypeId] === undefined) this.stockSaleDraftQty[productTypeId] = Math.floor(this.stockOf(productTypeId));
+    // Menge bei JEDEM Öffnen frisch mit dem aktuellen Lagerbestand vorbelegen (nicht nur beim allerersten
+    // Mal) – sonst zeigt ein erneutes Öffnen einen längst überholten Bestand von der letzten Anzeige an.
+    if (opening) this.stockSaleDraftQty[productTypeId] = Math.floor(this.stockOf(productTypeId));
     if (this.stockSaleDraftPrice[productTypeId] === undefined) this.stockSaleDraftPrice[productTypeId] = 5;
+    if (this.stockSaleDraftAutoRelist[productTypeId] === undefined) this.stockSaleDraftAutoRelist[productTypeId] = true;
   }
 
   protected submitStockSale(productTypeId: Id): void {
     const qty = this.stockSaleDraftQty[productTypeId] ?? 0;
     const price = this.stockSaleDraftPrice[productTypeId] ?? 0;
+    const autoRelist = this.stockSaleDraftAutoRelist[productTypeId] ?? true;
     if (qty <= 0 || price <= 0) return;
     void this.run(`stocksale:${productTypeId}`, async () => {
-      await this.api.createSellOrder(this.colonyId, productTypeId, qty, price, true);
+      await this.api.createSellOrder(this.colonyId, productTypeId, qty, price, autoRelist);
       this.stockSaleOpen.set(null);
     });
   }
@@ -214,11 +304,26 @@ export class ColonyDetailComponent {
     void this.run(`cancelrecruit:${entryId}`, () => this.api.cancelRecruitment(this.colonyId, entryId));
   }
 
-  protected submitSellOrder(): void {
-    if (!this.newOrderProductId) return;
-    void this.run('sellorder', () => this.api.createSellOrder(this.colonyId, this.newOrderProductId, this.newOrderQty, this.newOrderPrice));
-  }
   protected cancelSellOrder(orderId: Id): void {
     void this.run(`cancelorder:${orderId}`, () => this.api.cancelSellOrder(orderId));
+  }
+
+  protected depotColonyName(depotColonyId: Id | null): string {
+    if (!depotColonyId) return '—';
+    if (depotColonyId === this.colonyId) return 'diese Kolonie';
+    return this.api.colony(depotColonyId)()?.name ?? '—';
+  }
+
+  protected buyQtyFor(orderId: Id, max: number): number {
+    return Math.min(this.buyDraftQty[orderId] ?? max, max);
+  }
+  protected buyFromOrder(orderId: Id, remaining: number): void {
+    const qty = this.buyQtyFor(orderId, remaining);
+    if (qty <= 0) return;
+    // Lieferziel muss eine EIGENE Kolonie sein (siehe `GameApi.buyFromOrder`): auf der eigenen
+    // Kolonieseite direkt hierher, auf einer fremden (System Handel/„Öffnen" von einer anderen
+    // Kolonie aus) in die eigene Heimatkolonie – Ware ließe sich sonst nicht sinnvoll zustellen.
+    const deliverToColonyId = this.isOwnColony() ? this.colonyId : (this.api.player()?.homeworldColonyId ?? this.colonyId);
+    void this.run(`buy:${orderId}`, () => this.api.buyFromOrder(orderId, qty, deliverToColonyId));
   }
 }
