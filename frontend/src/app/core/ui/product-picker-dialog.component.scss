@@ -1,0 +1,68 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 10, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-panel {
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Beschreibungstext oberhalb der Formularfelder statt darunter, daher abweichende Randrichtung ggü. der globalen `.hint`-Regel (styles.scss). */
+.hint { margin: 0 0 10px; }
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.category-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  color: var(--text-hi);
+  font-size: 13px;
+  text-align: left;
+
+  &:hover { border-color: var(--line-accent); background: rgba(62, 226, 255, 0.06); }
+}
+.category-count { color: var(--text-dim); font-size: 11px; }
+
+.picker-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tier-groups { display: flex; flex-direction: column; gap: 16px; }
+.tier-group .eyebrow { display: block; margin-bottom: 6px; }
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+}
+.product-card {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  color: var(--text-hi);
+  font-size: 12.5px;
+  text-align: left;
+
+  &:hover { border-color: var(--line-accent); background: rgba(62, 226, 255, 0.06); }
+}

@@ -1,0 +1,40 @@
+@if (open) {
+  <div class="modal-backdrop" (click)="dismiss()">
+    <div class="panel corner-frame modal-panel" (click)="$event.stopPropagation()">
+      <div class="panel-header">
+        <h2>Produkt wählen</h2>
+        <button class="ghost small" type="button" (click)="dismiss()">✕</button>
+      </div>
+      <div class="panel-body">
+        @if (!selectedCategory()) {
+          <span class="hint">Kategorie wählen</span>
+          <div class="category-grid">
+            @for (cat of categoriesPresent(); track cat) {
+              <button type="button" class="category-card" (click)="chooseCategory(cat)">
+                <span class="category-name">{{ categoryLabels[cat] }}</span>
+                <span class="category-count mono">{{ countInCategory(cat) }}</span>
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="picker-head">
+            <button type="button" class="ghost small" (click)="back()">← Kategorien</button>
+            <span class="eyebrow">{{ categoryLabels[selectedCategory()!] }}</span>
+          </div>
+          <div class="tier-groups">
+            @for (group of tierGroupsFor(selectedCategory()!); track group.tier) {
+              <div class="tier-group">
+                <span class="eyebrow">Stufe {{ group.tier }}</span>
+                <div class="product-grid">
+                  @for (p of group.products; track p.id) {
+                    <button type="button" class="product-card" (click)="pick(p.id)">{{ p.name }}</button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
