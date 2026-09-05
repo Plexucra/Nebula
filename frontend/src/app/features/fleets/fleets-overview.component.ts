@@ -22,6 +22,7 @@ export class FleetsOverviewComponent {
 
   protected readonly colonies = this.api.colonies();
   protected readonly fleets = this.api.fleets();
+  protected readonly allFleets = this.api.allFleets();
   protected readonly shipTypes = this.api.productTypes().filter(p => p.category === 'Ship');
   protected readonly allSystems = this.api.visibleSystems();
   protected readonly countdown = formatCountdown;
@@ -233,13 +234,13 @@ export class FleetsOverviewComponent {
 
   protected async submitLand(fleet: Fleet, colonyId: Id): Promise<void> {
     await this.run('land:' + fleet.id, async () => {
-      await this.api.landFleet(fleet.id, colonyId);
+      await this.api.moveFleetWithinSystem(fleet.id, { kind: 'ColonyOrbit', colonyId });
       this.openPanel.set(null);
     });
   }
 
   protected async undock(fleet: Fleet): Promise<void> {
-    await this.run('undock:' + fleet.id, () => this.api.undockFleet(fleet.id));
+    await this.run('undock:' + fleet.id, () => this.api.moveFleetWithinSystem(fleet.id, { kind: 'System' }));
   }
 
   // --- Kampf --------------------------------------------------------------
@@ -269,10 +270,10 @@ export class FleetsOverviewComponent {
     return nextTickAt - this.clock.now();
   }
 
-  /** Name der GEGNERISCHEN Flotte in einem Gefecht, aus Sicht von `ownFleetId` – funktioniert auch, wenn die Gegnerflotte inzwischen vollständig vernichtet ist (letzter bekannter Name). */
+  /** Name der GEGNERISCHEN (fremden) Flotte in einem Gefecht, aus Sicht von `ownFleetId` – über `allFleets()`, da die Gegnerflotte einem anderen Kommandanten gehört und nicht in `fleets()` (nur eigene Flotten) auftaucht. */
   protected opposingFleetName(battle: { attackerFleetId: Id; defenderFleetId: Id }, ownFleetId: Id): string {
     const opposingId = battle.attackerFleetId === ownFleetId ? battle.defenderFleetId : battle.attackerFleetId;
-    return this.fleets().find(f => f.id === opposingId)?.name ?? '—';
+    return this.allFleets().find(f => f.id === opposingId)?.name ?? '—';
   }
 
   /** Kurzer Anzeigetext der eigenen Verluste im letzten Kampf-Tick, z. B. "Korvette × 1" – `null`, wenn im letzten Tick nichts verloren ging. */

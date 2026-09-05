@@ -99,6 +99,14 @@
                   @if (bt.id === 'b_powergrid' && buildingLevel(bt.id) > 0) {
                     <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.2-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
                   }
+                  @if (bt.category === 'ProductionFacility') {
+                    <span class="hint mono">
+                      Produktionstempo: {{ productionSpeedPct(buildingLevel(bt.id)) | number:'1.0-0' }}%
+                      @if (buildingLevel(bt.id) < bt.maxLevel) {
+                        (nächste Stufe: {{ productionSpeedPct(buildingLevel(bt.id) + 1) | number:'1.0-0' }}%)
+                      }
+                    </span>
+                  }
                 </div>
                 <div class="building-level">
                   <span class="eyebrow">Stufe</span>
@@ -190,6 +198,28 @@
         @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Stabilisiertem Elerium versorgt ist.</p> }
 
         <div class="panel-body">
+          @let speed = colonySpeedFactors();
+          <div class="speed-breakdown">
+            <span class="eyebrow">Produktionstempo dieser Kolonie — koloniweit, gilt für jeden Auftrag</span>
+            <div class="speed-factor-row">
+              <span>Bevölkerung {{ speed.population | number:'1.0-0' }}</span>
+              <span class="mono">× {{ speed.workforceFactor | number:'1.2-2' }}</span>
+              <span class="hint">(Arbeitskraft-Faktor, 0,35–5×, ab ~2000 Einwohnern gedeckelt)</span>
+            </div>
+            <div class="speed-factor-row">
+              <span>Industriekomplex Stufe {{ speed.industryLevel }}</span>
+              <span class="mono">× {{ speed.buildingSpeedFactor | number:'1.0-0' }}</span>
+              <span class="hint">(Gebäude-Tempofaktor, siehe Tab „Bebauung")</span>
+            </div>
+            @if (speed.blackout) {
+              <div class="speed-factor-row warn">
+                <span>Blackout aktiv</span>
+                <span class="mono">× 0,1</span>
+              </div>
+            }
+            <p class="hint">Dazu je Auftrag: Spezialisierung des Produkts (siehe Aufschlüsselung je Schritt unten und Panel „Spezialisierung" weiter unten) und bei Rohstoffen die Fördergüte des Planeten – zusammen ergibt sich die Geschwindigkeit, durch die die Basisstunden geteilt werden.</p>
+          </div>
+
           <span class="eyebrow">Neuer Auftrag</span>
           <div class="form-row">
             <button type="button" class="product-select-btn" (click)="openProductPicker()">
@@ -218,6 +248,12 @@
                   <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
                   <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
                   <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                  @if (step.quantityToProduce > 0) {
+                    <span class="hint step-factors">
+                      @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(specLevel(step.productTypeId)) }}%) }
+                      @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
+                    </span>
+                  }
                 </div>
               }
             }
@@ -252,6 +288,12 @@
                           <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
                           <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
                           <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                          @if (step.quantityToProduce > 0) {
+                            <span class="hint step-factors">
+                              @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(specLevel(step.productTypeId)) }}%) }
+                              @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
+                            </span>
+                          }
                         </div>
                       }
                     }

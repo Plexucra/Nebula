@@ -24,15 +24,31 @@ export interface ShipTypeDef {
 }
 
 /**
- * `'ColonyOrbit'` = im Orbit einer konkreten Kolonie gelandet (`locationColonyId`
- * gesetzt) – dort ist sowohl der Planetare Handelsposten dieser Kolonie als
- * auch das Be-/Entladen (nur bei eigener Kolonie) nutzbar. `'System'` = im
- * System angekommen, aber bei keiner Kolonie gelandet – entspricht dem
- * Systemhandelsposten (`SellOrder.locationType: 'Station'`); spielmechanisch
- * unabhängig davon, ob `locationPlanetId` gesetzt ist (reine Anzeige).
+ * Die drei Orte, an denen eine im System angekommene (`status: 'Stationed'`)
+ * Flotte innerhalb DESSELBEN Systems stehen kann (Konzeption/Mechanik/06_...,
+ * räumliche Hierarchie System → Orbit → Kolonie) – Wechsel zwischen ihnen ist
+ * instant (keine Flugzeit, siehe `moveFleetWithinSystem`), nur Gateway-Sprünge
+ * ZWISCHEN Systemen (siehe `Fleet.pendingHops`) kosten Zeit:
+ * - `'ColonyOrbit'` = angedockt an einer konkreten Kolonie (`locationColonyId`
+ *   gesetzt) – dort sind sowohl deren Planetarer Handelsposten als auch
+ *   Be-/Entladen (nur bei eigener Kolonie) nutzbar.
+ * - `'PlanetOrbit'` = im Orbit eines Planeten OHNE Andocken an eine dortige
+ *   Kolonie – auch bei unbesiedelten Planeten möglich (`locationPlanetId`
+ *   gesetzt, `locationColonyId` NICHT). Vorstufe für eine spätere
+ *   Landungs-/Invasionsmechanik (noch nicht umgesetzt), aktuell ohne
+ *   Handelszugriff.
+ * - `'System'` = am Systemhandelsposten, keinem Planeten zugeordnet
+ *   (`locationPlanetId` NICHT gesetzt) – entspricht `SellOrder.locationType:
+ *   'Station'`.
  */
-export type FleetLocationType = 'ColonyOrbit' | 'System';
+export type FleetLocationType = 'ColonyOrbit' | 'PlanetOrbit' | 'System';
 export type FleetStatus = 'Stationed' | 'InTransit';
+
+/** Bewegungsziel für `moveFleetWithinSystem` – siehe `FleetLocationType`. */
+export type FleetSystemTarget =
+  | { kind: 'System' }
+  | { kind: 'PlanetOrbit'; planetId: Id }
+  | { kind: 'ColonyOrbit'; colonyId: Id };
 
 export interface FleetShipGroup {
   shipProductTypeId: Id;
@@ -49,16 +65,9 @@ export interface Fleet {
   ownerId: Id;
   name: string;
   locationType: FleetLocationType;
+  /** Nur bei `locationType === 'ColonyOrbit'` gesetzt. */
   locationColonyId: Id | null;
-  /**
-   * Nur informativ, wenn `locationType === 'System'` und die Flotte gerade
-   * erst von einer Kolonie abgelegt hat ("Ablegen"): der Planet dieser
-   * Kolonie, damit die UI "Im Orbit von X" statt pauschal "Systemhandelsposten"
-   * anzeigen kann. Wird beim Ablegen gesetzt und bei Landung/Abflug/Ankunft
-   * wieder auf `null` zurückgesetzt – die Simulation kennt keine Bewegung
-   * zwischen Planeten innerhalb eines Systems, daher rein kosmetisch ohne
-   * Einfluss auf Handel/Landeoptionen.
-   */
+  /** Bei `'ColonyOrbit'` und `'PlanetOrbit'` der umkreiste Planet, bei `'System'` `null` – siehe `FleetLocationType`. */
   locationPlanetId: Id | null;
   /** Aktuelles bzw. (während `InTransit`) Ausgangssystem des GERADE LAUFENDEN Sprungs – siehe `destinationSystemId`. */
   systemId: Id;

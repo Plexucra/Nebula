@@ -2,7 +2,6 @@ import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, computed, inject, signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Fleet, Id, System } from '../../core/models';
 import { bfsHops } from '../../core/util/graph';
@@ -33,7 +32,7 @@ const WHEEL_ZOOM_STEP = 1.15;
 @Component({
   selector: 'app-galaxy-map',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './galaxy-map.component.html',
   styleUrl: './galaxy-map.component.scss',
@@ -82,6 +81,13 @@ export class GalaxyMapComponent implements AfterViewInit {
    * feindliche Flotten (Farbe 3/rot, überschreibt) – feindliche Präsenz nur für bereits
    * besuchte Systeme sichtbar (Fog of War, siehe `hasVisitedSystem`), eigene Flotten/Kolonien
    * immer, da man die ja selbst kennt.
+   *
+   * Zählt Flotten UNABHÄNGIG von `status`: `Fleet.systemId` ist auch während
+   * `InTransit` das Ausgangssystem des GERADE laufenden Sprungs (siehe
+   * `Fleet.systemId`-Doku) – ein Gateway-Sprung ist konzeptionell instant,
+   * die Flotte bleibt also bis zum Abschluss des Sprungs sichtbar im
+   * Ausgangssystem stehen, statt während des Fluges auf der Karte spurlos
+   * zu verschwinden.
    */
   protected readonly markers = computed(() => {
     const myId = this.api.player()?.id ?? null;
@@ -90,14 +96,13 @@ export class GalaxyMapComponent implements AfterViewInit {
 
     const myShipsBySystem = new Map<Id, number>();
     for (const f of this.myFleets()) {
-      if (f.status !== 'Stationed') continue;
       const ships = f.ships.reduce((sum, g) => sum + g.quantity, 0);
       myShipsBySystem.set(f.systemId, (myShipsBySystem.get(f.systemId) ?? 0) + ships);
     }
 
     const enemyShipsBySystem = new Map<Id, number>();
     for (const f of this.allFleets()) {
-      if (f.status !== 'Stationed' || f.ownerId === myId || !otherPlayerIds.has(f.ownerId)) continue;
+      if (f.ownerId === myId || !otherPlayerIds.has(f.ownerId)) continue;
       const ships = f.ships.reduce((sum, g) => sum + g.quantity, 0);
       enemyShipsBySystem.set(f.systemId, (enemyShipsBySystem.get(f.systemId) ?? 0) + ships);
     }
@@ -261,7 +266,8 @@ export class GalaxyMapComponent implements AfterViewInit {
   // Auswahl / Detailpanel
   // ==========================================================================
 
-  protected readonly selectedSystem = signal<System | null>(null);
+  /** Startet auf dem Heimatsystem statt leer, damit "Meine Flotten" (jetzt auf das gewählte System begrenzt, siehe unten) nicht ohne Grund leer aufgeht. */
+  protected readonly selectedSystem = signal<System | null>(this.homeSystem() ?? null);
 
   /** Klick auf einen System-Marker: wählt ihn für das Detailpanel aus – im Bewegen-Modus (siehe unten) zusätzlich als Flugziel. */
   protected onSystemClick(system: System): void {
@@ -283,6 +289,13 @@ export class GalaxyMapComponent implements AfterViewInit {
   protected coloniesInSelectedSystem(): Colony[] {
     const s = this.selectedSystem();
     return s ? this.api.coloniesInSystem(s.id)() : [];
+  }
+
+  /** "Meine Flotten" (Seitenleiste) zeigt NUR Flotten im gerade gewählten System – auch unterwegs befindliche, siehe `markers`-Doku zu `Fleet.systemId`. */
+  protected myFleetsInSelectedSystem(): Fleet[] {
+    const s = this.selectedSystem();
+    if (!s) return [];
+    return this.myFleets().filter(f => f.systemId === s.id);
   }
 
   protected ownerDisplay(ownerId: Id): string {
@@ -315,15 +328,6 @@ export class GalaxyMapComponent implements AfterViewInit {
     return fleet.ships.reduce((sum, g) => sum + g.quantity, 0);
   }
 
-  protected fleetSystem(fleet: Fleet): System | undefined {
-    return this.systemsById().get(fleet.systemId);
-  }
-
-  /** Öffnet das Detailpanel des Systems, in dem sich `fleet` gerade befindet, und zentriert die Karte darauf. */
-  protected focusFleetSystem(fleet: Fleet): void {
-    const sys = this.fleetSystem(fleet);
-    if (sys) this.focusSystem(sys);
-  }
 
   protected readonly moveModeFleetId = signal<Id | null>(null);
   protected readonly moveTargetSystemId = signal<Id | null>(null);
@@ -391,30 +395,4 @@ export class GalaxyMapComponent implements AfterViewInit {
     }
   }
 
-  // ==========================================================================
-  // Landen im Detailpanel: eigene, im gewählten System stationierte (nicht gelandete) Flotten
-  // ==========================================================================
-
-  protected eligibleLandingFleets(): Fleet[] {
-    const s = this.selectedSystem();
-    if (!s) return [];
-    return this.myFleets().filter(f => f.status === 'Stationed' && f.locationType === 'System' && f.systemId === s.id);
-  }
-
-  protected landingFleetId: Id | null = null;
-
-  protected async landAt(colonyId: Id): Promise<void> {
-    const fleets = this.eligibleLandingFleets();
-    const fleetId = this.landingFleetId ?? fleets[0]?.id;
-    if (!fleetId) return;
-    this.error.set(null);
-    this.busy.set('land:' + colonyId);
-    try {
-      await this.api.landFleet(fleetId, colonyId);
-    } catch (e) {
-      this.error.set(e instanceof Error ? e.message : 'Landung fehlgeschlagen.');
-    } finally {
-      this.busy.set(null);
-    }
-  }
 }

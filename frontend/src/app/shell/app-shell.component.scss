@@ -134,6 +134,7 @@
 .notification-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .notification-message { font-size: 12px; color: var(--text-hi); }
 .notification-meta { font-size: 10.5px; color: var(--text-faint); font-family: var(--font-mono); }
+.notification-link { font-size: 11px; color: var(--accent-soft); margin-top: 2px; }
 
 .body {
   flex: 1 1 auto;

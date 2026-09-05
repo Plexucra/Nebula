@@ -130,6 +130,11 @@ export class ColonyDetailComponent {
     return F.buildingUpgradeHours(bt.baseHoursPerLevel, this.buildingLevel(bt.id));
   }
 
+  /** Produktionstempo einer Produktionsanlage (Industriekomplex/Werft/Ausbildungszentrum) als Prozentsatz – Stufe 1 = 100%, Stufe 4 = 400% (linear, siehe `buildingLevelSpeedFactor`). */
+  protected productionSpeedPct(level: number): number {
+    return F.buildingLevelSpeedFactor(level) * 100;
+  }
+
   protected capacityUsagePct(): number {
     const capacity = this.housingCapacity();
     const count = this.population()?.currentCount ?? 0;
@@ -162,6 +167,40 @@ export class ColonyDetailComponent {
   /** Tempo-Bonus durch Spezialisierung in %, siehe `F.specializationSpeedFactor`: 100% = doppelte Geschwindigkeit = nur noch die halbe Zeit. */
   protected specSpeedBonusPct(level: number): number {
     return Math.round((F.specializationSpeedFactor(level) - 1) * 100);
+  }
+
+  /**
+   * Vollständige Aufschlüsselung ALLER Faktoren, die in `computeProductionHours`
+   * (Backend) in die Produktionsgeschwindigkeit dieser Kolonie eingehen –
+   * bewusst hier client-seitig aus denselben `engine/formulas.ts`-Funktionen
+   * nachgerechnet (keine zweite, potenziell abweichende Formel), damit dem
+   * Spieler KEIN Faktor verborgen bleibt, der seine strategische Entscheidung
+   * (z. B. "erst Bevölkerung wachsen lassen" oder "Industriekomplex ausbauen")
+   * beeinflussen könnte. Bevölkerung/Gebäudestufe/Blackout gelten koloniweit
+   * für JEDEN Produktionsschritt gleichermaßen; Spezialisierung und
+   * Fördergüte sind PRODUKTSPEZIFISCH, siehe `specLevel`/`concentrationFactorFor`.
+   */
+  protected colonySpeedFactors(): { population: number; workforceFactor: number; industryLevel: number; buildingSpeedFactor: number; blackout: boolean } {
+    const population = this.population()?.currentCount ?? 0;
+    const industryLevel = this.buildingLevel('b_industry');
+    return {
+      population,
+      workforceFactor: F.workforceFactor(population),
+      industryLevel,
+      buildingSpeedFactor: F.buildingLevelSpeedFactor(industryLevel),
+      blackout: this.powerCoverage() < 0.999,
+    };
+  }
+
+  /** Fördergüte-Ausbeutefaktor (nur für Rohstoffe/Tier 0 – bei allem anderen `null`), siehe `F.resourceConcentrationFactor`. */
+  protected concentrationFactorFor(productTypeId: Id): number | null {
+    const product = this.api.productTypes().find(p => p.id === productTypeId);
+    if (!product || product.tier !== 0 || product.resourceProfile.length === 0) return null;
+    const planet = this.planet();
+    if (!planet) return null;
+    const resId = product.resourceProfile[0].resourceTypeId;
+    const conc = planet.resourceConcentration.find(c => c.resourceTypeId === resId)?.concentration ?? 50;
+    return F.resourceConcentrationFactor(conc);
   }
 
   private async run(key: string, action: () => Promise<unknown>): Promise<void> {

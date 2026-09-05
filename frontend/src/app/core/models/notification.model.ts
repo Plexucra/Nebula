@@ -21,4 +21,6 @@ export interface GameNotification {
   colonyId: Id | null;
   createdAt: number;
   read: boolean;
+  /** Interner Routen-Pfad (z. B. `/kampfbericht/<token>`) – wird im Benachrichtigungs-Panel als Link gerendert, wenn gesetzt. */
+  link: string | null;
 }

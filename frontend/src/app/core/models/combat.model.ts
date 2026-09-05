@@ -1,12 +1,24 @@
 import { Id } from './common.model';
+import { FleetShipGroup } from './fleet.model';
 
 export type BattleStatus = 'Active' | 'Ended';
 export type BattleOutcome = 'AttackerVictory' | 'DefenderVictory' | 'Retreat';
 
-/** Verluste eines einzelnen Kampf-Ticks, je Schiffs-ProductType. */
+/**
+ * Ein einzelner Kampf-Tick für den Kampfbericht (`SystemViewComponent`
+ * betrifft das nicht – siehe `BattleReportComponent`):
+ * `attackerShipsBefore`/`defenderShipsBefore` sind die zu Tickbeginn noch
+ * kampffähigen (und damit an diesem Tick TEILNEHMENDEN) Schiffe je Seite –
+ * Mechanik/04_..., §1: "Alle zu Tickbeginn kampffähigen Einheiten
+ * verursachen ihren Schaden auch dann noch, wenn sie im selben Tick
+ * zerstört werden." `...Losses` sind die in GENAU diesem Tick daraus
+ * resultierenden Verluste.
+ */
 export interface BattleTickResult {
   tick: number;
   atTime: number;
+  attackerShipsBefore: FleetShipGroup[];
+  defenderShipsBefore: FleetShipGroup[];
   attackerLosses: Record<Id, number>;
   defenderLosses: Record<Id, number>;
 }
@@ -21,6 +33,16 @@ export interface BattleTickResult {
  */
 export interface Battle {
   id: Id;
+  /**
+   * Unerratbares Token für den öffentlich abrufbaren, teilbaren
+   * Kampfbericht (`/kampfbericht/:token`, siehe `BattleReportComponent` und
+   * `GameApi.battleByReportToken`) – bewusst NICHT `id` (fortlaufender,
+   * erratbarer Zähler, siehe `nextId`), sondern ein eigener Zufallswert
+   * (`randomToken()`). Ab dem ERSTEN Kampf-Tick abrufbar, siehe
+   * `engageBattle` (Bericht existiert schon bei Kampfbeginn, nicht erst am
+   * Ende).
+   */
+  reportToken: string;
   systemId: Id;
   attackerId: Id;
   defenderId: Id;

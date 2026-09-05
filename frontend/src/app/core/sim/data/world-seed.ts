@@ -153,29 +153,39 @@ function buildInstance(colonyId: string, typeId: string, level: number): Buildin
   return { id: nextId('bld'), colonyId, typeId, level, pendingOrder: null, activationState: null, activationCompletesAt: null };
 }
 
-function freighterFleet(ownerId: string, colonyId: string, systemId: string, name: string): Fleet {
+function freighterFleet(ownerId: string, colonyId: string, planetId: string, systemId: string, name: string): Fleet {
   return {
-    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: null,
+    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: planetId,
     systemId, status: 'Stationed', ships: [{ shipProductTypeId: 'p_freighter', quantity: 1 }],
     cargo: [], destinationSystemId: null, pendingHops: [], departedAt: null, arrivesAt: null,
   };
 }
 
+function randInt(rnd: Rng, min: number, max: number): number {
+  return min + Math.floor(rnd() * (max - min + 1));
+}
+
 /**
- * Kleine Startflotte mit je einem Schiff der drei Kampfklassen (Korvette/
- * Zerstörer/Kreuzer, siehe Mechanik/03_..., §2) – deckt den vollen
- * Konterkreis ab (Korvette>Kreuzer>Zerstörer>Korvette), damit sich ein
- * Raumgefecht von Anfang an sinnvoll ausprobieren lässt, ohne erst eine
- * Werft hochziehen und Schiffe bauen zu müssen.
+ * Startflotte mit ALLEN drei Kampfklassen (Korvette/Zerstörer/Kreuzer,
+ * siehe Mechanik/03_..., §2) – deckt den vollen Konterkreis
+ * (Korvette>Kreuzer>Zerstörer>Korvette) ab, damit sich ein Raumgefecht von
+ * Anfang an ausprobieren lässt, ohne erst eine Werft hochziehen zu müssen.
+ * Stückzahlen je Klasse bewusst zufällig und deutlich unterschiedlich
+ * (Korvette 2-8, Zerstörer 1-5, Kreuzer 1-3 – grob umgekehrt proportional
+ * zu ihrem Produktionsaufwand/militärischen Wert, siehe `ship-catalog.ts`)
+ * statt symmetrisch 1:1:1: erst bei asymmetrischen Flottenzusammen-
+ * setzungen lässt sich der Kontermultiplikator (Mechanik/04_..., §4) beim
+ * Testen eines Gefechts wirklich beobachten – bei zwei spiegelgleichen
+ * 1:1:1-Flotten heben sich Vor-/Nachteile pro Tick gegenseitig auf.
  */
-function combatFleet(ownerId: string, colonyId: string, systemId: string, name: string): Fleet {
+function combatFleet(ownerId: string, colonyId: string, planetId: string, systemId: string, name: string, rnd: Rng): Fleet {
   return {
-    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: null,
+    id: nextId('flt'), ownerId, name, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: planetId,
     systemId, status: 'Stationed',
     ships: [
-      { shipProductTypeId: 'p_corvette', quantity: 1 },
-      { shipProductTypeId: 'p_destroyer', quantity: 1 },
-      { shipProductTypeId: 'p_cruiser', quantity: 1 },
+      { shipProductTypeId: 'p_corvette', quantity: randInt(rnd, 2, 8) },
+      { shipProductTypeId: 'p_destroyer', quantity: randInt(rnd, 1, 5) },
+      { shipProductTypeId: 'p_cruiser', quantity: randInt(rnd, 1, 3) },
     ],
     cargo: [], destinationSystemId: null, pendingHops: [], departedAt: null, arrivesAt: null,
   };
@@ -396,7 +406,7 @@ function spawnNpcs(systems: System[], neighborsByIndex: number[][], rnd: Rng, t:
     warehouse.push(eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_NPC));
     // Jeder NPC startet mit einem Frachter – Grundvoraussetzung für Handel
     // über die eigene Kolonie hinaus (Konzeption/05_..., §9).
-    fleets.push(freighterFleet(npc.id, colony.id, system.id, `Handelsflotte ${colony.name}`));
+    fleets.push(freighterFleet(npc.id, colony.id, planet.id, system.id, `Handelsflotte ${colony.name}`));
   });
 
   return { npcs, colonies, planets, planetStats, populations, moneySupplyStates, wallets, buildings, warehouse, fleets };
@@ -489,8 +499,14 @@ function buildHomeworldBundle(commanderName: string, homeworldName: string, home
   const buildings: Building[] = [
     buildInstance(colony.id, 'b_habitat', homeHabitatLevel),
     buildInstance(colony.id, 'b_powergrid', homePowergridLevel),
-    buildInstance(colony.id, 'b_industry', 2),
-    buildInstance(colony.id, 'b_shipyard', 1),
+    // Industriekomplex/Werft bewusst höher als ein absolutes Minimum (siehe
+    // Umsetzungskonzept/12_...md, "10-Spieler-Arbeitsteilungs-Meilenstein"):
+    // erst ab hier ist der Bau eines ersten Frachters in Arbeitsteilung
+    // innerhalb einer Spielwoche überhaupt in Reichweite, ohne dass jede
+    // beteiligte Kolonie zusätzlich noch selbst erst mehrere Gebäudestufen
+    // ausbauen müsste, bevor die eigentliche Produktion beginnen kann.
+    buildInstance(colony.id, 'b_industry', 4),
+    buildInstance(colony.id, 'b_shipyard', 3),
     buildInstance(colony.id, 'b_academy', 1),
   ];
   const warehouse: WarehouseEntry[] = [
@@ -500,11 +516,12 @@ function buildHomeworldBundle(commanderName: string, homeworldName: string, home
 
   // Frachter ab Spielbeginn – ohne eigene Transportkapazität ist kein
   // Handel über die eigene Kolonie hinaus möglich (Konzeption/05_..., §9).
-  const freighter = freighterFleet(player.id, colony.id, homeSystemId, `Handelsflotte ${colony.name}`);
-  // Kampfflotte mit je einem Schiff der drei Klassen (Korvette/Zerstörer/
-  // Kreuzer) – ermöglicht sofortiges Ausprobieren des Kampfsystems ohne
+  const freighter = freighterFleet(player.id, colony.id, colony.planetId, homeSystemId, `Handelsflotte ${colony.name}`);
+  // Kampfflotte mit allen drei Klassen (Korvette/Zerstörer/Kreuzer), stark
+  // unterschiedliche Stückzahlen je Klasse (siehe `combatFleet`) – ermöglicht
+  // sofortiges Ausprobieren des Kampfsystems inkl. Kontermultiplikator ohne
   // erst eine Werft hochziehen zu müssen (Mechanik/04_..., Konterzyklus).
-  const combat = combatFleet(player.id, colony.id, homeSystemId, `Kampfflotte ${colony.name}`);
+  const combat = combatFleet(player.id, colony.id, colony.planetId, homeSystemId, `Kampfflotte ${colony.name}`, rnd);
   const groundForceGroup = starterGroundForceGroup(player.id, colony.id);
 
   return {

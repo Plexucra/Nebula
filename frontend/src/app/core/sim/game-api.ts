@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  Battle, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Npc, PeaceOffer, Planet, PlanetStats, Player, Population,
   PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
@@ -159,10 +159,16 @@ export interface GameApi {
   cancelFleetMove(fleetId: Id): Promise<void>;
   /** Reine Vorschau (keine Bewegung) für "Bewegen" auf der Galaxiekarte: Sprunganzahl + geschätzte Reisezeit (ms) zu einem Zielsystem – `null`, wenn kein Gateway-Pfad bekannt ist. Dieselbe Berechnung wie `moveFleet`, damit Vorschau und tatsächliche Ankunft nie auseinanderlaufen. */
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null>;
-  /** Landet eine im System angekommene (nicht unterwegs befindliche) Flotte bei einer Kolonie dieses Systems – eigene wie fremde, für Handel am dortigen Planetaren Handelsposten. */
-  landFleet(fleetId: Id, colonyId: Id): Promise<void>;
-  /** Legt von einer Kolonie ab, ohne das System zu verlassen – die Flotte steht dann am Systemhandelsposten. */
-  undockFleet(fleetId: Id): Promise<void>;
+  /**
+   * Bewegt eine im System angekommene (nicht unterwegs befindliche) Flotte
+   * INSTANT (keine Flugzeit) zwischen den drei Orten desselben Systems –
+   * Systemhandelsposten, Orbit eines beliebigen Planeten (auch unbesiedelt)
+   * oder angedockt an einer Kolonie (eigene wie fremde, für Handel am
+   * dortigen Planetaren Handelsposten) – siehe `FleetSystemTarget`. Für die
+   * Systemansicht (Planet-zu-Planet-Bewegung); Bewegung ZWISCHEN Systemen
+   * läuft weiterhin über `moveFleet`.
+   */
+  moveFleetWithinSystem(fleetId: Id, target: FleetSystemTarget): Promise<void>;
 
   // --- Bodentruppen -------------------------------------------------------
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined>;
@@ -233,12 +239,26 @@ export interface GameApi {
   battle(id: Id): Signal<Battle | undefined>;
   /** Beendete Gefechte, neueste zuerst – Kampfprotokoll. */
   battleHistory(): Signal<Battle[]>;
-  /** Eigene, im selben System stationierte, gegnerische Flotten (im Krieg, mit Schiffen) – Kandidaten für `engageBattle`. */
+  /**
+   * Öffentlich abrufbarer Kampfbericht über den unerratbaren `reportToken`
+   * (siehe `Battle`) – UNABHÄNGIG vom angemeldeten Kommandanten, für den
+   * teilbaren Link `/kampfbericht/:token`. Ab Kampfbeginn verfügbar, nicht
+   * erst nach Kampfende.
+   */
+  battleByReportToken(token: string): Signal<Battle | undefined>;
+  /** Eigene, im selben System stationierte, gegnerische Flotten MIT AKTIVER BLOCKADE (im Krieg, mit Schiffen) – Kandidaten für `engageBattle`. Ohne Blockade nicht angreifbar, siehe `Blockade`. */
   attackableFleetsInSystem(systemId: Id): Signal<Fleet[]>;
-  /** Startet ein 1v1-Gefecht zwischen der eigenen Flotte und einer gegnerischen im selben System – nur im Krieg möglich. */
+  /** Startet ein 1v1-Gefecht zwischen der eigenen Flotte und einer gegnerischen, blockierenden Flotte im selben System – nur im Krieg möglich. */
   engageBattle(attackerFleetId: Id, defenderFleetId: Id): Promise<void>;
   /** Zieht die eigene Flotte aus einem laufenden Gefecht zurück – die Gegenseite feuert dabei noch einen letzten Schlag. */
   retreatFromBattle(battleId: Id): Promise<void>;
+
+  // --- Blockaden (Mechanik/06_..., stark vereinfacht, siehe `Blockade`) ------
+  blockadesInSystem(systemId: Id): Signal<Blockade[]>;
+  /** Errichtet mit der eigenen, an diesem Ort bereits stationierten Flotte eine Blockade – macht sie angreifbar. Höchstens eine Blockade je Anker und je Flotte. */
+  formBlockade(fleetId: Id, anchor: BlockadeAnchor): Promise<void>;
+  /** Hebt die eigene Blockade wieder auf – nicht möglich während eines laufenden Gefechts der blockierenden Flotte. */
+  liftBlockade(blockadeId: Id): Promise<void>;
 
   // --- Benachrichtigungen (siehe Dokument §5) -------------------------------
   notifications(): Signal<GameNotification[]>;

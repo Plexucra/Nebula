@@ -158,6 +158,26 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
   font-size: 11.5px;
   color: var(--text-dim);
 }
+.step-factors { grid-column: 1 / -1; font-size: 10.5px; }
+
+.speed-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+}
+.speed-factor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+
+  &.warn { color: var(--danger); }
+}
 
 .new-order-preview {
   border: 1px solid var(--line);

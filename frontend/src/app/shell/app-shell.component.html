@@ -34,6 +34,9 @@
                   <div class="notification-body">
                     <span class="notification-message">{{ n.message }}</span>
                     <span class="notification-meta">#{{ n.code }} · {{ formatAge(n.createdAt) }}</span>
+                    @if (n.link) {
+                      <a class="notification-link" [routerLink]="n.link">Kampfbericht öffnen →</a>
+                    }
                   </div>
                 </div>
               } @empty { <p class="empty-hint">Keine Benachrichtigungen.</p> }

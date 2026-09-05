@@ -31,6 +31,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/galaxy/galaxy-map.component').then(m => m.GalaxyMapComponent),
   },
   {
+    path: 'galaxie/:id',
+    loadComponent: () => import('./features/galaxy/system-view.component').then(m => m.SystemViewComponent),
+  },
+  {
     path: 'handel',
     loadComponent: () => import('./features/trade/trade-overview.component').then(m => m.TradeOverviewComponent),
   },
@@ -41,6 +45,10 @@ export const routes: Routes = [
   {
     path: 'statistiken',
     loadComponent: () => import('./features/statistics/statistics.component').then(m => m.StatisticsComponent),
+  },
+  {
+    path: 'kampfbericht/:token',
+    loadComponent: () => import('./features/combat/battle-report.component').then(m => m.BattleReportComponent),
   },
   { path: '**', redirectTo: 'planeten' },
 ];

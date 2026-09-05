@@ -7,13 +7,17 @@ Quelle: `02/10_Planetare_Bebauung_Bodenkrieg_und_Gefechtsaufmarsch.md`
 selbst: `04_Kampfmechanik_Kern.md`.*
 
 > **Umsetzungsstand im Prototyp** (siehe `04_...md`, Abschnitt
-> „Umsetzungsstand im Prototyp“, und `Umsetzungskonzept/11_...md`): §1
-> (Kriegserklärung/Frieden) ist vollständig umgesetzt, inkl. der
+> „Umsetzungsstand im Prototyp“, und `Umsetzungskonzept/11_...md`, §4-5):
+> §1 (Kriegserklärung/Frieden) ist vollständig umgesetzt, inkl. der
 > 24-Stunden-Mindestdauer und der Sperre während eines aktiven
-> Gefechts. Die Blockade-/Aufmarsch-/Expositions-Mechanik in den
-> restlichen Abschnitten dieses Dokuments ist NICHT umgesetzt – der
-> Prototyp kennt nur strikte 1-Flotte-gegen-1-Flotte-Gefechte ohne
-> Blockade-Anker, Mobilmachungsrampe oder Expositionslimit.
+> Gefechts. Der Kerngedanke "eine Flotte ist nur an einer Blockadestelle
+> angreifbar" ist ebenfalls umgesetzt (`Blockade`-Modell), aber stark
+> vereinfacht: nur zwei Ankerarten (Gateway-Blockade am
+> Systemhandelsposten, Orbit-Blockade an einem Planeten), kein
+> Blockade-Anker-Objekt mit voller räumlicher Hierarchie, keine
+> Mobilmachungsrampe, kein Expositionslimit, keine Mehrparteien-
+> Blockaden. Der Prototyp kennt weiterhin nur strikte
+> 1-Flotte-gegen-1-Flotte-Gefechte.
 
 ## 1. Kriegserklärung und Frieden
 

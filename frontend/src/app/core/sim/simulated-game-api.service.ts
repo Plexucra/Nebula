@@ -1,7 +1,7 @@
 import { Injectable, Signal, computed, signal } from '@angular/core';
 import {
-  Battle, BattleOutcome, BattleStatus, BattleTickResult, Building, BuildingType, ChainPlan, ChainPlanStep, Colony, ColonyPowerState,
-  DiplomaticRelation, DiplomaticStatus, Fleet, FleetShipGroup, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
+  Battle, BattleOutcome, BattleStatus, BattleTickResult, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, ChainPlanStep, Colony, ColonyPowerState,
+  DiplomaticRelation, DiplomaticStatus, Fleet, FleetShipGroup, FleetSystemTarget, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
   GroundUnitTypeDef, Id, NotificationType, Npc, PeaceOffer, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
   ProductType, ProductionQueueEntry, ProductionQueueStatus, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, TransactionReason,
@@ -9,7 +9,7 @@ import {
 } from '../models';
 import { GameApi } from './game-api';
 import { hoursToMs, now, REAL_MS_PER_GAME_HOUR } from './clock';
-import { nextId } from './id';
+import { nextId, randomToken } from './id';
 import { PRODUCT_CATALOG, findProductType } from './data/product-catalog';
 import { BUILDING_CATALOG, findBuildingType } from './data/building-catalog';
 import { SHIP_CATALOG, findShipDef } from './data/ship-catalog';
@@ -175,6 +175,7 @@ interface Snapshot {
   diplomaticRelations: DiplomaticRelation[];
   peaceOffers: PeaceOffer[];
   battles: Battle[];
+  blockades: Blockade[];
 }
 
 /**
@@ -240,6 +241,8 @@ export class SimulatedGameApiService implements GameApi {
   private readonly _peaceOffers = signal<PeaceOffer[]>([]);
   /** Raumgefechte, siehe `Battle` – bewusst vereinfacht auf strikte 1v1-Flottengefechte, siehe `engageBattle`. */
   private readonly _battles = signal<Battle[]>([]);
+  /** Blockaden, siehe `Blockade` – macht die bildende Flotte angreifbar (`engageBattle`), stark vereinfacht ggü. Mechanik/06_...md. */
+  private readonly _blockades = signal<Blockade[]>([]);
   /**
    * Zuletzt in `runConsumption` ermittelte Deckung (0..1,5, 1 = Bedarf exakt
    * gedeckt) je Grundkonsumgut und Kolonie – rein abgeleiteter Diagnosewert
@@ -373,6 +376,7 @@ export class SimulatedGameApiService implements GameApi {
     this._diplomaticRelations.set([]);
     this._peaceOffers.set([]);
     this._battles.set([]);
+    this._blockades.set([]);
     this.lastProducedAt.clear();
     this.consumptionBudget.clear();
     this.rawStandardOfLiving.clear();
@@ -1135,8 +1139,8 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   /** Neueste zuerst, siehe `GameNotification`. */
-  private notify(type: NotificationType, code: number, message: string, colonyId: Id | null = null): void {
-    const entry: GameNotification = { id: nextId('ntf'), code, type, message, colonyId, createdAt: now(), read: false };
+  private notify(type: NotificationType, code: number, message: string, colonyId: Id | null = null, link: string | null = null): void {
+    const entry: GameNotification = { id: nextId('ntf'), code, type, message, colonyId, createdAt: now(), read: false, link };
     this._notifications.update(list => [entry, ...list]);
   }
 
@@ -2173,26 +2177,81 @@ export class SimulatedGameApiService implements GameApi {
     });
   }
 
-  async landFleet(fleetId: Id, colonyId: Id): Promise<void> {
+  /**
+   * Instant-Bewegung (keine Flugzeit) zwischen den drei Orten desselben
+   * Systems, siehe `FleetSystemTarget`/`FleetLocationType` – Grundlage der
+   * Systemansicht (`SystemViewComponent`).
+   */
+  async moveFleetWithinSystem(fleetId: Id, target: FleetSystemTarget): Promise<void> {
     await this.latency();
     const fleet = this.requireOwnFleet(fleetId);
     if (fleet.status !== 'Stationed') throw new Error('Die Flotte ist unterwegs.');
-    const colony = this._colonies().find(c => c.id === colonyId);
-    if (!colony) throw new Error('Unbekannte Kolonie.');
-    if (colony.systemId !== fleet.systemId) throw new Error('Die Kolonie liegt nicht in diesem System.');
-    this._fleets.update(list => list.map(f => f.id === fleetId ? { ...f, locationType: 'ColonyOrbit', locationColonyId: colonyId, locationPlanetId: null } : f));
+    if (this.activeBattleForFleet(fleetId)) throw new Error('Eine Flotte in einem laufenden Gefecht kann sich nicht bewegen – zuerst zurückziehen.');
+    if (target.kind === 'System') {
+      this._fleets.update(list => list.map(f => f.id === fleetId ? { ...f, locationType: 'System', locationColonyId: null, locationPlanetId: null } : f));
+    } else if (target.kind === 'PlanetOrbit') {
+      const planet = this._planets().find(p => p.id === target.planetId);
+      if (!planet) throw new Error('Unbekannter Planet.');
+      if (planet.systemId !== fleet.systemId) throw new Error('Der Planet liegt nicht in diesem System.');
+      this._fleets.update(list => list.map(f => f.id === fleetId ? { ...f, locationType: 'PlanetOrbit', locationColonyId: null, locationPlanetId: target.planetId } : f));
+    } else {
+      const colony = this._colonies().find(c => c.id === target.colonyId);
+      if (!colony) throw new Error('Unbekannte Kolonie.');
+      if (colony.systemId !== fleet.systemId) throw new Error('Die Kolonie liegt nicht in diesem System.');
+      this._fleets.update(list => list.map(f => f.id === fleetId ? { ...f, locationType: 'ColonyOrbit', locationColonyId: target.colonyId, locationPlanetId: colony.planetId } : f));
+    }
+    // Ein Ortswechsel hebt eine eigene Blockade an diesem Ort automatisch auf – man kann nicht blockieren, wo man nicht mehr ist.
+    this._blockades.update(list => list.filter(b => b.fleetId !== fleetId));
     this.persist();
   }
 
-  /** Legt ab – die Flotte gilt danach als im Orbit des Planeten der zuletzt verlassenen Kolonie (`locationPlanetId`, rein informativ, siehe `Fleet`-Doku). */
-  async undockFleet(fleetId: Id): Promise<void> {
+  // ==========================================================================
+  // Blockaden (Mechanik/06_..., stark vereinfacht – siehe `Blockade`-Doku und
+  // Klassendoku über `engageBattle`: nur zwei Ankerarten, kein
+  // Blockade-Anker-Objekt mit räumlicher Hierarchie, keine
+  // Mobilmachungsrampe, kein Expositionslimit, keine Mehrparteien-Blockaden.
+  // Eine Blockade macht die sie bildende Flotte angreifbar – siehe
+  // `attackableFleetsInSystem`/`engageBattle`.
+  // ==========================================================================
+
+  blockadesInSystem(systemId: Id): Signal<Blockade[]> {
+    return computed(() => this._blockades().filter(b => b.systemId === systemId));
+  }
+
+  /** Errichtet eine Blockade mit der eigenen, an diesem Ort bereits stationierten Flotte – macht sie angreifbar. Höchstens eine Blockade je Anker, höchstens eine Blockade je Flotte. */
+  async formBlockade(fleetId: Id, anchor: BlockadeAnchor): Promise<void> {
     await this.latency();
+    const me = this.requirePlayer();
     const fleet = this.requireOwnFleet(fleetId);
     if (fleet.status !== 'Stationed') throw new Error('Die Flotte ist unterwegs.');
-    const leftPlanetId = fleet.locationColonyId
-      ? this._colonies().find(c => c.id === fleet.locationColonyId)?.planetId ?? null
-      : null;
-    this._fleets.update(list => list.map(f => f.id === fleetId ? { ...f, locationType: 'System', locationColonyId: null, locationPlanetId: leftPlanetId } : f));
+    if (!fleet.ships.some(s => s.quantity > 0)) throw new Error('Eine Flotte ohne Schiffe kann keine Blockade bilden.');
+    if (this._blockades().some(b => b.fleetId === fleetId)) throw new Error('Diese Flotte blockiert bereits einen Ort.');
+    if (anchor.kind === 'Gateway') {
+      if (fleet.locationType !== 'System') throw new Error('Für eine Gateway-Blockade muss die Flotte am Systemhandelsposten stehen.');
+      if (this._blockades().some(b => b.systemId === fleet.systemId && b.anchorKind === 'Gateway')) throw new Error('Dieses Gateway wird bereits blockiert.');
+    } else {
+      if (fleet.locationPlanetId !== anchor.planetId || (fleet.locationType !== 'PlanetOrbit' && fleet.locationType !== 'ColonyOrbit')) {
+        throw new Error('Die Flotte muss im Orbit dieses Planeten stehen.');
+      }
+      if (this._blockades().some(b => b.anchorKind === 'PlanetOrbit' && b.planetId === anchor.planetId)) throw new Error('Dieser Planet wird bereits blockiert.');
+    }
+    const blockade: Blockade = {
+      id: nextId('blk'), systemId: fleet.systemId, anchorKind: anchor.kind,
+      planetId: anchor.kind === 'PlanetOrbit' ? anchor.planetId : null, fleetId, ownerId: me.id, startedAt: now(),
+    };
+    this._blockades.update(list => [...list, blockade]);
+    this.persist();
+  }
+
+  /** Hebt die eigene Blockade wieder auf – nicht möglich während eines laufenden Gefechts der blockierenden Flotte (zuerst zurückziehen). */
+  async liftBlockade(blockadeId: Id): Promise<void> {
+    await this.latency();
+    const me = this.requirePlayer();
+    const blockade = this._blockades().find(b => b.id === blockadeId);
+    if (!blockade) throw new Error('Unbekannte Blockade.');
+    if (blockade.ownerId !== me.id) throw new Error('Diese Blockade gehört einem anderen Kommandanten.');
+    if (this.activeBattleForFleet(blockade.fleetId)) throw new Error('Während eines laufenden Gefechts kann die Blockade nicht aufgehoben werden.');
+    this._blockades.update(list => list.filter(b => b.id !== blockadeId));
     this.persist();
   }
 
@@ -2408,7 +2467,12 @@ export class SimulatedGameApiService implements GameApi {
     });
   }
 
-  /** Eigene, im System stationierte, gegnerische (im Krieg stehende) Flotten mit mindestens einem Schiff – Kandidaten für "Angreifen". */
+  /** Absichtlich UNGEFILTERT nach angemeldetem Kommandant – der Kampfbericht ist über den unerratbaren Token teilbar, siehe `Battle.reportToken`. */
+  battleByReportToken(token: string): Signal<Battle | undefined> {
+    return computed(() => this._battles().find(b => b.reportToken === token));
+  }
+
+  /** Eigene, im System stationierte, gegnerische (im Krieg stehende) Flotten MIT AKTIVER BLOCKADE (siehe `Blockade`) – Kandidaten für "Angreifen". Ohne Blockade ist eine Flotte nicht angreifbar. */
   attackableFleetsInSystem(systemId: Id): Signal<Fleet[]> {
     return computed(() => {
       const me = this.player();
@@ -2418,13 +2482,14 @@ export class SimulatedGameApiService implements GameApi {
           .filter(r => r.status === 'War' && (r.playerAId === me.id || r.playerBId === me.id))
           .map(r => (r.playerAId === me.id ? r.playerBId : r.playerAId)),
       );
+      const blockadingFleetIds = new Set(this._blockades().filter(b => b.systemId === systemId).map(b => b.fleetId));
       return this._fleets().filter(f =>
         f.systemId === systemId && f.status === 'Stationed' && f.ownerId !== me.id
-        && atWarWith.has(f.ownerId) && f.ships.some(s => s.quantity > 0));
+        && atWarWith.has(f.ownerId) && f.ships.some(s => s.quantity > 0) && blockadingFleetIds.has(f.id));
     });
   }
 
-  /** Startet ein Gefecht zwischen der eigenen `attackerFleetId` und einer gegnerischen, im selben System stationierten Flotte. */
+  /** Startet ein Gefecht zwischen der eigenen `attackerFleetId` und einer gegnerischen, blockierenden Flotte im selben System. Der Kampfbericht (`reportToken`) ist ab hier sofort abrufbar. */
   async engageBattle(attackerFleetId: Id, defenderFleetId: Id): Promise<void> {
     await this.latency();
     const me = this.requirePlayer();
@@ -2437,6 +2502,9 @@ export class SimulatedGameApiService implements GameApi {
     if (this.findRelation(me.id, defenderFleet.ownerId)?.status !== 'War') {
       throw new Error('Ein Angriff ist nur im Krieg möglich – erklären Sie zuerst den Krieg (Diplomatie).');
     }
+    if (!this._blockades().some(b => b.fleetId === defenderFleetId)) {
+      throw new Error('Diese Flotte hat keine Blockade gebildet und ist daher nicht angreifbar.');
+    }
     if (!attackerFleet.ships.some(s => s.quantity > 0) || !defenderFleet.ships.some(s => s.quantity > 0)) {
       throw new Error('Eine der beiden Flotten hat keine Kampfschiffe.');
     }
@@ -2444,13 +2512,15 @@ export class SimulatedGameApiService implements GameApi {
     if (this.activeBattleForFleet(defenderFleetId)) throw new Error('Die Zielflotte befindet sich bereits in einem laufenden Gefecht.');
     const t = now();
     const battle: Battle = {
-      id: nextId('btl'), systemId: attackerFleet.systemId, attackerId: me.id, defenderId: defenderFleet.ownerId,
+      id: nextId('btl'), reportToken: randomToken(), systemId: attackerFleet.systemId, attackerId: me.id, defenderId: defenderFleet.ownerId,
       attackerFleetId, defenderFleetId, status: 'Active', startedAt: t, nextTickAt: t + hoursToMs(F.COMBAT_TICK_HOURS),
       ticksResolved: 0, attackerResidualDamage: {}, defenderResidualDamage: {}, ticks: [], endedAt: null, outcome: null,
     };
     this._battles.update(list => [...list, battle]);
+    const reportLink = '/kampfbericht/' + battle.reportToken;
     const defenderOwner = this._players().find(p => p.id === defenderFleet.ownerId);
-    this.notify('Warnung', NOTIFICATION_CODE_BATTLE_STARTED, `${me.name} greift Ihre Flotte "${defenderFleet.name}" an!`, defenderOwner?.homeworldColonyId ?? null);
+    this.notify('Warnung', NOTIFICATION_CODE_BATTLE_STARTED, `${me.name} greift Ihre Flotte "${defenderFleet.name}" an!`, defenderOwner?.homeworldColonyId ?? null, reportLink);
+    this.notify('Warnung', NOTIFICATION_CODE_BATTLE_STARTED, `Sie greifen die Flotte "${defenderFleet.name}" an!`, me.homeworldColonyId, reportLink);
     this.persist();
   }
 
@@ -2499,7 +2569,11 @@ export class SimulatedGameApiService implements GameApi {
     }));
 
     const t = now();
-    const tickResult: BattleTickResult = { tick: battle.ticksResolved + 1, atTime: t, attackerLosses: atkApplied.losses, defenderLosses: defApplied.losses };
+    const tickResult: BattleTickResult = {
+      tick: battle.ticksResolved + 1, atTime: t,
+      attackerShipsBefore: attackerFleet.ships, defenderShipsBefore: defenderFleet.ships,
+      attackerLosses: atkApplied.losses, defenderLosses: defApplied.losses,
+    };
     const defenderDestroyed = defApplied.ships.every(s => s.quantity <= 0);
     const attackerDestroyed = atkApplied.ships.every(s => s.quantity <= 0);
 
@@ -2508,9 +2582,15 @@ export class SimulatedGameApiService implements GameApi {
     if (retreatingSide) {
       outcome = 'Retreat';
       status = 'Ended';
-    } else if (defenderDestroyed || attackerDestroyed) {
+    } else if (attackerDestroyed && defenderDestroyed) {
       // Beide gleichzeitig vernichtet: Verteidiger gilt als erfolgreich verteidigt (Gleichstand-Auflösung).
-      outcome = defenderDestroyed ? 'AttackerVictory' : 'DefenderVictory';
+      outcome = 'DefenderVictory';
+      status = 'Ended';
+    } else if (defenderDestroyed) {
+      outcome = 'AttackerVictory';
+      status = 'Ended';
+    } else if (attackerDestroyed) {
+      outcome = 'DefenderVictory';
       status = 'Ended';
     }
 
@@ -2539,10 +2619,18 @@ export class SimulatedGameApiService implements GameApi {
           : `${retreatingSide === 'attacker' ? attackerName : defenderName} hat sich aus dem Gefecht zurückgezogen.`;
       const attackerHome = this._players().find(p => p.id === battle.attackerId)?.homeworldColonyId ?? null;
       const defenderHome = this._players().find(p => p.id === battle.defenderId)?.homeworldColonyId ?? null;
-      this.notify('Warnung', NOTIFICATION_CODE_BATTLE_ENDED, summary, attackerHome);
-      this.notify('Warnung', NOTIFICATION_CODE_BATTLE_ENDED, summary, defenderHome);
+      const reportLink = '/kampfbericht/' + battle.reportToken;
+      this.notify('Warnung', NOTIFICATION_CODE_BATTLE_ENDED, summary, attackerHome, reportLink);
+      this.notify('Warnung', NOTIFICATION_CODE_BATTLE_ENDED, summary, defenderHome, reportLink);
     }
+    this.pruneEmptyBlockades();
     this.persist();
+  }
+
+  /** Eine Blockade ohne verbliebene Schiffe (Flotte im Kampf vollständig vernichtet) macht keinen Sinn mehr – wird automatisch entfernt. */
+  private pruneEmptyBlockades(): void {
+    const emptyFleetIds = new Set(this._fleets().filter(f => !f.ships.some(s => s.quantity > 0)).map(f => f.id));
+    this._blockades.update(list => list.filter(b => !emptyFleetIds.has(b.fleetId)));
   }
 
   private addUnitToGarrison(colonyId: Id, unitProductTypeId: Id, count: number): void {
@@ -2660,6 +2748,7 @@ export class SimulatedGameApiService implements GameApi {
       diplomaticRelations: this._diplomaticRelations(),
       peaceOffers: this._peaceOffers(),
       battles: this._battles(),
+      blockades: this._blockades(),
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -2709,10 +2798,15 @@ export class SimulatedGameApiService implements GameApi {
       this._sellOrders.set((snap.sellOrders ?? []).map(o => ({ ...o, autoRelist: o.autoRelist ?? false, sourceFleetId: o.sourceFleetId ?? null })));
       this._npcs.set(snap.npcs ?? []);
       this._universeStats.set(snap.universeStats ?? []);
-      this._notifications.set(snap.notifications ?? []);
+      this._notifications.set((snap.notifications ?? []).map(n => ({ ...n, link: n.link ?? null })));
       this._diplomaticRelations.set(snap.diplomaticRelations ?? []);
       this._peaceOffers.set(snap.peaceOffers ?? []);
-      this._battles.set(snap.battles ?? []);
+      this._battles.set((snap.battles ?? []).map(b => ({
+        ...b,
+        reportToken: b.reportToken ?? randomToken(),
+        ticks: (b.ticks ?? []).map(t => ({ ...t, attackerShipsBefore: t.attackerShipsBefore ?? [], defenderShipsBefore: t.defenderShipsBefore ?? [] })),
+      })));
+      this._blockades.set(snap.blockades ?? []);
       for (const [k, v] of Object.entries(snap.consumptionBudget ?? {})) this.consumptionBudget.set(k, v);
       return true;
     } catch {

@@ -78,9 +78,9 @@
 
   <div class="side-column">
     <div class="panel corner-frame fleets-panel">
-      <div class="panel-header"><h2>Meine Flotten</h2></div>
+      <div class="panel-header"><h2>Meine Flotten — {{ selectedSystem()?.name ?? '—' }}</h2></div>
       <div class="panel-body fleet-list">
-        @for (fleet of myFleets(); track fleet.id) {
+        @for (fleet of myFleetsInSelectedSystem(); track fleet.id) {
           <div class="fleet-row">
             <div class="fleet-row-head">
               <strong>{{ fleet.name }}</strong>
@@ -94,11 +94,10 @@
             } @else {
               <div class="fleet-row-actions">
                 <button class="ghost small" (click)="startMove(fleet)" [disabled]="!!moveModeFleetId()">Bewegen</button>
-                <button class="ghost small" (click)="focusFleetSystem(fleet)">Zum System</button>
               </div>
             }
           </div>
-        } @empty { <p class="empty-hint">Keine eigenen Flotten.</p> }
+        } @empty { <p class="empty-hint">Keine eigenen Flotten in diesem System.</p> }
       </div>
     </div>
 
@@ -135,19 +134,8 @@
           }
 
           <div class="divider"></div>
-          <span class="eyebrow">Kolonien in diesem System</span>
           @if (hasVisited(s.id)) {
-            @if (eligibleLandingFleets().length) {
-              <div class="landing-picker">
-                @if (eligibleLandingFleets().length > 1) {
-                  <select [(ngModel)]="landingFleetId">
-                    @for (f of eligibleLandingFleets(); track f.id) { <option [value]="f.id">{{ f.name }}</option> }
-                  </select>
-                } @else {
-                  <span class="hint">{{ eligibleLandingFleets()[0].name }} landen bei:</span>
-                }
-              </div>
-            }
+            <span class="eyebrow">Kolonien in diesem System</span>
             <div class="system-colony-list">
               @for (c of coloniesInSelectedSystem(); track c.id) {
                 <div class="system-colony-row">
@@ -155,14 +143,13 @@
                     <span>{{ c.name }}</span>
                     <span class="hint">{{ ownerDisplay(c.ownerId) }}</span>
                   </a>
-                  @if (eligibleLandingFleets().length) {
-                    <button class="ghost small" (click)="landAt(c.id)" [disabled]="busy() === ('land:' + c.id)">Landen</button>
-                  }
                 </div>
               } @empty { <p class="empty-hint">Keine Kolonien in diesem System.</p> }
             </div>
-            <p class="hint">Handel über den Planetaren bzw. System Handelsposten dieses Systems ist möglich, solange
-              eine eigene Flotte dort ist (Tab „Flotten").</p>
+            <a class="primary small system-view-link" [routerLink]="['/galaxie', s.id]">Systemansicht öffnen →</a>
+            <p class="hint">Dort lassen sich eigene Flotten zwischen Systemhandelsposten, Planeten-Orbits und Kolonien
+              dieses Systems bewegen (auch unbesiedelte Planeten) – Handel läuft über den jeweiligen Handelsposten,
+              solange eine eigene Flotte dort steht.</p>
           } @else {
             <p class="empty-hint">Noch nicht bereist – eine eigene Flotte muss dieses System erst erreichen
               (Tab „Flotten" → Bewegen), bevor seine Kolonien hier sichtbar werden.</p>

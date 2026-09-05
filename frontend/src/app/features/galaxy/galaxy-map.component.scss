@@ -177,13 +177,10 @@
   padding: 4px 0;
 }
 
-.landing-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0;
-
-  select { flex: 1 1 auto; }
+.system-view-link {
+  display: block;
+  text-align: center;
+  margin: 10px 0 6px;
 }
 
 .system-colony-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }

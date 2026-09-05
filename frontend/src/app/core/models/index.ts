@@ -17,3 +17,4 @@ export * from './stats.model';
 export * from './notification.model';
 export * from './diplomacy.model';
 export * from './combat.model';
+export * from './blockade.model';
