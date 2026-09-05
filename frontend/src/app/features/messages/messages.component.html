@@ -1,0 +1,68 @@
+<div class="page-head">
+  <span class="eyebrow">Kommunikation</span>
+  <h1>Nachrichten</h1>
+  <button class="primary small" (click)="openCompose()" [disabled]="otherPlayers().length === 0">✉ Neue Nachricht</button>
+</div>
+
+@if (error()) { <div class="error">{{ error() }}</div> }
+
+@if (composeOpen()) {
+  <div class="panel corner-frame compose-panel">
+    <div class="panel-header"><h2>Neue Nachricht verfassen</h2></div>
+    <div class="panel-body compose-form">
+      <label>
+        Empfänger
+        <select [ngModel]="composeTo()" (ngModelChange)="composeTo.set($event)">
+          @for (p of otherPlayers(); track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Betreff
+        <input type="text" [ngModel]="composeSubject()" (ngModelChange)="composeSubject.set($event)" maxlength="120" placeholder="Betreff" />
+      </label>
+      <label>
+        Nachricht
+        <textarea rows="5" [ngModel]="composeBody()" (ngModelChange)="composeBody.set($event)" placeholder="Ihre Nachricht ..."></textarea>
+      </label>
+      <div class="compose-actions">
+        <button class="primary small" (click)="send()" [disabled]="busy() === 'send' || !composeTo() || !composeBody().trim()">Senden</button>
+        <button class="ghost small" (click)="closeCompose()">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="panel corner-frame">
+  <div class="panel-header tabs">
+    <button class="tab" [class.active]="tab() === 'inbox'" (click)="tab.set('inbox')">Posteingang</button>
+    <button class="tab" [class.active]="tab() === 'sent'" (click)="tab.set('sent')">Gesendet</button>
+  </div>
+  <div class="panel-body message-list">
+    @if (tab() === 'inbox') {
+      @for (m of inbox(); track m.id) {
+        <div class="message-row" [class.unread]="!m.read" (click)="openAndMarkRead(m.id)">
+          <div class="message-meta">
+            <span class="message-from">{{ playerName(m.fromPlayerId) }}</span>
+            <span class="message-age">{{ formatAge(m.sentAt) }}</span>
+            @if (!m.read) { <span class="tag warn small-tag">ungelesen</span> }
+          </div>
+          <div class="message-subject">{{ m.subject }}</div>
+          <div class="message-body">{{ m.body }}</div>
+        </div>
+      } @empty { <p class="empty-hint">Posteingang ist leer.</p> }
+    } @else {
+      @for (m of sent(); track m.id) {
+        <div class="message-row">
+          <div class="message-meta">
+            <span class="message-from">an {{ playerName(m.toPlayerId) }}</span>
+            <span class="message-age">{{ formatAge(m.sentAt) }}</span>
+          </div>
+          <div class="message-subject">{{ m.subject }}</div>
+          <div class="message-body">{{ m.body }}</div>
+        </div>
+      } @empty { <p class="empty-hint">Noch keine Nachrichten gesendet.</p> }
+    }
+  </div>
+</div>

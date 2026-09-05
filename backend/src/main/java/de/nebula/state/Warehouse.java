@@ -1,0 +1,41 @@
+package de.nebula.state;
+
+import de.nebula.model.WarehouseEntry;
+
+/**
+ * 1:1-Portierung von {@code warehouseQty}/{@code addToWarehouse} aus
+ * {@code simulated-game-api.service.ts}. Die TS-Version pflegt zusätzlich
+ * einen {@code warehouseIndex} (`Map`) für O(1)-Lookups bei vielen
+ * gleichzeitig aktiven Aufträgen (Performance-Fix aus einer früheren
+ * Session) – im sequentiellen Warteschlangenmodell (max. 1 aktiver Auftrag
+ * je Kolonie) ist die lineare Suche über {@code state.warehouse} für die
+ * Größenordnung dieses Prototyps unproblematisch, der Index wird deshalb
+ * bewusst NICHT mitportiert (YAGNI, bis ein echtes Performance-Problem
+ * auftritt).
+ */
+public final class Warehouse {
+  private Warehouse() {
+  }
+
+  public static double qty(GameState state, String colonyId, String productTypeId) {
+    for (WarehouseEntry w : state.warehouse) {
+      if (w.colonyId.equals(colonyId) && w.productTypeId.equals(productTypeId)) return w.quantity;
+    }
+    return 0;
+  }
+
+  public static void add(GameState state, String colonyId, String productTypeId, double delta) {
+    for (WarehouseEntry w : state.warehouse) {
+      if (w.colonyId.equals(colonyId) && w.productTypeId.equals(productTypeId)) {
+        w.quantity = Math.max(0, w.quantity + delta);
+        return;
+      }
+    }
+    if (delta <= 0) return;
+    WarehouseEntry w = new WarehouseEntry();
+    w.colonyId = colonyId;
+    w.productTypeId = productTypeId;
+    w.quantity = delta;
+    state.warehouse.add(w);
+  }
+}

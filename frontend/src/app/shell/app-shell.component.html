@@ -55,6 +55,9 @@
         <a class="nav-item" [routerLink]="item.path" routerLinkActive="active">
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
+          @if (item.path === '/nachrichten' && unreadMessageCount() > 0) {
+            <span class="notification-badge">{{ unreadMessageCount() }}</span>
+          }
         </a>
       }
     </nav>

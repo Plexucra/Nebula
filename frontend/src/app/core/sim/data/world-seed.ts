@@ -1,10 +1,9 @@
 import {
-  Building, ChainPlan, Colony, Fleet, Gateway, GroundForceGroup, Id, Npc, Planet, PlanetStats, PlanetType, Player,
+  Building, ChainPlan, Colony, Fleet, Gateway, GroundForceGroup, Id, Planet, PlanetStats, PlanetType, Player,
   Population, PopulationMoneySupplyState, ProductionQueueEntry, System, Wallet, WarehouseEntry,
 } from '../../models';
 import { nextId } from '../id';
 import { now } from '../clock';
-import { RAW_RESOURCES } from './product-catalog';
 import { findBuildingType } from './building-catalog';
 import { generateGalaxy } from './galaxy-generator';
 import { seededRandom, shuffle, Rng } from '../rng';
@@ -23,7 +22,6 @@ export interface WorldSeed {
   warehouse: WarehouseEntry[];
   productionQueue: ProductionQueueEntry[];
   gateways: Gateway[];
-  npcs: Npc[];
   fleets: Fleet[];
   groundForceGroups: GroundForceGroup[];
 }
@@ -85,7 +83,6 @@ function starterProductionQueue(colonyId: Id): ProductionQueueEntry[] {
  * `simulated-game-api.service.ts`.
  */
 const SEALED_ELERIUM_RESERVE_HOME = 25;
-const SEALED_ELERIUM_RESERVE_NPC = 10;
 
 function eleriumReserveEntry(colonyId: string, quantity: number): WarehouseEntry {
   return { colonyId, productTypeId: 'p_elerium_stabil', quantity };
@@ -94,7 +91,6 @@ function eleriumReserveEntry(colonyId: string, quantity: number): WarehouseEntry
 const PLANET_NAMES_HOME = ['Aurelia Prime', 'Kessar', 'Vantis', 'Thal Minor', 'Rho Cindra'];
 
 const GALAXY_SYSTEM_COUNT = 200;
-const NPC_COUNT = 10;
 
 const SYSTEM_NAME_POOL = [
   'Aurelia', "Kepler's Reach", 'Thessaly', 'Drakon-Weite', 'Vey Corva', 'Halcyon Rand',
@@ -135,18 +131,6 @@ function pickAdditionalSystemName(usedNames: Set<string>, rnd: Rng): string {
 const FACTION_FLAVORS = [
   'unabhängige Kolonisten', 'Grenzsiedlung', 'unerforscht', 'kleine Kolonie',
   'verlassenes System', 'lokale Miliz',
-];
-
-const NPC_PLANET_NAMES = [
-  'Varek', 'Ilyra', 'Sohrat', 'Kellin', 'Draveth', 'Anthys', 'Woronok', 'Petriv',
-  'Cardessa', 'Halvorn', 'Junai', 'Merrek', 'Osvalt', 'Quinnara',
-];
-
-const NPC_NAME_POOL = [
-  'Direktorin Assan Korr', 'Verwalter Beno Yatt', 'Vorsitzende Ilse Marren',
-  'Kommissar Dov Rehn', 'Ratsherrin Priya Thessin', 'Verwalter Okonkwo Bass',
-  'Direktor Lian Fessu', 'Vorsteherin Marta Ödberg', 'Kommissarin Ayen Solvik',
-  'Verwalter Timo Achra',
 ];
 
 function buildInstance(colonyId: string, typeId: string, level: number): Building {
@@ -252,164 +236,19 @@ function applyHomeworldMinimums(conc: Planet['resourceConcentration']): Planet['
   }));
 }
 
-function specialtyProductFor(resourceTypeId: string): string {
-  return RAW_RESOURCES.find(p => p.resourceProfile[0]?.resourceTypeId === resourceTypeId)?.id ?? RAW_RESOURCES[0].id;
-}
-
 /**
  * Wählt eine Wohnkomplex-Stufe, die zusammen mit `powergridLevel` die
  * Startbevölkerung komfortabel deckt (Ziel ~110 % Infrastruktur, siehe
  * Konzeption/07_..., §4: Bevölkerung ist Ergebnis realer Entwicklung –
  * eine Startwelt, die von Anfang an über ihrer eigenen
  * Infrastrukturkapazität liegt, widerspricht diesem Prinzip und erzeugt
- * chronischen Bevölkerungsschwund, siehe NPC-Stresstest-Befund).
+ * chronischen Bevölkerungsschwund).
  */
 function habitatLevelFor(population: number, powergridLevel: number, targetPct = 1.1): number {
   const habitatCap = findBuildingType('b_habitat').populationCapacityPerLevel ?? 60;
   const powergridCap = findBuildingType('b_powergrid').populationCapacityPerLevel ?? 25;
   const remaining = population * targetPct - powergridLevel * powergridCap;
   return Math.max(1, Math.ceil(remaining / habitatCap));
-}
-
-/**
- * Wählt `NPC_COUNT` Systeme als zusammenhängenden Nachbarschafts-Cluster
- * statt verstreut über die ganze Galaxie: Breitensuche (BFS) über den
- * Gateway-Graphen ab einem zufälligen Startsystem, wodurch die nächsten
- * erreichbaren Systeme zuerst gewählt werden. Nur so können NPCs
- * überhaupt direkte Gateway-Nachbarn sein und eine lokale Wirtschaft
- * bilden (siehe Auftrag).
- */
-function selectNpcClusterIndices(neighborsByIndex: number[][], eligible: (i: number) => boolean, rnd: Rng, count: number): number[] {
-  const n = neighborsByIndex.length;
-  const eligibleIndices = Array.from({ length: n }, (_, i) => i).filter(eligible);
-  const seed = eligibleIndices[Math.floor(rnd() * eligibleIndices.length)];
-
-  const visited = new Set<number>([seed]);
-  const order: number[] = [];
-  const queue = [seed];
-  let head = 0;
-  while (head < queue.length && order.length < count) {
-    const cur = queue[head++];
-    if (eligible(cur)) order.push(cur);
-    for (const nb of neighborsByIndex[cur]) {
-      if (!visited.has(nb)) { visited.add(nb); queue.push(nb); }
-    }
-  }
-  // Fallback, falls das Cluster um den Zufalls-Seed (z. B. am Rand der
-  // Galaxie) nicht genug erreichbare Systeme liefert.
-  if (order.length < count) {
-    for (const i of shuffle(eligibleIndices, rnd)) {
-      if (!order.includes(i)) order.push(i);
-      if (order.length >= count) break;
-    }
-  }
-  return order.slice(0, count);
-}
-
-/**
- * Erzeugt `NPC_COUNT` nicht-kriegerische NPC-Kolonien (siehe Auftrag:
- * "verhalten sich wie Spieler, bauen aber keine Angriffsflotten/
- * Bodentruppen") als zusammenhängenden Nachbarschafts-Cluster, damit
- * eine stabile lokale Wirtschaft überhaupt möglich ist. Innerhalb des
- * Clusters stimmen benachbarte NPCs ihre Spezialisierung direkt
- * miteinander ab (kein doppeltes Angebot unter direkten Nachbarn),
- * bewusst kleiner gestartet als die Heimatwelt des Spielers.
- */
-function spawnNpcs(systems: System[], neighborsByIndex: number[][], rnd: Rng, t: number): {
-  npcs: Npc[]; colonies: Colony[]; planets: Planet[]; planetStats: PlanetStats[];
-  populations: Population[]; moneySupplyStates: PopulationMoneySupplyState[];
-  wallets: Wallet[]; buildings: Building[]; warehouse: WarehouseEntry[]; fleets: Fleet[];
-} {
-  const eligible = (i: number) => !systems[i].isHomeSystem && !systems[i].isTradeHub;
-  const clusterIndices = selectNpcClusterIndices(neighborsByIndex, eligible, rnd, NPC_COUNT);
-  const clusterSet = new Set(clusterIndices);
-  const planetNames = shuffle(NPC_PLANET_NAMES, rnd);
-  const npcNames = shuffle(NPC_NAME_POOL, rnd);
-
-  const npcs: Npc[] = [];
-  const colonies: Colony[] = [];
-  const planets: Planet[] = [];
-  const planetStats: PlanetStats[] = [];
-  const populations: Population[] = [];
-  const moneySupplyStates: PopulationMoneySupplyState[] = [];
-  const wallets: Wallet[] = [];
-  const buildings: Building[] = [];
-  const warehouse: WarehouseEntry[] = [];
-  const fleets: Fleet[] = [];
-
-  // Planetentyp + Konzentrationsprofile vorab erzeugen, damit die
-  // Spezialisierungswahl unten bereits alle Nachbarprofile im Cluster kennt.
-  const typeByIndex = new Map(clusterIndices.map(i => [i, randomPlanetType(rnd)]));
-  const concByIndex = new Map(clusterIndices.map(i => [i, concentrationProfileForType(typeByIndex.get(i)!, rnd)]));
-  const specialtyByIndex = new Map<number, string>();
-
-  clusterIndices.forEach((sysIndex, i) => {
-    const system = systems[sysIndex];
-    const conc = concByIndex.get(sysIndex)!;
-    const planetType = typeByIndex.get(sysIndex)!;
-
-    // Direkte Gateway-Nachbarn dieses Systems, die ebenfalls zum
-    // NPC-Cluster gehören und bereits eine Spezialisierung gewählt haben.
-    const neighborSpecialties = new Set(
-      neighborsByIndex[sysIndex].filter(nb => clusterSet.has(nb) && specialtyByIndex.has(nb))
-        .map(nb => specialtyByIndex.get(nb)!),
-    );
-    const sortedByConcentration = [...conc].sort((a, b) => b.concentration - a.concentration);
-    const chosen = sortedByConcentration.find(c => !neighborSpecialties.has(specialtyProductFor(c.resourceTypeId)));
-    const specialtyProductId = specialtyProductFor((chosen ?? sortedByConcentration[0]).resourceTypeId);
-    specialtyByIndex.set(sysIndex, specialtyProductId);
-
-    const planet: Planet = {
-      id: nextId('pla'),
-      systemId: system.id,
-      name: planetNames[i % planetNames.length],
-      size: (['Klein', 'Mittel', 'Groß', 'Riesig'] as const)[Math.floor(rnd() * 4)],
-      type: planetType,
-      buildCapacity: 45 + Math.floor(rnd() * 30),
-      resourceConcentration: conc,
-      orbitIndex: 0,
-    };
-    system.planetIds = [planet.id];
-
-    const npc: Npc = {
-      id: nextId('npc'),
-      name: npcNames[i % npcNames.length],
-      homeColonyId: '',
-      homeSystemId: system.id,
-      specialtyProductId,
-    };
-    const colony: Colony = {
-      id: nextId('col'), planetId: planet.id, systemId: system.id, ownerId: npc.id,
-      name: `${planet.name}-Kolonie`, foundedAt: t, isHomeworld: true,
-    };
-    npc.homeColonyId = colony.id;
-
-    const population = 150 + Math.floor(rnd() * 200);
-    const powergridLevel = 1;
-    const habitatLevel = habitatLevelFor(population, powergridLevel);
-    planets.push(planet);
-    npcs.push(npc);
-    colonies.push(colony);
-    planetStats.push({
-      colonyId: colony.id, infrastructurePct: 105 + rnd() * 10, securityPct: 0,
-      standardOfLivingPct: 60 + rnd() * 20, loyaltyPct: 55 + rnd() * 15, lastRecalculatedAt: t,
-    });
-    populations.push({ colonyId: colony.id, currentCount: population, growthRatePerInterval: 0 });
-    moneySupplyStates.push({ planetId: planet.id, historicalPeakPopulation: population, lastPopulation: population });
-    wallets.push({ id: nextId('wal'), ownerType: 'Player', ownerId: npc.id, balance: 2500 + Math.floor(rnd() * 2000) });
-    wallets.push({ id: nextId('wal'), ownerType: 'Population', ownerId: colony.id, balance: 300 + Math.floor(rnd() * 300) });
-    buildings.push(
-      buildInstance(colony.id, 'b_habitat', habitatLevel),
-      buildInstance(colony.id, 'b_powergrid', powergridLevel),
-      buildInstance(colony.id, 'b_industry', 1),
-    );
-    warehouse.push(eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_NPC));
-    // Jeder NPC startet mit einem Frachter – Grundvoraussetzung für Handel
-    // über die eigene Kolonie hinaus (Konzeption/05_..., §9).
-    fleets.push(freighterFleet(npc.id, colony.id, planet.id, system.id, `Handelsflotte ${colony.name}`));
-  });
-
-  return { npcs, colonies, planets, planetStats, populations, moneySupplyStates, wallets, buildings, warehouse, fleets };
 }
 
 interface HomeworldBundle {
@@ -582,23 +421,19 @@ export function createWorldSeed(commanderName: string, homeworldName: string): W
     reachableSystemIds: galaxy.neighbors[i].map(j => systemIds[j]),
   }));
 
-  // --- NPCs ------------------------------------------------------------------
-  const npcData = spawnNpcs(systems, galaxy.neighbors, rnd, t);
-
   return {
     player: home.player,
     systems,
-    planets: [...home.planets, ...npcData.planets],
-    colonies: [home.colony, ...npcData.colonies],
-    planetStats: [home.planetStats, ...npcData.planetStats],
-    populations: [home.population, ...npcData.populations],
-    moneySupplyStates: [home.moneySupplyState, ...npcData.moneySupplyStates],
-    wallets: [...home.wallets, ...npcData.wallets],
-    buildings: [...home.buildings, ...npcData.buildings],
-    warehouse: [...home.warehouse, ...npcData.warehouse],
+    planets: home.planets,
+    colonies: [home.colony],
+    planetStats: [home.planetStats],
+    populations: [home.population],
+    moneySupplyStates: [home.moneySupplyState],
+    wallets: home.wallets,
+    buildings: home.buildings,
+    warehouse: home.warehouse,
     productionQueue: home.productionQueue,
-    npcs: npcData.npcs,
-    fleets: [...home.fleets, ...npcData.fleets],
+    fleets: home.fleets,
     groundForceGroups: [home.groundForceGroup],
     gateways,
   };
@@ -629,8 +464,7 @@ export interface AdditionalPlayerSeed {
  * dabei ein komplett neues Heimatsystem samt Heimatplaneten-Cluster mit,
  * nach demselben Muster wie das allererste Heimatsystem in
  * `createWorldSeed` – nur zusätzlich zur bestehenden Galaxie statt als deren
- * Ursprung. NPCs, andere Kommandanten, Systeme und der Markt bleiben
- * unangetastet.
+ * Ursprung. Andere Kommandanten, Systeme und der Markt bleiben unangetastet.
  *
  * Das neue System startet – wie jedes Heimatsystem – mit uneingeschränkt
  * aktivem Gateway (siehe `createWorldSeed`-Kommentar zu Gateways) und wird

@@ -1,0 +1,95 @@
+<div class="page-head">
+  <span class="eyebrow">Kartografie</span>
+  <h1>{{ system()?.name ?? 'System' }}</h1>
+  <a class="ghost small back-link" routerLink="/galaxie">← Zur Galaxiekarte</a>
+</div>
+
+@if (error()) { <div class="error">{{ error() }}</div> }
+
+@if (!visited()) {
+  <div class="panel corner-frame">
+    <div class="panel-body empty-state">
+      <p class="empty-hint">Dieses System wurde noch nicht bereist – eine eigene Flotte muss es erst über die
+        Galaxiekarte erreichen (Tab „Flotten" → Bewegen), bevor hier Details sichtbar werden.</p>
+    </div>
+  </div>
+} @else {
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Meine Flotten hier</h2></div>
+    <div class="panel-body fleet-move-list">
+      @for (fleet of myStationedFleetsHere(); track fleet.id) {
+        <div class="fleet-move-row">
+          <div class="fleet-move-head">
+            <strong>{{ fleet.name }}</strong>
+            <span class="mono">{{ fleetShipCount(fleet) }} Schiffe</span>
+            <span class="hint">{{ locationLabel(fleet) }}</span>
+          </div>
+          <div class="fleet-move-actions">
+            <select [(ngModel)]="destinationChoice[fleet.id]">
+              <option [ngValue]="null">Ziel wählen…</option>
+              @for (opt of destinationOptions(fleet); track opt.label) {
+                <option [ngValue]="opt">{{ opt.label }}</option>
+              }
+            </select>
+            <button class="primary small" (click)="moveFleet(fleet)" [disabled]="!destinationChoice[fleet.id] || busy() === ('move:' + fleet.id)">Bewegen</button>
+            @if (blockadeForFleet(fleet.id); as b) {
+              <span class="tag warn">🛡 Blockade aktiv</span>
+              <button class="ghost small danger" (click)="liftBlockade(b)" [disabled]="busy() === ('unblockade:' + b.id)">Blockade aufheben</button>
+            } @else if (canFormGatewayBlockade(fleet)) {
+              <button class="ghost small" (click)="formGatewayBlockade(fleet)" [disabled]="busy() === ('blockade:' + fleet.id)">Gateway blockieren</button>
+            } @else if (canFormPlanetBlockade(fleet)) {
+              <button class="ghost small" (click)="formPlanetBlockade(fleet)" [disabled]="busy() === ('blockade:' + fleet.id)">Planet blockieren</button>
+            }
+          </div>
+        </div>
+      } @empty { <p class="empty-hint">Keine eigenen, hier bereits stationierten Flotten.</p> }
+
+      @for (fleet of myInTransitFleetsHere(); track fleet.id) {
+        <div class="fleet-move-row in-transit">
+          <strong>{{ fleet.name }}</strong>
+          <span class="mono">{{ fleetShipCount(fleet) }} Schiffe</span>
+          <span class="hint">Springt gleich weiter — nächster Sprung in {{ countdown(fleet.arrivesAt! - clock.now()) }}</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Systemhandelsposten</h2></div>
+    <div class="panel-body">
+      @if (gatewayBlockade(); as gb) {
+        <p class="hint">🛡 Gateway blockiert von <strong>{{ ownerDisplay(gb.ownerId) }}</strong> — nur blockierte Flotten sind angreifbar.</p>
+      }
+      <div class="fleets-here-list">
+        @for (f of fleetsAt({ kind: 'System' }); track f.id) {
+          <span class="tag" [class.good]="f.ownerId === api.player()?.id">{{ ownerDisplay(f.ownerId) }}: {{ f.name }} ({{ fleetShipCount(f) }})</span>
+        } @empty { <p class="empty-hint">Keine Flotten am Systemhandelsposten.</p> }
+      </div>
+    </div>
+  </div>
+
+  <div class="planet-grid">
+    @for (planet of planets(); track planet.id) {
+      @let colony = colonyForPlanet(planet.id);
+      <div class="panel corner-frame planet-card">
+        <div class="panel-header"><h3>{{ planet.name }}</h3></div>
+        <div class="panel-body">
+          <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }}</span>
+          @if (colony) {
+            <p class="hint"><a [routerLink]="['/planeten', colony.id]">{{ colony.name }}</a> — {{ ownerDisplay(colony.ownerId) }}</p>
+          } @else {
+            <p class="hint">Unbesiedelt.</p>
+          }
+          @if (planetBlockade(planet.id); as pb) {
+            <p class="hint">🛡 Orbit blockiert von <strong>{{ ownerDisplay(pb.ownerId) }}</strong></p>
+          }
+          <div class="fleets-here-list">
+            @for (f of fleetsAtPlanet(planet.id); track f.id) {
+              <span class="tag" [class.good]="f.ownerId === api.player()?.id">{{ ownerDisplay(f.ownerId) }}: {{ f.name }} ({{ fleetShipCount(f) }})</span>
+            } @empty { <p class="empty-hint">Keine Flotten hier.</p> }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

@@ -52,7 +52,6 @@ export class GalaxyMapComponent implements AfterViewInit {
   protected readonly systems = this.api.visibleSystems();
   protected readonly routes = this.api.galaxyRoutes();
   protected readonly allPlayers = this.api.players();
-  protected readonly npcsAll = this.api.npcs();
   protected readonly myColonies = this.api.colonies();
   protected readonly myFleets = this.api.fleets();
   protected readonly allFleets = this.api.allFleets();
@@ -299,9 +298,7 @@ export class GalaxyMapComponent implements AfterViewInit {
   }
 
   protected ownerDisplay(ownerId: Id): string {
-    return this.allPlayers().find(p => p.id === ownerId)?.name
-      ?? this.npcsAll().find(n => n.id === ownerId)?.name
-      ?? 'Unbekannt';
+    return this.allPlayers().find(p => p.id === ownerId)?.name ?? 'Unbekannt';
   }
 
   protected hopsFromHome(systemId: Id): number | null {

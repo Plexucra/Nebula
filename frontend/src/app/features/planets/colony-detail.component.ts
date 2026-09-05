@@ -48,7 +48,6 @@ export class ColonyDetailComponent {
 
   protected readonly playerId = this.api.player()?.id ?? '';
   protected readonly allPlayers = this.api.players();
-  protected readonly npcsAll = this.api.npcs();
   protected readonly tab = signal<Tab>(this.initialTab());
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -69,9 +68,7 @@ export class ColonyDetailComponent {
   protected ownerDisplay(): string {
     const ownerId = this.colony()?.ownerId;
     if (!ownerId) return 'Unbekannt';
-    return this.allPlayers().find(p => p.id === ownerId)?.name
-      ?? this.npcsAll().find(n => n.id === ownerId)?.name
-      ?? 'Unbekannt';
+    return this.allPlayers().find(p => p.id === ownerId)?.name ?? 'Unbekannt';
   }
 
   protected readonly buildingTypes = this.api.buildingTypes();

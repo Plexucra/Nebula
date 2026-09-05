@@ -1,7 +1,7 @@
 import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, FleetSystemTarget, GameNotification, Gateway,
-  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Npc, PeaceOffer, Planet, PlanetStats, Player, Population,
+  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
   PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
@@ -266,13 +266,17 @@ export interface GameApi {
   markNotificationRead(id: Id): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
 
-  // --- NPCs / Universums-Statistik ------------------------------------------
-  /** Alle NPC-"Spieler" der Galaxie (nicht-kriegerisch, siehe Npc-Modell). */
-  npcs(): Signal<Npc[]>;
-  /** Kolonie eines NPCs (jeder NPC besitzt aktuell genau eine). */
-  npcColony(npcId: Id): Signal<Colony | undefined>;
-  /** Wallet eines beliebigen Besitzers (Spieler oder NPC) – für die NPC-Übersicht. */
-  ownerWallet(ownerId: Id): Signal<Wallet | undefined>;
+  // --- Nachrichten (ausschließlich Spieler-zu-Spieler, keine Gruppen-/Broadcast-Nachrichten) ---
+  /** Empfangene Nachrichten des angemeldeten Kommandanten, neueste zuerst. */
+  inbox(): Signal<Message[]>;
+  /** Vom angemeldeten Kommandanten selbst gesendete Nachrichten, neueste zuerst. */
+  sentMessages(): Signal<Message[]>;
+  unreadMessageCount(): Signal<number>;
+  sendMessage(toPlayerId: Id, subject: string, body: string): Promise<void>;
+  /** Nur der Empfänger darf seine eigene Nachricht als gelesen markieren. */
+  markMessageRead(id: Id): Promise<void>;
+
+  // --- Universums-Statistik ------------------------------------------
   /** Zeitreihe aggregierter Stabilitätskennzahlen über die gesamte Galaxie. */
   universeStats(): Signal<UniverseStatSnapshot[]>;
 }

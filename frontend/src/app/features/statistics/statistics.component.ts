@@ -1,18 +1,8 @@
 import { ChangeDetectionStrategy, Component, Signal, computed, inject } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Colony, Id, Npc, PlanetStats, Population, Wallet } from '../../core/models';
+import { Colony, Id, PlanetStats, Population, Wallet } from '../../core/models';
 import { SparklineTileComponent } from '../../shared/sparkline-tile.component';
-
-interface NpcRow {
-  npc: Npc;
-  colony: Signal<Colony | undefined>;
-  population: Signal<Population | undefined>;
-  stats: Signal<PlanetStats | undefined>;
-  wallet: Signal<Wallet | undefined>;
-  coverage: Signal<Record<Id, number>>;
-  powerCoverage: Signal<number>;
-}
 
 interface ColonyRow {
   colony: Colony;
@@ -61,16 +51,6 @@ export class StatisticsComponent {
   protected readonly colonyCountSeries = computed(() => this.history().map(s => s.colonyCount));
   protected readonly strugglingSeries = computed(() => this.history().map(s => s.strugglingColonyCount));
   protected readonly sellOrderSeries = computed(() => this.history().map(s => s.openSellOrderCount));
-
-  protected readonly npcRows: NpcRow[] = this.api.npcs()().map(npc => ({
-    npc,
-    colony: this.api.colony(npc.homeColonyId),
-    population: this.api.population(npc.homeColonyId),
-    stats: this.api.colonyStats(npc.homeColonyId),
-    wallet: this.api.ownerWallet(npc.id),
-    coverage: this.api.consumptionCoverage(npc.homeColonyId),
-    powerCoverage: this.api.powerCoverage(npc.homeColonyId),
-  }));
 
   protected readonly colonyRows: ColonyRow[] = this.api.colonies()().map(colony => ({
     colony,

@@ -1,0 +1,9 @@
+target/
+dependency-reduced-pom.xml
+logs/
+army.pids
+
+.idea
+*.iml
+.vscode
+.DS_Store

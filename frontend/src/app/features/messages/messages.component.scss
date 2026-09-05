@@ -1,0 +1,83 @@
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  h1 { flex: 1 1 auto; }
+}
+
+.compose-panel { margin-bottom: 14px; }
+
+.compose-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  select, input, textarea {
+    font: inherit;
+    background: var(--panel-2, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: inherit;
+    padding: 6px 8px;
+  }
+}
+
+.compose-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  opacity: 0.6;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+
+  &.active { opacity: 1; border-color: var(--accent, currentColor); }
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 12.5px;
+
+  &.unread { border-color: var(--accent, currentColor); }
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.message-from { font-weight: 600; opacity: 1; }
+.message-subject { font-weight: 600; margin-bottom: 2px; }
+.message-body { opacity: 0.85; white-space: pre-wrap; }

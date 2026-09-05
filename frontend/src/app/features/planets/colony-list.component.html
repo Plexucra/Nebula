@@ -18,23 +18,23 @@
         </div>
       </div>
 
-      @if (stats(colony.id); as s) {
+      @if (stats(colony.id)(); as s) {
         <div class="stat-row">
           <div class="stat-item">
             <span class="label">Infra</span>
-            <div class="stat-bar"><span [style.width.%]="s()!.infrastructurePct"></span></div>
+            <div class="stat-bar"><span [style.width.%]="s.infrastructurePct"></span></div>
           </div>
           <div class="stat-item">
             <span class="label">Sicherheit</span>
-            <div class="stat-bar"><span [style.width.%]="s()!.securityPct"></span></div>
+            <div class="stat-bar"><span [style.width.%]="s.securityPct"></span></div>
           </div>
           <div class="stat-item">
             <span class="label">Lebensstd.</span>
-            <div class="stat-bar"><span [style.width.%]="s()!.standardOfLivingPct"></span></div>
+            <div class="stat-bar"><span [style.width.%]="s.standardOfLivingPct"></span></div>
           </div>
           <div class="stat-item">
             <span class="label">Loyalität</span>
-            <div class="stat-bar"><span [style.width.%]="s()!.loyaltyPct"></span></div>
+            <div class="stat-bar"><span [style.width.%]="s.loyaltyPct"></span></div>
           </div>
         </div>
       }

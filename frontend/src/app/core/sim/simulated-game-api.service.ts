@@ -2,7 +2,7 @@ import { Injectable, Signal, computed, signal } from '@angular/core';
 import {
   Battle, BattleOutcome, BattleStatus, BattleTickResult, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, ChainPlanStep, Colony, ColonyPowerState,
   DiplomaticRelation, DiplomaticStatus, Fleet, FleetShipGroup, FleetSystemTarget, GameNotification, Gateway, GatewayWeightEntry, GroundForceGroup,
-  GroundUnitTypeDef, Id, NotificationType, Npc, PeaceOffer, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
+  GroundUnitTypeDef, Id, Message, NotificationType, PeaceOffer, Planet, PlanetStats, Player, Population, PopulationMoneySupplyState,
   ProductType, ProductionQueueEntry, ProductionQueueStatus, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, TransactionReason,
   UniverseStatSnapshot, Wallet, WarehouseEntry,
@@ -38,13 +38,9 @@ const DEFENSE_ACTIVATION_HOURS = 12;
 /**
  * Konsumgüter für die Bevölkerungsversorgung – seit dem erweiterten
  * Produktionsbaum (Nebula_Planetentypen_..., §10.7) mehrstufige
- * Endprodukte statt einstufiger Güter. Siehe `npcMaybeQueueFoodChain` für
- * die NPC-KI-Seite dieser tieferen Kette.
+ * Endprodukte statt einstufiger Güter.
  */
 const CONSUMER_GOODS_ORDER = ['p_grundnahrung', 'p_grundmedizin', 'p_unterhaltungselektronik'];
-/** Ziel-Endprodukt und Mindestbestand der NPC-Nahrungskette, siehe `npcMaybeQueueFoodChain`. */
-const FOOD_TARGET_PRODUCT_ID = 'p_grundnahrung';
-const FOOD_TARGET_STOCK = 30;
 const DRONE_PRODUCT_IDS = ['p_drone_light', 'p_drone_medium', 'p_drone_heavy'];
 /**
  * Soldaten-zu-Drohnen-Besetzungsverhältnis (wie viele Drohnen ein
@@ -74,7 +70,6 @@ const DRONES_PER_SOLDIER = 5;
  * ("Verbrauch ... je Bevölkerungseinheit" als offene Zahlenfrage).
  */
 const CONSUMER_NEED_PER_CAPITA: Record<string, number> = { p_grundnahrung: 0.0004, p_grundmedizin: 0.00015, p_unterhaltungselektronik: 0.0001 };
-const NPC_AI_INTERVAL_MS = 5000;
 const STATS_SNAPSHOT_INTERVAL_MS = 10000;
 const STATS_HISTORY_LIMIT = 400;
 /**
@@ -169,13 +164,13 @@ interface Snapshot {
   recruitmentQueue: RecruitmentQueueEntry[];
   sellOrders: SellOrder[];
   consumptionBudget: Record<string, number>;
-  npcs: Npc[];
   universeStats: UniverseStatSnapshot[];
   notifications: GameNotification[];
   diplomaticRelations: DiplomaticRelation[];
   peaceOffers: PeaceOffer[];
   battles: Battle[];
   blockades: Blockade[];
+  messages: Message[];
 }
 
 /**
@@ -232,7 +227,6 @@ export class SimulatedGameApiService implements GameApi {
   private readonly _groundForceGroups = signal<GroundForceGroup[]>([]);
   private readonly _recruitmentQueue = signal<RecruitmentQueueEntry[]>([]);
   private readonly _sellOrders = signal<SellOrder[]>([]);
-  private readonly _npcs = signal<Npc[]>([]);
   private readonly _universeStats = signal<UniverseStatSnapshot[]>([]);
   /** Benachrichtigungssystem, siehe Konzeption/Umsetzungskonzept/10_...md, §5. Neueste zuerst gepflegt (siehe `notify`). */
   private readonly _notifications = signal<GameNotification[]>([]);
@@ -243,6 +237,8 @@ export class SimulatedGameApiService implements GameApi {
   private readonly _battles = signal<Battle[]>([]);
   /** Blockaden, siehe `Blockade` – macht die bildende Flotte angreifbar (`engageBattle`), stark vereinfacht ggü. Mechanik/06_...md. */
   private readonly _blockades = signal<Blockade[]>([]);
+  /** Ingame-Nachrichtensystem (Umsetzungskonzept/14_...md) – ausschließlich Spieler-zu-Spieler, neueste zuerst gepflegt (siehe `sendMessage`). */
+  private readonly _messages = signal<Message[]>([]);
   /**
    * Zuletzt in `runConsumption` ermittelte Deckung (0..1,5, 1 = Bedarf exakt
    * gedeckt) je Grundkonsumgut und Kolonie – rein abgeleiteter Diagnosewert
@@ -265,7 +261,6 @@ export class SimulatedGameApiService implements GameApi {
    * stabil zu halbieren.
    */
   private readonly rawStandardOfLiving = new Map<Id, number>();
-  private lastNpcAiAt = 0;
   private lastStatsSnapshotAt = 0;
   private lastWealthRedistributionAt = 0;
   private lastPersistAt = 0;
@@ -369,7 +364,6 @@ export class SimulatedGameApiService implements GameApi {
     this._groundForceGroups.set([]);
     this._recruitmentQueue.set([]);
     this._sellOrders.set([]);
-    this._npcs.set([]);
     this._universeStats.set([]);
     this._consumptionCoverage.set({});
     this._notifications.set([]);
@@ -377,10 +371,10 @@ export class SimulatedGameApiService implements GameApi {
     this._peaceOffers.set([]);
     this._battles.set([]);
     this._blockades.set([]);
+    this._messages.set([]);
     this.lastProducedAt.clear();
     this.consumptionBudget.clear();
     this.rawStandardOfLiving.clear();
-    this.lastNpcAiAt = 0;
     this.lastStatsSnapshotAt = 0;
     this.lastWealthRedistributionAt = 0;
     this.lastPersistAt = 0;
@@ -408,7 +402,6 @@ export class SimulatedGameApiService implements GameApi {
     this.rebuildWarehouseIndex(seed.warehouse);
     this._productionQueue.set(seed.productionQueue);
     this._gateways.set(seed.gateways);
-    this._npcs.set(seed.npcs);
     this._fleets.set(seed.fleets);
     this._groundForceGroups.set(seed.groundForceGroups);
     // Start-Auftragsliste kommt direkt über `.set()` statt über `queueProduction`
@@ -1087,18 +1080,9 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   // ==========================================================================
-  // NPCs / Universums-Statistik
+  // Universums-Statistik
   // ==========================================================================
 
-  npcs(): Signal<Npc[]> {
-    return computed(() => this._npcs());
-  }
-  npcColony(npcId: Id): Signal<Colony | undefined> {
-    return computed(() => this._colonies().find(c => c.ownerId === npcId));
-  }
-  ownerWallet(ownerId: Id): Signal<Wallet | undefined> {
-    return computed(() => this.findWallet('Player', ownerId));
-  }
   universeStats(): Signal<UniverseStatSnapshot[]> {
     return computed(() => this._universeStats());
   }
@@ -1145,6 +1129,53 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   // ==========================================================================
+  // Nachrichten (Umsetzungskonzept/14_...md) – ausschließlich Spieler-zu-Spieler,
+  // AUSDRÜCKLICH keine Gruppen-/Broadcast-Nachrichten.
+  // ==========================================================================
+
+  inbox(): Signal<Message[]> {
+    return computed(() => {
+      const me = this.player()?.id;
+      return this._messages().filter(m => m.toPlayerId === me).sort((a, b) => b.sentAt - a.sentAt);
+    });
+  }
+
+  sentMessages(): Signal<Message[]> {
+    return computed(() => {
+      const me = this.player()?.id;
+      return this._messages().filter(m => m.fromPlayerId === me).sort((a, b) => b.sentAt - a.sentAt);
+    });
+  }
+
+  unreadMessageCount(): Signal<number> {
+    return computed(() => {
+      const me = this.player()?.id;
+      return this._messages().filter(m => m.toPlayerId === me && !m.read).length;
+    });
+  }
+
+  async sendMessage(toPlayerId: Id, subject: string, body: string): Promise<void> {
+    await this.latency();
+    const me = this.requirePlayer();
+    if (toPlayerId === me.id) throw new Error('Eine Nachricht an sich selbst ist nicht möglich.');
+    if (!this._players().some(p => p.id === toPlayerId)) throw new Error('Unbekannter Empfänger.');
+    const trimmedSubject = subject.trim() || '(kein Betreff)';
+    const trimmedBody = body.trim();
+    if (!trimmedBody) throw new Error('Die Nachricht darf nicht leer sein.');
+    const message: Message = { id: nextId('msg'), fromPlayerId: me.id, toPlayerId, subject: trimmedSubject, body: trimmedBody, sentAt: now(), read: false };
+    this._messages.update(list => [...list, message]);
+    this.persist();
+  }
+
+  /** Nur der Empfänger darf seine eigene Nachricht als gelesen markieren. */
+  async markMessageRead(id: Id): Promise<void> {
+    await this.latency();
+    const me = this.requirePlayer();
+    this._messages.update(list => list.map(m => m.id === id && m.toPlayerId === me.id ? { ...m, read: true } : m));
+    this.persist();
+  }
+
+  // ==========================================================================
   // Tick-Loop / Hintergrundjobs
   // ==========================================================================
 
@@ -1169,7 +1200,6 @@ export class SimulatedGameApiService implements GameApi {
     this.recalcCoreStats();
     this.growPopulationAndMoneySupply();
     this.runWealthRedistributionIfDue(t);
-    this.runNpcAiIfDue(t);
     this.recordStatsSnapshotIfDue(t);
     this.schedulePersistFromTick(t);
   }
@@ -1721,126 +1751,12 @@ export class SimulatedGameApiService implements GameApi {
   }
 
   // ==========================================================================
-  // NPC-KI und Universums-Statistik
+  // Universums-Statistik
   // ==========================================================================
-
-  private runNpcAiIfDue(t: number): void {
-    if (t - this.lastNpcAiAt < NPC_AI_INTERVAL_MS) return;
-    this.lastNpcAiAt = t;
-    for (const npc of this._npcs()) this.runNpcAiTick(npc);
-  }
-
-  /**
-   * Bewusst einfache, nicht-kriegerische KI (siehe Auftrag: NPCs
-   * verhalten sich wie Spieler, bauen aber keine Angriffsflotten oder
-   * Bodentruppen): baut nur Infrastruktur/Industrie aus, hält eine
-   * Grundnahrungsmittelproduktion am Laufen, produziert ihr
-   * Spezialprodukt (meist die Rohstoffkonzentration ihres Planeten) und
-   * verkauft Überschüsse lokal. Rührt Werft, Ausbildungszentrum,
-   * Verteidigung, Schiffe und Bodentruppen nie an.
-   */
-  private runNpcAiTick(npc: Npc): void {
-    const colony = this._colonies().find(c => c.id === npc.homeColonyId);
-    if (!colony) return;
-    const wallet = this.findWallet('Player', npc.id);
-    if (!wallet) return;
-
-    this.npcMaybeUpgradeInfrastructure(colony.id, wallet.balance);
-    this.npcMaybeUpgradeIndustry(colony.id, wallet.balance);
-    this.npcMaybeQueueFoodChain(colony.id);
-    this.npcMaybeQueueSpecialty(colony.id, npc.specialtyProductId);
-    this.npcMaybeSellSurplus(colony, npc);
-  }
-
-  private npcMaybeUpgradeInfrastructure(colonyId: Id, balance: number): void {
-    const stats = this._planetStats().find(s => s.colonyId === colonyId);
-    if (!stats || stats.infrastructurePct >= 95) return;
-    for (const typeId of ['b_habitat', 'b_powergrid']) {
-      const building = this._buildings().find(b => b.colonyId === colonyId && b.typeId === typeId);
-      if (building?.pendingOrder) continue;
-      const type = findBuildingType(typeId);
-      const fromLevel = building?.level ?? 0;
-      if (fromLevel >= type.maxLevel) continue;
-      const cost = F.buildingUpgradeCost(type.baseCostPerLevel, fromLevel);
-      if (balance < cost * 1.4) continue;
-      try { this.queueBuildingCore(colonyId, typeId); } catch { /* diesen KI-Durchlauf überspringen, nächster Tick versucht es erneut */ }
-      return; // ein Ausbau pro KI-Durchlauf reicht
-    }
-  }
-
-  private npcMaybeUpgradeIndustry(colonyId: Id, balance: number): void {
-    const building = this._buildings().find(b => b.colonyId === colonyId && b.typeId === 'b_industry');
-    if (building?.pendingOrder) return;
-    const fromLevel = building?.level ?? 0;
-    if (fromLevel >= 6) return; // NPCs wachsen bewusst begrenzt – Stresstest, kein Wettrüsten
-    const type = findBuildingType('b_industry');
-    const cost = F.buildingUpgradeCost(type.baseCostPerLevel, fromLevel);
-    if (balance < cost * 2) return;
-    try { this.queueBuildingCore(colonyId, 'b_industry'); } catch { /* diesen KI-Durchlauf überspringen, nächster Tick versucht es erneut */ }
-  }
-
-  /**
-   * NPCs stellen genau wie Spieler EINEN Auftrag mit "automatisch
-   * mitproduzieren" + "nach Erfolg erneut einreihen" – `planChain`
-   * übernimmt die komplette, ggf. mehrstufige Kette in einer Berechnung
-   * (siehe Konzeption/Umsetzungskonzept/10_...md, §8). Ersetzt die frühere,
-   * eigene rekursive "eine Kettenschicht pro KI-Tick"-Logik, die jetzt
-   * überflüssig ist.
-   */
-  private npcMaybeQueueFoodChain(colonyId: Id): void {
-    if (this.getBuildingLevel(colonyId, 'b_industry') < 1) return;
-    if (this._productionQueue().some(q => q.colonyId === colonyId && q.productTypeId === FOOD_TARGET_PRODUCT_ID)) return;
-    try { this.queueProductionCore(colonyId, FOOD_TARGET_PRODUCT_ID, FOOD_TARGET_STOCK, true, true); } catch { /* nächster Tick versucht es erneut */ }
-  }
-
-  private npcMaybeQueueSpecialty(colonyId: Id, productId: Id): void {
-    if (this.getBuildingLevel(colonyId, 'b_industry') < 1) return;
-    if (this._productionQueue().some(q => q.colonyId === colonyId && q.productTypeId === productId)) return;
-    const stock = this.warehouseQty(colonyId, productId);
-    if (stock >= 60) return;
-    try { this.queueProductionCore(colonyId, productId, 15, true, true); } catch { /* nächster Tick versucht es erneut */ }
-  }
-
-  /**
-   * WICHTIG: Die Kolonialbevölkerung kann NIE direkt aus dem eigenen
-   * Lager konsumieren, sondern ausschließlich über Marktorders kaufen
-   * (siehe runConsumption/reachableSellOrders) – eine ungelistete
-   * "Reserve" ist für die eigene Bevölkerung unerreichbar und verhungert
-   * dadurch faktisch. Für Nahrung wird deshalb nur ein minimaler Puffer
-   * zurückgehalten und der Bestand aktiv nachgelistet, sobald der Markt
-   * leerläuft (statt wie zuvor: Order nur erneuern, wenn GAR keine mehr
-   * offen ist – das ließ Bestände oberhalb der Reserve unverkauft
-   * liegen, siehe Stresstest-Befund).
-   */
-  private npcMaybeSellSurplus(colony: Colony, npc: Npc): void {
-    for (const productId of [npc.specialtyProductId, FOOD_TARGET_PRODUCT_ID]) {
-      const isFood = productId === FOOD_TARGET_PRODUCT_ID;
-      const reserve = isFood ? 2 : 10;
-      const minListing = isFood ? 3 : 5;
-      const stock = this.warehouseQty(colony.id, productId);
-      const surplus = Math.floor(stock - reserve);
-      if (surplus < minListing) continue;
-      const listedRemaining = this._sellOrders()
-        .filter(o => o.depotColonyId === colony.id && o.productTypeId === productId && o.remainingQuantity > 0)
-        .reduce((sum, o) => sum + o.remainingQuantity, 0);
-      if (listedRemaining >= minListing) continue; // Markt noch ausreichend versorgt
-      const product = findProductType(productId);
-      const basePrice = 3 + product.tier * 2.5;
-      const price = Math.round(basePrice * (0.85 + this.npcPriceJitter(npc.id) * 0.3) * 100) / 100;
-      try { this.createSellOrderCore(colony.id, productId, surplus, price, true); } catch { /* nächster Tick versucht es erneut */ }
-    }
-  }
-
-  /** Deterministischer Pseudo-Zufallswert [0,1) je NPC – nur für Preis-Streuung, kein Spielzustand. */
-  private npcPriceJitter(npcId: Id): number {
-    let hash = 0;
-    for (let i = 0; i < npcId.length; i++) hash = (hash * 31 + npcId.charCodeAt(i)) & 0xffffffff;
-    return (Math.abs(hash) % 1000) / 1000;
-  }
 
   /**
    * Zeichnet periodisch einen aggregierten Messpunkt über die gesamte
-   * Galaxie auf (Spieler + alle NPCs) – Grundlage für die
+   * Galaxie auf (alle Kommandanten) – Grundlage für die
    * "Statistiken"-Ansicht, mit der sich die Wirtschafts-/
    * Bevölkerungsstabilität über die Zeit beobachten lässt.
    */
@@ -1911,9 +1827,7 @@ export class SimulatedGameApiService implements GameApi {
 
   /** Löst JEDEN Besitzer auf (nicht nur den aktuell eingeloggten Kommandanten) – z. B. für Verkäufernamen am gemeinsamen Systemmarkt. */
   private ownerDisplayName(ownerId: Id): string {
-    return this._players().find(p => p.id === ownerId)?.name
-      ?? this._npcs().find(n => n.id === ownerId)?.name
-      ?? 'Unbekannt';
+    return this._players().find(p => p.id === ownerId)?.name ?? 'Unbekannt';
   }
 
   private findWallet(ownerType: 'Player' | 'Population', ownerId: Id): Wallet | undefined {
@@ -2742,13 +2656,13 @@ export class SimulatedGameApiService implements GameApi {
       recruitmentQueue: this._recruitmentQueue(),
       sellOrders: this._sellOrders(),
       consumptionBudget: Object.fromEntries(this.consumptionBudget),
-      npcs: this._npcs(),
       universeStats: this._universeStats(),
       notifications: this._notifications(),
       diplomaticRelations: this._diplomaticRelations(),
       peaceOffers: this._peaceOffers(),
       battles: this._battles(),
       blockades: this._blockades(),
+      messages: this._messages(),
     };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
@@ -2796,7 +2710,6 @@ export class SimulatedGameApiService implements GameApi {
       this._groundForceGroups.set(snap.groundForceGroups);
       this._recruitmentQueue.set(snap.recruitmentQueue ?? []);
       this._sellOrders.set((snap.sellOrders ?? []).map(o => ({ ...o, autoRelist: o.autoRelist ?? false, sourceFleetId: o.sourceFleetId ?? null })));
-      this._npcs.set(snap.npcs ?? []);
       this._universeStats.set(snap.universeStats ?? []);
       this._notifications.set((snap.notifications ?? []).map(n => ({ ...n, link: n.link ?? null })));
       this._diplomaticRelations.set(snap.diplomaticRelations ?? []);
@@ -2807,6 +2720,7 @@ export class SimulatedGameApiService implements GameApi {
         ticks: (b.ticks ?? []).map(t => ({ ...t, attackerShipsBefore: t.attackerShipsBefore ?? [], defenderShipsBefore: t.defenderShipsBefore ?? [] })),
       })));
       this._blockades.set(snap.blockades ?? []);
+      this._messages.set(snap.messages ?? []);
       for (const [k, v] of Object.entries(snap.consumptionBudget ?? {})) this.consumptionBudget.set(k, v);
       return true;
     } catch {

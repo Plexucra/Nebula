@@ -39,6 +39,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/trade/trade-overview.component').then(m => m.TradeOverviewComponent),
   },
   {
+    path: 'nachrichten',
+    loadComponent: () => import('./features/messages/messages.component').then(m => m.MessagesComponent),
+  },
+  {
     path: 'konto',
     loadComponent: () => import('./features/account/account.component').then(m => m.AccountComponent),
   },

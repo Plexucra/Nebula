@@ -1,0 +1,76 @@
+@if (battle(); as b) {
+  <div class="page-head">
+    <span class="eyebrow">Kampfbericht</span>
+    <h1>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</h1>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-body report-meta">
+      <span>System <strong>{{ systemName(b.systemId) }}</strong></span>
+      <span class="tag" [class.warn]="b.status === 'Active'" [class.good]="b.status === 'Ended'">
+        {{ b.status === 'Active' ? 'Laufend' : 'Beendet' }}
+      </span>
+      @if (b.status === 'Active') {
+        <span class="hint">Nächster Tick in {{ countdown(b.nextTickAt - clock.now()) }}</span>
+      } @else {
+        <span class="tag" [class.good]="b.outcome === 'AttackerVictory'" [class.warn]="b.outcome === 'DefenderVictory'">
+          @switch (b.outcome) {
+            @case ('AttackerVictory') { Angreifer siegt }
+            @case ('DefenderVictory') { Verteidiger siegt }
+            @case ('Retreat') { Rückzug }
+          }
+        </span>
+      }
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Kampfverlauf</h2></div>
+    <div class="panel-body tick-list">
+      @if (b.ticks.length === 0) {
+        <div class="tick-row">
+          <span class="eyebrow">Vor dem ersten Kampf-Tick</span>
+          <div class="side-row"><span class="side-label">{{ playerName(b.attackerId) }}</span><span>{{ shipsLabel(currentShips(b.attackerFleetId)) }}</span></div>
+          <div class="side-row"><span class="side-label">{{ playerName(b.defenderId) }}</span><span>{{ shipsLabel(currentShips(b.defenderFleetId)) }}</span></div>
+        </div>
+      }
+      @for (t of b.ticks; track t.tick) {
+        <div class="tick-row">
+          <span class="eyebrow">Tick {{ t.tick }}</span>
+          <div class="side-row">
+            <span class="side-label">{{ playerName(b.attackerId) }}</span>
+            <span>Teilgenommen: {{ shipsLabel(t.attackerShipsBefore) }}</span>
+            <span class="hint">Verluste: {{ lossesLabel(t.attackerLosses) }}</span>
+          </div>
+          <div class="side-row">
+            <span class="side-label">{{ playerName(b.defenderId) }}</span>
+            <span>Teilgenommen: {{ shipsLabel(t.defenderShipsBefore) }}</span>
+            <span class="hint">Verluste: {{ lossesLabel(t.defenderLosses) }}</span>
+          </div>
+        </div>
+      } @empty {
+        <p class="empty-hint">Noch kein Kampf-Tick abgeschlossen.</p>
+      }
+    </div>
+  </div>
+
+  @if (b.status === 'Ended') {
+    <div class="panel corner-frame">
+      <div class="panel-header"><h2>Gesamtverluste</h2></div>
+      <div class="panel-body">
+        <div class="side-row"><span class="side-label">{{ playerName(b.attackerId) }}</span><span>{{ lossesLabel(totalLosses(b.ticks, 'attacker')) }}</span></div>
+        <div class="side-row"><span class="side-label">{{ playerName(b.defenderId) }}</span><span>{{ lossesLabel(totalLosses(b.ticks, 'defender')) }}</span></div>
+      </div>
+    </div>
+  }
+} @else {
+  <div class="page-head">
+    <span class="eyebrow">Kampfbericht</span>
+    <h1>Nicht gefunden</h1>
+  </div>
+  <div class="panel corner-frame">
+    <div class="panel-body empty-state">
+      <p class="empty-hint">Unter diesem Link wurde kein Kampfbericht gefunden.</p>
+    </div>
+  </div>
+}

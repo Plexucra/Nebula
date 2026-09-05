@@ -33,6 +33,7 @@ export class AppShellComponent {
   protected readonly notifications = this.api.notifications();
   protected readonly unreadNotificationCount = this.api.unreadNotificationCount();
   protected readonly notificationPanelOpen = signal(false);
+  protected readonly unreadMessageCount = this.api.unreadMessageCount();
 
   protected toggleNotificationPanel(): void {
     this.notificationPanelOpen.update(v => !v);
@@ -69,6 +70,7 @@ export class AppShellComponent {
     { path: '/flotten', label: 'Flotten', icon: '✈' },
     { path: '/bodentruppen', label: 'Bodentruppen', icon: '⛊' },
     { path: '/diplomatie', label: 'Diplomatie / Krieg', icon: '⚔' },
+    { path: '/nachrichten', label: 'Nachrichten', icon: '✉' },
     { path: '/galaxie', label: 'Galaxiekarte', icon: '✦' },
     { path: '/handel', label: 'Handel', icon: '⇄' },
     { path: '/konto', label: 'Konto', icon: '◈' },
