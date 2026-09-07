@@ -19,7 +19,13 @@ import java.util.Map;
  */
 public class ColonySpeedBreakdown {
   public double population;
-  public double workforceFactor;
+  /**
+   * Verfügbare Arbeitskräfte = Bevölkerung der Kolonie (Umsetzungskonzept/19_...md).
+   * Anders als früher ist das KEIN Tempo-Multiplikator mehr, sondern eine
+   * produktspezifische Obergrenze: bindet eine Fertigung mehr Arbeitskräfte je
+   * Stunde als vorhanden sind, läuft sie entsprechend langsamer.
+   */
+  public double availableWorkers;
   public int industryLevel;
   /** Tempofaktor des Industriekomplexes (linear zur Stufe, siehe {@code Formulas.buildingLevelSpeedFactor}). */
   public double buildingSpeedFactor;

@@ -34,7 +34,8 @@ export interface BuildingUpgradePreview {
  */
 export interface ColonySpeedBreakdown {
   population: number;
-  workforceFactor: number;
+  /** Verfügbare Arbeitskräfte = Bevölkerung. Kein Tempo-Multiplikator, sondern eine Obergrenze je Fertigung. */
+  availableWorkers: number;
   industryLevel: number;
   buildingSpeedFactor: number;
   blackout: boolean;

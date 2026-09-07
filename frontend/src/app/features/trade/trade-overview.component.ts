@@ -15,19 +15,26 @@ import { nearestByHops } from '../../core/util/graph';
 })
 export class TradeOverviewComponent {
   protected readonly api = inject(GAME_API);
-  private readonly homeSystemId = this.api.player()?.homeSystemId ?? '';
-  protected readonly gateway = this.api.gateway(this.homeSystemId);
+  /**
+   * REAKTIV, nicht einmalig beim Konstruieren auslesen: `player()` ist beim
+   * echten Backend zunächst `null` (die Antwort kommt erst über die
+   * WebSocket-Verbindung). Ein hier eingefrorenes `''` würde über
+   * `GameApi.sellOrders('')` ein dauerhaft leeres Polling-Signal erzeugen –
+   * die Handelsansicht bliebe für immer leer.
+   */
+  private readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
+  protected readonly gateway = computed(() => this.api.gateway(this.homeSystemId())());
   protected readonly gatewayActive = () => this.gateway()?.state === 'Active';
-  protected readonly orders = this.api.sellOrders(this.homeSystemId);
+  protected readonly orders = computed(() => this.api.sellOrders(this.homeSystemId())());
   protected readonly colonies = this.api.colonies();
   protected readonly visibleSystems = this.api.visibleSystems();
   protected readonly routes = this.api.galaxyRoutes();
 
-  protected readonly playerId = this.api.player()?.id ?? '';
+  protected readonly playerId = computed(() => this.api.player()?.id ?? '');
 
   protected readonly nearestTradeHub = computed(() => {
     const hubIds = this.visibleSystems().filter(s => s.isTradeHub).map(s => s.id);
-    const nearest = nearestByHops(this.routes(), this.homeSystemId, hubIds);
+    const nearest = nearestByHops(this.routes(), this.homeSystemId(), hubIds);
     if (!nearest) return null;
     const system = this.visibleSystems().find(s => s.id === nearest.id);
     return system ? { system, hops: nearest.hops } : null;

@@ -64,6 +64,8 @@ public class GameState {
   public final List<Blockade> blockades = new CopyOnWriteArrayList<>();
   /** Ingame-Nachrichtensystem (Umsetzungskonzept/14_...md) – ausschließlich Spieler-zu-Spieler. */
   public final List<Message> messages = new CopyOnWriteArrayList<>();
+  /** Bevölkerungsverlauf je Kolonie als begrenzter Ringpuffer, siehe {@code PopulationHistory}. */
+  public final Map<String, List<PopulationSample>> populationHistory = new ConcurrentHashMap<>();
 
   /** Analog zu {@code consumptionBudget}/{@code lastProducedAt}/{@code rawStandardOfLiving} in der TS-Simulation – rein interne Buchführung, kein Snapshot-Feld. */
   public final Map<String, Double> consumptionBudget = new ConcurrentHashMap<>();

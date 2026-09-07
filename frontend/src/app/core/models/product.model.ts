@@ -33,7 +33,13 @@ export interface ProductType {
   /** Basis-Produktionszeit in Spielstunden für 1 Einheit. */
   baseProductionHours: number;
   /** Benötigte Arbeitskraft (Bevölkerung) pro paralleler Produktionseinheit. */
-  baseWorkforceRequired: number;
+  /**
+   * Arbeitsstunden, die EIN Stück insgesamt an Arbeitskraft kostet. Zusammen
+   * mit der tatsächlichen Fertigungsdauer ergibt sich daraus, wie viele
+   * Arbeitskräfte die Fertigung je Stunde bindet – reicht die Bevölkerung
+   * nicht, dauert es länger (siehe Umsetzungskonzept/19_...md).
+   */
+  workHoursPerUnit: number;
   /** Masse pro Einheit in kg – künftig neben `volumeM3` begrenzender Faktor für Frachterladung. */
   massKg: number;
   /** Volumen pro Einheit in m³ – künftig neben `massKg` begrenzender Faktor für Frachterladung. */

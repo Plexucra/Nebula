@@ -24,7 +24,7 @@
       [series]="populationSeries()"
       hint="Spieler + alle NPC-Kolonien" />
     <app-sparkline-tile
-      title="Geldmenge (Credits)"
+      title="Alle Credits der Galaxie zusammen – sie wächst nur, wenn Kolonien über ihren bisherigen Höchststand hinauswachsen"
       [value]="((latest()?.totalCredits ?? 0) | number:'1.0-0') ?? ''"
       [series]="creditsSeries()"
       hint="Summe aller Wallets – validiert den geschlossenen Geldkreislauf" />
@@ -33,7 +33,7 @@
       [value]="((latest()?.colonyCount ?? 0) | number:'1.0-0') ?? ''"
       [series]="colonyCountSeries()" />
     <app-sparkline-tile
-      title="Gefährdete Kolonien"
+      title="Kolonien mit sehr niedrigem Lebensstandard oder brüchiger Loyalität – hier droht Abwanderung"
       [value]="((latest()?.strugglingColonyCount ?? 0) | number:'1.0-0') ?? ''"
       [series]="strugglingSeries()"
       [tone]="(latest()?.strugglingColonyCount ?? 0) > 0 ? 'danger' : 'good'"
@@ -86,7 +86,7 @@
             </span>
             <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
             <span>
-              @if (row.blackout()) { <span class="tag blackout" title="Energienetz nicht ausreichend versorgt – Produktion läuft nur mit 10%, Sicherheit/Lebensstandard halbiert.">Blackout</span> }
+              @if (row.blackout()) { <span class="tag blackout" title="Der Infrastruktur fehlt Stabilisiertes Elerium – die Produktion kriecht, Sicherheit und Lebensstandard brechen ein.">Blackout</span> }
               @if (isStruggling(row.stats())) {
                 <span class="tag bad" [title]="strugglingReason(row.stats())">gefährdet</span>
               } @else {

@@ -23,7 +23,8 @@ export class FleetsOverviewComponent {
   protected readonly colonies = this.api.colonies();
   protected readonly fleets = this.api.fleets();
   protected readonly allFleets = this.api.allFleets();
-  protected readonly shipTypes = this.api.productTypes().filter(p => p.category === 'Ship');
+  /** Katalog kommt asynchron – bei jedem Zugriff frisch lesen statt einmalig einzufrieren. */
+  protected get shipTypes() { return this.api.productTypes().filter(p => p.category === 'Ship'); }
   protected readonly allSystems = this.api.visibleSystems();
   protected readonly countdown = formatCountdown;
 

@@ -34,6 +34,10 @@ export interface ChainPlanStep {
   quantityToProduce: number;
   /** Produktionszeit in Spielstunden für `quantityToProduce`, zu den Geschwindigkeitsfaktoren der Kolonie zum Berechnungszeitpunkt. */
   hours: number;
+  /** Arbeitskräfte, die dieser Schritt je Stunde bindet (Umsetzungskonzept/19_...md). */
+  workersBoundPerHour: number;
+  /** true = die Bevölkerung reicht dafür nicht aus, der Schritt läuft langsamer. */
+  workforceLimited: boolean;
 }
 
 export interface ChainPlan {

@@ -78,14 +78,27 @@ public final class Formulas {
   }
 
   /**
-   * Workforce-Verfügbarkeit als Geschwindigkeitsfaktor, grob an
-   * Bevölkerungsgröße gekoppelt (Konzeption/06_..., §1: mehr Bevölkerung
-   * ermöglicht mehr gleichzeitig nutzbare Arbeit). Erreicht sein Maximum (5)
-   * bereits ab ~2000 Einwohnern – siehe Umsetzungskonzept/12_...md für die
-   * Analyse, warum das der dominante Geschwindigkeitshebel im Spiel ist.
+   * Tatsächliche Fertigungsdauer unter Berücksichtigung der verfügbaren
+   * Arbeitskräfte (Umsetzungskonzept/19_...md). {@code hoursWithBonuses} ist
+   * die Dauer NACH allen übrigen Boni (Anlagenstufe, Spezialisierung,
+   * Fördergüte, Blackout); {@code workHours} sind die Arbeitsstunden, die das
+   * Stück kostet; {@code availableWorkers} ist die Bevölkerung der Kolonie.
+   *
+   * <p>Die Fertigung bindet {@code workHours / hoursWithBonuses} Arbeitskräfte
+   * je Stunde. Sind weniger vorhanden, läuft sie anteilig langsamer – daraus
+   * folgt unmittelbar {@code max(hoursWithBonuses, workHours / verfügbar)}.
+   * Bevölkerung kann die Produktion damit NUR BREMSEN, nie beschleunigen
+   * (frühere {@code workforceFactor}-Regel: ein Tempo-Multiplikator bis ×5,
+   * bewusst abgeschafft).</p>
    */
-  public static double workforceFactor(double population) {
-    return clamp(population / 400, 0.35, 5);
+  public static double productionHoursWithWorkforce(double hoursWithBonuses, double workHours, double availableWorkers) {
+    double workers = Math.max(availableWorkers, 0.01);
+    return Math.max(hoursWithBonuses, workHours / workers);
+  }
+
+  /** Arbeitskräfte, die eine Fertigung mit dieser Dauer je Stunde bindet. */
+  public static double workersBoundPerHour(double hoursWithBonuses, double workHours) {
+    return hoursWithBonuses > 0 ? workHours / hoursWithBonuses : 0;
   }
 
   /**
@@ -140,11 +153,14 @@ public final class Formulas {
    * (Mechanik/11_..., §3/§8: "hohe Loyalität → weniger notwendige Truppen").
    * Der Sockel ersetzt keine Garnison vollständig (max. 30% bei 100% Loyalität).
    */
+  public static final double MAX_SECURITY_PCT = 99;
+
   public static double securityPct(double garrisonStrength, double population, double loyaltyPct) {
     double reference = Math.max(population * 0.05, 5);
     double garrisonSecurity = (garrisonStrength / reference) * 100;
     double loyaltyFloor = loyaltyPct * 0.3;
-    return clamp(Math.max(garrisonSecurity, loyaltyFloor), 0, 400);
+    // Gedeckelt bei 99%: es gibt keine absolute Sicherheit (Umsetzungskonzept/19_...md).
+    return clamp(Math.max(garrisonSecurity, loyaltyFloor), 0, MAX_SECURITY_PCT);
   }
 
   public static double loyaltyDelta(boolean isHomeworld, double standardOfLivingPct, double securityPct) {
@@ -236,8 +252,8 @@ public final class Formulas {
    * "Kein zusätzlicher abstrakter Kampfkraftwert" — Schaden UND Haltbarkeit
    * einer Einheit im Kampf leiten sich ausschließlich hieraus ab.
    */
-  public static double productionAspect(double baseWorkforceRequired, double baseProductionHours) {
-    return baseWorkforceRequired * baseProductionHours;
+  public static double productionAspect(double workHoursPerUnit, double baseProductionHours) {
+    return workHoursPerUnit * baseProductionHours;
   }
 
   /**

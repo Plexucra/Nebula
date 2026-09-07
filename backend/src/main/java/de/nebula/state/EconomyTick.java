@@ -168,7 +168,7 @@ public final class EconomyTick {
         for (GroundForceUnitStack u : garrison.units) {
           if (u.unitProductTypeId.equals("p_soldier")) continue;
           ProductType product = ProductCatalog.find(u.unitProductTypeId);
-          garrisonStrength += u.activeCount * Formulas.productionAspect(product.baseWorkforceRequired, product.baseProductionHours);
+          garrisonStrength += u.activeCount * Formulas.productionAspect(product.workHoursPerUnit, product.baseProductionHours);
         }
       }
       double infra = Formulas.infrastructurePct(builtCapacity, population);
@@ -294,6 +294,8 @@ public final class EconomyTick {
   public static void recordStatsSnapshotIfDue(GameState state, long t) {
     if (t - state.lastStatsSnapshotAt < GameConstants.STATS_SNAPSHOT_INTERVAL_MS) return;
     state.lastStatsSnapshotAt = t;
+    // Bevölkerungsverlauf je Kolonie im selben Takt mitschreiben (Umsetzungskonzept/18_...md).
+    PopulationHistory.record(state, t);
     if (state.colonies.isEmpty()) return;
 
     List<PlanetStats> stats = state.planetStats;

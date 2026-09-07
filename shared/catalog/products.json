@@ -12,11 +12,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 800000.0,
     "volumeM3": 363.64,
     "eleriumG": 0.001,
-    "description": "Eisen-, nickel- und kobalthaltige Erze für Stahl, Struktur und Maschinen."
+    "description": "Eisen-, nickel- und kobalthaltige Erze für Stahl, Struktur und Maschinen.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_leichtmetall",
@@ -31,11 +31,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 500000.0,
     "volumeM3": 333.33,
     "eleriumG": 0.001,
-    "description": "Aluminium- und magnesiumhaltige Erze für Leichtbau und schnelle Schiffe."
+    "description": "Aluminium- und magnesiumhaltige Erze für Leichtbau und schnelle Schiffe.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_refraktaer",
@@ -50,11 +50,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 180000.0,
     "volumeM3": 69.23,
     "eleriumG": 0.001,
-    "description": "Titan-, wolfram-, molybdän- und niobhaltige Erze für Hitze, Reaktoren und Düsen."
+    "description": "Titan-, wolfram-, molybdän- und niobhaltige Erze für Hitze, Reaktoren und Düsen.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_leitmetall",
@@ -69,11 +69,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 350000.0,
     "volumeM3": 152.17,
     "eleriumG": 0.001,
-    "description": "Vor allem kupfer-, zinn- und zinkhaltige Erze für Leitungen und Kontakte."
+    "description": "Vor allem kupfer-, zinn- und zinkhaltige Erze für Leitungen und Kontakte.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_edelmetall",
@@ -88,11 +88,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 12000.0,
     "volumeM3": 4.0,
     "eleriumG": 0.001,
-    "description": "Gold, Silber und Platingruppenmetalle für Kontakte, Katalysatoren und Sensorik."
+    "description": "Gold, Silber und Platingruppenmetalle für Kontakte, Katalysatoren und Sensorik.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_seltenerden",
@@ -107,11 +107,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 40000.0,
     "volumeM3": 20.0,
     "eleriumG": 0.001,
-    "description": "Lanthanoide, Yttrium und Scandium für Magnete, Optik und Hochleistungselektronik."
+    "description": "Lanthanoide, Yttrium und Scandium für Magnete, Optik und Hochleistungselektronik.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_technometall",
@@ -126,11 +126,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 20000.0,
     "volumeM3": 11.11,
     "eleriumG": 0.001,
-    "description": "Lithium, Gallium, Germanium, Indium und verwandte Spurenmetalle für Halbleiter und Batterien."
+    "description": "Lithium, Gallium, Germanium, Indium und verwandte Spurenmetalle für Halbleiter und Batterien.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_silikat",
@@ -145,11 +145,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 1500000.0,
     "volumeM3": 937.5,
     "eleriumG": 0.001,
-    "description": "Quarz, Feldspäte und silikatische Gesteine für Glas, Keramik und Silizium."
+    "description": "Quarz, Feldspäte und silikatische Gesteine für Glas, Keramik und Silizium.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_kohlenstoff",
@@ -164,11 +164,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 500000.0,
     "volumeM3": 555.56,
     "eleriumG": 0.001,
-    "description": "Graphit, Karbonate und kohlenstoffreiche Minerale für Verbundstoffe und Chemie."
+    "description": "Graphit, Karbonate und kohlenstoffreiche Minerale für Verbundstoffe und Chemie.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_salz",
@@ -183,11 +183,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 800000.0,
     "volumeM3": 666.67,
     "eleriumG": 0.001,
-    "description": "Chloride, Phosphate, Nitrate und Sulfate für Chemie, Dünger und Medizin."
+    "description": "Chloride, Phosphate, Nitrate und Sulfate für Chemie, Dünger und Medizin.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_radionuklid",
@@ -202,11 +202,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 15000.0,
     "volumeM3": 6.0,
     "eleriumG": 0.001,
-    "description": "Uran-, Thorium- und andere radioaktive Minerale für Strahlenquellen und Spezialenergie."
+    "description": "Uran-, Thorium- und andere radioaktive Minerale für Strahlenquellen und Spezialenergie.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_eis",
@@ -221,11 +221,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 2000000.0,
     "volumeM3": 2105.26,
     "eleriumG": 0.001,
-    "description": "Eis, Grundwasser und wasserhaltige Minerale für Trinkwasser, Sauerstoff und Reaktionsmasse."
+    "description": "Eis, Grundwasser und wasserhaltige Minerale für Trinkwasser, Sauerstoff und Reaktionsmasse.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_atmosphaere",
@@ -240,11 +240,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 5000000.0,
     "volumeM3": 166666.67,
     "eleriumG": 0.001,
-    "description": "Stickstoff, Sauerstoff, Kohlendioxid, Wasserstoff und Prozessgase für Atemluft und Chemie."
+    "description": "Stickstoff, Sauerstoff, Kohlendioxid, Wasserstoff und Prozessgase für Atemluft und Chemie.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_edelgas",
@@ -259,11 +259,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 80000.0,
     "volumeM3": 2000.0,
     "eleriumG": 0.001,
-    "description": "Helium, Neon, Argon, Krypton und Xenon für Kühlung und Ionentriebwerke."
+    "description": "Helium, Neon, Argon, Krypton und Xenon für Kühlung und Ionentriebwerke.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_kohlenwasserstoff",
@@ -278,11 +278,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 1000000.0,
     "volumeM3": 1538.46,
     "eleriumG": 0.001,
-    "description": "Methan, höhere Kohlenwasserstoffe und organische Sedimente für Polymere und Treibstoffe."
+    "description": "Methan, höhere Kohlenwasserstoffe und organische Sedimente für Polymere und Treibstoffe.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_isotopentraeger",
@@ -297,11 +297,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 10000.0,
     "volumeM3": 33.33,
     "eleriumG": 0.001,
-    "description": "Deuterium-, helium-3- und lithiumreiche Trägerstoffe für Fusionsisotope und Hochenergieantriebe."
+    "description": "Deuterium-, helium-3- und lithiumreiche Trägerstoffe für Fusionsisotope und Hochenergieantriebe.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_elerium",
@@ -316,11 +316,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 0.001,
     "volumeM3": 2.5e-07,
     "eleriumG": 0.001,
-    "description": "Fiktives Elerium-115 in stabilen Mineral- oder Fluidmatrizen – sehr selten, extrem energiedicht."
+    "description": "Fiktives Elerium-115 in stabilen Mineral- oder Fluidmatrizen – sehr selten, extrem energiedicht.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_ferrometall_konz",
@@ -340,11 +340,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 500000.0,
     "volumeM3": 178.57,
     "eleriumG": 0.0032,
-    "description": "Angereichertes Ferrometallerz."
+    "description": "Angereichertes Ferrometallerz.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_leichtmetall_konz",
@@ -364,11 +364,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 300000.0,
     "volumeM3": 166.67,
     "eleriumG": 0.0032,
-    "description": "Angereichertes Leichtmetallerz."
+    "description": "Angereichertes Leichtmetallerz.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_refraktaer_konz",
@@ -388,11 +388,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 80000.0,
     "volumeM3": 25.0,
     "eleriumG": 0.0032,
-    "description": "Angereichertes Refraktärmetallerz."
+    "description": "Angereichertes Refraktärmetallerz.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_leitmetall_konz",
@@ -412,11 +412,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 180000.0,
     "volumeM3": 69.23,
     "eleriumG": 0.0032,
-    "description": "Angereichertes Leitmetallerz."
+    "description": "Angereichertes Leitmetallerz.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_edelmetall_konz",
@@ -436,11 +436,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 5000.0,
     "volumeM3": 1.25,
     "eleriumG": 0.0072,
-    "description": "Angereichertes Edelmetallerz."
+    "description": "Angereichertes Edelmetallerz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_seltenerd_konz",
@@ -460,11 +460,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 15000.0,
     "volumeM3": 6.0,
     "eleriumG": 0.0072,
-    "description": "Angereichertes Seltenerdenerz."
+    "description": "Angereichertes Seltenerdenerz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_technometall_konz",
@@ -484,11 +484,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 8000.0,
     "volumeM3": 3.48,
     "eleriumG": 0.0072,
-    "description": "Angereichertes Technologiemetallerz."
+    "description": "Angereichertes Technologiemetallerz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_silikat_raffinat",
@@ -508,11 +508,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 900000.0,
     "volumeM3": 529.41,
     "eleriumG": 0.0032,
-    "description": "Gereinigtes Silikatmineral."
+    "description": "Gereinigtes Silikatmineral.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_kohlenstoff_raffinat",
@@ -532,11 +532,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 250000.0,
     "volumeM3": 312.5,
     "eleriumG": 0.0032,
-    "description": "Gereinigtes Kohlenstoffmineral."
+    "description": "Gereinigtes Kohlenstoffmineral.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_industriesalze",
@@ -556,11 +556,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 400000.0,
     "volumeM3": 285.71,
     "eleriumG": 0.0032,
-    "description": "Aufbereitetes Salzmineral."
+    "description": "Aufbereitetes Salzmineral.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_radionuklid_konz",
@@ -580,11 +580,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 5000.0,
     "volumeM3": 1.56,
     "eleriumG": 0.0072,
-    "description": "Angereichertes Radionukliderz."
+    "description": "Angereichertes Radionukliderz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_prozesswasser",
@@ -604,11 +604,11 @@
       }
     ],
     "baseProductionHours": 2.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 1800000.0,
     "volumeM3": 1800.0,
     "eleriumG": 0.0032,
-    "description": "Geschmolzenes und gereinigtes Wassereis."
+    "description": "Geschmolzenes und gereinigtes Wassereis.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_atmogase",
@@ -628,11 +628,11 @@
       }
     ],
     "baseProductionHours": 3.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 2000000.0,
     "volumeM3": 25000.0,
     "eleriumG": 0.0018,
-    "description": "Fraktioniertes Atmosphärenfluid."
+    "description": "Fraktioniertes Atmosphärenfluid.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_edelgas_fraktion",
@@ -652,11 +652,11 @@
       }
     ],
     "baseProductionHours": 3.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 30000.0,
     "volumeM3": 250.0,
     "eleriumG": 0.0018,
-    "description": "Fraktioniertes Edelgaskonzentrat."
+    "description": "Fraktioniertes Edelgaskonzentrat.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_kw_fraktion",
@@ -676,11 +676,11 @@
       }
     ],
     "baseProductionHours": 4.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 700000.0,
     "volumeM3": 1000.0,
     "eleriumG": 0.0032,
-    "description": "Fraktioniertes Kohlenwasserstofflager."
+    "description": "Fraktioniertes Kohlenwasserstofflager.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_isotopen_konz",
@@ -700,11 +700,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 2000.0,
     "volumeM3": 6.67,
     "eleriumG": 0.0072,
-    "description": "Angereicherter Isotopenträger."
+    "description": "Angereicherter Isotopenträger.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_elerium_stabil",
@@ -732,11 +732,11 @@
       }
     ],
     "baseProductionHours": 1.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 0.0006,
     "volumeM3": 2.4e-08,
     "eleriumG": 0.793,
-    "description": "Stabilisierte, lagerfähige Eleriumform – Betriebsstoff des Energienetzes."
+    "description": "Stabilisierte, lagerfähige Eleriumform – Betriebsstoff des Energienetzes.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_stahl",
@@ -764,11 +764,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 100000.0,
     "volumeM3": 15.38,
     "eleriumG": 0.012,
-    "description": "Grundlegende Struktur- und Panzerlegierung."
+    "description": "Grundlegende Struktur- und Panzerlegierung.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_leichtmetalllegierung",
@@ -796,11 +796,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 70000.0,
     "volumeM3": 28.0,
     "eleriumG": 0.012,
-    "description": "Leichtbaulegierung für Rahmen und schnelle Schiffe."
+    "description": "Leichtbaulegierung für Rahmen und schnelle Schiffe.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_hochtemplegierung",
@@ -836,11 +836,11 @@
       }
     ],
     "baseProductionHours": 16.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 20000.0,
     "volumeM3": 2.86,
     "eleriumG": 0.029,
-    "description": "Hitzebeständige Legierung für Reaktoren und Düsen."
+    "description": "Hitzebeständige Legierung für Reaktoren und Düsen.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_leitermetall",
@@ -868,11 +868,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 20000.0,
     "volumeM3": 2.67,
     "eleriumG": 0.012,
-    "description": "Hochleitfähiges Metall für Leitungen und Kontakte."
+    "description": "Hochleitfähiges Metall für Leitungen und Kontakte.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_katalysatormetall",
@@ -900,11 +900,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 2000.0,
     "volumeM3": 0.222,
     "eleriumG": 0.012,
-    "description": "Katalytisch aktives Metall für Chemie und Reaktoren."
+    "description": "Katalytisch aktives Metall für Chemie und Reaktoren.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_magnetwerkstoff",
@@ -932,11 +932,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 8000.0,
     "volumeM3": 1.33,
     "eleriumG": 0.012,
-    "description": "Hochleistungsmagnetwerkstoff."
+    "description": "Hochleistungsmagnetwerkstoff.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_halbleiterrohstoff",
@@ -972,11 +972,11 @@
       }
     ],
     "baseProductionHours": 16.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 5000.0,
     "volumeM3": 2.27,
     "eleriumG": 0.029,
-    "description": "Grundstoff für Halbleiterfertigung."
+    "description": "Grundstoff für Halbleiterfertigung.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_keramikwerkstoff",
@@ -1004,11 +1004,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 80000.0,
     "volumeM3": 28.57,
     "eleriumG": 0.012,
-    "description": "Hitzefeste Keramik."
+    "description": "Hitzefeste Keramik.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_glaswerkstoff",
@@ -1036,11 +1036,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 100000.0,
     "volumeM3": 40.0,
     "eleriumG": 0.012,
-    "description": "Optisches und strukturelles Glas."
+    "description": "Optisches und strukturelles Glas.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_verbundwerkstoff",
@@ -1076,11 +1076,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 50000.0,
     "volumeM3": 31.25,
     "eleriumG": 0.012,
-    "description": "Leichter, fester Verbundwerkstoff."
+    "description": "Leichter, fester Verbundwerkstoff.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_strahlenschutzwerkstoff",
@@ -1116,11 +1116,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 50000.0,
     "volumeM3": 10.0,
     "eleriumG": 0.012,
-    "description": "Dichter Verbund für Strahlenschutz."
+    "description": "Dichter Verbund für Strahlenschutz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_polymergrundstoff",
@@ -1148,11 +1148,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 80000.0,
     "volumeM3": 88.89,
     "eleriumG": 0.012,
-    "description": "Grundstoff für Kunststoffe und Textilien."
+    "description": "Grundstoff für Kunststoffe und Textilien.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_industriechemikalien",
@@ -1188,11 +1188,11 @@
       }
     ],
     "baseProductionHours": 10.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 100000.0,
     "volumeM3": 100.0,
     "eleriumG": 0.012,
-    "description": "Vielseitige industrielle Chemikalien."
+    "description": "Vielseitige industrielle Chemikalien.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_naehrloesung",
@@ -1232,11 +1232,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 100000.0,
     "volumeM3": 100.0,
     "eleriumG": 0.0064,
-    "description": "Nährstofflösung für biologische Kultivierung."
+    "description": "Nährstofflösung für biologische Kultivierung.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_atemgasgemisch",
@@ -1264,11 +1264,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 50000.0,
     "volumeM3": 625.0,
     "eleriumG": 0.0064,
-    "description": "Atembares Gasgemisch."
+    "description": "Atembares Gasgemisch.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_kryofluid",
@@ -1296,11 +1296,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 20000.0,
     "volumeM3": 25.0,
     "eleriumG": 0.0064,
-    "description": "Kühlfluid für Supraleiter und Reaktoren."
+    "description": "Kühlfluid für Supraleiter und Reaktoren.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_reaktionsmasse",
@@ -1328,11 +1328,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 80.0,
     "massKg": 100000.0,
     "volumeM3": 100.0,
     "eleriumG": 0.0064,
-    "description": "Reaktionsmasse für konventionelle Antriebe."
+    "description": "Reaktionsmasse für konventionelle Antriebe.",
+    "workHoursPerUnit": 80.0
   },
   {
     "id": "p_fusionsisotope",
@@ -1368,11 +1368,11 @@
       }
     ],
     "baseProductionHours": 16.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 500.0,
     "volumeM3": 1.0,
     "eleriumG": 0.029,
-    "description": "Fusionsfähige Isotopenmischung."
+    "description": "Fusionsfähige Isotopenmischung.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_radiowerkstoff",
@@ -1404,11 +1404,11 @@
       }
     ],
     "baseProductionHours": 16.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 3000.0,
     "volumeM3": 0.857,
     "eleriumG": 0.029,
-    "description": "Strahlungsquelle in keramischer Matrix."
+    "description": "Strahlungsquelle in keramischer Matrix.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_strukturplatte",
@@ -1432,11 +1432,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 20000.0,
     "volumeM3": 11.11,
     "eleriumG": 0.021,
-    "description": "Gewalzte Strukturplatte."
+    "description": "Gewalzte Strukturplatte.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_leichtrahmen",
@@ -1468,11 +1468,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 12000.0,
     "volumeM3": 6.67,
     "eleriumG": 0.021,
-    "description": "Leichter Strukturrahmen."
+    "description": "Leichter Strukturrahmen.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_panzersegment",
@@ -1508,11 +1508,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 25000.0,
     "volumeM3": 3.85,
     "eleriumG": 0.021,
-    "description": "Panzerungssegment."
+    "description": "Panzerungssegment.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_hitzeschildsegment",
@@ -1544,11 +1544,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 8000.0,
     "volumeM3": 4.44,
     "eleriumG": 0.021,
-    "description": "Hitzeschutzsegment."
+    "description": "Hitzeschutzsegment.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_strahlenschutzsegment",
@@ -1580,11 +1580,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 15000.0,
     "volumeM3": 5.0,
     "eleriumG": 0.053,
-    "description": "Strahlenschutzsegment."
+    "description": "Strahlenschutzsegment.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_leiterbuendel",
@@ -1616,11 +1616,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 3000.0,
     "volumeM3": 1.67,
     "eleriumG": 0.021,
-    "description": "Isoliertes Leiterbündel."
+    "description": "Isoliertes Leiterbündel.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_magnetspule",
@@ -1656,11 +1656,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 5000.0,
     "volumeM3": 0.769,
     "eleriumG": 0.021,
-    "description": "Gekühlte Magnetspule."
+    "description": "Gekühlte Magnetspule.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_optikkristall",
@@ -1692,11 +1692,11 @@
       }
     ],
     "baseProductionHours": 20.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 500.0,
     "volumeM3": 0.278,
     "eleriumG": 0.036,
-    "description": "Präzisionsoptik."
+    "description": "Präzisionsoptik.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_halbleiterwafer",
@@ -1732,11 +1732,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 100.0,
     "volumeM3": 0.056,
     "eleriumG": 0.021,
-    "description": "Geätzter Halbleiterwafer."
+    "description": "Geätzter Halbleiterwafer.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_keramiksubstrat",
@@ -1768,11 +1768,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 500.0,
     "volumeM3": 0.167,
     "eleriumG": 0.021,
-    "description": "Elektronisches Keramiksubstrat."
+    "description": "Elektronisches Keramiksubstrat.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_energiespeicherzelle",
@@ -1808,11 +1808,11 @@
       }
     ],
     "baseProductionHours": 20.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 2000.0,
     "volumeM3": 1.11,
     "eleriumG": 0.036,
-    "description": "Wiederaufladbare Energiespeicherzelle."
+    "description": "Wiederaufladbare Energiespeicherzelle.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_supraleitersegment",
@@ -1848,11 +1848,11 @@
       }
     ],
     "baseProductionHours": 20.0,
-    "baseWorkforceRequired": 180.0,
     "massKg": 1000.0,
     "volumeM3": 0.556,
     "eleriumG": 0.036,
-    "description": "Gekühltes Supraleitersegment."
+    "description": "Gekühltes Supraleitersegment.",
+    "workHoursPerUnit": 180.0
   },
   {
     "id": "p_dichtungssystem",
@@ -1884,11 +1884,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 500.0,
     "volumeM3": 0.278,
     "eleriumG": 0.021,
-    "description": "Druckdichtungssystem."
+    "description": "Druckdichtungssystem.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_rohrleitungssystem",
@@ -1924,11 +1924,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 3000.0,
     "volumeM3": 1.67,
     "eleriumG": 0.021,
-    "description": "Rohrleitungssystem für Fluide."
+    "description": "Rohrleitungssystem für Fluide.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_kuehlmittelbehaelter",
@@ -1964,11 +1964,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 6000.0,
     "volumeM3": 3.33,
     "eleriumG": 0.021,
-    "description": "Isolierter Kühlmittelbehälter."
+    "description": "Isolierter Kühlmittelbehälter.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_aktuatoreinheit",
@@ -2004,11 +2004,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 4000.0,
     "volumeM3": 2.22,
     "eleriumG": 0.021,
-    "description": "Elektromechanische Aktuatoreinheit."
+    "description": "Elektromechanische Aktuatoreinheit.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_reaktorkammer",
@@ -2044,11 +2044,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 20000.0,
     "volumeM3": 3.08,
     "eleriumG": 0.053,
-    "description": "Druck- und hitzefeste Reaktorkammer."
+    "description": "Druck- und hitzefeste Reaktorkammer.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_druckhabitatsegment",
@@ -2088,11 +2088,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 15000.0,
     "volumeM3": 8.33,
     "eleriumG": 0.021,
-    "description": "Druckdichtes Habitatsegment."
+    "description": "Druckdichtes Habitatsegment.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_lebenserhaltungszelle",
@@ -2132,11 +2132,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 5000.0,
     "volumeM3": 2.78,
     "eleriumG": 0.012,
-    "description": "Kreislauf-Lebenserhaltungszelle."
+    "description": "Kreislauf-Lebenserhaltungszelle.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_biomassekultur",
@@ -2172,11 +2172,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 20000.0,
     "volumeM3": 25.0,
     "eleriumG": 0.012,
-    "description": "Kultivierte Biomasse."
+    "description": "Kultivierte Biomasse.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_pharmakultur",
@@ -2216,11 +2216,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 2000.0,
     "volumeM3": 2.5,
     "eleriumG": 0.012,
-    "description": "Kultivierte Pharmabiomasse."
+    "description": "Kultivierte Pharmabiomasse.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_chem_energiesatz",
@@ -2256,11 +2256,11 @@
       }
     ],
     "baseProductionHours": 14.0,
-    "baseWorkforceRequired": 150.0,
     "massKg": 5000.0,
     "volumeM3": 2.78,
     "eleriumG": 0.021,
-    "description": "Chemischer Treibsatz."
+    "description": "Chemischer Treibsatz.",
+    "workHoursPerUnit": 150.0
   },
   {
     "id": "p_fusionskapsel",
@@ -2296,11 +2296,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 1000.0,
     "volumeM3": 0.556,
     "eleriumG": 0.053,
-    "description": "Fusionsbrennstoffkapsel."
+    "description": "Fusionsbrennstoffkapsel.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_elerium_kapsel",
@@ -2328,11 +2328,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 200.0,
     "massKg": 500.0,
     "volumeM3": 0.2,
     "eleriumG": 0.648,
-    "description": "Sicher verkapseltes Elerium."
+    "description": "Sicher verkapseltes Elerium.",
+    "workHoursPerUnit": 200.0
   },
   {
     "id": "p_steuerchip",
@@ -2368,11 +2368,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 50.0,
     "volumeM3": 0.083,
     "eleriumG": 0.053,
-    "description": "Steuerungschip."
+    "description": "Steuerungschip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_sensorchip",
@@ -2408,11 +2408,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 60.0,
     "volumeM3": 0.1,
     "eleriumG": 0.053,
-    "description": "Sensorchip."
+    "description": "Sensorchip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_navchip",
@@ -2452,11 +2452,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 80.0,
     "volumeM3": 0.133,
     "eleriumG": 0.053,
-    "description": "Navigationschip."
+    "description": "Navigationschip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_kommchip",
@@ -2492,11 +2492,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 60.0,
     "volumeM3": 0.1,
     "eleriumG": 0.053,
-    "description": "Kommunikationschip."
+    "description": "Kommunikationschip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_gefechtschip",
@@ -2536,11 +2536,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 100.0,
     "volumeM3": 0.167,
     "eleriumG": 0.053,
-    "description": "Gefechtsleitchip."
+    "description": "Gefechtsleitchip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_logistikchip",
@@ -2580,11 +2580,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 70.0,
     "volumeM3": 0.117,
     "eleriumG": 0.053,
-    "description": "Logistikchip."
+    "description": "Logistikchip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_medizinchip",
@@ -2624,11 +2624,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 70.0,
     "volumeM3": 0.117,
     "eleriumG": 0.053,
-    "description": "Medizinischer Diagnosechip."
+    "description": "Medizinischer Diagnosechip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_energiechip",
@@ -2664,11 +2664,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 220.0,
     "massKg": 90.0,
     "volumeM3": 0.15,
     "eleriumG": 0.053,
-    "description": "Energiesteuerungschip."
+    "description": "Energiesteuerungschip.",
+    "workHoursPerUnit": 220.0
   },
   {
     "id": "p_strukturzelle",
@@ -2704,11 +2704,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 600.0,
     "massKg": 45000.0,
     "volumeM3": 81.82,
     "eleriumG": 0.288,
-    "description": "Modulare Strukturzelle."
+    "description": "Modulare Strukturzelle.",
+    "workHoursPerUnit": 600.0
   },
   {
     "id": "p_panzerbaugruppe",
@@ -2744,11 +2744,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 600.0,
     "massKg": 35000.0,
     "volumeM3": 5.38,
     "eleriumG": 0.288,
-    "description": "Panzerbaugruppe."
+    "description": "Panzerbaugruppe.",
+    "workHoursPerUnit": 600.0
   },
   {
     "id": "p_energieverteiler",
@@ -2788,11 +2788,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 8000.0,
     "volumeM3": 14.55,
     "eleriumG": 0.126,
-    "description": "Energieverteiler."
+    "description": "Energieverteiler.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_fusionsreaktorkern",
@@ -2832,11 +2832,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 600.0,
     "massKg": 35000.0,
     "volumeM3": 5.38,
     "eleriumG": 0.288,
-    "description": "Fusionsreaktorkern."
+    "description": "Fusionsreaktorkern.",
+    "workHoursPerUnit": 600.0
   },
   {
     "id": "p_elerium_energiezelle",
@@ -2872,11 +2872,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 300.0,
     "massKg": 3000.0,
     "volumeM3": 5.45,
     "eleriumG": 0.708,
-    "description": "Eleriumbetriebene Energiezelle für Kraftwerke und Netze."
+    "description": "Eleriumbetriebene Energiezelle für Kraftwerke und Netze.",
+    "workHoursPerUnit": 300.0
   },
   {
     "id": "p_elerium_treibstoffkern",
@@ -2916,11 +2916,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 300.0,
     "massKg": 5000.0,
     "volumeM3": 9.09,
     "eleriumG": 0.708,
-    "description": "Eleriumbetriebener Reaktor- und Antriebskern."
+    "description": "Eleriumbetriebener Reaktor- und Antriebskern.",
+    "workHoursPerUnit": 300.0
   },
   {
     "id": "p_elerium_initiator",
@@ -2956,11 +2956,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 300.0,
     "massKg": 1000.0,
     "volumeM3": 1.82,
     "eleriumG": 0.708,
-    "description": "Eleriumbasierter Initiator für schwere Gefechtsköpfe."
+    "description": "Eleriumbasierter Initiator für schwere Gefechtsköpfe.",
+    "workHoursPerUnit": 300.0
   },
   {
     "id": "p_triebwerkskern",
@@ -3000,11 +3000,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 600.0,
     "massKg": 25000.0,
     "volumeM3": 45.45,
     "eleriumG": 0.288,
-    "description": "Haupttriebwerkskern."
+    "description": "Haupttriebwerkskern.",
+    "workHoursPerUnit": 600.0
   },
   {
     "id": "p_manoevertriebwerk",
@@ -3044,11 +3044,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 5000.0,
     "volumeM3": 9.09,
     "eleriumG": 0.126,
-    "description": "Manövriertriebwerk."
+    "description": "Manövriertriebwerk.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_reaktionsmassensystem",
@@ -3088,11 +3088,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 15000.0,
     "volumeM3": 15.0,
     "eleriumG": 0.126,
-    "description": "Reaktionsmassen-Versorgungssystem."
+    "description": "Reaktionsmassen-Versorgungssystem.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_sensorfeld",
@@ -3132,11 +3132,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 2000.0,
     "volumeM3": 3.64,
     "eleriumG": 0.126,
-    "description": "Sensorfeld."
+    "description": "Sensorfeld.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_kommfeld",
@@ -3172,11 +3172,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 1500.0,
     "volumeM3": 2.73,
     "eleriumG": 0.126,
-    "description": "Kommunikationsfeld."
+    "description": "Kommunikationsfeld.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_navsystem",
@@ -3212,11 +3212,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 3000.0,
     "volumeM3": 5.45,
     "eleriumG": 0.126,
-    "description": "Navigationssystem."
+    "description": "Navigationssystem.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_gefechtsleitsystem",
@@ -3252,11 +3252,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 2500.0,
     "volumeM3": 4.55,
     "eleriumG": 0.126,
-    "description": "Gefechtsleitsystem."
+    "description": "Gefechtsleitsystem.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_projektilwaffe",
@@ -3296,11 +3296,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 12000.0,
     "volumeM3": 21.82,
     "eleriumG": 0.126,
-    "description": "Projektilwaffenbaugruppe."
+    "description": "Projektilwaffenbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_strahlenwaffe",
@@ -3340,11 +3340,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 8000.0,
     "volumeM3": 14.55,
     "eleriumG": 0.126,
-    "description": "Strahlenwaffenbaugruppe."
+    "description": "Strahlenwaffenbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_lenkwaffe",
@@ -3384,11 +3384,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 10000.0,
     "volumeM3": 18.18,
     "eleriumG": 0.126,
-    "description": "Lenkflugkörperbaugruppe."
+    "description": "Lenkflugkörperbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_schwerer_gefechtskopf",
@@ -3424,11 +3424,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 2000.0,
     "volumeM3": 3.64,
     "eleriumG": 0.126,
-    "description": "Schwerer eleriumbasierter Gefechtskopf."
+    "description": "Schwerer eleriumbasierter Gefechtskopf.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_schildemitter",
@@ -3468,11 +3468,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 8000.0,
     "volumeM3": 14.55,
     "eleriumG": 0.126,
-    "description": "Schildemitterbaugruppe."
+    "description": "Schildemitterbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_hangarbaugruppe",
@@ -3512,11 +3512,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 600.0,
     "massKg": 50000.0,
     "volumeM3": 90.91,
     "eleriumG": 0.288,
-    "description": "Hangarbaugruppe."
+    "description": "Hangarbaugruppe.",
+    "workHoursPerUnit": 600.0
   },
   {
     "id": "p_frachtumschlag",
@@ -3552,11 +3552,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 25000.0,
     "volumeM3": 45.45,
     "eleriumG": 0.126,
-    "description": "Frachtumschlagbaugruppe."
+    "description": "Frachtumschlagbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_lebenserhaltungsbaugruppe",
@@ -3592,11 +3592,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 10000.0,
     "volumeM3": 18.18,
     "eleriumG": 0.126,
-    "description": "Lebenserhaltungsbaugruppe."
+    "description": "Lebenserhaltungsbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_besatzungsbaugruppe",
@@ -3632,11 +3632,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 20000.0,
     "volumeM3": 36.36,
     "eleriumG": 0.126,
-    "description": "Besatzungsbaugruppe."
+    "description": "Besatzungsbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_truppenunterbringung",
@@ -3672,11 +3672,11 @@
       }
     ],
     "baseProductionHours": 36.0,
-    "baseWorkforceRequired": 350.0,
     "massKg": 35000.0,
     "volumeM3": 63.64,
     "eleriumG": 0.126,
-    "description": "Truppenunterbringungsbaugruppe."
+    "description": "Truppenunterbringungsbaugruppe.",
+    "workHoursPerUnit": 350.0
   },
   {
     "id": "p_foerdermaschinenbaugruppe",
@@ -3716,11 +3716,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 60000.0,
     "volumeM3": 109.09,
     "eleriumG": 0.24,
-    "description": "Fördermaschinenbaugruppe."
+    "description": "Fördermaschinenbaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_raffineriebaugruppe",
@@ -3760,11 +3760,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 70000.0,
     "volumeM3": 127.27,
     "eleriumG": 0.24,
-    "description": "Raffineriebaugruppe."
+    "description": "Raffineriebaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_fertigungsmaschinenbaugruppe",
@@ -3804,11 +3804,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 80000.0,
     "volumeM3": 145.45,
     "eleriumG": 0.24,
-    "description": "Fertigungsmaschinenbaugruppe."
+    "description": "Fertigungsmaschinenbaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_reinraumbaugruppe",
@@ -3848,11 +3848,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 30000.0,
     "volumeM3": 54.55,
     "eleriumG": 0.24,
-    "description": "Reinraumbaugruppe."
+    "description": "Reinraumbaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_bioreaktorbaugruppe",
@@ -3892,11 +3892,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 30000.0,
     "volumeM3": 4.62,
     "eleriumG": 0.24,
-    "description": "Bioreaktorbaugruppe."
+    "description": "Bioreaktorbaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_energienetzbaugruppe",
@@ -3936,11 +3936,11 @@
       }
     ],
     "baseProductionHours": 48.0,
-    "baseWorkforceRequired": 500.0,
     "massKg": 40000.0,
     "volumeM3": 72.73,
     "eleriumG": 0.24,
-    "description": "Energienetzbaugruppe."
+    "description": "Energienetzbaugruppe.",
+    "workHoursPerUnit": 500.0
   },
   {
     "id": "p_nahrungsbasis",
@@ -3976,11 +3976,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 20000.0,
     "volumeM3": 25.0,
     "eleriumG": 0.014,
-    "description": "Biologische Nahrungsbasis."
+    "description": "Biologische Nahrungsbasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_textilfaserbasis",
@@ -4012,11 +4012,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 10000.0,
     "volumeM3": 12.5,
     "eleriumG": 0.014,
-    "description": "Textilfaserbasis."
+    "description": "Textilfaserbasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_hygienebasis",
@@ -4056,11 +4056,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 10000.0,
     "volumeM3": 12.5,
     "eleriumG": 0.014,
-    "description": "Hygienebasis."
+    "description": "Hygienebasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_pharmabasis",
@@ -4096,11 +4096,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 2000.0,
     "volumeM3": 2.5,
     "eleriumG": 0.014,
-    "description": "Pharmabasis."
+    "description": "Pharmabasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_haushaltswarenbasis",
@@ -4140,11 +4140,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 20000.0,
     "volumeM3": 36.36,
     "eleriumG": 0.014,
-    "description": "Haushaltswarenbasis."
+    "description": "Haushaltswarenbasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_unterhaltungselektronikbasis",
@@ -4184,11 +4184,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 1000.0,
     "volumeM3": 1.82,
     "eleriumG": 0.014,
-    "description": "Unterhaltungselektronikbasis."
+    "description": "Unterhaltungselektronikbasis.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_korvette_rumpf",
@@ -4224,11 +4224,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 108000.0,
     "volumeM3": 337.5,
     "eleriumG": 0.504,
-    "description": "Rumpfmodul der Korvette."
+    "description": "Rumpfmodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_korvette_antrieb",
@@ -4268,11 +4268,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 59500.0,
     "volumeM3": 123.96,
     "eleriumG": 1.1,
-    "description": "Antriebsmodul der Korvette."
+    "description": "Antriebsmodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_korvette_energie",
@@ -4308,11 +4308,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 14100.0,
     "volumeM3": 29.38,
     "eleriumG": 1.1,
-    "description": "Energiemodul der Korvette."
+    "description": "Energiemodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_korvette_elektronik",
@@ -4348,11 +4348,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 7030.0,
     "volumeM3": 27.04,
     "eleriumG": 0.504,
-    "description": "Elektronikmodul der Korvette."
+    "description": "Elektronikmodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_korvette_waffen",
@@ -4388,11 +4388,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 22200.0,
     "volumeM3": 46.25,
     "eleriumG": 0.504,
-    "description": "Waffenmodul der Korvette."
+    "description": "Waffenmodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_korvette_versorgung",
@@ -4428,11 +4428,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "baseWorkforceRequired": 700.0,
     "massKg": 59500.0,
     "volumeM3": 330.56,
     "eleriumG": 0.504,
-    "description": "Versorgungsmodul der Korvette."
+    "description": "Versorgungsmodul der Korvette.",
+    "workHoursPerUnit": 700.0
   },
   {
     "id": "p_zerstoerer_rumpf",
@@ -4468,11 +4468,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 194400.0,
     "volumeM3": 607.5,
     "eleriumG": 1.44,
-    "description": "Rumpfmodul des Zerstörers."
+    "description": "Rumpfmodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_zerstoerer_antrieb",
@@ -4512,11 +4512,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 81000.0,
     "volumeM3": 168.75,
     "eleriumG": 2.04,
-    "description": "Antriebsmodul des Zerstörers."
+    "description": "Antriebsmodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_zerstoerer_energie",
@@ -4552,11 +4552,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 49700.0,
     "volumeM3": 103.54,
     "eleriumG": 2.04,
-    "description": "Energiemodul des Zerstörers."
+    "description": "Energiemodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_zerstoerer_elektronik",
@@ -4592,11 +4592,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 7570.0,
     "volumeM3": 29.12,
     "eleriumG": 1.44,
-    "description": "Elektronikmodul des Zerstörers."
+    "description": "Elektronikmodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_zerstoerer_waffen",
@@ -4632,11 +4632,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 49700.0,
     "volumeM3": 103.54,
     "eleriumG": 1.44,
-    "description": "Waffenmodul des Zerstörers."
+    "description": "Waffenmodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_zerstoerer_versorgung",
@@ -4672,11 +4672,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 59500.0,
     "volumeM3": 330.56,
     "eleriumG": 1.44,
-    "description": "Versorgungsmodul des Zerstörers."
+    "description": "Versorgungsmodul des Zerstörers.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_kreuzer_rumpf",
@@ -4712,11 +4712,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 275400.0,
     "volumeM3": 860.62,
     "eleriumG": 3.6,
-    "description": "Rumpfmodul des Kreuzers."
+    "description": "Rumpfmodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_kreuzer_antrieb",
@@ -4756,11 +4756,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 129700.0,
     "volumeM3": 270.21,
     "eleriumG": 4.2,
-    "description": "Antriebsmodul des Kreuzers."
+    "description": "Antriebsmodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_kreuzer_energie",
@@ -4796,11 +4796,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 61600.0,
     "volumeM3": 128.33,
     "eleriumG": 4.8,
-    "description": "Energiemodul des Kreuzers."
+    "description": "Energiemodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_kreuzer_elektronik",
@@ -4840,11 +4840,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 11900.0,
     "volumeM3": 45.77,
     "eleriumG": 3.6,
-    "description": "Elektronikmodul des Kreuzers."
+    "description": "Elektronikmodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_kreuzer_waffen",
@@ -4884,11 +4884,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 58400.0,
     "volumeM3": 121.67,
     "eleriumG": 3.6,
-    "description": "Waffenmodul des Kreuzers."
+    "description": "Waffenmodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_kreuzer_versorgung",
@@ -4924,11 +4924,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "baseWorkforceRequired": 2000.0,
     "massKg": 91800.0,
     "volumeM3": 510.0,
     "eleriumG": 3.6,
-    "description": "Versorgungsmodul des Kreuzers."
+    "description": "Versorgungsmodul des Kreuzers.",
+    "workHoursPerUnit": 2000.0
   },
   {
     "id": "p_frachter_rumpf",
@@ -4964,11 +4964,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 175000.0,
     "volumeM3": 546.88,
     "eleriumG": 1.44,
-    "description": "Rumpfmodul des Frachters."
+    "description": "Rumpfmodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_frachter_antrieb",
@@ -5008,11 +5008,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 70200.0,
     "volumeM3": 146.25,
     "eleriumG": 2.04,
-    "description": "Antriebsmodul des Frachters."
+    "description": "Antriebsmodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_frachter_energie",
@@ -5048,11 +5048,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 48600.0,
     "volumeM3": 101.25,
     "eleriumG": 1.44,
-    "description": "Energiemodul des Frachters."
+    "description": "Energiemodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_frachter_elektronik",
@@ -5088,11 +5088,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 4940.0,
     "volumeM3": 19.0,
     "eleriumG": 1.44,
-    "description": "Elektronikmodul des Frachters."
+    "description": "Elektronikmodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_frachter_ladung",
@@ -5128,11 +5128,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 129700.0,
     "volumeM3": 720.56,
     "eleriumG": 1.44,
-    "description": "Ladungsmodul des Frachters."
+    "description": "Ladungsmodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_frachter_versorgung",
@@ -5168,11 +5168,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "baseWorkforceRequired": 1200.0,
     "massKg": 118900.0,
     "volumeM3": 660.56,
     "eleriumG": 1.44,
-    "description": "Versorgungsmodul des Frachters."
+    "description": "Versorgungsmodul des Frachters.",
+    "workHoursPerUnit": 1200.0
   },
   {
     "id": "p_traeger_rumpf",
@@ -5208,11 +5208,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 340200.0,
     "volumeM3": 1063.12,
     "eleriumG": 7.2,
-    "description": "Rumpfmodul des Trägerschiffs."
+    "description": "Rumpfmodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_traeger_antrieb",
@@ -5252,11 +5252,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 145800.0,
     "volumeM3": 303.75,
     "eleriumG": 7.8,
-    "description": "Antriebsmodul des Trägerschiffs."
+    "description": "Antriebsmodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_traeger_energie",
@@ -5292,11 +5292,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 64900.0,
     "volumeM3": 135.21,
     "eleriumG": 9.0,
-    "description": "Energiemodul des Trägerschiffs."
+    "description": "Energiemodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_traeger_elektronik",
@@ -5336,11 +5336,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 13500.0,
     "volumeM3": 51.92,
     "eleriumG": 7.2,
-    "description": "Elektronikmodul des Trägerschiffs."
+    "description": "Elektronikmodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_traeger_hangar",
@@ -5376,11 +5376,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 270100.0,
     "volumeM3": 1500.56,
     "eleriumG": 7.2,
-    "description": "Hangarmodul des Trägerschiffs."
+    "description": "Hangarmodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_traeger_versorgung",
@@ -5416,11 +5416,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 3000.0,
     "massKg": 183600.0,
     "volumeM3": 1020.0,
     "eleriumG": 7.2,
-    "description": "Versorgungsmodul des Trägerschiffs."
+    "description": "Versorgungsmodul des Trägerschiffs.",
+    "workHoursPerUnit": 3000.0
   },
   {
     "id": "p_transport_rumpf",
@@ -5456,11 +5456,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 253900.0,
     "volumeM3": 793.44,
     "eleriumG": 2.59,
-    "description": "Rumpfmodul des Mannschaftstransporters."
+    "description": "Rumpfmodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_transport_antrieb",
@@ -5500,11 +5500,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 102600.0,
     "volumeM3": 213.75,
     "eleriumG": 3.19,
-    "description": "Antriebsmodul des Mannschaftstransporters."
+    "description": "Antriebsmodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_transport_energie",
@@ -5540,11 +5540,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 49700.0,
     "volumeM3": 103.54,
     "eleriumG": 3.19,
-    "description": "Energiemodul des Mannschaftstransporters."
+    "description": "Energiemodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_transport_elektronik",
@@ -5580,11 +5580,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 7030.0,
     "volumeM3": 27.04,
     "eleriumG": 2.59,
-    "description": "Elektronikmodul des Mannschaftstransporters."
+    "description": "Elektronikmodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_transport_truppen",
@@ -5620,11 +5620,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 140500.0,
     "volumeM3": 780.56,
     "eleriumG": 2.59,
-    "description": "Truppenmodul des Mannschaftstransporters."
+    "description": "Truppenmodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_transport_versorgung",
@@ -5660,11 +5660,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "baseWorkforceRequired": 1800.0,
     "massKg": 77800.0,
     "volumeM3": 432.22,
     "eleriumG": 2.59,
-    "description": "Versorgungsmodul des Mannschaftstransporters."
+    "description": "Versorgungsmodul des Mannschaftstransporters.",
+    "workHoursPerUnit": 1800.0
   },
   {
     "id": "p_trinkwasserration",
@@ -5696,11 +5696,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1000.0,
     "volumeM3": 1.0,
     "eleriumG": 0.0048,
-    "description": "Trinkwasserration."
+    "description": "Trinkwasserration.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_grundnahrung",
@@ -5732,11 +5732,11 @@
       }
     ],
     "baseProductionHours": 2.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Einfache Nährstoffration direkt aus Wassereis und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung."
+    "description": "Einfache Nährstoffration direkt aus Wassereis und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_standardnahrung",
@@ -5768,11 +5768,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Standardnahrung."
+    "description": "Standardnahrung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_hygienewaren",
@@ -5804,11 +5804,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 500.0,
     "volumeM3": 1.0,
     "eleriumG": 0.0048,
-    "description": "Hygienewaren."
+    "description": "Hygienewaren.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_grundkleidung",
@@ -5836,11 +5836,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 500.0,
     "volumeM3": 1.0,
     "eleriumG": 0.0048,
-    "description": "Grundkleidung."
+    "description": "Grundkleidung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_schutzkleidung",
@@ -5872,11 +5872,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 500.0,
     "volumeM3": 1.0,
     "eleriumG": 0.0048,
-    "description": "Schutzkleidung."
+    "description": "Schutzkleidung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_grundmedizin",
@@ -5908,11 +5908,11 @@
       }
     ],
     "baseProductionHours": 2.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 100.0,
     "volumeM3": 0.2,
     "eleriumG": 0.0048,
-    "description": "Einfaches Salinen-Erste-Hilfe-Präparat direkt aus Wassereis und Salzmineral – bewusst flache Kette, weniger wirksam als Erweiterte Medizin."
+    "description": "Einfaches Salinen-Erste-Hilfe-Präparat direkt aus Wassereis und Salzmineral – bewusst flache Kette, weniger wirksam als Erweiterte Medizin.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_erweiterte_medizin",
@@ -5944,11 +5944,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 100.0,
     "massKg": 50.0,
     "volumeM3": 0.1,
     "eleriumG": 0.012,
-    "description": "Erweiterte Medizin."
+    "description": "Erweiterte Medizin.",
+    "workHoursPerUnit": 100.0
   },
   {
     "id": "p_haushaltswaren",
@@ -5976,11 +5976,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Haushaltswaren."
+    "description": "Haushaltswaren.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_hw_haushaltswaren",
@@ -6012,11 +6012,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Hochwertige Haushaltswaren."
+    "description": "Hochwertige Haushaltswaren.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_unterhaltungselektronik",
@@ -6044,11 +6044,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 200.0,
     "volumeM3": 0.4,
     "eleriumG": 0.0048,
-    "description": "Unterhaltungselektronik."
+    "description": "Unterhaltungselektronik.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_infanterieausruestung",
@@ -6084,11 +6084,11 @@
       }
     ],
     "baseProductionHours": 8.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 3000.0,
     "volumeM3": 6.0,
     "eleriumG": 0.0048,
-    "description": "Infanterieausrüstung."
+    "description": "Infanterieausrüstung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_schwere_bodenausruestung",
@@ -6124,11 +6124,11 @@
       }
     ],
     "baseProductionHours": 24.0,
-    "baseWorkforceRequired": 200.0,
     "massKg": 10000.0,
     "volumeM3": 20.0,
     "eleriumG": 0.048,
-    "description": "Schwere Bodenausrüstung."
+    "description": "Schwere Bodenausrüstung.",
+    "workHoursPerUnit": 200.0
   },
   {
     "id": "p_drone_light",
@@ -6160,11 +6160,11 @@
       }
     ],
     "baseProductionHours": 2.29,
-    "baseWorkforceRequired": 17.0,
     "massKg": 31505.48,
     "volumeM3": 13.0598,
     "eleriumG": 0.126,
-    "description": "Leichte autonome Kampfdrohne, wird von Soldaten ferngesteuert."
+    "description": "Leichte autonome Kampfdrohne, wird von Soldaten ferngesteuert.",
+    "workHoursPerUnit": 17.0
   },
   {
     "id": "p_drone_medium",
@@ -6200,11 +6200,11 @@
       }
     ],
     "baseProductionHours": 2.53,
-    "baseWorkforceRequired": 19.0,
     "massKg": 60780.36,
     "volumeM3": 22.9992,
     "eleriumG": 0.252,
-    "description": "Mittlere autonome Kampfdrohne, wird von Soldaten ferngesteuert."
+    "description": "Mittlere autonome Kampfdrohne, wird von Soldaten ferngesteuert.",
+    "workHoursPerUnit": 19.0
   },
   {
     "id": "p_drone_heavy",
@@ -6240,11 +6240,11 @@
       }
     ],
     "baseProductionHours": 2.65,
-    "baseWorkforceRequired": 20.0,
     "massKg": 97210.96,
     "volumeM3": 33.6464,
     "eleriumG": 0.414,
-    "description": "Schwere autonome Kampfdrohne, hohe Haltbarkeit, wird von Soldaten ferngesteuert."
+    "description": "Schwere autonome Kampfdrohne, hohe Haltbarkeit, wird von Soldaten ferngesteuert.",
+    "workHoursPerUnit": 20.0
   },
   {
     "id": "p_corvette",
@@ -6292,11 +6292,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "baseWorkforceRequired": 2500.0,
     "massKg": 278500.0,
     "volumeM3": 1265.91,
     "eleriumG": 7.2,
-    "description": "Schnelles, leichtes Kampfschiff. Kontert Zerstörer, unterliegt Kreuzern."
+    "description": "Schnelles, leichtes Kampfschiff. Kontert Zerstörer, unterliegt Kreuzern.",
+    "workHoursPerUnit": 2500.0
   },
   {
     "id": "p_destroyer",
@@ -6344,11 +6344,11 @@
       }
     ],
     "baseProductionHours": 360.0,
-    "baseWorkforceRequired": 4500.0,
     "massKg": 455200.0,
     "volumeM3": 1750.77,
     "eleriumG": 17.4,
-    "description": "Vielseitiger Zerstörer. Kontert Kreuzer, unterliegt Korvetten."
+    "description": "Vielseitiger Zerstörer. Kontert Kreuzer, unterliegt Korvetten.",
+    "workHoursPerUnit": 4500.0
   },
   {
     "id": "p_cruiser",
@@ -6396,11 +6396,11 @@
       }
     ],
     "baseProductionHours": 600.0,
-    "baseWorkforceRequired": 8000.0,
     "massKg": 647700.0,
     "volumeM3": 2024.06,
     "eleriumG": 49.8,
-    "description": "Schwerer Kreuzer. Kontert Korvetten, unterliegt Zerstörern."
+    "description": "Schwerer Kreuzer. Kontert Korvetten, unterliegt Zerstörern.",
+    "workHoursPerUnit": 8000.0
   },
   {
     "id": "p_freighter",
@@ -6448,11 +6448,11 @@
       }
     ],
     "baseProductionHours": 300.0,
-    "baseWorkforceRequired": 4000.0,
     "massKg": 563800.0,
     "volumeM3": 5125.45,
     "eleriumG": 12.6,
-    "description": "Reiner Warentransporter, keine Kampfkraft."
+    "description": "Reiner Warentransporter, keine Kampfkraft.",
+    "workHoursPerUnit": 4000.0
   },
   {
     "id": "p_carrier",
@@ -6500,11 +6500,11 @@
       }
     ],
     "baseProductionHours": 720.0,
-    "baseWorkforceRequired": 12000.0,
     "massKg": 1048700.0,
     "volumeM3": 7490.71,
     "eleriumG": 88.8,
-    "description": "Einziges Schiff mit Sprungantrieb – langsame, gatewayunabhängige Reise."
+    "description": "Einziges Schiff mit Sprungantrieb – langsame, gatewayunabhängige Reise.",
+    "workHoursPerUnit": 12000.0
   },
   {
     "id": "p_trooptransport",
@@ -6552,11 +6552,11 @@
       }
     ],
     "baseProductionHours": 420.0,
-    "baseWorkforceRequired": 6000.0,
     "massKg": 650500.0,
     "volumeM3": 4065.62,
     "eleriumG": 26.4,
-    "description": "Transport für Bodentruppen."
+    "description": "Transport für Bodentruppen.",
+    "workHoursPerUnit": 6000.0
   },
   {
     "id": "p_grundversorgungspaket",
@@ -6596,11 +6596,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 3090.0,
     "volumeM3": 7.36,
     "eleriumG": 0.0036,
-    "description": "Verhindert akute Unterversorgung."
+    "description": "Verhindert akute Unterversorgung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_standardversorgungspaket",
@@ -6644,11 +6644,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 4120.0,
     "volumeM3": 9.81,
     "eleriumG": 0.0036,
-    "description": "Stabiler normaler Lebensstandard."
+    "description": "Stabiler normaler Lebensstandard.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_medizinpaket",
@@ -6688,11 +6688,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 1700.0,
     "volumeM3": 4.05,
     "eleriumG": 0.0036,
-    "description": "Gesundheit, Epidemieschutz und Genesung."
+    "description": "Gesundheit, Epidemieschutz und Genesung.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_komfortpaket",
@@ -6732,11 +6732,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 2790.0,
     "volumeM3": 6.64,
     "eleriumG": 0.0036,
-    "description": "Zufriedenheit und Loyalität."
+    "description": "Zufriedenheit und Loyalität.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_luxuspaket",
@@ -6776,11 +6776,11 @@
       }
     ],
     "baseProductionHours": 6.0,
-    "baseWorkforceRequired": 60.0,
     "massKg": 2320.0,
     "volumeM3": 5.52,
     "eleriumG": 0.0036,
-    "description": "Prestige, hohe Zufriedenheit und Geldsenke."
+    "description": "Prestige, hohe Zufriedenheit und Geldsenke.",
+    "workHoursPerUnit": 60.0
   },
   {
     "id": "p_infanteriepaket",
@@ -6824,11 +6824,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 5770.0,
     "volumeM3": 13.74,
     "eleriumG": 0.014,
-    "description": "Ausrüstung einer leichten Bodeneinheit."
+    "description": "Ausrüstung einer leichten Bodeneinheit.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_schweres_truppenpaket",
@@ -6872,11 +6872,11 @@
       }
     ],
     "baseProductionHours": 12.0,
-    "baseWorkforceRequired": 120.0,
     "massKg": 13000.0,
     "volumeM3": 30.95,
     "eleriumG": 0.014,
-    "description": "Schweres Feldausrüstungspaket für Bodentruppen im Einsatz."
+    "description": "Schweres Feldausrüstungspaket für Bodentruppen im Einsatz.",
+    "workHoursPerUnit": 120.0
   },
   {
     "id": "p_soldier",
@@ -6904,10 +6904,10 @@
       }
     ],
     "baseProductionHours": 2.52,
-    "baseWorkforceRequired": 19.0,
     "massKg": 25605.36,
     "volumeM3": 11.1813,
     "eleriumG": 0.0048,
-    "description": "Ausgerüsteter Infanterist aus der Kolonie-Bevölkerung. Besitzt keine eigene Kampfwirkung, sondern kommandiert Kampfdrohnen aus der Ferne."
+    "description": "Ausgerüsteter Infanterist aus der Kolonie-Bevölkerung. Besitzt keine eigene Kampfwirkung, sondern kommandiert Kampfdrohnen aus der Ferne.",
+    "workHoursPerUnit": 19.0
   }
 ]

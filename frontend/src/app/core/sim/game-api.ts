@@ -2,7 +2,7 @@ import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
-  PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
@@ -126,6 +126,12 @@ export interface GameApi {
 
   // --- Bevölkerung / Geld -----------------------------------------------------
   population(colonyId: Id): Signal<Population | undefined>;
+  /**
+   * Bevölkerungsverlauf der letzten ~20 Minuten samt Einordnung der
+   * Wachstumsphase und dessen, was das Wachstum gerade begrenzt – vom Backend
+   * berechnet (siehe Umsetzungskonzept/18_...md).
+   */
+  populationTrend(colonyId: Id): Signal<PopulationTrend | null>;
   moneySupplyState(planetId: Id): Signal<PopulationMoneySupplyState | undefined>;
   populationWallet(colonyId: Id): Signal<Wallet | undefined>;
   transactions(): Signal<Transaction[]>;

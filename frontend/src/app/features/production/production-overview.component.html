@@ -45,10 +45,10 @@
                 <span class="recipe-item">Extraktion aus Planetenkonzentration</span>
               }
               <div class="product-facts">
-                <span title="Arbeitskraft pro paralleler Produktionseinheit">👷 {{ p.baseWorkforceRequired }}</span>
-                <span title="Basiszeit pro Einheit">⏱ {{ p.baseProductionHours }}h</span>
-                <span title="Masse pro Einheit – künftig Frachterlimit">⚖ {{ formatMass(p.massKg) }}</span>
-                <span title="Volumen pro Einheit – künftig Frachterlimit">📐 {{ formatVolume(p.volumeM3) }}</span>
+                <span title="Arbeitsstunden, die ein Stück kostet. Zusammen mit der Fertigungsdauer ergibt sich, wie viele Arbeitskräfte dabei gebunden sind – hat die Kolonie weniger Einwohner, dauert es entsprechend länger.">👷 {{ p.workHoursPerUnit }} Ah</span>
+                <span title="Fertigungsdauer je Einheit unter Idealbedingungen – Industrie, Bevölkerung und Spezialisierung verkürzen sie">⏱ {{ p.baseProductionHours }}h</span>
+                <span title="Masse je Einheit – begrenzt zusammen mit dem Volumen, wie viel eine Flotte laden kann">⚖ {{ formatMass(p.massKg) }}</span>
+                <span title="Volumen je Einheit – begrenzt zusammen mit der Masse, wie viel eine Flotte laden kann">📐 {{ formatVolume(p.volumeM3) }}</span>
               </div>
               @if (isIndustryProduct(p)) {
                 <button class="small" type="button" (click)="openModal(p)">

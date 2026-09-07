@@ -38,17 +38,17 @@
               <div class="stat-block">
                 <div class="stat-block-head"><span>Sicherheit</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.securityPct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big" [class.blackout]="powerCoverage() < 0.999"><span [style.width.%]="s.securityPct > 100 ? 100 : s.securityPct"></span></div>
-                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Aus stationierten Bodentruppen relativ zur Bevölkerung, mindestens 30% der Loyalität als Sockel. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
+                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Wie gut die Kolonie geschützt ist – getragen von den hier stationierten Truppen im Verhältnis zur Einwohnerzahl; eine loyale Bevölkerung sorgt auch ohne Garnison für ein Mindestmaß an Ordnung. Vollständige Sicherheit gibt es nie. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
               </div>
               <div class="stat-block">
                 <div class="stat-block-head"><span>Lebensstandard</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.standardOfLivingPct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big" [class.blackout]="powerCoverage() < 0.999"><span [style.width.%]="s.standardOfLivingPct > 100 ? 100 : s.standardOfLivingPct"></span></div>
-                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Geglättete Deckung des Konsumbedarfs am Systemmarkt. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
+                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Wie gut die Bevölkerung mit Konsumgütern versorgt ist, die sie am Systemmarkt kaufen konnte – Ausreißer einzelner Momente sind geglättet. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
               </div>
               <div class="stat-block">
                 <div class="stat-block-head"><span>Loyalität</span><span class="mono">{{ s.loyaltyPct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big"><span [style.width.%]="s.loyaltyPct"></span></div>
-                <p class="hint">Politischer Langzeitwert, bei 100% gedeckelt. {{ c.isHomeworld ? 'Heimatwelt-Bonus aktiv.' : '' }}</p>
+                <p class="hint">Die Verbundenheit der Bevölkerung mit Ihnen – sie verändert sich nur langsam und wächst, solange die Menschen gut versorgt und sicher leben. {{ c.isHomeworld ? 'Heimatwelt-Bonus aktiv.' : '' }}</p>
               </div>
             }
           </div>
@@ -94,6 +94,9 @@
           }
         </div>
         <div class="panel-body building-list">
+          <p class="hint">Jeder Ausbau kostet Credits und Baustoffe aus dem Kolonielager und belegt einen Bebauungsplatz.
+            Plätze schafft allein die Infrastruktur – wie viele davon ein Himmelskörper insgesamt verträgt, hängt von seiner Größe ab
+            und zählt über alle Kolonien darauf zusammen. Wer eng baut, verteuert damit auch die Ausbauten seiner Nachbarn.</p>
           @if (speedBreakdown(); as sb) {
             <p class="hint">
               Bevölkerung: <strong>{{ growthStateLabel() }}</strong>
@@ -230,21 +233,21 @@
           <span class="hint">Pro Kolonie läuft immer nur ein Auftrag gleichzeitig – neue Aufträge warten in der Liste. „Nicht vorhandene Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette (Zeit + Rohstoffe); ist das Häkchen nicht gesetzt und die direkten Vorprodukte fehlen, hält die Warteschlange an und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung wieder ans Ende der Liste.</span>
         </div>
         @if (buildingLevel('b_industry') < 1) { <p class="hint panel-hint">Benötigt einen Industriekomplex.</p> }
-        @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Blackout: alle Produktion läuft nur mit 10% Geschwindigkeit, bis das Energienetz wieder ausreichend mit Stabilisiertem Elerium versorgt ist.</p> }
+        @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Der Infrastruktur fehlt Stabilisiertes Elerium – bis wieder genug im Lager liegt, arbeiten alle Anlagen nur mit einem Bruchteil ihrer Leistung.</p> }
 
         <div class="panel-body">
           @let speed = colonySpeedFactors();
           <div class="speed-breakdown">
             <span class="eyebrow">Produktionstempo dieser Kolonie — koloniweit, gilt für jeden Auftrag</span>
             <div class="speed-factor-row">
-              <span>Bevölkerung {{ speed.population | number:'1.0-0' }}</span>
-              <span class="mono">× {{ speed.workforceFactor | number:'1.2-2' }}</span>
-              <span class="hint">(Arbeitskraft-Faktor, 0,35–5×, ab ~2000 Einwohnern gedeckelt)</span>
+              <span>Verfügbare Arbeitskräfte</span>
+              <span class="mono">{{ speed.availableWorkers | number:'1.0-0' }}</span>
+              <span class="hint">(die Einwohner der Kolonie – sie beschleunigen nichts, können eine Fertigung aber ausbremsen, wenn sie zu wenige sind)</span>
             </div>
             <div class="speed-factor-row">
               <span>Industriekomplex Stufe {{ speed.industryLevel }}</span>
               <span class="mono">× {{ speed.buildingSpeedFactor | number:'1.0-0' }}</span>
-              <span class="hint">(Gebäude-Tempofaktor, siehe Tab „Bebauung")</span>
+              <span class="hint">(jede Ausbaustufe des Industriekomplexes fertigt spürbar schneller, siehe Tab „Bebauung")</span>
             </div>
             @if (speed.blackout) {
               <div class="speed-factor-row warn">
@@ -465,27 +468,34 @@
                 [class.good]="powerCoverage() >= 0.999 && (population()?.growthRatePerInterval ?? 0) >= 0"
                 [class.bad]="powerCoverage() >= 0.999 && (population()?.growthRatePerInterval ?? 0) < 0">
                 {{ (population()?.growthRatePerInterval ?? 0) >= 0 ? '▲' : '▼' }} {{ population()?.growthRatePerInterval ?? 0 | number:'1.1-1' }} / Tick
-                @if (powerCoverage() < 0.999) { · kein Wachstum (Blackout) }
+                @if (powerCoverage() < 0.999) { · Wachstum ausgesetzt, solange die Infrastruktur unterversorgt ist }
               </span>
             </div>
             <div class="stat-bar big"><span [style.width.%]="capacityUsagePct() > 100 ? 100 : capacityUsagePct()"></span></div>
             <dl class="fact-list">
-              <div><dt>Wohnkapazität</dt><dd class="mono">{{ housingCapacity() | number:'1.0-0' }} Plätze <span class="hint">({{ capacityUsagePct() | number:'1.0-0' }}% belegt)</span></dd></div>
+              <div><dt>Wohnkapazität</dt><dd class="mono">{{ housingCapacity() | number:'1.0-0' }} Plätze <span class="hint">({{ capacityUsagePct() | number:'1.0-1' }}% belegt)</span></dd></div>
               <div><dt>Energieversorgung</dt><dd class="mono" [class.warn]="powerCoverage() < 0.999 && powerCoverage() >= 0.5" [class.bad]="powerCoverage() < 0.5">{{ powerCoverage() * 100 | number:'1.0-0' }}%
-                <span class="hint">(Energienetz-Anteil an der Wohnkapazität, Stabilisiertes Elerium im Lager nötig)</span></dd></div>
+                <span class="hint">(die Infrastruktur zieht dafür laufend Stabilisiertes Elerium aus dem Lager)</span></dd></div>
               <div><dt>Historischer Höchststand</dt><dd class="mono">{{ moneyState()?.historicalPeakPopulation ?? 0 | number:'1.0-0' }}
-                <span class="hint">(neue Credits entstehen nur oberhalb dieses Werts)</span></dd></div>
+                <span class="hint">(neue Credits entstehen nur, wenn die Kolonie über diesen Stand hinauswächst)</span></dd></div>
             </dl>
             @if (capacityUsagePct() >= 100) {
-              <p class="hint bad">Wohnkapazität erschöpft – die Bevölkerung schrumpft leicht, bis Wohnkomplex und/oder Energienetz ausgebaut werden.</p>
+              <p class="hint bad">Der Wohnraum ist voll – ohne zusätzliche Unterkünfte geht die Bevölkerung langsam zurück. Ein Ausbau des Wohnkomplexes verdoppelt den Platz.</p>
             } @else if (capacityUsagePct() >= 85) {
-              <p class="hint warn">Wohnkapazität wird knapp – Wohnkomplex und/oder Energienetz bald ausbauen, um weiteres Wachstum zu ermöglichen.</p>
+              <p class="hint warn">Der Wohnraum wird knapp. Ein Ausbau des Wohnkomplexes verdoppelt die Kapazität und schafft wieder Luft zum Wachsen.</p>
             } @else {
-              <p class="hint">Noch genug Platz für weiteres Wachstum. Kapazität kommt aus Wohnkomplex + Energienetz (Tab „Bebauung").</p>
+              <p class="hint">Es ist reichlich Platz vorhanden – den Wohnraum stellt allein der Wohnkomplex (Tab „Bebauung"). Ob die Kolonie wächst, entscheidet derzeit die Versorgung.</p>
             }
             @if (powerCoverage() < 0.999) {
-              <p class="hint warn">Energienetz-Blackout: zu wenig Stabilisiertes Elerium im Lager – mindert den Kapazitätsbeitrag des Energienetzes anteilig. Eleriumspuren abbauen und zu Stabilisiertem Elerium verarbeiten (Tab „Produktion").</p>
+              <p class="hint warn">Die Infrastruktur ist unterversorgt: es fehlt Stabilisiertes Elerium im Lager. Solange das anhält, arbeiten die Anlagen nur mit einem Bruchteil ihrer Leistung, und Lebensstandard wie Sicherheit brechen ein. Eleriumspuren abbauen und zu Stabilisiertem Elerium verarbeiten (Tab „Produktion").</p>
             }
+          </div>
+        </div>
+
+        <div class="panel corner-frame span-2">
+          <div class="panel-header"><h2>Wachstumsverlauf</h2></div>
+          <div class="panel-body">
+            <app-population-chart [trend]="populationTrend()" />
           </div>
         </div>
         <div class="panel corner-frame">
@@ -505,9 +515,9 @@
               <div><dt>Sicherheit</dt><dd class="mono" [class.blackout]="powerCoverage() < 0.999">{{ stats()?.securityPct | number:'1.0-0' }}%</dd></div>
             </dl>
             @if (powerCoverage() < 0.999) {
-              <p class="hint blackout">Durch Blackout halbiert (Lebensstandard, Sicherheit) – siehe Wohnkapazität oben.</p>
+              <p class="hint blackout">Wegen der unterversorgten Infrastruktur zählen Lebensstandard und Sicherheit derzeit nur zur Hälfte.</p>
             }
-            <p class="hint">Aus Lebensstandard × Sicherheit – steuert direkt, wie schnell die Bevölkerung wächst (100% = Referenzgeschwindigkeit). Niedriger Lebensstandard oder Sicherheit &lt; 40% bremsen zusätzlich die Loyalität.</p>
+            <p class="hint">Wie gut es den Menschen hier geht – gut versorgt und sicher, dann wächst die Kolonie zügig; fehlt es an Waren oder Schutz, kommt das Wachstum ins Stocken. Anhaltend schlechte Verhältnisse kosten außerdem Loyalität.</p>
           </div>
         </div>
       </div>
@@ -525,8 +535,8 @@
               <div class="order-row">
                 <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
                 <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
-                <span class="hint">{{ o.sellerId === playerId ? 'eigene Order' : o.sellerName }}</span>
-                @if (o.sellerId === playerId) {
+                <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }}</span>
+                @if (o.sellerId === playerId()) {
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
                 } @else {
                   <div class="buy-controls">
@@ -549,8 +559,8 @@
               <div class="order-row">
                 <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
                 <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
-                <span class="hint">{{ o.sellerId === playerId ? 'eigene Order' : o.sellerName }} · {{ depotColonyName(o.depotColonyId) }}</span>
-                @if (o.sellerId === playerId) {
+                <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }} · {{ depotColonyName(o.depotColonyId) }}</span>
+                @if (o.sellerId === playerId()) {
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
                 } @else {
                   <div class="buy-controls">

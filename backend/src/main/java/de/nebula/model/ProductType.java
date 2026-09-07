@@ -13,7 +13,14 @@ public class ProductType {
   /** Basis-Produktionszeit in Spielstunden für 1 Einheit. */
   public double baseProductionHours;
   /** Benötigte Arbeitskraft (Bevölkerung) pro paralleler Produktionseinheit. */
-  public double baseWorkforceRequired;
+  /**
+   * Arbeitsstunden, die EIN Stück dieses Erzeugnisses insgesamt an
+   * Arbeitskraft kostet (Umsetzungskonzept/19_...md). Zusammen mit der
+   * tatsächlichen Fertigungsdauer ergibt sich daraus, wie viele Arbeitskräfte
+   * die Fertigung je Stunde bindet – reicht die Bevölkerung dafür nicht,
+   * dauert es entsprechend länger.
+   */
+  public double workHoursPerUnit;
   public double massKg;
   public double volumeM3;
   /** Eleriumbedarf pro Charge in Gramm – reiner Datenwert, aktuell NICHT als Voraussetzung geprüft (siehe TS-Original). */

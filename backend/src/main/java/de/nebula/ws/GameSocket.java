@@ -144,6 +144,7 @@ public class GameSocket {
       case "populationWallet" -> GameQueries.findWallet(state, WalletOwnerType.Population, text(payload, "colonyId"));
       case "consumptionCoverage" -> ColonyCommands.consumptionCoverage(state, text(payload, "colonyId"));
       case "colonySpeedBreakdown" -> ColonyCommands.colonySpeedBreakdown(state, text(payload, "colonyId"));
+      case "populationTrend" -> de.nebula.state.PopulationHistory.trend(state, text(payload, "colonyId"));
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
@@ -521,6 +522,7 @@ public class GameSocket {
       state.battles.clear();
       state.blockades.clear();
       state.messages.clear();
+      state.populationHistory.clear();
       state.consumptionBudget.clear();
       state.lastProducedAt.clear();
     }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
@@ -16,8 +16,9 @@ import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 export class ColonyListComponent {
   protected readonly api = inject(GAME_API);
   protected readonly colonies = this.api.colonies();
-  protected readonly homeSystemId = this.api.player()?.homeSystemId ?? '';
-  protected readonly planetsInSystem = this.api.planetsInSystem(this.homeSystemId);
+  /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
+  protected readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
+  protected readonly planetsInSystem = computed(() => this.api.planetsInSystem(this.homeSystemId())());
 
   protected readonly busyPlanetId = signal<Id | null>(null);
   protected readonly error = signal<string | null>(null);

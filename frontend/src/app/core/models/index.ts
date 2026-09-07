@@ -5,6 +5,7 @@ export * from './building.model';
 export * from './planet.model';
 export * from './colony.model';
 export * from './colony-speed.model';
+export * from './population-trend.model';
 export * from './population.model';
 export * from './wallet.model';
 export * from './production.model';

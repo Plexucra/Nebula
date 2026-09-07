@@ -16,4 +16,8 @@ public class ChainPlanStep {
   public double quantityToProduce;
   /** Produktionszeit in Spielstunden für {@code quantityToProduce}, zu den Geschwindigkeitsfaktoren der Kolonie zum Berechnungszeitpunkt. */
   public double hours;
+  /** Arbeitskräfte, die dieser Schritt je Stunde bindet (Umsetzungskonzept/19_...md). */
+  public double workersBoundPerHour;
+  /** true = die Bevölkerung reicht dafür nicht aus, der Schritt läuft deshalb langsamer. */
+  public boolean workforceLimited;
 }

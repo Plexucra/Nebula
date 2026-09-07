@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NOTIFICATION_RETENTION_GAME_HOURS, gameHoursToGameDays, gameHoursToRealMinutes } from '../core/shared-constants';
@@ -27,8 +27,9 @@ export class AppShellComponent {
   protected readonly player = this.api.player;
   protected readonly wallet = this.api.wallet;
 
-  private readonly homeSystemId = this.api.player()?.homeSystemId ?? '';
-  protected readonly gateway = this.api.gateway(this.homeSystemId);
+  /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
+  private readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
+  protected readonly gateway = computed(() => this.api.gateway(this.homeSystemId())());
   protected readonly gatewayActive = () => this.gateway()?.state === 'Active';
 
   protected readonly notifications = this.api.notifications();

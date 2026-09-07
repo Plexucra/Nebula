@@ -73,7 +73,47 @@ public final class ChainPlanner {
       concFactor = Formulas.resourceConcentrationFactor(conc);
     }
     double blackoutFactor = PowerGrid.isBlackout(state, colonyId) ? Formulas.BLACKOUT_PRODUCTION_FACTOR : 1;
-    double speed = Formulas.workforceFactor(population) * Formulas.buildingLevelSpeedFactor(level)
+    // Alle Boni AUSSER Arbeitskraft – daraus ergibt sich, wie viele Arbeitskräfte
+    // die Fertigung je Stunde binden würde (Umsetzungskonzept/19_...md).
+    double speed = Formulas.buildingLevelSpeedFactor(level)
+        * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
+    double hoursWithBonuses = product.baseProductionHours / Math.max(speed, 0.05);
+    return Formulas.productionHoursWithWorkforce(hoursWithBonuses, product.workHoursPerUnit, population);
+  }
+
+  /** Dauer OHNE Arbeitskraft-Bremse – Bezugsgröße für die Transparenz-Anzeige. */
+  public static double computeProductionHoursWithoutWorkforce(GameState state, String colonyId, ProductType product, String facilityTypeId) {
+    int level = GameQueries.getBuildingLevel(state, colonyId, facilityTypeId);
+    boolean isSoldier = product.id.equals("p_soldier");
+    double spec = 0;
+    if (!isSoldier) {
+      for (Specialization s : state.specializations) {
+        if (s.colonyId.equals(colonyId) && s.productTypeId.equals(product.id)) {
+          spec = s.currentLevel;
+          break;
+        }
+      }
+    }
+    double concFactor = 1;
+    if (product.tier == 0 && !product.resourceProfile.isEmpty()) {
+      Colony colony = null;
+      for (Colony c : state.colonies) if (c.id.equals(colonyId)) colony = c;
+      Planet planet = null;
+      if (colony != null) for (Planet p : state.planets) if (p.id.equals(colony.planetId)) planet = p;
+      String resId = product.resourceProfile.get(0).resourceTypeId;
+      double conc = 50;
+      if (planet != null) {
+        for (PlanetResourceConcentration c : planet.resourceConcentration) {
+          if (c.resourceTypeId.equals(resId)) {
+            conc = c.concentration;
+            break;
+          }
+        }
+      }
+      concFactor = Formulas.resourceConcentrationFactor(conc);
+    }
+    double blackoutFactor = PowerGrid.isBlackout(state, colonyId) ? Formulas.BLACKOUT_PRODUCTION_FACTOR : 1;
+    double speed = Formulas.buildingLevelSpeedFactor(level)
         * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
     return product.baseProductionHours / Math.max(speed, 0.05);
   }
@@ -111,13 +151,17 @@ public final class ChainPlanner {
           totalDemand.merge(input.inputProductTypeId, input.quantity * toProduce, Double::sum);
         }
       }
-      double hours = toProduce > 0 ? toProduce * computeProductionHours(state, colonyId, product, facilityTypeId) : 0;
+      double hoursPerUnit = computeProductionHours(state, colonyId, product, facilityTypeId);
+      double hours = toProduce > 0 ? toProduce * hoursPerUnit : 0;
+      double unlimitedPerUnit = computeProductionHoursWithoutWorkforce(state, colonyId, product, facilityTypeId);
       ChainPlanStep step = new ChainPlanStep();
       step.productTypeId = pid;
       step.quantityNeeded = needed;
       step.quantityFromWarehouse = fromWarehouse;
       step.quantityToProduce = toProduce;
       step.hours = hours;
+      step.workersBoundPerHour = Formulas.workersBoundPerHour(unlimitedPerUnit, product.workHoursPerUnit);
+      step.workforceLimited = hoursPerUnit > unlimitedPerUnit * 1.001;
       rawSteps.add(step);
     }
 

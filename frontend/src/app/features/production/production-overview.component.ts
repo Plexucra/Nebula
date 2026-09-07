@@ -65,7 +65,8 @@ interface ModalRow {
 export class ProductionOverviewComponent {
   protected readonly api = inject(GAME_API);
   protected readonly colonies = this.api.colonies();
-  protected readonly productTypes = this.api.productTypes();
+  /** Katalog kommt asynchron – bei jedem Zugriff frisch lesen statt einmalig einzufrieren. */
+  protected get productTypes() { return this.api.productTypes(); }
 
   protected readonly tiers = [0, 1, 2, 3, 4, 5, 6];
 

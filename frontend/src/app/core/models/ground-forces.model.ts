@@ -16,7 +16,7 @@ export interface GroundUnitTypeDef {
    * Drohnenklasse, die gekontert wird (×2 Schaden), analog zu den
    * Schiffsklassen (Mechanik/05_..., §3). Kein eigener Angriffs-/
    * Verteidigungswert — militärischer Wert = Produktionsaufwand
-   * (ProductType.baseWorkforceRequired × baseProductionHours), siehe
+   * (ProductType.workHoursPerUnit × baseProductionHours), siehe
    * Mechanik/04_..., §2. `null` bei Soldaten, die laut Mechanik/05_...
    * §3 keine eigene unmittelbare Kampfwirkung besitzen.
    */

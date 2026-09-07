@@ -56,7 +56,7 @@ public final class BattleCommands {
 
   private static double shipMilitaryValue(String shipProductTypeId) {
     ProductType product = ProductCatalog.find(shipProductTypeId);
-    return Formulas.productionAspect(product.baseWorkforceRequired, product.baseProductionHours);
+    return Formulas.productionAspect(product.workHoursPerUnit, product.baseProductionHours);
   }
 
   /**

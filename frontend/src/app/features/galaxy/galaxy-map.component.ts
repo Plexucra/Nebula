@@ -1,5 +1,5 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, computed, inject, signal,
+  AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, computed, effect, inject, signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
@@ -46,8 +46,9 @@ export class GalaxyMapComponent implements AfterViewInit {
   @ViewChild('svgEl', { static: true }) private readonly svgRef!: ElementRef<SVGSVGElement>;
 
   protected readonly player = this.api.player;
-  private readonly homeSystemId = this.api.player()?.homeSystemId ?? '';
-  protected readonly homeSystem = this.api.system(this.homeSystemId);
+  /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
+  private readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
+  protected readonly homeSystem = computed(() => this.api.system(this.homeSystemId())());
 
   protected readonly systems = this.api.visibleSystems();
   protected readonly routes = this.api.galaxyRoutes();
@@ -57,7 +58,7 @@ export class GalaxyMapComponent implements AfterViewInit {
   protected readonly allFleets = this.api.allFleets();
 
   private readonly systemsById = computed(() => new Map(this.systems().map(s => [s.id, s])));
-  private readonly hopsFromHomeMap = computed(() => bfsHops(this.routes(), this.homeSystemId));
+  private readonly hopsFromHomeMap = computed(() => bfsHops(this.routes(), this.homeSystemId()));
 
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -132,6 +133,26 @@ export class GalaxyMapComponent implements AfterViewInit {
   protected readonly viewBox = signal<ViewBox>(this.initialViewBox());
   protected readonly showLabels = computed(() => this.viewBox().w < NAME_LABEL_ZOOM_THRESHOLD);
   protected readonly isDragging = signal(false);
+
+  /**
+   * Sobald der Nutzer den Ausschnitt selbst verschoben/gezoomt hat, wird nicht
+   * mehr automatisch nachzentriert – sonst würde ihm die Karte unter der Hand
+   * wegspringen.
+   */
+  private userAdjustedView = false;
+
+  /**
+   * Beim echten Backend ist `homeSystem()` im Konstruktor noch `undefined` (die
+   * Antwort kommt erst über die WebSocket-Verbindung), `initialViewBox()`
+   * zentriert dann notgedrungen auf die Galaxiemitte statt auf die Heimat.
+   * Dieser Effekt holt die Zentrierung nach, sobald das Heimatsystem eintrifft.
+   */
+  private readonly centerOnHomeOnce = effect(() => {
+    const home = this.homeSystem();
+    if (!home || this.userAdjustedView) return;
+    this.userAdjustedView = true; // genau einmal zentrieren, danach gehört der Ausschnitt dem Nutzer
+    this.centerOn(home);
+  });
 
   private initialViewBox(): ViewBox {
     const home = this.homeSystem();
@@ -211,6 +232,7 @@ export class GalaxyMapComponent implements AfterViewInit {
 
   protected onWheel(ev: WheelEvent): void {
     ev.preventDefault();
+    this.userAdjustedView = true;
     const factor = ev.deltaY > 0 ? WHEEL_ZOOM_STEP : 1 / WHEEL_ZOOM_STEP;
     this.zoomAtClientPoint(factor, ev.clientX, ev.clientY);
   }
@@ -225,6 +247,7 @@ export class GalaxyMapComponent implements AfterViewInit {
   }
 
   private panByPixels(dxPx: number, dyPx: number): void {
+    this.userAdjustedView = true;
     const rect = this.svgRef.nativeElement.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
     const box = this.pendingBox ?? this.viewBox();
@@ -277,6 +300,7 @@ export class GalaxyMapComponent implements AfterViewInit {
 
   /** Wählt `system` aus und zentriert die Karte darauf – für die "Zum System"-Buttons in der Flottenliste. */
   protected focusSystem(system: System): void {
+    this.userAdjustedView = true;
     this.selectedSystem.set(system);
     this.centerOn(system);
   }

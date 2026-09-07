@@ -17,7 +17,7 @@ export interface ShipTypeDef {
    * Mechanik/03_..., §2 und Mechanik/04_..., §4. Es gibt bewusst KEINE
    * eigenen Angriffs-/Hüllenwerte: Schaden und Haltbarkeit im Kampf
    * leiten sich ausschließlich aus dem Produktionsaufwand
-   * (ProductType.baseWorkforceRequired × baseProductionHours) ab,
+   * (ProductType.workHoursPerUnit × baseProductionHours) ab,
    * siehe Mechanik/04_..., §2-3.
    */
   countersClass: ShipClass | null;

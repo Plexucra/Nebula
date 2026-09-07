@@ -66,7 +66,7 @@ public final class ColonyCommands {
 
     ColonySpeedBreakdown result = new ColonySpeedBreakdown();
     result.population = population;
-    result.workforceFactor = Formulas.workforceFactor(population);
+    result.availableWorkers = population;
     result.industryLevel = industryLevel;
     result.buildingSpeedFactor = Formulas.buildingLevelSpeedFactor(industryLevel);
     result.blackout = PowerGrid.isBlackout(state, colonyId);

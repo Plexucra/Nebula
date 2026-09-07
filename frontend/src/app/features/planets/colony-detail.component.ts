@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { BuildingType, ChainPlan, Id, MaterialRequirement, PlanetType, Productio
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
+import { PopulationChartComponent } from '../../shared/population-chart.component';
 
 type Tab = 'uebersicht' | 'bebauung' | 'verteidigung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
@@ -16,7 +17,7 @@ const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true }
 @Component({
   selector: 'app-colony-detail',
   standalone: true,
-  imports: [RouterLink, DecimalPipe, FormsModule, ProductPickerDialogComponent],
+  imports: [RouterLink, DecimalPipe, FormsModule, ProductPickerDialogComponent, PopulationChartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './colony-detail.component.html',
   styleUrl: './colony-detail.component.scss',
@@ -52,8 +53,10 @@ export class ColonyDetailComponent {
    */
   protected readonly speedBreakdown = this.api.colonySpeedBreakdown(this.colonyId);
   protected readonly consumptionCoverage = this.api.consumptionCoverage(this.colonyId);
+  protected readonly populationTrend = this.api.populationTrend(this.colonyId);
 
-  protected readonly playerId = this.api.player()?.id ?? '';
+  /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
+  protected readonly playerId = computed(() => this.api.player()?.id ?? '');
   protected readonly allPlayers = this.api.players();
   protected readonly tab = signal<Tab>(this.initialTab());
   protected readonly busy = signal<string | null>(null);
@@ -63,7 +66,7 @@ export class ColonyDetailComponent {
 
   /** Nur die eigene Kolonie erlaubt Bau/Produktion/Truppen/Verwaltung – fremde Kolonien (siehe „System Handel") sind nur für Übersicht/Handel einsehbar. */
   protected isOwnColony(): boolean {
-    return this.colony()?.ownerId === this.playerId;
+    return this.colony()?.ownerId === this.playerId();
   }
 
   /** Fällt für Besitzer-only-Tabs auf „Übersicht" zurück, sobald die Kolonie nicht (mehr) der eigenen gehört. */
@@ -78,9 +81,10 @@ export class ColonyDetailComponent {
     return this.allPlayers().find(p => p.id === ownerId)?.name ?? 'Unbekannt';
   }
 
-  protected readonly buildingTypes = this.api.buildingTypes();
-  protected readonly productTypes = this.api.productTypes().filter(p => p.category !== 'Ship' && p.category !== 'GroundUnit');
-  protected readonly groundUnitTypes = this.api.productTypes().filter(p => p.category === 'GroundUnit');
+  /** Kataloge kommen asynchron nach dem Verbindungsaufbau – deshalb bei jedem Zugriff frisch lesen, nicht einmalig im Feld einfrieren. */
+  protected get buildingTypes() { return this.api.buildingTypes(); }
+  protected get productTypes() { return this.api.productTypes().filter(p => p.category !== 'Ship' && p.category !== 'GroundUnit'); }
+  protected get groundUnitTypes() { return this.api.productTypes().filter(p => p.category === 'GroundUnit'); }
 
   /** Nur Orders, die diese Kolonie selbst eingestellt hat – "Planetarer Handel", siehe Handel-Tab. */
   protected readonly planetOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId === this.colonyId);
@@ -225,11 +229,11 @@ export class ColonyDetailComponent {
    * für JEDEN Produktionsschritt gleichermaßen; Spezialisierung und
    * Fördergüte sind PRODUKTSPEZIFISCH, siehe `specLevel`/`concentrationFactorFor`.
    */
-  protected colonySpeedFactors(): { population: number; workforceFactor: number; industryLevel: number; buildingSpeedFactor: number; blackout: boolean } {
+  protected colonySpeedFactors(): { population: number; availableWorkers: number; industryLevel: number; buildingSpeedFactor: number; blackout: boolean } {
     const b = this.speedBreakdown();
     return {
       population: b?.population ?? 0,
-      workforceFactor: b?.workforceFactor ?? 0,
+      availableWorkers: b?.availableWorkers ?? 0,
       industryLevel: b?.industryLevel ?? 0,
       buildingSpeedFactor: b?.buildingSpeedFactor ?? 0,
       blackout: b?.blackout ?? false,

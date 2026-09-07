@@ -4,7 +4,7 @@ import { webSocketBackendUrl } from './backend-config';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
-  PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
@@ -293,6 +293,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   // ==========================================================================
   // Bevölkerung / Geld
   // ==========================================================================
+
+  populationTrend(colonyId: Id): Signal<PopulationTrend | null> {
+    return this.poll('populationTrend', () => ({ colonyId }), null);
+  }
 
   population(colonyId: Id): Signal<Population | undefined> {
     return this.poll('population', () => ({ id: colonyId }), undefined);

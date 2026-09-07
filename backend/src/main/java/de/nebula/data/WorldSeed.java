@@ -1,6 +1,7 @@
 package de.nebula.data;
 
 import de.nebula.engine.Clock;
+import de.nebula.engine.Formulas;
 import de.nebula.engine.Rng;
 import de.nebula.model.Building;
 import de.nebula.model.ChainPlan;
@@ -311,11 +312,11 @@ public final class WorldSeed {
   }
 
   /**
-   * Kleine Boden-Garnison mit Soldaten und je einem Bestand aller drei
-   * Waffenträgerklassen (Mechanik/05_..., §3) – deckt ebenfalls den vollen
-   * Konterkreis ab. 3 aktive Soldaten kommandieren bei {@code DRONES_PER_SOLDIER = 5}
-   * genau 15 Drohnen; die gesäten 15 Drohnen (5 je Klasse) sind damit von
-   * Anfang an vollständig aktiv/kampffähig.
+   * Start-Garnison (Umsetzungskonzept/19_...md): 2 Soldaten und 10 leichte
+   * Drohnen – exakt die Kommandokapazität der beiden Soldaten
+   * ({@code DRONES_PER_SOLDIER = 5}), alle zehn Drohnen sind also von Anfang
+   * an geführt und einsatzbereit. Bewusst nur eine Drohnenklasse: der volle
+   * Konterkreis ist Sache des Spielers, nicht der Startausstattung.
    */
   private static GroundForceGroup starterGroundForceGroup(String ownerId, String colonyId, IdGenerator ids) {
     GroundForceGroup g = new GroundForceGroup();
@@ -323,10 +324,8 @@ public final class WorldSeed {
     g.ownerId = ownerId;
     g.colonyId = colonyId;
     g.units = new ArrayList<>();
-    g.units.add(stack("p_soldier", 3, 2));
-    g.units.add(stack("p_drone_light", 5, 0));
-    g.units.add(stack("p_drone_medium", 5, 0));
-    g.units.add(stack("p_drone_heavy", 5, 0));
+    g.units.add(stack("p_soldier", 2, 0));
+    g.units.add(stack("p_drone_light", 10, 0));
     return g;
   }
 
@@ -450,7 +449,7 @@ public final class WorldSeed {
     PlanetStats planetStats = new PlanetStats();
     planetStats.colonyId = colony.id;
     planetStats.infrastructurePct = 110;
-    planetStats.securityPct = 100;
+    planetStats.securityPct = Formulas.MAX_SECURITY_PCT; // es gibt keine absolute Sicherheit (Umsetzungskonzept/19_...md)
     planetStats.standardOfLivingPct = 100;
     planetStats.loyaltyPct = 78;
     planetStats.lastRecalculatedAt = t;
