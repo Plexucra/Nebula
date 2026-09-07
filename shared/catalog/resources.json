@@ -55,7 +55,7 @@
   "description" : "Uran-, Thorium- und andere radioaktive Minerale für Strahlenquellen, Spezialenergie und Sensorik."
 }, {
   "id" : "res_eis",
-  "name" : "Wassereis",
+  "name" : "Wasser",
   "category" : "Fluide",
   "description" : "Eis, Grundwasser und wasserhaltige Minerale für Trinkwasser, Sauerstoff, Chemie und Reaktionsmasse."
 }, {

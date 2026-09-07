@@ -13,7 +13,70 @@
 .panel.locked { opacity: 0.85; }
 .panel:not(:first-child) { margin-top: 16px; }
 
+.hub-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+}
+.hub-picker select { min-width: 160px; }
+
+.buy-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input { width: 70px; }
+}
+
 .small-tag { padding: 1px 6px; font-size: 9.5px; margin-left: 6px; }
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+
+  select { flex: 1 1 160px; }
+  input { flex: 0 0 100px; }
+}
+
+.product-select-btn {
+  flex: 1 1 220px;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  color: var(--text-hi);
+  font-size: 12.5px;
+
+  &:hover { border-color: var(--line-accent); }
+}
+
+.sell-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  input { width: 70px; }
+}
+
+.depot-list { margin-bottom: 16px; }
+
+.order-book {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.order-book-side .order-row { grid-template-columns: auto auto 1fr auto; }
+@media (max-width: 720px) {
+  .order-book { grid-template-columns: 1fr; }
+}
 
 /* Mobil (Umsetzungskonzept/16_...md): die fünfspaltige Order-Zeile
    (Produkt | Menge | Preis | Verkäufer | Aktion) passt bei 390px nicht und

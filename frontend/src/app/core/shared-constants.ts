@@ -13,6 +13,9 @@ import sharedConstants from '@shared/game-constants.json';
 export const REAL_MS_PER_GAME_HOUR: number = sharedConstants.realMsPerGameHour;
 export const NOTIFICATION_RETENTION_GAME_HOURS: number = sharedConstants.notificationRetentionGameHours;
 export const MESSAGE_RETENTION_GAME_HOURS: number = sharedConstants.messageRetentionGameHours;
+/** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) – für Hinweistexte. */
+export const PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS: number = sharedConstants.peaceTreatyTerminationNoticeGameHours;
+export const TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS: number = sharedConstants.tradeAgreementTerminationNoticeGameHours;
 /** Lebensstandard-Totband der Bevölkerungsentwicklung (Umsetzungskonzept/17_...md, Teil C) – für Hinweistexte. */
 export const LIVING_STANDARD_SHRINK_BELOW_PCT: number = sharedConstants.livingStandardShrinkBelowPct;
 export const LIVING_STANDARD_GROWTH_FROM_PCT: number = sharedConstants.livingStandardGrowthFromPct;

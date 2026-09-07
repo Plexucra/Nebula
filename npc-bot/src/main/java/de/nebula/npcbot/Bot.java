@@ -137,7 +137,7 @@ public class Bot {
 
   private void registerAndBootstrap() {
     JsonNode player = connection.call("registerPlayer", Map.of(
-        "commanderName", botName, "homeworldName", botName + "-Heimat"));
+        "commanderName", botName, "homeworldName", botName + "-Heimat", "role", "Npc", "campId", camp));
     playerId = text(player, "id");
     homeColonyId = text(player, "homeworldColonyId");
     homeSystemId = text(player, "homeSystemId");

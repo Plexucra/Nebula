@@ -166,8 +166,51 @@ public final class ColonyCommands {
     return state.planets.stream().filter(p -> p.id.equals(id)).findFirst().orElse(null);
   }
 
-  public static List<Planet> planetsInSystem(GameState state, String systemId) {
-    return state.planets.stream().filter(p -> p.systemId.equals(systemId)).toList();
+  /**
+   * Ob {@code playerId} die Rohstoffkonzentration von {@code planet} kennt: entweder durch
+   * explizites Erforschen des Systems ({@code GatewayCommands.hasExploredSystem}, siehe
+   * {@code FleetCommands.exploreSystem}) oder implizit, weil dort bereits eine eigene Kolonie
+   * besteht (wer kolonisiert, kennt zwangsläufig die Fördergüte).
+   */
+  private static boolean knowsResourceConcentration(GameState state, Planet planet, String playerId) {
+    if (playerId == null) return false;
+    if (GatewayCommands.hasExploredSystem(state, playerId, planet.systemId)) return true;
+    return state.colonies.stream().anyMatch(c -> c.planetId.equals(planet.id) && c.ownerId.equals(playerId));
+  }
+
+  /** Kopie von {@code planet} ohne Rohstoffkonzentration – für Kommandanten, die das System noch nicht erforscht haben. */
+  private static Planet withoutResourceConcentration(Planet planet) {
+    Planet copy = new Planet();
+    copy.id = planet.id;
+    copy.systemId = planet.systemId;
+    copy.name = planet.name;
+    copy.size = planet.size;
+    copy.type = planet.type;
+    copy.resourceConcentration = List.of();
+    copy.orbitIndex = planet.orbitIndex;
+    copy.usable = planet.usable;
+    return copy;
+  }
+
+  /**
+   * Client-facing Fassung EINES Planeten: blendet die Rohstoffkonzentration aus, solange
+   * {@code playerId} das System noch nicht erforscht hat (siehe {@link #knowsResourceConcentration}).
+   * Interne Geschäftslogik (Produktion, Kolonisierung, ...) liest weiterhin direkt
+   * {@link #planet(GameState, String)} bzw. {@code state.planets} – die reale Fördergüte bleibt
+   * davon unberührt, nur ihre Sichtbarkeit für die Oberfläche ist gegated.
+   */
+  public static Planet planetForPlayer(GameState state, String id, String playerId) {
+    Planet planet = planet(state, id);
+    if (planet == null) return null;
+    return knowsResourceConcentration(state, planet, playerId) ? planet : withoutResourceConcentration(planet);
+  }
+
+  /** Client-facing Fassung ALLER Planeten eines Systems, siehe {@link #planetForPlayer}. */
+  public static List<Planet> planetsInSystemForPlayer(GameState state, String systemId, String playerId) {
+    return state.planets.stream()
+        .filter(p -> p.systemId.equals(systemId))
+        .map(p -> knowsResourceConcentration(state, p, playerId) ? p : withoutResourceConcentration(p))
+        .toList();
   }
 
   private static final double COLONIZE_COST = 800;
@@ -176,6 +219,7 @@ public final class ColonyCommands {
     var player = GameQueries.requirePlayer(state, playerId);
     Planet planet = planet(state, planetId);
     if (planet == null) throw new CommandException("Unbekannter Planet.");
+    if (!planet.usable) throw new CommandException("Dieser Himmelskörper ist nicht besiedelbar.");
     boolean alreadyOwned = state.colonies.stream().anyMatch(c -> c.planetId.equals(planetId) && c.ownerId.equals(player.id));
     if (alreadyOwned) throw new CommandException("Auf diesem Planeten besteht bereits eine eigene Kolonie.");
 

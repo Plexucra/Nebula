@@ -22,6 +22,20 @@
           } @else {
             <button class="ghost small" (click)="offerPeace(p.id)" [disabled]="busy() === ('peace:' + p.id)">Frieden anbieten</button>
           }
+
+          @for (type of treatyTypes; track type) {
+            @let treaty = treatyWith(p.id, type);
+            @if (treaty && !treaty.terminationEffectiveAt) {
+              <span class="tag good small-tag">{{ treatyLabel(type) }}</span>
+              <button class="ghost small danger" (click)="terminateTreaty(p.id, type)" [disabled]="busy() === ('terminatetreaty:' + type + ':' + p.id)">Kündigen</button>
+            } @else if (treaty && treaty.terminationEffectiveAt) {
+              <span class="tag warn small-tag">{{ treatyLabel(type) }} gekündigt — noch {{ countdown(treaty.terminationEffectiveAt - clock.now()) }}</span>
+            } @else if (hasOutgoingTreatyOfferTo(p.id, type)) {
+              <span class="hint small-tag">{{ treatyLabel(type) }}-Angebot wartet auf Antwort</span>
+            } @else {
+              <button class="ghost small" (click)="offerTreaty(p.id, type)" [disabled]="statusWith(p.id) === 'War' || busy() === ('offertreaty:' + type + ':' + p.id)">{{ treatyLabel(type) }} anbieten</button>
+            }
+          }
         </div>
       } @empty { <p class="empty-hint">Noch keine anderen Kommandanten in der Galaxie.</p> }
     </div>
@@ -43,6 +57,27 @@
       <span class="eyebrow">Ausgehend</span>
       @for (o of outgoingPeaceOffers(); track o.id) {
         <div class="offer-row"><span>An {{ playerName(o.toPlayerId) }} — wartet auf Antwort</span></div>
+      } @empty { <p class="empty-hint">Keine ausgehenden Angebote.</p> }
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Vertragsangebote</h2></div>
+    <div class="panel-body offer-list">
+      <span class="hint">Friedensvertrag: schließt einen Angriff aus, Kündigungsfrist {{ peaceTreatyNoticeDays }} Spieltage. Handelsvertrag: erlaubt planetaren Handel, Kündigungsfrist {{ tradeAgreementNoticeDays }} Spieltage. Handel an der Handelsgilde-Station ist davon unabhängig.</span>
+      <span class="eyebrow">Eingehend</span>
+      @for (o of incomingTreatyOffers(); track o.id) {
+        <div class="offer-row">
+          <span>{{ playerName(o.fromPlayerId) }} bietet einen {{ treatyLabel(o.type) }} an</span>
+          <button class="primary small" (click)="respondTreaty(o.id, true)" [disabled]="busy() === ('respondtreaty:' + o.id)">Annehmen</button>
+          <button class="ghost small" (click)="respondTreaty(o.id, false)" [disabled]="busy() === ('respondtreaty:' + o.id)">Ablehnen</button>
+        </div>
+      } @empty { <p class="empty-hint">Keine eingehenden Angebote.</p> }
+
+      <div class="divider"></div>
+      <span class="eyebrow">Ausgehend</span>
+      @for (o of outgoingTreatyOffers(); track o.id) {
+        <div class="offer-row"><span>{{ treatyLabel(o.type) }} an {{ playerName(o.toPlayerId) }} — wartet auf Antwort</span></div>
       } @empty { <p class="empty-hint">Keine ausgehenden Angebote.</p> }
     </div>
   </div>

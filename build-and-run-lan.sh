@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Baut das Angular-Frontend als Production-Bundle, bettet es in das Quarkus-
-# Backend ein und startet den Server auf allen Netzwerkschnittstellen
-# (Umsetzungskonzept/14_...md, Teil 3 – "LAN-Betrieb"). Damit ist die Anwendung
-# unter http://<LAN-IP-dieses-Rechners>:8080/ von jedem Gerät im selben WLAN
+# Backend ein, startet den Server auf allen Netzwerkschnittstellen und
+# anschließend die komplette NPC-Bot-Armee (20 Prozesse, siehe
+# npc-bot/run-army.sh) gegen diesen Server (Umsetzungskonzept/14_...md,
+# Teil 2+3 – "NPC-Bot-Armee" und "LAN-Betrieb"). Damit ist die Anwendung unter
+# http://<LAN-IP-dieses-Rechners>:8080/ von jedem Gerät im selben WLAN
 # erreichbar (z. B. einem Smartphone) – NICHT für Internet-Veröffentlichung
 # gedacht. Der normale lokale Entwicklungsablauf (separates `ng serve` auf
 # 4200 + `quarkus:dev` auf 8080) bleibt davon unberührt und funktioniert
@@ -12,7 +14,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 BACKEND_DIR="$SCRIPT_DIR/backend"
+NPC_BOT_DIR="$SCRIPT_DIR/npc-bot"
 STATIC_TARGET="$BACKEND_DIR/src/main/resources/META-INF/resources"
+RUN_JAR="$BACKEND_DIR/target/quarkus-app/quarkus-run.jar"
+NPC_JAR="$NPC_BOT_DIR/target/npc-bot.jar"
+
+# Läuft bereits ein Server aus einem früheren Aufruf dieses Skripts? Der neue
+# Build würde sich sonst mit dem alten Prozess den Port 8080 teilen wollen.
+# Gleiches Matching-Muster wie in stop-lan.sh.
+EXISTING_PIDS="$(pgrep -f "java -jar $RUN_JAR" || true)"
+if [ -n "$EXISTING_PIDS" ]; then
+  echo "Fehler: Es läuft bereits ein Server aus diesem Checkout (PID(s): $EXISTING_PIDS)." >&2
+  echo "        Erst beenden mit: ./stop-lan.sh" >&2
+  exit 1
+fi
+if [ -f "$NPC_BOT_DIR/army.pids" ] && [ -s "$NPC_BOT_DIR/army.pids" ]; then
+  echo "Fehler: Es sieht so aus, als liefe bereits eine Bot-Armee aus diesem Checkout." >&2
+  echo "        Erst beenden mit: ./stop-lan.sh" >&2
+  exit 1
+fi
 
 echo "==> Baue Angular-Frontend (Production) ..."
 (cd "$FRONTEND_DIR" && npx ng build --configuration production)
@@ -31,9 +51,16 @@ cp -r "$BROWSER_DIST"/. "$STATIC_TARGET"/
 echo "==> Baue und paketiere das Backend (inkl. eingebettetem Frontend) ..."
 (cd "$BACKEND_DIR" && ./mvnw -B -ntp -DskipTests clean package)
 
-RUN_JAR="$BACKEND_DIR/target/quarkus-app/quarkus-run.jar"
 if [ ! -f "$RUN_JAR" ]; then
   echo "Fehler: $RUN_JAR nicht gefunden – Quarkus-Package-Layout hat sich vermutlich geändert." >&2
+  exit 1
+fi
+
+echo "==> Baue und paketiere den NPC-Bot (npc-bot/run-army.sh braucht $NPC_JAR) ..."
+(cd "$NPC_BOT_DIR" && mvn -B -ntp -q -DskipTests clean package)
+
+if [ ! -f "$NPC_JAR" ]; then
+  echo "Fehler: $NPC_JAR nicht gefunden – npc-bot-Package-Layout hat sich vermutlich geändert." >&2
   exit 1
 fi
 
@@ -45,7 +72,48 @@ if [ -n "$LAN_IP" ]; then
 else
   echo "    Konnte die LAN-IP nicht automatisch ermitteln – mit 'hostname -I' oder 'ip a' selbst nachsehen."
 fi
-echo "    Zum Beenden: Strg+C"
+echo "    Zum Beenden: Strg+C (in diesem Terminal) oder ./stop-lan.sh (von woanders)"
 echo ""
 
-exec java -jar "$RUN_JAR"
+# Läuft NICHT mehr per `exec` im Vordergrund: die 20 Bot-Prozesse (siehe unten)
+# müssen NACH einem erfolgreichen Serverstart angestoßen werden, brauchen also
+# ein Skript, das danach noch weiterläuft. `trap` sorgt dafür, dass sowohl
+# Server als auch Bot-Armee bei Strg+C (SIGINT) oder SIGTERM sauber beendet
+# werden – exakt das, was bisher `exec` + Strg+C implizit erledigte.
+java -jar "$RUN_JAR" &
+SERVER_PID=$!
+
+cleanup() {
+  echo ""
+  echo "==> Beende Bot-Armee und Server ..."
+  if [ -f "$NPC_BOT_DIR/army.pids" ]; then
+    "$NPC_BOT_DIR/stop-army.sh" || true
+  fi
+  kill "$SERVER_PID" 2>/dev/null || true
+  wait "$SERVER_PID" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+echo "==> Warte auf Serverstart, bevor die Bot-Armee losgeschickt wird ..."
+SERVER_READY=0
+for _ in $(seq 1 60); do
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "Fehler: Server-Prozess ist während des Starts beendet worden." >&2
+    exit 1
+  fi
+  if curl -sf -o /dev/null "http://localhost:8080/"; then
+    SERVER_READY=1
+    break
+  fi
+  sleep 1
+done
+
+if [ "$SERVER_READY" -ne 1 ]; then
+  echo "Fehler: Server antwortet nach 60s nicht auf http://localhost:8080/ – Bot-Armee wird nicht gestartet." >&2
+  exit 1
+fi
+
+echo "==> Server läuft – starte Bot-Armee (20 Prozesse) ..."
+"$NPC_BOT_DIR/run-army.sh" "ws://localhost:8080/game"
+
+wait "$SERVER_PID"

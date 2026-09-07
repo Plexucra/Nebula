@@ -2,6 +2,7 @@ package de.nebula.data;
 
 import de.nebula.engine.Clock;
 import de.nebula.engine.Formulas;
+import de.nebula.engine.GameConstants;
 import de.nebula.engine.Rng;
 import de.nebula.model.Building;
 import de.nebula.model.ChainPlan;
@@ -20,6 +21,7 @@ import de.nebula.model.PlanetStats;
 import de.nebula.model.PlanetSize;
 import de.nebula.model.PlanetType;
 import de.nebula.model.Player;
+import de.nebula.model.PlayerRole;
 import de.nebula.model.Population;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.ProductionQueueEntry;
@@ -33,6 +35,7 @@ import de.nebula.model.WarehouseEntry;
 import de.nebula.state.IdGenerator;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,26 +60,36 @@ public final class WorldSeed {
    * Auto-Relist-Verkaufsorder am eigenen Depot anbietet – siehe
    * {@link #starterSellOrders} und Umsetzungskonzept/15_...md, Auftrag 1.
    *
-   * <p>Bewusst NUR die beiden billigen Tier-2-Güter aus
-   * {@code GameConstants.CONSUMER_GOODS_ORDER}: das dritte
-   * ({@code p_unterhaltungselektronik}) ist Tier 5 mit tiefer Vorkette
-   * (Steuerchip/Kommchip/Leiterbündel/Polymergrundstoff …) und würde die
-   * SEQUENTIELLE Produktionswarteschlange der Kolonie über lange Zeit
-   * blockieren und damit ausgerechnet die Nahrungsproduktion aushungern.
-   * Diesen Zweig baut der Kommandant selbst auf, sobald seine Industrie
-   * es hergibt.</p>
+   * <p>Bewusst NUR Grundnahrung (Umsetzungskonzept/20_...md): Grundmedizin
+   * und Unterhaltungselektronik lässt das Spiel jetzt komplett dem
+   * Kommandanten. Zwei mitproduzierte Güter füllten die SEQUENTIELLE
+   * Produktionswarteschlange der Kolonie dauerhaft, sodass nie Freiraum
+   * blieb, um für Grundnahrung eigene Spezialisierungsstufen aufzubauen –
+   * genau das soll die Startphase jetzt ermöglichen.</p>
    */
-  private static final List<String> STARTER_CONSUMER_GOODS = List.of("p_grundnahrung", "p_grundmedizin");
+  private static final List<String> STARTER_CONSUMER_GOODS = List.of("p_grundnahrung");
   private static final double STARTER_CONSUMER_GOODS_QUANTITY = 5;
   /**
+   * Anzahl Startaufträge, auf die {@link #STARTER_CONSUMER_GOODS_QUANTITY}
+   * je Startkonsumgut aufgeteilt wird (Umsetzungskonzept/20_...md): zwei
+   * Aufträge zu je der halben Menge statt einem großen – der
+   * Gesamtdurchsatz der sequentiellen Warteschlange bleibt gleich, aber die
+   * erste Charge liegt bereits nach der halben Zeit im Lager, statt dass der
+   * Spieler auf den kompletten Auftrag warten muss.
+   */
+  private static final int STARTER_CONSUMER_GOODS_ORDER_SPLIT = 2;
+  /**
    * Stabilisiertes Elerium je Warteschlangen-Umlauf. Seit dem Minimalstart
-   * (Umsetzungskonzept/17_...md) dauert ein Umlauf der Startaufträge bei
+   * (Umsetzungskonzept/17_...md) dauerte ein Umlauf der Startaufträge bei
    * Industriekomplex 1 rund 134 Spielstunden (Grundnahrung 55 h + Grundmedizin
    * 53 h + 3 × 9 h Elerium); Infrastruktur 2 verbraucht in dieser Zeit
-   * 0,0119 × 134 ≈ 1,6 Stück. Mit nur 1 Stück je Umlauf (früherer Wert) lief
-   * die 25er-Reserve in ≈ 5 Realstunden leer, danach Blackout-Todesspirale
-   * (Produktion ×0,1 kann kein Elerium mehr nachliefern). 3 Stück je Umlauf
-   * decken den Bedarf bis Infrastruktur 3 (0,0198/h ≈ 2,7 je Umlauf) mit Puffer.
+   * 0,0119 × 134 ≈ 1,6 Stück. Seit Umsetzungskonzept/20_...md entfällt der
+   * Grundmedizin-Block, ein Umlauf ist also kürzer und der bisherige Puffer
+   * reicht mit Reserve weiter: mit nur 1 Stück je Umlauf (früherer Wert vor
+   * Konzept 17) lief die 25er-Reserve in ≈ 5 Realstunden leer, danach
+   * Blackout-Todesspirale (Produktion ×0,1 kann kein Elerium mehr
+   * nachliefern). 3 Stück je Umlauf decken den Bedarf bis Infrastruktur 3
+   * (0,0198/h ≈ 2,7 je Umlauf) mit Puffer.
    */
   private static final double STARTER_ELERIUM_QUANTITY = 3;
 
@@ -103,29 +116,67 @@ public final class WorldSeed {
    * zwangsläufig das Verarmen der anderen.
    *
    * <p>Bilanz je Tick ({@code TICK_GAME_HOURS} = 0,4): Einnahme =
-   * {@code Bevölkerung × (0,00008 + 0,00004) × Preis} (nur Grundnahrung und
-   * Grundmedizin werden geliefert), Abfluss = Löhne
-   * {@code Bevölkerung × 0,008} + Gebäudeunterhalt (Wohnkomplex 1,5 +
-   * Infrastruktur 2×1,5 + Industrie 3,0 = 7,5/Spielstunde ⇒ 3,0) +
-   * Flottenunterhalt (0,2 je Schiff an der Kolonie). Gleichgewichtspreis
-   * {@code P* = (0,008·Bev + 3,0 + 0,2·Schiffe) / (0,00012·Bev)}: bei der
+   * {@code Bevölkerung × 0,00008 × Preis} (seit Umsetzungskonzept/20_...md
+   * wird NUR NOCH Grundnahrung geliefert, Grundmedizin baut der Spieler
+   * selbst auf), Abfluss = Löhne {@code Bevölkerung × 0,008} +
+   * Gebäudeunterhalt (Wohnkomplex 1,5 + Infrastruktur 2×1,5 + Industrie
+   * 3,0 = 7,5/Spielstunde ⇒ 3,0) + Flottenunterhalt (0,2 je Schiff an der
+   * Kolonie). Gleichgewichtspreis
+   * {@code P* = (0,008·Bev + 3,0 + 0,2·Schiffe) / (0,00008·Bev)}: bei der
    * eingeschwungenen Bevölkerung (Wohnkomplex 1 ⇒ 200 Einwohner) und der
-   * Startflotte (13 Schiffe) sind das <b>300 Credits/Stück</b>.</p>
+   * Startflotte (13 Schiffe) sind das <b>450 Credits/Stück</b> (vor Konzept
+   * 20, mit zusätzlichem Grundmedizin-Erlös: 300).</p>
    *
    * <p>Während der Aufbauphase (120 → 200 Einwohner) liegt der
-   * Gleichgewichtspreis höher (456 bei 120), die Kolonie macht dort also ein
-   * kleines, sich selbst korrigierendes Minus von ≈ 600 Credits – gedeckt aus
-   * dem Startguthaben und dem gleichzeitig geschöpften Wachstumsgeld
-   * (80 × 8 = 640 Cr). Verworfene Werte: 20 (Spieler-Wallet nach ≈ 20
-   * Realminuten leer) und 500 (Spieler +3,1/Tick, dafür Bevölkerungs-Wallet
-   * 1865 → 263 in 10 Minuten – dieselbe Krankheit mit vertauschten Rollen).</p>
+   * Gleichgewichtspreis höher, die Kolonie macht dort also ein kleines,
+   * sich selbst korrigierendes Minus – gedeckt aus dem Startguthaben und dem
+   * gleichzeitig geschöpften Wachstumsgeld (80 × 8 = 640 Cr).</p>
+   *
+   * <p><b>Bekannte Folgewirkung von Konzept 20:</b> {@code EconomyTick.
+   * runConsumption} gewichtet Grundnahrung doppelt so hoch wie die übrigen
+   * Konsumgüter bei der Lebensstandard-Berechnung. Ohne Grundmedizin-
+   * Versorgung startet der Lebensstandard einer frischen Kolonie deshalb bei
+   * rund 50 % statt vorher 75 % – gewollt, das ist der Anreiz, die
+   * Grundmedizin-Kette selbst aufzubauen.</p>
    */
-  private static final double STARTER_SELL_ORDER_PRICE = 300;
+  private static final double STARTER_SELL_ORDER_PRICE = 450;
 
   private static final double SEALED_ELERIUM_RESERVE_HOME = 25;
 
+  /**
+   * Start-Vorrat an Eleriumkapseln ({@code GameConstants.JUMP_FUEL_PRODUCT_ID}), die jeder
+   * Sprung einer Flotte verbraucht (siehe {@code FleetCommands.moveFleet}). Zehn Kapseln
+   * reichen für rund 1000 Schiff-Sprünge (10 / 0,01) – ein neuer Kommandant mit wenigen
+   * Schiffen kommt damit lange ohne eigene Kapselproduktion aus, während eine große Flotte
+   * aus vielen Frachtern den Verbrauch schnell spürt.
+   */
+  private static final double STARTER_JUMP_FUEL_QUANTITY = 10;
+
   private static final List<String> PLANET_NAMES_HOME =
       List.of("Aurelia Prime", "Kessar", "Vantis", "Thal Minor", "Rho Cindra");
+
+  /** Bahn-Suffixe für die Himmelskörper eines fremden Systems, siehe {@link #buildForeignSystemPlanets}. */
+  private static final List<String> ORBIT_NUMERALS =
+      List.of("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII");
+
+  /**
+   * Anzahl besiedelbarer Himmelskörper je System (Nutzervorgabe: "alles über 1,5 G wäre
+   * unrealistisch" – mehr als eine Handvoll Planeten/Monde mit passender Masse pro System
+   * gibt es deshalb nicht). Das Heimatsystem hat immer genau {@link #PLANET_NAMES_HOME}.size()
+   * besiedelbare Himmelskörper, fremde Systeme eine zufällige Anzahl in diesem Bereich.
+   */
+  private static final int USABLE_BODIES_MIN = 3;
+  private static final int USABLE_BODIES_MAX = 5;
+  /** Anzahl NICHT besiedelbarer Himmelskörper je System (ungünstige Masse, Gasriesen, …), zusätzlich zu den besiedelbaren. */
+  private static final int UNUSABLE_BODIES_MIN = 4;
+  private static final int UNUSABLE_BODIES_MAX = 6;
+  /**
+   * Wahrscheinlichkeit, dass EIN besiedelbarer Himmelskörper eines Systems mit mindestens
+   * einem Gasriesen/Eisriesen unter seinen unbesiedelbaren Körpern stattdessen ein
+   * {@link PlanetType#Gasriesenmond} wird – ein Mond, der einen Teil der Fluide seines
+   * Gasriesen mitnutzbar macht (Nutzervorgabe).
+   */
+  private static final double GAS_GIANT_MOON_CHANCE = 0.5;
 
   private static final int GALAXY_SYSTEM_COUNT = 200;
 
@@ -150,19 +201,31 @@ public final class WorldSeed {
   private static final List<PlanetSize> PLANET_SIZES =
       List.of(PlanetSize.Klein, PlanetSize.Mittel, PlanetSize.Groß, PlanetSize.Riesig);
 
-  /** Heimatplanet-Mindestfördergüten (Nebula_Planetentypen_..., §8). */
-  private static final Map<String, Double> HOMEWORLD_MINIMUMS = Map.ofEntries(
-      Map.entry("res_eis", 80.0), Map.entry("res_atmosphaere", 80.0), Map.entry("res_salz", 60.0),
-      Map.entry("res_kohlenstoff", 50.0), Map.entry("res_silikat", 45.0), Map.entry("res_leichtmetall", 30.0),
-      Map.entry("res_kohlenwasserstoff", 30.0), Map.entry("res_ferrometall", 25.0), Map.entry("res_leitmetall", 15.0),
-      Map.entry("res_technometall", 12.0), Map.entry("res_elerium", 15.0));
+  /**
+   * Rohstoffe der Nahrungskette (Grundnahrung/Standardnahrung, siehe {@code products.json}),
+   * die auf JEDEM Heimatplaneten zwischen {@link #HOMEWORLD_GOOD_MIN} und
+   * {@link #HOMEWORLD_GOOD_MAX} Prozent liegen (Nutzervorgabe) – ein neuer Kommandant kann
+   * seine Bevölkerung damit unabhängig vom gewürfelten Systemcluster immer selbst ernähren.
+   */
+  private static final List<String> HOMEWORLD_FOOD_RESOURCES =
+      List.of("res_eis", "res_atmosphaere", "res_salz", "res_kohlenstoff");
+  /** Eleriumspuren liegen wie die Nahrungsrohstoffe immer im "guten" Bereich (Nutzervorgabe). */
+  private static final String HOMEWORLD_ELERIUM_RESOURCE = "res_elerium";
+  private static final double HOMEWORLD_GOOD_MIN = 50.0;
+  private static final double HOMEWORLD_GOOD_MAX = 60.0;
+  /** Bereich für alle übrigen Heimatplanet-Rohstoffe außer der einen Zufalls-Ausnahme, siehe {@link #applyHomeworldProfile}. */
+  private static final double HOMEWORLD_POOR_MIN = 1.0;
+  private static final double HOMEWORLD_POOR_MAX = 9.0;
 
   private static List<ProductionQueueEntry> starterProductionQueue(String colonyId, IdGenerator ids) {
     record Entry(String productTypeId, double quantity) {
     }
     List<Entry> entries = new ArrayList<>();
     for (String productTypeId : STARTER_CONSUMER_GOODS) {
-      entries.add(new Entry(productTypeId, STARTER_CONSUMER_GOODS_QUANTITY));
+      double perOrder = STARTER_CONSUMER_GOODS_QUANTITY / STARTER_CONSUMER_GOODS_ORDER_SPLIT;
+      for (int i = 0; i < STARTER_CONSUMER_GOODS_ORDER_SPLIT; i++) {
+        entries.add(new Entry(productTypeId, perOrder));
+      }
     }
     entries.add(new Entry("p_elerium_stabil", STARTER_ELERIUM_QUANTITY));
 
@@ -189,6 +252,14 @@ public final class WorldSeed {
     WarehouseEntry e = new WarehouseEntry();
     e.colonyId = colonyId;
     e.productTypeId = "p_elerium_stabil";
+    e.quantity = quantity;
+    return e;
+  }
+
+  private static WarehouseEntry jumpFuelReserveEntry(String colonyId, double quantity) {
+    WarehouseEntry e = new WarehouseEntry();
+    e.colonyId = colonyId;
+    e.productTypeId = GameConstants.JUMP_FUEL_PRODUCT_ID;
     e.quantity = quantity;
     return e;
   }
@@ -344,18 +415,20 @@ public final class WorldSeed {
   /**
    * Fördergüte-Profil (0-100 je Rohstoff) aus dem Fördergüte-Bereich des
    * Planetentyps, siehe Nebula_Planetentypen_Rohstoffprofile_Produktionsbaum.md,
-   * §7.1. Vereinfachung ggü. Vorlage: der "Clusterwert" wird hier je Planet
-   * statt je Sternsystem gezogen – die dort beschriebene Zwei-Phasen-Erzeugung
-   * mit regionalem Cluster, Nachbarschaftsvalidierung und Signatur-/
-   * Mangelrohstoffen (§7.2-7.3) ist noch nicht umgesetzt.
+   * §7.1. Der Clusterwert kommt NICHT mehr aus einem eigenen Wurf je Planet,
+   * sondern aus {@code clusterValues} – dem regionalen Wert des Sternsystems an
+   * seiner Kartenposition ({@link ResourceClusterField}), gemeinsam für alle
+   * Planeten desselben Systems. Nur {@code localRandom} und
+   * {@code localDeviation} bleiben je Planet unabhängig gewürfelt.
    */
-  private static List<PlanetResourceConcentration> concentrationProfileForType(PlanetType type, Rng rnd) {
+  private static List<PlanetResourceConcentration> concentrationProfileForType(
+      PlanetType type, Map<String, Double> clusterValues, Rng rnd) {
     List<PlanetTypeProfiles.ResourceRange> ranges = PlanetTypeProfiles.rangesForPlanetType(type);
     List<PlanetResourceConcentration> result = new ArrayList<>();
     for (PlanetTypeProfiles.ResourceRange rr : ranges) {
       double min = rr.range().min();
       double max = rr.range().max();
-      double clusterValue = rnd.next() * 100;
+      double clusterValue = clusterValues.getOrDefault(rr.resourceTypeId(), 50.0);
       double localRandom = rnd.next();
       double localDeviation = rnd.next() * 10 - 5;
       double typwert = min + (max - min) * (0.65 * (clusterValue / 100) + 0.35 * localRandom);
@@ -368,15 +441,120 @@ public final class WorldSeed {
     return result;
   }
 
-  private static List<PlanetResourceConcentration> applyHomeworldMinimums(List<PlanetResourceConcentration> conc) {
+  /**
+   * Ersetzt für den Heimatplaneten ALLE Fördergüten durch die Nutzervorgabe: Nahrungsrohstoffe
+   * ({@link #HOMEWORLD_FOOD_RESOURCES}) und {@link #HOMEWORLD_ELERIUM_RESOURCE} liegen immer
+   * zwischen {@link #HOMEWORLD_GOOD_MIN} und {@link #HOMEWORLD_GOOD_MAX} Prozent, GENAU EIN
+   * zufällig gewählter weiterer Rohstoff ebenfalls – alle übrigen liegen zwischen
+   * {@link #HOMEWORLD_POOR_MIN} und {@link #HOMEWORLD_POOR_MAX} Prozent. Der zugrundeliegende
+   * Planetentyp-Bereich ({@code conc}) bestimmt dabei nur noch die Menge der Rohstoff-Ids.
+   */
+  private static List<PlanetResourceConcentration> applyHomeworldProfile(List<PlanetResourceConcentration> conc, Rng rnd) {
+    List<String> otherResourceIds = conc.stream()
+        .map(c -> c.resourceTypeId)
+        .filter(id -> !HOMEWORLD_FOOD_RESOURCES.contains(id) && !id.equals(HOMEWORLD_ELERIUM_RESOURCE))
+        .toList();
+    String bonusResourceId = otherResourceIds.isEmpty() ? null
+        : otherResourceIds.get((int) Math.floor(rnd.next() * otherResourceIds.size()));
+
     List<PlanetResourceConcentration> result = new ArrayList<>();
     for (PlanetResourceConcentration c : conc) {
+      boolean isGood = HOMEWORLD_FOOD_RESOURCES.contains(c.resourceTypeId)
+          || c.resourceTypeId.equals(HOMEWORLD_ELERIUM_RESOURCE)
+          || c.resourceTypeId.equals(bonusResourceId);
       PlanetResourceConcentration copy = new PlanetResourceConcentration();
       copy.resourceTypeId = c.resourceTypeId;
-      copy.concentration = Math.max(c.concentration, HOMEWORLD_MINIMUMS.getOrDefault(c.resourceTypeId, 0.0));
+      copy.concentration = isGood
+          ? Math.round(HOMEWORLD_GOOD_MIN + rnd.next() * (HOMEWORLD_GOOD_MAX - HOMEWORLD_GOOD_MIN))
+          : Math.round(HOMEWORLD_POOR_MIN + rnd.next() * (HOMEWORLD_POOR_MAX - HOMEWORLD_POOR_MIN));
       result.add(copy);
     }
     return result;
+  }
+
+  private static boolean isGasGiant(PlanetType type) {
+    return type == PlanetType.Gasriese || type == PlanetType.Eisriese;
+  }
+
+  /** Wie {@link #randomPlanetType}, aber ohne Gasriesen/Eisriesen – für Himmelskörper, die besiedelbar sein sollen. */
+  private static PlanetType randomUsablePlanetType(Rng rnd) {
+    PlanetType type;
+    do {
+      type = randomPlanetType(rnd);
+    } while (isGasGiant(type));
+    return type;
+  }
+
+  /** Regionaler Clusterwert je Rohstoff, unabhängig gewürfelt statt aus {@link ResourceClusterField} gelesen (siehe {@link #createAdditionalPlayerSeed}, dort ohne Zugriff auf das Feld der ursprünglichen Galaxie). */
+  private static Map<String, Double> randomClusterValues(Rng rnd) {
+    Map<String, Double> result = new LinkedHashMap<>();
+    for (String resourceTypeId : PlanetTypeProfiles.RESOURCE_ORDER) {
+      result.put(resourceTypeId, rnd.next() * 100);
+    }
+    return result;
+  }
+
+  /** Unbesiedelter Himmelskörper ohne Rohstoffanzeige (ungünstige Masse, Gasriese/Eisriese, …), siehe {@link #buildForeignSystemPlanets}. */
+  private static Planet buildUnusablePlanet(String systemId, String systemName, int orbitIndex, PlanetType type, Rng rnd, IdGenerator ids) {
+    Planet planet = new Planet();
+    planet.id = ids.next("pla");
+    planet.systemId = systemId;
+    planet.name = systemName + " " + ORBIT_NUMERALS.get(Math.min(orbitIndex, ORBIT_NUMERALS.size() - 1));
+    planet.size = PLANET_SIZES.get((int) Math.floor(rnd.next() * 4));
+    planet.type = type;
+    planet.resourceConcentration = List.of();
+    planet.orbitIndex = orbitIndex;
+    planet.usable = false;
+    return planet;
+  }
+
+  /**
+   * Himmelskörper eines NICHT-Heimatsystems (egal ob gewöhnliches System oder
+   * Handelsgilde-Station – überall gibt es Planeten, siehe Konzeption-Rückfrage): eine
+   * zufällige Anzahl besiedelbarer Körper ({@link #USABLE_BODIES_MIN}-{@link #USABLE_BODIES_MAX})
+   * mit vollem Fördergüte-Profil, plus zusätzlich unbesiedelbare Körper
+   * ({@link #UNUSABLE_BODIES_MIN}-{@link #UNUSABLE_BODIES_MAX}) ohne Rohstoffanzeige (Gasriesen,
+   * Eisriesen oder Körper mit ungünstiger Masse). Enthält das System einen Gasriesen/Eisriesen,
+   * wird mit {@link #GAS_GIANT_MOON_CHANCE} einer der besiedelbaren Körper stattdessen ein
+   * {@link PlanetType#Gasriesenmond}, der einen Teil von dessen Fluiden mitnutzbar macht.
+   */
+  private static List<Planet> buildForeignSystemPlanets(String systemId, String systemName, Rng rnd, IdGenerator ids,
+                                                          Map<String, Double> clusterValues) {
+    List<Planet> planets = new ArrayList<>();
+    int orbit = 0;
+
+    int unusableCount = randInt(rnd, UNUSABLE_BODIES_MIN, UNUSABLE_BODIES_MAX);
+    boolean gasGiantPresent = false;
+    for (int i = 0; i < unusableCount; i++) {
+      PlanetType type = randomPlanetType(rnd);
+      if (isGasGiant(type)) gasGiantPresent = true;
+      planets.add(buildUnusablePlanet(systemId, systemName, orbit++, type, rnd, ids));
+    }
+
+    int usableCount = randInt(rnd, USABLE_BODIES_MIN, USABLE_BODIES_MAX);
+    boolean moonAvailable = gasGiantPresent;
+    for (int i = 0; i < usableCount; i++) {
+      PlanetType type;
+      if (moonAvailable && rnd.next() < GAS_GIANT_MOON_CHANCE) {
+        type = PlanetType.Gasriesenmond;
+        moonAvailable = false; // höchstens ein Gasriesenmond pro System
+      } else {
+        type = randomUsablePlanetType(rnd);
+      }
+      List<PlanetResourceConcentration> conc = concentrationProfileForType(type, clusterValues, rnd);
+
+      Planet planet = new Planet();
+      planet.id = ids.next("pla");
+      planet.systemId = systemId;
+      planet.name = systemName + " " + ORBIT_NUMERALS.get(Math.min(orbit, ORBIT_NUMERALS.size() - 1));
+      planet.size = PLANET_SIZES.get((int) Math.floor(rnd.next() * 4));
+      planet.type = type;
+      planet.resourceConcentration = conc;
+      planet.orbitIndex = orbit++;
+      planet.usable = true;
+      planets.add(planet);
+    }
+    return planets;
   }
 
   private record HomeworldBundle(Player player, List<Planet> planets, Colony colony, PlanetStats planetStats,
@@ -394,23 +572,27 @@ public final class WorldSeed {
    * wird ({@link #createAdditionalPlayerSeed}).
    */
   private static HomeworldBundle buildHomeworldBundle(String commanderName, String homeworldName, String homeSystemId,
-                                                        Rng rnd, long t, IdGenerator ids) {
+                                                        Rng rnd, long t, IdGenerator ids, PlayerRole role, String campId,
+                                                        Map<String, Double> clusterValues) {
     Player player = new Player();
     player.id = ids.next("ply");
     player.name = commanderName;
     player.homeSystemId = homeSystemId;
     player.homeworldColonyId = "";
     player.createdAt = t;
+    player.role = role;
+    player.campId = campId;
 
     List<Planet> planets = new ArrayList<>();
     for (int i = 0; i < PLANET_NAMES_HOME.size(); i++) {
       String name = PLANET_NAMES_HOME.get(i);
       // Der Spieler startet auf einem temperierten Biosphärenplaneten
       // (Nebula_Planetentypen_..., §8) – die übrigen Himmelskörper im
-      // Heimatsystem sind zunächst unbesiedelt und dürfen beliebige Typen sein.
-      PlanetType planetType = i == 0 ? PlanetType.TemperierterBiosphaerenplanet : randomPlanetType(rnd);
-      List<PlanetResourceConcentration> conc = concentrationProfileForType(planetType, rnd);
-      if (i == 0) conc = applyHomeworldMinimums(conc);
+      // Heimatsystem sind zunächst unbesiedelt, aber (wie alle fünf
+      // namentlichen Heimatplaneten) immer besiedelbar, deshalb kein Gasriese/Eisriese.
+      PlanetType planetType = i == 0 ? PlanetType.TemperierterBiosphaerenplanet : randomUsablePlanetType(rnd);
+      List<PlanetResourceConcentration> conc = concentrationProfileForType(planetType, clusterValues, rnd);
+      if (i == 0) conc = applyHomeworldProfile(conc, rnd);
 
       Planet planet = new Planet();
       planet.id = ids.next("pla");
@@ -420,7 +602,19 @@ public final class WorldSeed {
       planet.type = planetType;
       planet.resourceConcentration = conc;
       planet.orbitIndex = i;
+      planet.usable = true;
       planets.add(planet);
+    }
+    // Zusätzlich unbesiedelbare Himmelskörper, damit auch das Heimatsystem der
+    // galaxieweiten Zusammensetzung "wenige besiedelbare + einige unbesiedelbare
+    // Körper" folgt (Nutzervorgabe), siehe {@link #buildForeignSystemPlanets}.
+    int unusableCount = randInt(rnd, UNUSABLE_BODIES_MIN, UNUSABLE_BODIES_MAX);
+    for (int i = 0; i < unusableCount; i++) {
+      PlanetType type = randomPlanetType(rnd);
+      int orbitIndex = PLANET_NAMES_HOME.size() + i;
+      // Kein Systemname zur Hand (der Anzeigename des Heimatsystems entsteht erst in
+      // createWorldSeed) – bewusst neutrale Bezeichnung statt Kolonienamens.
+      planets.add(buildUnusablePlanet(homeSystemId, "Trümmerkörper", orbitIndex, type, rnd, ids));
     }
 
     Colony colony = new Colony();
@@ -433,18 +627,18 @@ public final class WorldSeed {
     colony.isHomeworld = true;
     player.homeworldColonyId = colony.id;
 
-    // Minimalstart (Umsetzungskonzept/17_...md): 120 Einwohner in einem
-    // Wohnkomplex Stufe 1 (Kapazität 20.000 – der Wohnraum ist im Frühspiel
-    // bewusst NICHT die Grenze; begrenzend ist die Nahrungsversorgung, die
-    // Bevölkerung plateauiert rechnerisch bei ≈ 390), Industriekomplex
-    // Stufe 1 und Infrastruktur Stufe 2 (beide Bebauungsplätze belegt, keiner
-    // frei). Keine Baustoffe im Lager – jeder weitere Ausbau kostet Baustoffe,
-    // die der Industriekomplex Stufe 1 selbst produzieren muss; der erste Zug
-    // ist deshalb zwangsläufig Infrastruktur → 3.
+    // Start (Nutzerentscheidung, abweichend von der ursprünglichen
+    // Minimalstart-Herleitung in Umsetzungskonzept/17_...md): 120 Einwohner in
+    // einem Wohnkomplex Stufe 1 (Kapazität 20.000 – der Wohnraum ist im
+    // Frühspiel bewusst NICHT die Grenze; begrenzend ist die
+    // Nahrungsversorgung, die Bevölkerung plateauiert rechnerisch bei ≈ 390),
+    // Industriekomplex Stufe 5 und Infrastruktur Stufe 6 (beide
+    // Bebauungsplätze belegt, keiner frei: total = 6 × SLOTS_PER_INFRASTRUCTURE_LEVEL
+    // = 6, used = Habitat 1 + Industrie 5 = 6).
     double homePopulationCount = 120;
     int homeHabitatLevel = 1;
-    int homeIndustryLevel = 1;
-    int homeInfrastructureLevel = 2;
+    int homeIndustryLevel = 5;
+    int homeInfrastructureLevel = 6;
 
     PlanetStats planetStats = new PlanetStats();
     planetStats.colonyId = colony.id;
@@ -486,6 +680,7 @@ public final class WorldSeed {
 
     List<WarehouseEntry> warehouse = new ArrayList<>();
     warehouse.add(eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_HOME));
+    warehouse.add(jumpFuelReserveEntry(colony.id, STARTER_JUMP_FUEL_QUANTITY));
     // Startbestand je Grundkonsumgut: der in die Start-Verkaufsorder
     // reservierte Teil liegt NICHT mehr im Lager (gleiche Buchführung wie
     // MarketCommands.createSellOrderCore), der Rest bleibt als Puffer für das
@@ -534,11 +729,20 @@ public final class WorldSeed {
   }
 
   public static Seed createWorldSeed(String commanderName, String homeworldName, IdGenerator ids) {
+    return createWorldSeed(commanderName, homeworldName, ids, PlayerRole.Normal, null);
+  }
+
+  public static Seed createWorldSeed(String commanderName, String homeworldName, IdGenerator ids, PlayerRole role,
+                                      String campId) {
     Rng rnd = Rng.seeded(1337);
     long t = Clock.now();
 
     // --- Galaxie-Topologie ---------------------------------------------------
     GalaxyGenerator.GeneratedGalaxy galaxy = GalaxyGenerator.generateGalaxy(GALAXY_SYSTEM_COUNT, rnd);
+    // Regionale Rohstoffstärken über die ganze Karte, siehe ResourceClusterField: Systeme in
+    // derselben Gegend bekommen ähnliche Werte, weit entfernte Regionen unabhängige – dadurch
+    // hat jede Gegend der Galaxie ein eigenes wirtschaftliches Profil und Fernhandel lohnt sich.
+    ResourceClusterField.Field clusterField = ResourceClusterField.generate(PlanetTypeProfiles.RESOURCE_ORDER, rnd);
     List<String> names = Rng.shuffle(SYSTEM_NAME_POOL, rnd);
     List<String> systemIds = new ArrayList<>();
     List<String> gatewayIds = new ArrayList<>();
@@ -548,10 +752,13 @@ public final class WorldSeed {
     }
     Set<Integer> tradeHubSet = new LinkedHashSet<>(galaxy.tradeHubIndices());
     int homeIndex = galaxy.centralIndex();
+    GalaxyGenerator.Point homePos = galaxy.positions().get(homeIndex);
 
-    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemIds.get(homeIndex), rnd, t, ids);
+    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemIds.get(homeIndex), rnd, t, ids,
+        role, campId, clusterField.valuesAt(homePos.x(), homePos.y()));
 
     List<StarSystem> systems = new ArrayList<>();
+    List<Planet> allPlanets = new ArrayList<>(home.planets());
     for (int i = 0; i < galaxy.positions().size(); i++) {
       boolean isHome = i == homeIndex;
       boolean isHub = tradeHubSet.contains(i);
@@ -560,7 +767,16 @@ public final class WorldSeed {
       s.name = isHome ? "Aurelia-System" : systemNameAt(names, i);
       s.x = galaxy.positions().get(i).x();
       s.y = galaxy.positions().get(i).y();
-      s.planetIds = isHome ? home.planets().stream().map(p -> p.id).toList() : new ArrayList<>();
+      if (isHome) {
+        s.planetIds = home.planets().stream().map(p -> p.id).toList();
+      } else {
+        // Jedes System bekommt Himmelskörper, unabhängig davon, ob es eine
+        // Handelsgilde-Station ist – siehe Konzeption-Rückfrage zur Systemansicht.
+        Map<String, Double> clusterValues = clusterField.valuesAt(s.x, s.y);
+        List<Planet> foreignPlanets = buildForeignSystemPlanets(s.id, s.name, rnd, ids, clusterValues);
+        allPlanets.addAll(foreignPlanets);
+        s.planetIds = foreignPlanets.stream().map(p -> p.id).toList();
+      }
       s.gatewayId = gatewayIds.get(i);
       s.isHomeSystem = isHome;
       s.isTradeHub = isHub;
@@ -593,7 +809,7 @@ public final class WorldSeed {
     Seed seed = new Seed();
     seed.player = home.player();
     seed.systems = systems;
-    seed.planets = home.planets();
+    seed.planets = allPlanets;
     seed.colonies = List.of(home.colony());
     seed.planetStats = List.of(home.planetStats());
     seed.populations = List.of(home.population());
@@ -645,15 +861,45 @@ public final class WorldSeed {
    */
   public static AdditionalSeed createAdditionalPlayerSeed(List<StarSystem> existingSystems, String commanderName,
                                                             String homeworldName, IdGenerator ids) {
+    return createAdditionalPlayerSeed(existingSystems, List.of(), commanderName, homeworldName, ids, PlayerRole.Normal, null);
+  }
+
+  /**
+   * Wie {@link #createAdditionalPlayerSeed(List, String, String, IdGenerator)}, aber mit
+   * Spielerrolle: bei {@code role == Npc} und vorhandenem {@code campId} wird das neue
+   * Heimatsystem beim Schwerpunkt der bereits registrierten Lagerkollegen platziert
+   * ({@link #pickCampPosition}) statt wie bisher maximal isoliert
+   * ({@link #pickIsolatedPosition}) – Umsetzungskonzept/20_...md. Ohne Lagerkollegen (der
+   * erste NPC eines Lagers) bleibt es bei der isolierten Platzierung, wodurch sich
+   * verschiedene Lager im Schnitt weit auseinander ansiedeln.
+   */
+  public static AdditionalSeed createAdditionalPlayerSeed(List<StarSystem> existingSystems,
+                                                            List<Player> existingPlayers, String commanderName,
+                                                            String homeworldName, IdGenerator ids, PlayerRole role,
+                                                            String campId) {
     Rng rnd = () -> Math.random();
     long t = Clock.now();
 
-    GalaxyGenerator.Point position = pickIsolatedPosition(existingSystems, rnd);
+    List<StarSystem> campSystems = List.of();
+    if (role == PlayerRole.Npc && campId != null) {
+      Set<String> campHomeSystemIds = existingPlayers.stream()
+          .filter(p -> campId.equals(p.campId))
+          .map(p -> p.homeSystemId)
+          .collect(java.util.stream.Collectors.toSet());
+      campSystems = existingSystems.stream().filter(s -> campHomeSystemIds.contains(s.id)).toList();
+    }
+    GalaxyGenerator.Point position = campSystems.isEmpty()
+        ? pickIsolatedPosition(existingSystems, rnd)
+        : pickCampPosition(existingSystems, campSystems, rnd);
     StarSystem linkedSystem = nearestSystem(existingSystems, position);
 
     String systemId = ids.next("sys");
     String gatewayId = ids.next("gw");
-    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemId, rnd, t, ids);
+    // Kein Zugriff auf das ResourceClusterField der ursprünglichen Galaxie (dieses System liegt
+    // außerhalb davon) – stattdessen ein frisch gewürfelter, aber wie gewohnt über den ganzen
+    // Heimatplaneten-Cluster gemeinsamer Clusterwert je Rohstoff.
+    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemId, rnd, t, ids, role, campId,
+        randomClusterValues(rnd));
 
     Set<String> usedNames = new LinkedHashSet<>();
     for (StarSystem s : existingSystems) usedNames.add(s.name);
@@ -724,6 +970,46 @@ public final class WorldSeed {
       }
     }
     return best;
+  }
+
+  /**
+   * Mindestabstand zu jedem bestehenden System, den ein Lager-Kandidat trotz Clusterung
+   * einhalten muss – ungefähr eine Sprungweite zwischen benachbarten Systemen bei
+   * {@code GALAXY_SYSTEM_COUNT} Systemen ({@code GalaxyGenerator.generateGalaxy}), damit
+   * NPCs desselben Lagers nicht auf einem bestehenden System landen.
+   */
+  private static final double CAMP_MIN_SEPARATION = 0.05;
+
+  /**
+   * Gegenstück zu {@link #pickIsolatedPosition}: sucht unter zufälligen Kandidaten den mit
+   * dem kleinsten Abstand zum Schwerpunkt der übergebenen {@code campSystems}, verwirft
+   * dabei aber Kandidaten, die einem bestehenden System zu nahekommen
+   * ({@link #CAMP_MIN_SEPARATION}). Findet sich in den Versuchen kein solcher Kandidat,
+   * fällt die Methode auf isolierte Platzierung zurück, statt ein überlappendes System zu
+   * erzeugen.
+   */
+  private static GalaxyGenerator.Point pickCampPosition(List<StarSystem> existingSystems,
+                                                          List<StarSystem> campSystems, Rng rnd) {
+    double campX = campSystems.stream().mapToDouble(s -> s.x).average().orElse(0.5);
+    double campY = campSystems.stream().mapToDouble(s -> s.y).average().orElse(0.5);
+    double margin = 0.08;
+    GalaxyGenerator.Point best = null;
+    double bestDistToCamp = Double.POSITIVE_INFINITY;
+    for (int attempt = 0; attempt < 60; attempt++) {
+      GalaxyGenerator.Point candidate = new GalaxyGenerator.Point(
+          margin + rnd.next() * (1 - 2 * margin), margin + rnd.next() * (1 - 2 * margin));
+      double minDistToExisting = Double.POSITIVE_INFINITY;
+      for (StarSystem s : existingSystems) {
+        minDistToExisting = Math.min(minDistToExisting, Math.hypot(candidate.x() - s.x, candidate.y() - s.y));
+      }
+      if (minDistToExisting < CAMP_MIN_SEPARATION) continue;
+      double distToCamp = Math.hypot(candidate.x() - campX, candidate.y() - campY);
+      if (distToCamp < bestDistToCamp) {
+        bestDistToCamp = distToCamp;
+        best = candidate;
+      }
+    }
+    return best != null ? best : pickIsolatedPosition(existingSystems, rnd);
   }
 
   private static StarSystem nearestSystem(List<StarSystem> systems, GalaxyGenerator.Point pos) {

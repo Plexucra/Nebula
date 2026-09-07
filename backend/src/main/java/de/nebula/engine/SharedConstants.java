@@ -46,6 +46,15 @@ public final class SharedConstants {
     return ROOT.path("messageRetentionGameHours").asDouble();
   }
 
+  /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md). */
+  public static double peaceTreatyTerminationNoticeGameHours() {
+    return ROOT.path("peaceTreatyTerminationNoticeGameHours").asDouble();
+  }
+
+  public static double tradeAgreementTerminationNoticeGameHours() {
+    return ROOT.path("tradeAgreementTerminationNoticeGameHours").asDouble();
+  }
+
   // --- Bebauung / Infrastruktur (Umsetzungskonzept/17_...md) ---------------
   public static int slotsPerInfrastructureLevel() {
     return ROOT.path("slotsPerInfrastructureLevel").asInt();

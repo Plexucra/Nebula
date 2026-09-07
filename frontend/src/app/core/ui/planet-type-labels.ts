@@ -15,6 +15,7 @@ export const PLANET_TYPE_LABEL: Record<PlanetType, string> = {
   Gasriese: 'Gasriese',
   Eisriese: 'Eisriese',
   Schwefelplanet: 'Schwefelplanet',
+  Gasriesenmond: 'Gasriesenmond',
 };
 
 export function planetTypeLabel(type: PlanetType): string {

@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Id, Player } from '../../core/models';
+import { Id, Player, TreatyType } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
+import { gameHoursToGameDays, PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS, TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS } from '../../core/shared-constants';
 
 @Component({
   selector: 'app-diplomacy',
@@ -24,6 +25,13 @@ export class DiplomacyComponent {
   protected readonly outgoingPeaceOffers = this.api.outgoingPeaceOffers();
   protected readonly activeBattles = this.api.activeBattles();
   protected readonly battleHistory = this.api.battleHistory();
+
+  protected readonly treaties = this.api.treaties();
+  protected readonly incomingTreatyOffers = this.api.incomingTreatyOffers();
+  protected readonly outgoingTreatyOffers = this.api.outgoingTreatyOffers();
+  protected readonly peaceTreatyNoticeDays = gameHoursToGameDays(PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS);
+  protected readonly tradeAgreementNoticeDays = gameHoursToGameDays(TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS);
+  protected readonly treatyTypes: TreatyType[] = ['Peace', 'Trade'];
 
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -72,6 +80,32 @@ export class DiplomacyComponent {
 
   protected async respond(offerId: Id, accept: boolean): Promise<void> {
     await this.run('respond:' + offerId, () => this.api.respondToPeaceOffer(offerId, accept));
+  }
+
+  protected treatyLabel(type: TreatyType): string {
+    return type === 'Peace' ? 'Friedensvertrag' : 'Handelsvertrag';
+  }
+
+  protected treatyWith(otherPlayerId: Id, type: TreatyType) {
+    const myId = this.api.player()?.id;
+    return this.treaties().find(t => t.type === type
+      && ((t.playerAId === myId && t.playerBId === otherPlayerId) || (t.playerBId === myId && t.playerAId === otherPlayerId)));
+  }
+
+  protected hasOutgoingTreatyOfferTo(otherPlayerId: Id, type: TreatyType): boolean {
+    return this.outgoingTreatyOffers().some(o => o.toPlayerId === otherPlayerId && o.type === type);
+  }
+
+  protected async offerTreaty(otherPlayerId: Id, type: TreatyType): Promise<void> {
+    await this.run('offertreaty:' + type + ':' + otherPlayerId, () => this.api.offerTreaty(otherPlayerId, type));
+  }
+
+  protected async terminateTreaty(otherPlayerId: Id, type: TreatyType): Promise<void> {
+    await this.run('terminatetreaty:' + type + ':' + otherPlayerId, () => this.api.terminateTreaty(otherPlayerId, type));
+  }
+
+  protected async respondTreaty(offerId: Id, accept: boolean): Promise<void> {
+    await this.run('respondtreaty:' + offerId, () => this.api.respondToTreatyOffer(offerId, accept));
   }
 
   protected async retreat(battleId: Id): Promise<void> {

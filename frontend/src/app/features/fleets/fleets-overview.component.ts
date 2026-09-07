@@ -75,6 +75,10 @@ export class FleetsOverviewComponent {
   protected coloniesInFleetSystem(fleet: Fleet): Colony[] {
     return this.api.coloniesInSystem(fleet.systemId)();
   }
+  /** Stationiert, nicht gelandet, an einer Handelsgilde-Station – dort gibt es statt eines Kolonielagers ein unbegrenztes Depot (Umsetzungskonzept/22_...md). */
+  protected isAtTradeHub(fleet: Fleet): boolean {
+    return fleet.locationColonyId === null && (this.api.system(fleet.systemId)()?.isTradeHub ?? false);
+  }
 
   selection: Record<Id, { productId: Id; qty: number; autoProduceMissing: boolean; requeueOnComplete: boolean }> = {};
 
@@ -188,18 +192,27 @@ export class FleetsOverviewComponent {
   protected readonly loadProductId: Partial<Record<Id, Id>> = {};
   protected readonly loadQty: Partial<Record<Id, number>> = {};
 
+  /** Ladbare Waren: aus dem Kolonielager beim Landen, aus dem Stations-Depot an einer Handelsgilde-Station. */
   protected loadableProducts(fleet: Fleet): { productTypeId: Id; stock: number }[] {
-    if (!fleet.locationColonyId) return [];
-    return this.api.warehouse(fleet.locationColonyId)()
-      .filter(w => !this.shipTypes.some(s => s.id === w.productTypeId))
-      .map(w => ({ productTypeId: w.productTypeId, stock: w.quantity }));
+    if (fleet.locationColonyId) {
+      return this.api.warehouse(fleet.locationColonyId)()
+        .filter(w => !this.shipTypes.some(s => s.id === w.productTypeId))
+        .map(w => ({ productTypeId: w.productTypeId, stock: w.quantity }));
+    }
+    if (this.isAtTradeHub(fleet)) {
+      return this.api.hubDepot(fleet.systemId)().map(d => ({ productTypeId: d.productTypeId, stock: d.quantity }));
+    }
+    return [];
   }
 
   protected async submitLoad(fleet: Fleet): Promise<void> {
     const productTypeId = this.loadProductId[fleet.id];
     const qty = this.loadQty[fleet.id] ?? 0;
     if (!productTypeId || qty <= 0) return;
-    await this.run('load:' + fleet.id, () => this.api.loadCargo(fleet.id, productTypeId, qty));
+    const action = fleet.locationColonyId
+      ? () => this.api.loadCargo(fleet.id, productTypeId, qty)
+      : () => this.api.loadCargoFromHubDepot(fleet.id, productTypeId, qty);
+    await this.run('load:' + fleet.id, action);
   }
 
   protected readonly unloadQty: Partial<Record<Id, number>> = {};
@@ -207,7 +220,10 @@ export class FleetsOverviewComponent {
   protected async submitUnload(fleet: Fleet, productTypeId: Id): Promise<void> {
     const qty = this.unloadQty[fleet.id + ':' + productTypeId] ?? 0;
     if (qty <= 0) return;
-    await this.run('unload:' + fleet.id, () => this.api.unloadCargo(fleet.id, productTypeId, qty));
+    const action = fleet.locationColonyId
+      ? () => this.api.unloadCargo(fleet.id, productTypeId, qty)
+      : () => this.api.unloadCargoToHubDepot(fleet.id, productTypeId, qty);
+    await this.run('unload:' + fleet.id, action);
   }
 
   protected readonly sellProductId: Partial<Record<Id, Id>> = {};
@@ -244,6 +260,15 @@ export class FleetsOverviewComponent {
 
   protected async undock(fleet: Fleet): Promise<void> {
     await this.run('undock:' + fleet.id, () => this.api.moveFleetWithinSystem(fleet.id, { kind: 'System' }));
+  }
+
+  /** Erforschen deckt die Rohstoffkonzentration des aktuellen Systems auf – geht mit jedem Schiffstyp, siehe `GameApi.exploreSystem`. */
+  protected canExplore(fleet: Fleet): boolean {
+    return fleet.status === 'Stationed' && !this.api.hasExploredSystem(fleet.systemId)();
+  }
+
+  protected async exploreSystem(fleet: Fleet): Promise<void> {
+    await this.run('explore:' + fleet.id, () => this.api.exploreSystem(fleet.id));
   }
 
   // --- Kampf --------------------------------------------------------------

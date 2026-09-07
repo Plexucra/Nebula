@@ -144,9 +144,11 @@
               <div class="cargo-row">
                 <span>{{ productName(c.productTypeId) }}</span>
                 <span class="mono">{{ c.quantity }}</span>
-                @if (fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) {
+                @if ((fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) || isAtTradeHub(fleet)) {
                   <input type="number" min="1" [max]="c.quantity" [(ngModel)]="unloadQty[fleet.id + ':' + c.productTypeId]" placeholder="Menge" />
-                  <button class="ghost small" (click)="submitUnload(fleet, c.productTypeId)" [disabled]="busy() === ('unload:' + fleet.id)">Entladen</button>
+                  <button class="ghost small" (click)="submitUnload(fleet, c.productTypeId)" [disabled]="busy() === ('unload:' + fleet.id)">
+                    {{ isAtTradeHub(fleet) ? 'Ins Depot entladen' : 'Entladen' }}
+                  </button>
                 }
               </div>
             } @empty { <p class="empty-hint">Kein Frachtgut geladen.</p> }
@@ -160,12 +162,18 @@
               @if (colonyOwnedByMe(fleet.locationColonyId)) {
                 <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Laden</button>
               }
+              <button class="ghost small" (click)="togglePanel(fleet.id, 'sell')">Verkaufen</button>
             } @else {
               <button class="ghost small" (click)="togglePanel(fleet.id, 'land')">Landen</button>
+              @if (isAtTradeHub(fleet)) {
+                <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Aus Depot laden</button>
+              }
             }
-            <button class="ghost small" (click)="togglePanel(fleet.id, 'sell')">Verkaufen</button>
             @if (!battleForFleet(fleet.id) && attackableFleets(fleet).length > 0) {
               <button class="ghost small danger" (click)="togglePanel(fleet.id, 'attack')">Angreifen</button>
+            }
+            @if (canExplore(fleet)) {
+              <button class="ghost small" (click)="exploreSystem(fleet)" [disabled]="busy() === ('explore:' + fleet.id)">System erforschen</button>
             }
           </div>
 
@@ -187,7 +195,7 @@
               } @empty { <p class="empty-hint">Keine bekannten Kolonien in diesem System.</p> }
             </div>
           }
-          @if (isPanelOpen(fleet.id, 'load') && fleet.locationColonyId) {
+          @if (isPanelOpen(fleet.id, 'load') && (fleet.locationColonyId || isAtTradeHub(fleet))) {
             <div class="fleet-panel form-row">
               <select [(ngModel)]="loadProductId[fleet.id]">
                 <option value="">Ware wählen…</option>

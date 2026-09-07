@@ -52,6 +52,7 @@ public class GameTick {
       EconomyTick.payUpkeepAndWages(state, ids);
       EconomyTick.runConsumption(state, ids);
       MarketCommands.replenishDormantSellOrders(state);
+      TreatyCommands.processExpiredTerminations(state, ids, t);
       EconomyTick.recalcCoreStats(state, t);
       EconomyTick.growPopulationAndMoneySupply(state, ids);
       EconomyTick.runWealthRedistributionIfDue(state, ids, t);

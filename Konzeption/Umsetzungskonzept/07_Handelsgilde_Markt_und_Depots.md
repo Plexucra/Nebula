@@ -3,6 +3,15 @@
 *Grundlage: `Konzeption/05_Handelsgilde_und_Warenprinzip.md`,
 `Mechanik/09_Handelsabwicklung_und_Markt.md`.*
 
+> **Hinweis:** Dieses Dokument ist der ursprüngliche, abstrakte
+> REST-Entwurf aus der Planungsphase; die tatsächliche Umsetzung
+> (`MarketCommands`, WebSocket-Befehle statt REST-Endpunkte) folgt
+> Umsetzungskonzept/13_...md. Die dort seit Umsetzungskonzept/21_...md
+> geltende Einschränkung – kein Stationshandel mehr in normalen Systemen,
+> Depothandel zwischen Spielern nur noch mit Handelsvertrag, sektorale
+> Handelsstationen unverändert offen für alle – ist in diesem älteren
+> Entwurf noch NICHT eingearbeitet.
+
 ## 1. Datenmodell
 
 ```text

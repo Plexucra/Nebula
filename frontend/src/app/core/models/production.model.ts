@@ -50,6 +50,17 @@ export interface ChainPlan {
    * nicht aus eigenem Lagerbestand decken kann.
    */
   feasible: boolean;
+  /**
+   * Summe aller Arbeitsstunden über sämtliche Kettenschritte – die für den
+   * kompletten Auftrag aufgewendete Arbeitsleistung (Umsetzungskonzept/20_...md).
+   */
+  totalWorkHours: number;
+  /**
+   * `totalWorkHours / totalHours` – wie viele Arbeitskräfte der Auftrag im
+   * Schnitt über seine gesamte Laufzeit bindet, ergänzend zu
+   * `ChainPlanStep.workersBoundPerHour` je Schritt.
+   */
+  workersBoundPerHour: number;
 }
 
 export type ProductionQueueStatus = 'queued' | 'running' | 'stopped' | 'done';

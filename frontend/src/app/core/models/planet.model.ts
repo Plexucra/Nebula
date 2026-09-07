@@ -22,7 +22,9 @@ export type PlanetType =
   | 'Planetoid'
   | 'Gasriese'
   | 'Eisriese'
-  | 'Schwefelplanet';
+  | 'Schwefelplanet'
+  /** Mond eines Gasriesen – im Gegensatz zum Gasriesen selbst besiedelbar. */
+  | 'Gasriesenmond';
 
 export interface Planet {
   id: Id;
@@ -33,4 +35,6 @@ export interface Planet {
   resourceConcentration: PlanetResourceConcentration[];
   /** Bahn-Index im System, rein fürs Layout der Systemkarte. */
   orbitIndex: number;
+  /** Besiedelbar? Gasriesen und Himmelskörper mit ungünstiger Masse sind es nicht (keine Rohstoffanzeige). */
+  usable: boolean;
 }

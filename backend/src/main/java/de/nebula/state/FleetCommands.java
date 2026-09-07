@@ -16,8 +16,10 @@ import de.nebula.model.FleetSystemTarget;
 import de.nebula.model.Planet;
 import de.nebula.model.ProductType;
 import de.nebula.model.ShipTypeDef;
+import de.nebula.model.StarSystem;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,6 +50,11 @@ public final class FleetCommands {
 
   private static Fleet find(GameState state, String fleetId) {
     for (Fleet f : state.fleets) if (f.id.equals(fleetId)) return f;
+    return null;
+  }
+
+  private static StarSystem findSystem(GameState state, String systemId) {
+    for (StarSystem s : state.systems) if (s.id.equals(systemId)) return s;
     return null;
   }
 
@@ -148,9 +155,16 @@ public final class FleetCommands {
     result.usedVolumeM3 = used.volumeM3();
     result.maxLoadableQuantity = 0;
 
-    if (productTypeId == null || fleet.locationColonyId == null) return result;
+    if (productTypeId == null) return result;
+    double stock;
+    if (fleet.locationColonyId != null) {
+      stock = Warehouse.qty(state, fleet.locationColonyId, productTypeId);
+    } else {
+      StarSystem sys = findSystem(state, fleet.systemId);
+      if (sys == null || !sys.isTradeHub) return result; // außerhalb einer Kolonie oder Station gibt es nichts zu laden
+      stock = HubDepot.qty(state, fleet.systemId, fleet.ownerId, productTypeId);
+    }
     ProductType product = ProductCatalog.find(productTypeId);
-    double stock = Warehouse.qty(state, fleet.locationColonyId, productTypeId);
     double remainingMass = capacity.massKg() - used.massKg();
     double remainingVolume = capacity.volumeM3() - used.volumeM3();
     double byMass = product.massKg > 0 ? Math.floor(remainingMass / product.massKg) : Double.MAX_VALUE;
@@ -191,6 +205,49 @@ public final class FleetCommands {
   }
 
   /**
+   * Lädt Fracht aus dem unbegrenzten Stations-Depot des Kommandanten in die
+   * Flotte ({@code HubDepot}, Umsetzungskonzept/22_...md) – das Gegenstück zu
+   * {@link #loadCargo}, nur an einer Handelsgilde-Station statt einer
+   * Kolonie. Dieselbe Massen-/Volumengrenze wie dort gilt unverändert:
+   * NUR Flotten mit Frachtern (die einzigen Schiffe mit Cargo-Kapazität &gt; 0)
+   * können überhaupt etwas aufnehmen – eine eigene "Frachter-Pflicht" braucht
+   * es dafür nicht.
+   */
+  public static void loadCargoFromHubDepot(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
+      throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
+    }
+    StarSystem sys = findSystem(state, fleet.systemId);
+    if (sys == null || !sys.isTradeHub) throw new CommandException("Kein Depot außerhalb einer Handelsgilde-Station.");
+    double stock = HubDepot.qty(state, fleet.systemId, playerId, productTypeId);
+    if (stock < quantity) throw new CommandException("Nicht genug Bestand im Depot.");
+    ProductType product = ProductCatalog.find(productTypeId);
+    Capacity capacity = fleetCargoCapacity(fleet);
+    Capacity used = fleetCargoUsed(fleet);
+    if (used.massKg() + product.massKg * quantity > capacity.massKg() + 1e-6) throw new CommandException("Massekapazität der Flotte reicht nicht aus.");
+    if (used.volumeM3() + product.volumeM3 * quantity > capacity.volumeM3() + 1e-6) throw new CommandException("Volumenkapazität der Flotte reicht nicht aus.");
+    HubDepot.add(state, fleet.systemId, playerId, productTypeId, -quantity);
+    FleetCargo.add(fleet, productTypeId, quantity);
+  }
+
+  /** Entlädt Fracht der Flotte in das Stations-Depot des Kommandanten – Gegenstück zu {@link #unloadCargo}. */
+  public static void unloadCargoToHubDepot(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
+      throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
+    }
+    StarSystem sys = findSystem(state, fleet.systemId);
+    if (sys == null || !sys.isTradeHub) throw new CommandException("Kein Depot außerhalb einer Handelsgilde-Station.");
+    double have = FleetCargo.qty(fleet, productTypeId);
+    if (have < quantity) throw new CommandException("Nicht genug Fracht an Bord.");
+    FleetCargo.add(fleet, productTypeId, -quantity);
+    HubDepot.add(state, fleet.systemId, playerId, productTypeId, quantity);
+  }
+
+  /**
    * Löst die Reise in einzelne Gateway-Sprünge auf ({@code Graph.bfsPath})
    * statt sie als einen einzigen, nicht unterbrechbaren Direktsprung zu
    * behandeln: nur der ERSTE Sprung wird sofort gestartet
@@ -205,6 +262,7 @@ public final class FleetCommands {
     if (state.systems.stream().noneMatch(s -> s.id.equals(destinationSystemId))) throw new CommandException("Unbekanntes Zielsystem.");
     List<String> path = Graph.bfsPath(GatewayCommands.gatewayRoutes(state), fleet.systemId, destinationSystemId);
     if (path == null || path.isEmpty()) throw new CommandException("Kein Gateway-Pfad zu diesem System bekannt.");
+    consumeJumpFuel(state, playerId, fleet, path.size());
     String firstHop = path.get(0);
     List<String> pendingHops = path.subList(1, path.size());
     long departedAt = Clock.now();
@@ -218,6 +276,44 @@ public final class FleetCommands {
     fleet.locationType = FleetLocationType.System;
     fleet.locationColonyId = null;
     fleet.locationPlanetId = null;
+  }
+
+  /**
+   * Verbraucht Eleriumkapseln für einen kompletten (ggf. mehrsprungigen) Flug, siehe
+   * {@code GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP}: Kosten = Schiffe der Flotte × Sprünge.
+   * Die Kapseln kommen aus den Kolonielagern des Flottenbesitzers – zuerst aus dem
+   * Heimatkolonielager, dann aus den übrigen Kolonien – unabhängig davon, wo sich die Flotte
+   * gerade befindet (dieselbe Vereinfachung wie beim Elerium-Unterhalt der Infrastruktur).
+   * Reicht der Gesamtvorrat nicht, wird der Sprung abgelehnt, BEVOR die Flotte losfliegt.
+   */
+  private static void consumeJumpFuel(GameState state, String playerId, Fleet fleet, int hops) {
+    double totalShips = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
+    double needed = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    if (needed <= 0) return;
+    List<Colony> colonies = ColonyCommands.coloniesOf(state, playerId).stream()
+        .sorted(Comparator.comparing((Colony c) -> !c.isHomeworld))
+        .toList();
+    double available = colonies.stream()
+        .mapToDouble(c -> Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID))
+        .sum();
+    if (available < needed) {
+      throw new CommandException("Nicht genug Eleriumkapseln für diesen Sprung (benötigt "
+          + round2(needed) + ", vorhanden " + round2(available) + ").");
+    }
+    double remaining = needed;
+    for (Colony c : colonies) {
+      if (remaining <= 0) break;
+      double have = Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID);
+      double take = Math.min(have, remaining);
+      if (take > 0) {
+        Warehouse.add(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID, -take);
+        remaining -= take;
+      }
+    }
+  }
+
+  private static double round2(double v) {
+    return Math.round(v * 100) / 100.0;
   }
 
   /**
@@ -275,6 +371,23 @@ public final class FleetCommands {
     }
     // Ein Ortswechsel hebt eine eigene Blockade an diesem Ort automatisch auf – man kann nicht blockieren, wo man nicht mehr ist.
     state.blockades.removeIf(b -> b.fleetId.equals(fleetId));
+  }
+
+  /**
+   * Erforscht das System, in dem die Flotte gerade steht ({@code Stationed}, unabhängig vom
+   * genauen Ort im System und vom Schiffstyp – jede eigene Flotte kann das) und deckt damit die
+   * Rohstoffkonzentration aller dortigen Planeten für diesen Kommandanten auf (siehe
+   * {@code GatewayCommands.hasExploredSystem}). Bloßes Durchreisen/Ankommen ({@code moveFleet})
+   * reicht dafür bewusst NICHT – das ist der Unterschied zu {@code knownSystemIdsByPlayer}
+   * ("besucht"), das weiterhin automatisch bei Ankunft gesetzt wird.
+   */
+  public static void exploreSystem(GameState state, String playerId, String fleetId) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte muss im System stationiert sein, um es zu erforschen.");
+    if (GatewayCommands.hasExploredSystem(state, playerId, fleet.systemId)) {
+      throw new CommandException("Dieses System ist bereits erforscht.");
+    }
+    state.exploredSystemIdsByPlayer.computeIfAbsent(playerId, k -> new LinkedHashSet<>()).add(fleet.systemId);
   }
 
   /**

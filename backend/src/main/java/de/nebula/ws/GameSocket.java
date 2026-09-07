@@ -8,6 +8,7 @@ import de.nebula.data.ProductCatalog;
 import de.nebula.data.ShipCatalog;
 import de.nebula.data.WorldSeed;
 import de.nebula.model.Player;
+import de.nebula.model.PlayerRole;
 import de.nebula.state.BuildingCommands;
 import de.nebula.state.ColonyCommands;
 import de.nebula.state.CommandException;
@@ -22,13 +23,16 @@ import de.nebula.state.DiplomacyCommands;
 import de.nebula.state.EconomyTick;
 import de.nebula.state.FleetCommands;
 import de.nebula.state.GatewayCommands;
+import de.nebula.state.HubMarketCommands;
 import de.nebula.state.MarketCommands;
 import de.nebula.state.MessageCommands;
 import de.nebula.state.NotificationCommands;
 import de.nebula.state.ProductionCommands;
 import de.nebula.state.RecruitmentCommands;
 import de.nebula.state.ShipyardCommands;
+import de.nebula.state.TreatyCommands;
 import de.nebula.model.FleetSystemTarget;
+import de.nebula.model.TreatyType;
 import de.nebula.model.WalletOwnerType;
 import io.quarkus.websockets.next.OnClose;
 import io.quarkus.websockets.next.OnOpen;
@@ -148,8 +152,8 @@ public class GameSocket {
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
-      case "planet" -> ColonyCommands.planet(state, text(payload, "id"));
-      case "planetsInSystem" -> ColonyCommands.planetsInSystem(state, text(payload, "systemId"));
+      case "planet" -> ColonyCommands.planetForPlayer(state, text(payload, "id"), currentPlayerId());
+      case "planetsInSystem" -> ColonyCommands.planetsInSystemForPlayer(state, text(payload, "systemId"), currentPlayerId());
       case "colonizePlanet" -> ColonyCommands.colonizePlanet(state, ids, requirePlayerId(), text(payload, "planetId"));
 
       // --- Bebauung --------------------------------------------------------------
@@ -221,6 +225,34 @@ public class GameSocket {
       case "createSellOrderFromFleet" -> {
         MarketCommands.createSellOrderFromFleet(state, ids, requirePlayerId(), text(payload, "fleetId"), text(payload, "productTypeId"),
             payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble(), payload.path("autoRelist").asBoolean(false));
+        yield null;
+      }
+
+      // --- Handelsgilde-Station: Depot & Orderbuch (Umsetzungskonzept/22_...md) ---
+      case "hubDepot" -> HubMarketCommands.hubDepotOf(state, text(payload, "systemId"), requirePlayerId());
+      case "hubOrders" -> HubMarketCommands.ordersInSystem(state, text(payload, "systemId"));
+      case "createHubSellOrder" -> {
+        HubMarketCommands.createSellOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "productTypeId"),
+            payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble());
+        yield null;
+      }
+      case "createHubBuyOrder" -> {
+        HubMarketCommands.createBuyOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "productTypeId"),
+            payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble());
+        yield null;
+      }
+      case "cancelHubOrder" -> {
+        HubMarketCommands.cancelOrder(state, requirePlayerId(), text(payload, "orderId"));
+        yield null;
+      }
+      case "unloadCargoToHubDepot" -> {
+        FleetCommands.unloadCargoToHubDepot(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "productTypeId"),
+            payload.path("quantity").asDouble());
+        yield null;
+      }
+      case "loadCargoFromHubDepot" -> {
+        FleetCommands.loadCargoFromHubDepot(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "productTypeId"),
+            payload.path("quantity").asDouble());
         yield null;
       }
 
@@ -313,6 +345,10 @@ public class GameSocket {
         FleetCommands.moveFleetWithinSystem(state, requirePlayerId(), text(payload, "fleetId"), parseFleetSystemTarget(payload.path("target")));
         yield null;
       }
+      case "exploreSystem" -> {
+        FleetCommands.exploreSystem(state, requirePlayerId(), text(payload, "fleetId"));
+        yield null;
+      }
 
       // --- Bodentruppen ----------------------------------------------------------
       case "groundForces" -> RecruitmentCommands.groundForces(state, text(payload, "colonyId"));
@@ -339,6 +375,7 @@ public class GameSocket {
       case "system" -> GatewayCommands.system(state, text(payload, "id"));
       case "galaxyRoutes" -> GatewayCommands.galaxyRoutes(state);
       case "hasVisitedSystem" -> GatewayCommands.hasVisitedSystem(state, requirePlayerId(), text(payload, "systemId"));
+      case "hasExploredSystem" -> GatewayCommands.hasExploredSystem(state, requirePlayerId(), text(payload, "systemId"));
 
       // --- Blockaden ---------------------------------------------------------
       case "blockadesInSystem" -> BlockadeCommands.blockadesInSystem(state, text(payload, "systemId"));
@@ -366,6 +403,25 @@ public class GameSocket {
       }
       case "respondToPeaceOffer" -> {
         DiplomacyCommands.respondToPeaceOffer(state, ids, requirePlayerId(), text(payload, "offerId"), payload.path("accept").asBoolean(false));
+        yield null;
+      }
+
+      // --- Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) ---------------
+      case "treaties" -> TreatyCommands.treatiesOf(state, requirePlayerId());
+      case "incomingTreatyOffers" -> TreatyCommands.incomingTreatyOffers(state, requirePlayerId());
+      case "outgoingTreatyOffers" -> TreatyCommands.outgoingTreatyOffers(state, requirePlayerId());
+      case "hasPeaceTreaty" -> TreatyCommands.hasPeaceTreaty(state, requirePlayerId(), text(payload, "otherPlayerId"));
+      case "hasTradeAgreement" -> TreatyCommands.hasTradeAgreement(state, requirePlayerId(), text(payload, "otherPlayerId"));
+      case "offerTreaty" -> {
+        TreatyCommands.offerTreaty(state, ids, requirePlayerId(), text(payload, "otherPlayerId"), TreatyType.valueOf(text(payload, "type")));
+        yield null;
+      }
+      case "respondToTreatyOffer" -> {
+        TreatyCommands.respondToTreatyOffer(state, ids, requirePlayerId(), text(payload, "offerId"), payload.path("accept").asBoolean(false));
+        yield null;
+      }
+      case "terminateTreaty" -> {
+        TreatyCommands.terminateTreaty(state, ids, requirePlayerId(), text(payload, "otherPlayerId"), TreatyType.valueOf(text(payload, "type")));
         yield null;
       }
 
@@ -473,15 +529,24 @@ public class GameSocket {
     String homeworldName = payload.path("homeworldName").asText("").trim();
     if (commanderName.isEmpty()) commanderName = "Unbekannter Kommandant";
     if (homeworldName.isEmpty()) homeworldName = "Heimatwelt";
+    PlayerRole role;
+    try {
+      role = PlayerRole.valueOf(payload.path("role").asText(PlayerRole.Normal.name()));
+    } catch (IllegalArgumentException e) {
+      role = PlayerRole.Normal;
+    }
+    String campId = payload.hasNonNull("campId") ? payload.path("campId").asText().trim() : null;
+    if (campId != null && campId.isEmpty()) campId = null;
 
     Player player;
     synchronized (state) {
       if (state.systems.isEmpty()) {
-        WorldSeed.Seed seed = WorldSeed.createWorldSeed(commanderName, homeworldName, ids);
+        WorldSeed.Seed seed = WorldSeed.createWorldSeed(commanderName, homeworldName, ids, role, campId);
         GameStateSeeder.bootstrap(state, seed, ids);
         player = seed.player;
       } else {
-        WorldSeed.AdditionalSeed seed = WorldSeed.createAdditionalPlayerSeed(state.systems, commanderName, homeworldName, ids);
+        WorldSeed.AdditionalSeed seed = WorldSeed.createAdditionalPlayerSeed(
+            state.systems, state.players, commanderName, homeworldName, ids, role, campId);
         GameStateSeeder.appendPlayer(state, seed, ids);
         player = seed.player;
       }
@@ -497,6 +562,7 @@ public class GameSocket {
       state.players.clear();
       state.systems.clear();
       state.knownSystemIdsByPlayer.clear();
+      state.exploredSystemIdsByPlayer.clear();
       state.planets.clear();
       state.colonies.clear();
       state.planetStats.clear();
@@ -515,6 +581,8 @@ public class GameSocket {
       state.groundForceGroups.clear();
       state.recruitmentQueue.clear();
       state.sellOrders.clear();
+      state.hubOrders.clear();
+      state.hubDepot.clear();
       state.universeStats.clear();
       state.notifications.clear();
       state.diplomaticRelations.clear();

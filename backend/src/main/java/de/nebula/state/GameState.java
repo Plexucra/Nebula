@@ -38,6 +38,15 @@ public class GameState {
   public final List<StarSystem> systems = new CopyOnWriteArrayList<>();
   /** Bekannte Systeme PRO Kommandant (Fog of War) – playerId -> Set<systemId>. */
   public final Map<String, java.util.Set<String>> knownSystemIdsByPlayer = new ConcurrentHashMap<>();
+  /**
+   * Erforschte Systeme PRO Kommandant – playerId -> Set<systemId>. Getrennt von
+   * {@link #knownSystemIdsByPlayer} ("schon mal dort gewesen"): ein besuchtes System zeigt
+   * bereits seine Himmelskörper, aber erst das explizite Erforschen ({@code FleetCommands.exploreSystem})
+   * deckt deren Rohstoffkonzentration auf. Das Heimatsystem bzw. das eigene neue Heimatsystem
+   * gilt von Anfang an als erforscht (siehe {@code GameStateSeeder}), ebenso jedes System, in dem
+   * ein Kommandant selbst kolonisiert hat ({@code ColonyCommands.colonizePlanet}).
+   */
+  public final Map<String, java.util.Set<String>> exploredSystemIdsByPlayer = new ConcurrentHashMap<>();
   public final List<Planet> planets = new CopyOnWriteArrayList<>();
   public final List<Colony> colonies = new CopyOnWriteArrayList<>();
   public final List<PlanetStats> planetStats = new CopyOnWriteArrayList<>();
@@ -56,10 +65,19 @@ public class GameState {
   public final List<GroundForceGroup> groundForceGroups = new CopyOnWriteArrayList<>();
   public final List<RecruitmentQueueEntry> recruitmentQueue = new CopyOnWriteArrayList<>();
   public final List<SellOrder> sellOrders = new CopyOnWriteArrayList<>();
+  /** Orderbuch (Kauf UND Verkauf) der Handelsgilde-Stationen, siehe Umsetzungskonzept/22_...md. */
+  public final List<HubOrder> hubOrders = new CopyOnWriteArrayList<>();
+  /** Unbegrenztes Depot je Kommandant und Handelsgilde-Station, siehe {@code HubDepot}. */
+  public final List<HubDepotEntry> hubDepot = new CopyOnWriteArrayList<>();
+  /** Monotoner Zähler für Preis-Zeit-Priorität im Orderbuch (Millisekunden-Zeitstempel allein reichen bei zwei Orders im selben Tick nicht). */
+  public final java.util.concurrent.atomic.AtomicLong hubOrderSeq = new java.util.concurrent.atomic.AtomicLong();
   public final List<UniverseStatSnapshot> universeStats = new CopyOnWriteArrayList<>();
   public final List<GameNotification> notifications = new CopyOnWriteArrayList<>();
   public final List<DiplomaticRelation> diplomaticRelations = new CopyOnWriteArrayList<>();
   public final List<PeaceOffer> peaceOffers = new CopyOnWriteArrayList<>();
+  /** Förmliche Friedens-/Handelsverträge, siehe Umsetzungskonzept/21_...md. */
+  public final List<Treaty> treaties = new CopyOnWriteArrayList<>();
+  public final List<TreatyOffer> treatyOffers = new CopyOnWriteArrayList<>();
   public final List<Battle> battles = new CopyOnWriteArrayList<>();
   public final List<Blockade> blockades = new CopyOnWriteArrayList<>();
   /** Ingame-Nachrichtensystem (Umsetzungskonzept/14_...md) – ausschließlich Spieler-zu-Spieler. */

@@ -1,50 +1,16 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Id, ProductType, ProductionQueueEntry } from '../../core/models';
+import { ChainPlan, Id, ProductCategory, ProductType, ProductionQueueEntry } from '../../core/models';
+import { iconForProduct } from '../../core/ui/product-icons';
+import { PRODUCT_CATEGORY_LABELS } from '../../core/ui/product-category-labels';
+import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 
-/** Explizite Icons für die bekanntesten/prominentesten Produkte (Rohstoffe, Schiffe, Bodeneinheiten). */
-const PRODUCT_ICON: Record<string, string> = {
-  p_ferrometall: '⛏️', p_leichtmetall: '⛏️', p_refraktaer: '⛏️', p_leitmetall: '⛏️', p_edelmetall: '⛏️',
-  p_seltenerden: '⛏️', p_technometall: '⛏️', p_silikat: '🪨', p_kohlenstoff: '🪨', p_salz: '🧂',
-  p_radionuklid: '☢️', p_eis: '🧊', p_atmosphaere: '💨', p_edelgas: '💨', p_kohlenwasserstoff: '🛢️',
-  p_isotopentraeger: '⚛️', p_elerium: '☢️',
-  p_corvette: '🛩️', p_destroyer: '🚢', p_cruiser: '🛳️', p_freighter: '📦', p_carrier: '🛸', p_trooptransport: '🚐',
-  p_soldier: '💂', p_drone_light: '🤖', p_drone_medium: '🤖', p_drone_heavy: '🤖',
-};
 const DEFAULT_MAX_STOCK = 50;
-
-/**
- * Schlüsselwort-Fallback für die übrigen ~190 Produkte des erweiterten
- * Produktionsbaums (Nebula_Planetentypen_..., §10): ein Icon pro Produkt
- * von Hand zu pflegen ist bei dieser Katalogtiefe nicht praktikabel –
- * grobe visuelle Wiedererkennung nach Wortbestandteil/Kategorie genügt.
- */
-function keywordIcon(p: ProductType): string {
-  const n = p.name.toLowerCase();
-  if (n.includes('waffe') || n.includes('gefechtskopf') || n.includes('initiator')) return '⚔️';
-  if (n.includes('schild')) return '🛡️';
-  if (n.includes('triebwerk') || n.includes('manöver') || n.includes('antrieb')) return '🚀';
-  if (n.includes('sensor') || n.includes('navigation') || n.includes('kommunikation')) return '📡';
-  if (n.includes('chip') || n.includes('wafer') || n.includes('halbleiter')) return '🧩';
-  if (n.includes('reaktor') || n.includes('kraftwerk') || n.includes('energie')) return '⚡';
-  if (n.includes('elerium')) return '☢️';
-  if (n.includes('rumpf') || n.includes('struktur') || n.includes('panzer') || n.includes('hitzeschild')) return '🔩';
-  if (n.includes('habitat') || n.includes('besatzung') || n.includes('lebenserhaltung') || n.includes('truppenunterbring')) return '🫀';
-  if (n.includes('hangar') || n.includes('fracht') || n.includes('lager')) return '📦';
-  if (n.includes('werft')) return '🏗️';
-  if (n.includes('medizin') || n.includes('pharma') || n.includes('hygiene')) return '💊';
-  if (n.includes('nahrung') || n.includes('wasser') || n.includes('trinkwasser')) return '🥫';
-  if (n.includes('kleidung') || n.includes('textil')) return '🧥';
-  if (n.includes('elektronik') || n.includes('unterhaltung')) return '📺';
-  if (n.includes('paket')) return '🎁';
-  if (p.category === 'Ship') return '🛸';
-  if (p.category === 'GroundUnit') return '🤖';
-  if (p.category === 'RawResource') return '⛏️';
-  if (p.category === 'Fuel') return '🔋';
-  return '⚙️';
-}
+/** Rekursionsdeckel für `buildTreeNode` – der tiefste reale Rezeptbaum liegt bei Stufe 6, 12 ist reichlich Sicherheitsabstand gegen einen unerwarteten Zyklus im Katalog. */
+const MAX_TREE_DEPTH = 12;
 
 interface ModalRow {
   colonyId: Id;
@@ -54,28 +20,80 @@ interface ModalRow {
   existingEntry: ProductionQueueEntry | undefined;
 }
 
+/** Ein Knoten im vollständig aufgeklappten Produktionsbaum eines Produkts, siehe `buildTreeNode`. */
+interface TreeNode {
+  productTypeId: Id;
+  name: string;
+  icon: string;
+  tier: number;
+  isRaw: boolean;
+  /** Gesamtbedarf dieses Vorprodukts für EINE Einheit des Wurzelprodukts. */
+  quantity: number;
+  children: TreeNode[];
+}
+
 @Component({
   selector: 'app-production-overview',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, NgTemplateOutlet, DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './production-overview.component.html',
   styleUrl: './production-overview.component.scss',
 })
 export class ProductionOverviewComponent {
   protected readonly api = inject(GAME_API);
+  protected readonly clock = inject(UiClockService);
   protected readonly colonies = this.api.colonies();
   /** Katalog kommt asynchron – bei jedem Zugriff frisch lesen statt einmalig einzufrieren. */
   protected get productTypes() { return this.api.productTypes(); }
 
-  protected readonly tiers = [0, 1, 2, 3, 4, 5, 6];
+  protected readonly categoryLabels = PRODUCT_CATEGORY_LABELS;
+  protected readonly countdown = formatCountdown;
 
+  // --- Produktionskette: Kategorie → Stufe → Produkt --------------------
+  protected readonly selectedCategory = signal<ProductCategory | null>(null);
+
+  protected categoriesPresent(): ProductCategory[] {
+    const seen = new Set<ProductCategory>();
+    const order: ProductCategory[] = [];
+    for (const p of this.productTypes) {
+      if (!seen.has(p.category)) { seen.add(p.category); order.push(p.category); }
+    }
+    return order;
+  }
+
+  protected countInCategory(cat: ProductCategory): number {
+    return this.productTypes.filter(p => p.category === cat).length;
+  }
+
+  protected tiersInCategory(cat: ProductCategory): number[] {
+    return [...new Set(this.productTypes.filter(p => p.category === cat).map(p => p.tier))].sort((a, b) => a - b);
+  }
+
+  protected productsInCategoryTier(cat: ProductCategory, tier: number): ProductType[] {
+    return this.productTypes
+      .filter(p => p.category === cat && p.tier === tier)
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  }
+
+  protected chooseCategory(cat: ProductCategory): void {
+    this.selectedCategory.set(cat);
+  }
+
+  protected backToCategories(): void {
+    this.selectedCategory.set(null);
+  }
+
+  // --- Produkt-Detailansicht ---------------------------------------------
   protected readonly selectedProduct = signal<ProductType | null>(null);
+  protected readonly produceOpen = signal(false);
   protected readonly draftQty: Record<Id, number> = {};
   protected readonly draftAutoMissing: Record<Id, boolean> = {};
   protected readonly draftRequeue: Record<Id, boolean> = {};
   protected readonly busy = signal<Id | null>(null);
   protected readonly error = signal<string | null>(null);
+  protected readonly chainPreview: Partial<Record<Id, ChainPlan>> = {};
+  protected readonly chainPreviewLoading = signal<Id | null>(null);
 
   protected readonly modalRows = computed<ModalRow[]>(() => {
     const product = this.selectedProduct();
@@ -92,8 +110,75 @@ export class ProductionOverviewComponent {
     });
   });
 
+  protected openDetail(product: ProductType): void {
+    this.error.set(null);
+    this.produceOpen.set(false);
+    for (const c of this.colonies()) {
+      this.draftQty[c.id] = DEFAULT_MAX_STOCK;
+      this.draftAutoMissing[c.id] = true;
+      this.draftRequeue[c.id] = false;
+      delete this.chainPreview[c.id];
+    }
+    this.selectedProduct.set(product);
+  }
+
+  protected closeDetail(): void {
+    this.selectedProduct.set(null);
+    this.produceOpen.set(false);
+  }
+
+  protected openProduce(): void {
+    this.produceOpen.set(true);
+  }
+
+  /** Baut den kompletten Produktionsbaum (Rezept-Eingänge rekursiv bis zu den Rohstoffen) für EINE Einheit des angegebenen Produkts – rein aus dem statischen Katalog, unabhängig von einer Kolonie. */
+  private buildTreeNode(productTypeId: Id, quantity: number, depth: number): TreeNode {
+    const product = this.productTypes.find(p => p.id === productTypeId);
+    const children = product && depth < MAX_TREE_DEPTH
+      ? product.recipe.map(r => this.buildTreeNode(r.inputProductTypeId, quantity * r.quantity, depth + 1))
+      : [];
+    return {
+      productTypeId,
+      name: product?.name ?? productTypeId,
+      icon: this.productIcon(productTypeId),
+      tier: product?.tier ?? 0,
+      isRaw: !product || product.recipe.length === 0,
+      quantity,
+      children,
+    };
+  }
+
+  protected productionTree(): TreeNode | null {
+    const p = this.selectedProduct();
+    return p ? this.buildTreeNode(p.id, 1, 0) : null;
+  }
+
   protected queueLength(colonyId: string): number { return this.api.productionQueue(colonyId)().length; }
   protected warehouseCount(colonyId: string): number { return this.api.warehouse(colonyId)().length; }
+
+  /** Der gerade laufende Auftrag dieser Kolonie (höchstens einer je Kolonie), für die Kolonienübersicht oben. */
+  protected runningEntry(colonyId: Id): ProductionQueueEntry | undefined {
+    return this.api.productionQueue(colonyId)().find(e => e.status === 'running');
+  }
+
+  /** Der als Nächstes anstehende Auftrag (wartend oder angehalten) – erster Nicht-laufender Eintrag in Warteschlangenreihenfolge. */
+  protected nextEntry(colonyId: Id): ProductionQueueEntry | undefined {
+    return this.api.productionQueue(colonyId)().find(e => e.status !== 'running');
+  }
+
+  /** Weitere Aufträge über den laufenden und den nächsten hinaus, für den "+N weitere"-Hinweis. */
+  protected remainingQueueCount(colonyId: Id): number {
+    const total = this.queueLength(colonyId);
+    const shown = (this.runningEntry(colonyId) ? 1 : 0) + (this.nextEntry(colonyId) ? 1 : 0);
+    return Math.max(0, total - shown);
+  }
+
+  protected queueProgressPct(entry: { status: string; startedAt: number | null; endsAt: number | null }): number {
+    if (entry.status !== 'running' || entry.startedAt === null || entry.endsAt === null) return 0;
+    const total = entry.endsAt - entry.startedAt;
+    if (total <= 0) return 100;
+    return Math.min(100, Math.max(0, ((this.clock.now() - entry.startedAt) / total) * 100));
+  }
 
   protected queueStatusLabel(entry: { status: string }): string {
     switch (entry.status) {
@@ -104,18 +189,13 @@ export class ProductionOverviewComponent {
     }
   }
 
-  protected productsByTier(tier: number): ProductType[] {
-    return this.productTypes.filter(p => p.tier === tier);
-  }
-
   protected productName(id: string): string {
     return this.productTypes.find(p => p.id === id)?.name ?? id;
   }
 
   protected productIcon(id: string): string {
-    if (PRODUCT_ICON[id]) return PRODUCT_ICON[id];
     const product = this.productTypes.find(p => p.id === id);
-    return product ? keywordIcon(product) : '❔';
+    return product ? iconForProduct(product) : '❔';
   }
 
   protected formatMass(kg: number): string {
@@ -138,20 +218,6 @@ export class ProductionOverviewComponent {
       this.api.productionQueue(c.id)().some(e => e.productTypeId === productTypeId && e.status !== 'done')).length;
   }
 
-  protected openModal(product: ProductType): void {
-    this.error.set(null);
-    for (const c of this.colonies()) {
-      this.draftQty[c.id] = DEFAULT_MAX_STOCK;
-      this.draftAutoMissing[c.id] = true;
-      this.draftRequeue[c.id] = false;
-    }
-    this.selectedProduct.set(product);
-  }
-
-  protected closeModal(): void {
-    this.selectedProduct.set(null);
-  }
-
   private async run(key: Id, action: () => Promise<unknown>): Promise<void> {
     this.error.set(null);
     this.busy.set(key);
@@ -162,6 +228,18 @@ export class ProductionOverviewComponent {
     } finally {
       this.busy.set(null);
     }
+  }
+
+  /** Reine Vorschau unter dem aktuellen Lagerbestand DIESER Kolonie – die vom Backend berechneten Realwerte für den Bau (Kettenschritte, Dauer, Arbeitskräfte). */
+  protected previewFor(colonyId: Id): void {
+    const product = this.selectedProduct();
+    if (!product) return;
+    const qty = this.draftQty[colonyId] ?? DEFAULT_MAX_STOCK;
+    this.chainPreviewLoading.set(colonyId);
+    this.api.previewProductionChain(colonyId, product.id, qty).then(plan => {
+      this.chainPreview[colonyId] = plan;
+      if (this.chainPreviewLoading() === colonyId) this.chainPreviewLoading.set(null);
+    });
   }
 
   protected queueHere(colonyId: Id): void {

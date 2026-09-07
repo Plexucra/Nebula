@@ -12,7 +12,7 @@ import { PopulationChartComponent } from '../../shared/population-chart.componen
 type Tab = 'uebersicht' | 'bebauung' | 'verteidigung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
 /** Platzhalter, solange eine Vorschau noch nicht (neu) berechnet wurde – siehe `refreshNewOrderPreview`/`toggleQueueEntry`. */
-const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true };
+const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true, totalWorkHours: 0, workersBoundPerHour: 0 };
 
 @Component({
   selector: 'app-colony-detail',
@@ -41,6 +41,7 @@ export class ColonyDetailComponent {
   protected readonly groundForces = this.api.groundForces(this.colonyId);
   protected readonly recruitmentQueue = this.api.recruitmentQueue(this.colonyId);
   protected readonly sellOrdersAll = this.api.sellOrders(this.colony()?.systemId ?? '');
+  protected readonly system = this.api.system(this.colony()?.systemId ?? '');
   protected readonly housingCapacity = this.api.housingCapacity(this.colonyId);
   protected readonly powerCoverage = this.api.powerCoverage(this.colonyId);
   protected readonly powerUpkeepPerHour = this.api.powerUpkeepPerHour(this.colonyId);
@@ -88,8 +89,20 @@ export class ColonyDetailComponent {
 
   /** Nur Orders, die diese Kolonie selbst eingestellt hat – "Planetarer Handel", siehe Handel-Tab. */
   protected readonly planetOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId === this.colonyId);
-  /** "System Handel": alle übrigen Orders im System (Systemhandelsposten + Depots anderer Kolonien) – die dieser Kolonie selbst stehen schon unter "Planetarer Handel", eine Dopplung dort wäre verwirrend. */
+  /** Übrige Depot-Orders anderer Kolonien im selben System – die dieser Kolonie selbst stehen schon unter "Planetarer Handel", eine Dopplung dort wäre verwirrend. Systemhandelsposten-Orders (`depotColonyId === null`) sind außerhalb einer Handelsgilde-Station nicht mehr möglich, siehe `canBuyFrom`. */
   protected readonly systemOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId !== this.colonyId);
+
+  /**
+   * Planetarer Handel ist außerhalb einer neutralen Handelsgilde-Station
+   * (`system().isTradeHub`) nur zwischen Kommandanten mit gültigem
+   * Handelsvertrag möglich (Umsetzungskonzept/21_...md) – die eigene Order
+   * ist davon unbenommen (dafür gibt es „Zurückziehen").
+   */
+  protected canBuyFrom(sellerId: Id): boolean {
+    if (sellerId === this.playerId()) return true;
+    if (this.system()?.isTradeHub) return true;
+    return this.api.hasTradeAgreement(sellerId)();
+  }
 
   protected newProductionProductId = this.productTypes[0]?.id ?? '';
   protected newProductionQty = 1;

@@ -79,4 +79,16 @@ public final class GatewayCommands {
     Set<String> known = state.knownSystemIdsByPlayer.get(playerId);
     return known != null && known.contains(systemId);
   }
+
+  /**
+   * true, sobald ein Kommandant die Rohstoffkonzentration der Planeten dieses Systems kennt –
+   * gesetzt durch {@code FleetCommands.exploreSystem} (eigene Flottenaktion) oder implizit durch
+   * eine eigene Kolonisierung dort ({@code ColonyCommands.colonizePlanet}). Getrennt von
+   * {@link #hasVisitedSystem}: bloße Anwesenheit einer Flotte reicht NICHT, um die Fördergüten
+   * aufzudecken.
+   */
+  public static boolean hasExploredSystem(GameState state, String playerId, String systemId) {
+    Set<String> explored = state.exploredSystemIdsByPlayer.get(playerId);
+    return explored != null && explored.contains(systemId);
+  }
 }

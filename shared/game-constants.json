@@ -3,6 +3,8 @@
   "realMsPerGameHour": 2500,
   "notificationRetentionGameHours": 48,
   "messageRetentionGameHours": 168,
+  "peaceTreatyTerminationNoticeGameHours": 168,
+  "tradeAgreementTerminationNoticeGameHours": 48,
   "slotsPerInfrastructureLevel": 1,
   "eleriumUpkeepBasePerHour": 0.005,
   "eleriumUpkeepLevelExponent": 1.25,

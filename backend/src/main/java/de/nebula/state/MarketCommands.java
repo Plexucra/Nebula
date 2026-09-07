@@ -4,6 +4,7 @@ import de.nebula.engine.Clock;
 import de.nebula.model.Colony;
 import de.nebula.model.Fleet;
 import de.nebula.model.SellOrder;
+import de.nebula.model.StarSystem;
 import de.nebula.model.TradeLocationType;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.Wallet;
@@ -20,9 +21,33 @@ import java.util.List;
  * (Phase 7) enthalten – der Flotten-Zweig in {@link #settleSellOrderPurchase}/
  * {@link #reserveForRelist}/{@link #cancelSellOrder} war schon vorher 1:1
  * mitportiert, wird ab jetzt tatsächlich erreichbar.</p>
+ *
+ * <p><b>Eingeschränkter planetarer Handel</b> (Umsetzungskonzept/21_...md):
+ * außerhalb einer neutralen Handelsgilde-Station ({@code StarSystem.isTradeHub})
+ * ist Systemhandel (Orders am Systemhandelsposten ohne Kolonie-Landung) nicht
+ * mehr möglich – nur noch der Planetare Handelsposten einer konkreten Kolonie.
+ * Ein tatsächlicher Kauf/Verkauf dort erfordert zusätzlich einen gültigen
+ * Handelsvertrag ({@link TreatyCommands#hasTradeAgreement}) zwischen den
+ * beiden beteiligten Kommandanten. An einer Handelsgilde-Station gilt keine
+ * dieser Einschränkungen – dort kann jeder mit jedem handeln.</p>
  */
 public final class MarketCommands {
   private MarketCommands() {
+  }
+
+  private static StarSystem findSystem(GameState state, String systemId) {
+    for (StarSystem s : state.systems) if (s.id.equals(systemId)) return s;
+    return null;
+  }
+
+  /** Wirft, sofern {@code systemId} KEINE Handelsgilde-Station ist und zwischen den beiden Parteien kein Handelsvertrag besteht. */
+  private static void requireTradePermission(GameState state, String systemId, String playerAId, String playerBId) {
+    if (playerAId.equals(playerBId)) return;
+    StarSystem sys = findSystem(state, systemId);
+    if (sys != null && sys.isTradeHub) return;
+    if (!TreatyCommands.hasTradeAgreement(state, playerAId, playerBId)) {
+      throw new CommandException("Planetarer Handel ist nur mit Kommandanten möglich, mit denen ein Handelsvertrag besteht.");
+    }
   }
 
   public static List<SellOrder> sellOrdersInSystem(GameState state, String systemId) {
@@ -78,6 +103,19 @@ public final class MarketCommands {
     double have = FleetCargo.qty(fleet, productTypeId);
     if (have < quantity) throw new CommandException("Nicht genug Fracht an Bord.");
     var player = GameQueries.requirePlayer(state, playerId);
+    if (fleet.locationColonyId == null) {
+      StarSystem sys = findSystem(state, fleet.systemId);
+      if (sys != null && sys.isTradeHub) {
+        // Seit Umsetzungskonzept/22_...md abgelöst durch das Depot-basierte Orderbuch der
+        // Handelsgilde-Station (HubMarketCommands) – dieser Zweig war die einzige bisherige Nutzung
+        // von "ohne Landung verkaufen" (siehe Klassendoku) und bleibt nur als sprechende Fehlermeldung stehen.
+        throw new CommandException("An einer Handelsgilde-Station läuft der Handel jetzt über das Depot: zuerst Fracht ins Depot entladen, dann auf der Handel-Seite eine Order aufgeben.");
+      }
+      throw new CommandException("Handel am Systemhandelsposten ist nur noch an neutralen Handelsgilde-Stationen möglich – bitte bei einer Kolonie landen.");
+    } else {
+      Colony depotColony = ColonyCommands.colony(state, fleet.locationColonyId);
+      if (depotColony != null) requireTradePermission(state, fleet.systemId, player.id, depotColony.ownerId);
+    }
     FleetCargo.add(fleet, productTypeId, -quantity);
 
     SellOrder order = new SellOrder();
@@ -111,6 +149,10 @@ public final class MarketCommands {
         FleetCargo.add(sourceFleet, order.productTypeId, order.remainingQuantity);
       } else if (order.depotColonyId != null) {
         Warehouse.add(state, order.depotColonyId, order.productTypeId, order.remainingQuantity);
+      } else {
+        // Weder Flotte noch Kolonie als Erstattungsziel: bislang unerreichbar (jede Order hatte bisher
+        // eines von beiden), soll aber NICHT still die Ware verschwinden lassen, falls sich das ändert.
+        throw new IllegalStateException("Order " + order.id + " hat kein Erstattungsziel (weder Flotte noch Kolonie).");
       }
     }
     state.sellOrders.remove(order);
@@ -122,6 +164,7 @@ public final class MarketCommands {
     SellOrder order = find(state, orderId);
     if (order == null || order.remainingQuantity < quantity) throw new CommandException("Nicht genug Ware in dieser Order verfügbar.");
     var player = GameQueries.requirePlayer(state, playerId);
+    requireTradePermission(state, order.systemId, player.id, order.sellerId);
     Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, player.id);
     double cost = Math.round(quantity * order.pricePerUnit);
     if (wallet == null || wallet.balance < cost) throw new CommandException("Nicht genug Credits.");
@@ -191,7 +234,12 @@ public final class MarketCommands {
   private static double reserveForRelist(GameState state, SellOrder order) {
     if (order.sourceFleetId != null) {
       Fleet fleet = findFleet(state, order.sourceFleetId);
-      if (fleet == null || fleet.status != de.nebula.model.FleetStatus.Stationed) return 0;
+      // Zusätzlich zu "stationiert" auch noch AM SELBEN Ort wie beim Einstellen der Order prüfen – sonst
+      // würde eine inzwischen weitergezogene Flotte an ihrem NEUEN Standort weiter Fracht für eine Order
+      // an ihrem ALTEN Standort abgeben.
+      if (fleet == null || fleet.status != de.nebula.model.FleetStatus.Stationed
+          || !fleet.systemId.equals(order.systemId)
+          || !java.util.Objects.equals(fleet.locationColonyId, order.depotColonyId)) return 0;
       double have = FleetCargo.qty(fleet, order.productTypeId);
       double qty = Math.min(order.quantity, Math.floor(have));
       if (qty <= 0) return 0;

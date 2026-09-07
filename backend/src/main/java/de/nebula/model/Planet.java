@@ -11,4 +11,6 @@ public class Planet {
   public List<PlanetResourceConcentration> resourceConcentration;
   /** Bahn-Index im System, rein fürs Layout der Systemkarte. */
   public int orbitIndex;
+  /** Besiedelbar? Gasriesen und Himmelskörper mit ungünstiger Masse sind es nicht (keine Rohstoffanzeige, keine Kolonie). */
+  public boolean usable;
 }

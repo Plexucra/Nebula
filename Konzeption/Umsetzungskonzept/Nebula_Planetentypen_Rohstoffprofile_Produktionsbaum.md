@@ -92,7 +92,7 @@ technische Unterschiede bei.
 | Kohlenstoffmineral     | Graphit, Karbonate und kohlenstoffreiche Minerale                 | Verbundstoffe, Elektroden, Chemie, Biologie       |
 | Salzmineral            | Chloride, Phosphate, Nitrate, Sulfate und Spurennährstoffe        | Chemie, Dünger, Medizin, Lebenserhaltung          |
 | Radionukliderz         | Uran-, Thorium- und andere radioaktive Minerale                   | Strahlenquellen, Spezialenergie, Sensorik         |
-| Wassereis              | Eis, Grundwasser und wasserhaltige Minerale                       | Trinkwasser, Sauerstoff, Chemie, Reaktionsmasse   |
+| Wasser              | Eis, Grundwasser und wasserhaltige Minerale                       | Trinkwasser, Sauerstoff, Chemie, Reaktionsmasse   |
 | Atmosphärenfluid       | Stickstoff, Sauerstoff, Kohlendioxid, Wasserstoff und Prozessgase | Atemluft, Chemie, Treibstoffe, Biologie           |
 | Edelgaskonzentrat      | Helium, Neon, Argon, Krypton und Xenon                            | Kühlung, Ionentriebwerke, Fertigungsatmosphäre    |
 | Kohlenwasserstofflager | Methan, höhere Kohlenwasserstoffe und organische Sedimente        | Polymere, Chemie, Textilien, Treibstoffe          |
@@ -105,7 +105,7 @@ technische Unterschiede bei.
 - Blei wird nicht als eigener Rohstoff geführt. Strahlenschutz entsteht als
   Werkstoff aus dichten Metallfraktionen und Verbundmaterialien.
 - Gold, Silber und Platingruppenmetalle werden als Edelmetallerz geführt.
-- Wasserstoff ist Bestandteil von Atmosphärenfluid und Wassereis. Besonders
+- Wasserstoff ist Bestandteil von Atmosphärenfluid und Wasser. Besonders
   geeignete Isotope werden über Isotopenträger abgebildet.
 - Helium ist Teil des Edelgaskonzentrats. Helium-3 für Fusionsanwendungen
   erfordert zusätzlich die Isotopenaufbereitung.
@@ -134,10 +134,14 @@ Oberflächen- und Zusammensetzungsklasse.
 | Gasriese                      | wasserstoff- und heliumreicher Riesenplanet                             | Atmosphärengase, Edelgase, Kohlenwasserstoffe und Isotope |
 | Eisriese                      | methan-, ammoniak- und wasserreicher Riesenplanet                       | Wasser, Kohlenwasserstoffe, Isotope und Kryofluide        |
 | Schwefelplanet                | schwefelreicher, vulkanisch oder chemisch aktiver terrestrischer Körper | Salze, Prozesschemie und hitzefeste Werkstoffe            |
+| Gasriesenmond                 | Mond eines Gasriesen oder Eisriesen                                     | teilweiser Zugriff auf dessen Fluide, sonst unauffällig   |
 
-Gasriesen und Eisriesen werden nicht an einer festen Oberfläche besiedelt.
-Ihre Kolonien bestehen aus Orbitalstationen, schwebenden Förderplattformen und
-automatisierten Atmosphärensonden. Beim Planetoiden ersetzt eine verteilte
+Gasriesen und Eisriese haben keine feste Oberfläche und sind NICHT
+besiedelbar (§7.4) – anders als in einer früheren Fassung dieses Dokuments
+gibt es für sie keine Orbitalstationen-Kolonie mehr. Besiedelbar ist
+stattdessen, mit einiger Wahrscheinlichkeit, ein **Gasriesenmond** im selben
+System: ein gewöhnlicher kleiner Körper, der einen Teil der Fluide seines
+Gasriesen mitnutzbar macht. Beim Planetoiden ersetzt eine verteilte
 Habitatstruktur die klassische planetare Stadt.
 
 ## 6. Rohstoffprofile der Planetentypen
@@ -146,59 +150,70 @@ Alle Angaben sind mögliche Fördergütebereiche. Der konkrete Planet erhält je
 Rohstoff einen Wert innerhalb des Bereichs. Ein hoher Maximalwert bedeutet
 nicht, dass jeder Planet dieses Typs reich ist.
 
+Balanceregel (Nutzervorgabe): jeder Planetentyp hat höchstens ZWEI
+Signaturrohstoffe, die wirklich gut sein dürfen – ein Hauptsignaturrohstoff
+zwischen 30 und 100 Prozent, höchstens ein zweiter zwischen 30 und 50 Prozent.
+Alle übrigen Rohstoffe des Typs liegen zwischen 1 und 14 Prozent, also immer
+unter der "arm"-Schwelle aus §2. Ein Planetentyp ist damit klar erkennbar
+spezialisiert statt überall mittelmäßig gut, und kein einzelner Planetentyp
+deckt seinen Bedarf an mehr als ein bis zwei Rohstoffen selbst.
+
 ### 6.1 Metallerze
 
 | Planetentyp                   | Ferrometall | Leichtmetall | Refraktärmetall | Leitmetall | Edelmetall | Seltene Erden | Technologiemetall |
-| ----------------------------- | -----------:| ------------:| ---------------:| ----------:| ----------:| -------------:| -----------------:|
-| Temperierter Biosphärenplanet | 25–55       | 35–65        | 10–30           | 20–45      | 5–20       | 10–30         | 15–35             |
-| Silikatplanet                 | 35–70       | 30–65        | 20–50           | 20–50      | 5–25       | 10–40         | 15–45             |
-| Wüstenplanet                  | 25–60       | 40–75        | 15–45           | 15–40      | 5–20       | 15–45         | 10–35             |
-| Ozeanplanet                   | 10–35       | 15–40        | 5–20            | 10–30      | 5–20       | 5–20          | 10–30             |
-| Eisplanet                     | 10–30       | 10–30        | 5–20            | 5–20       | 2–15       | 5–25          | 5–20              |
-| Vulkanplanet                  | 55–90       | 30–60        | 50–85           | 35–70      | 10–35      | 30–65         | 25–60             |
-| Metallplanet                  | 75–100      | 30–65        | 50–90           | 55–95      | 20–55      | 25–60         | 25–60             |
-| Kohlenstoffplanet             | 15–40       | 10–35        | 10–30           | 10–35      | 5–25       | 10–30         | 15–50             |
-| Supererde                     | 45–85       | 30–60        | 40–75           | 35–70      | 15–40      | 25–60         | 25–60             |
-| Planetoid                     | 20–90       | 20–85        | 10–80           | 10–80      | 5–65       | 10–70         | 10–70             |
-| Gasriese                      | 1–8         | 1–8          | 1–6             | 1–6        | 1–5        | 1–6           | 1–8               |
-| Eisriese                      | 1–12        | 1–12         | 1–10            | 1–10       | 1–8        | 1–12          | 2–15              |
-| Schwefelplanet                | 25–55       | 15–40        | 15–45           | 20–50      | 5–20       | 10–40         | 15–45             |
+| ------------------------------ | ----------- | ------------ | --------------- | ---------- | ---------- | ------------- | ----------------- |
+| Temperierter Biosphärenplanet  |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Silikatplanet                  |       30–50 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Wüstenplanet                   |        1–14 |       30–100 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Ozeanplanet                    |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Eisplanet                      |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Vulkanplanet                   |        1–14 |         1–14 |          30–100 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Metallplanet                   |      30–100 |         1–14 |            1–14 |      30–50 |       1–14 |          1–14 |              1–14 |
+| Kohlenstoffplanet              |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Supererde                      |        1–14 |         1–14 |           30–50 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Planetoid                      |        1–14 |         1–14 |            1–14 |       1–14 |      30–50 |        30–100 |              1–14 |
+| Gasriese                       |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Eisriese                       |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
+| Schwefelplanet                 |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |             30–50 |
+| Gasriesenmond                  |        1–14 |         1–14 |            1–14 |       1–14 |       1–14 |          1–14 |              1–14 |
 
 ### 6.2 Mineralische und energetische Rohstoffe
 
 | Planetentyp                   | Silikat | Kohlenstoff | Salz   | Radionuklide | Eleriumspuren |
-| ----------------------------- | -------:| -----------:| ------:| ------------:| -------------:|
-| Temperierter Biosphärenplanet | 45–75   | 45–75       | 60–90  | 5–20         | 15–30         |
-| Silikatplanet                 | 70–100  | 15–40       | 20–50  | 10–35        | 5–25          |
-| Wüstenplanet                  | 65–95   | 20–50       | 55–90  | 10–30        | 5–20          |
-| Ozeanplanet                   | 20–50   | 35–65       | 75–100 | 5–20         | 8–25          |
-| Eisplanet                     | 15–45   | 25–60       | 25–60  | 5–25         | 10–35         |
-| Vulkanplanet                  | 65–95   | 10–35       | 25–60  | 30–70        | 20–55         |
-| Metallplanet                  | 20–55   | 10–35       | 10–35  | 25–65        | 15–45         |
-| Kohlenstoffplanet             | 25–60   | 75–100      | 20–55  | 10–35        | 10–40         |
-| Supererde                     | 55–90   | 20–50       | 25–60  | 35–75        | 20–60         |
-| Planetoid                     | 10–90   | 10–90       | 5–70   | 5–80         | 2–65          |
-| Gasriese                      | 1–10    | 45–85       | 1–20   | 1–8          | 3–25          |
-| Eisriese                      | 1–15    | 50–90       | 10–35  | 1–12         | 8–35          |
-| Schwefelplanet                | 55–85   | 10–35       | 60–95  | 15–45        | 10–35         |
+| ------------------------------ | ------- | ----------- | ------ | ------------ | ------------- |
+| Temperierter Biosphärenplanet  |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Silikatplanet                  |  30–100 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Wüstenplanet                   |    1–14 |        1–14 |  30–50 |         1–14 |          1–14 |
+| Ozeanplanet                    |    1–14 |        1–14 |  30–50 |         1–14 |          1–14 |
+| Eisplanet                      |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Vulkanplanet                   |    1–14 |        1–14 |   1–14 |         1–14 |         30–50 |
+| Metallplanet                   |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Kohlenstoffplanet              |    1–14 |      30–100 |   1–14 |         1–14 |          1–14 |
+| Supererde                      |    1–14 |        1–14 |   1–14 |       30–100 |          1–14 |
+| Planetoid                      |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Gasriese                       |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Eisriese                       |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
+| Schwefelplanet                 |    1–14 |        1–14 | 30–100 |         1–14 |          1–14 |
+| Gasriesenmond                  |    1–14 |        1–14 |   1–14 |         1–14 |          1–14 |
 
 ### 6.3 Fluide und Isotopenträger
 
-| Planetentyp                   | Wassereis | Atmosphärenfluid | Edelgase | Kohlenwasserstoffe | Isotopenträger |
-| ----------------------------- | ---------:| ----------------:| --------:| ------------------:| --------------:|
-| Temperierter Biosphärenplanet | 80–100    | 80–100           | 20–50    | 30–60              | 20–45          |
-| Silikatplanet                 | 5–35      | 10–40            | 10–35    | 5–25               | 10–35          |
-| Wüstenplanet                  | 5–30      | 20–55            | 10–40    | 15–50              | 10–35          |
-| Ozeanplanet                   | 90–100    | 70–95            | 20–50    | 25–55              | 30–60          |
-| Eisplanet                     | 85–100    | 15–45            | 25–60    | 35–75              | 45–80          |
-| Vulkanplanet                  | 10–40     | 40–80            | 25–60    | 5–25               | 20–55          |
-| Metallplanet                  | 1–20      | 1–25             | 5–30     | 1–15               | 15–45          |
-| Kohlenstoffplanet             | 10–45     | 20–60            | 10–35    | 70–100             | 20–50          |
-| Supererde                     | 20–60     | 35–75            | 20–55    | 10–40              | 25–60          |
-| Planetoid                     | 1–70      | 1–65             | 1–70     | 1–80               | 5–85           |
-| Gasriese                      | 30–75     | 90–100           | 75–100   | 65–100             | 70–100         |
-| Eisriese                      | 70–100    | 90–100           | 65–95    | 75–100             | 75–100         |
-| Schwefelplanet                | 5–35      | 45–85            | 15–50    | 10–40              | 15–45          |
+| Planetentyp                   | Wasser | Atmosphärenfluid | Edelgase | Kohlenwasserstoffe | Isotopenträger |
+| ------------------------------ | ------ | ---------------- | -------- | ------------------- | -------------- |
+| Temperierter Biosphärenplanet  | 30–100 |             30–50 |     1–14 |                1–14 |           1–14 |
+| Silikatplanet                  |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Wüstenplanet                   |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Ozeanplanet                    | 30–100 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Eisplanet                      | 30–100 |              1–14 |     1–14 |                1–14 |          30–50 |
+| Vulkanplanet                   |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Metallplanet                   |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Kohlenstoffplanet              |   1–14 |              1–14 |     1–14 |               30–50 |           1–14 |
+| Supererde                      |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Planetoid                      |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Gasriese                       |   1–14 |            30–100 |    30–50 |                1–14 |           1–14 |
+| Eisriese                       |   1–14 |              1–14 |     1–14 |               30–50 |         30–100 |
+| Schwefelplanet                 |   1–14 |              1–14 |     1–14 |                1–14 |           1–14 |
+| Gasriesenmond                  |   1–14 |             30–50 |   30–100 |                1–14 |           1–14 |
 
 ## 7. Generierung von Planet und Cluster
 
@@ -222,58 +237,76 @@ Fördergüte = runden(begrenzen(Typwert + lokale Abweichung, Minimum, Maximum))
 - Der Planetentyp verhindert geologisch unpassende Ergebnisse. Ein Gasriese
   wird deshalb trotz eines Metallclusters nicht zum Metallplaneten.
 
-### 7.2 Nachbarschaftsregel
+### 7.2 Regionale Kohärenz statt Nachbarschafts-Validierung
 
-Die bestehende Zehn-Prozentpunkte-Regel wird auf jede ungerichtete
-Gateway-Verbindung in beide Richtungen angewandt:
+Statt den Clusterwert je System unabhängig zu würfeln und Ausreißer in einer
+nachträglichen Validierungsphase über alle Gateway-Nachbarn zu korrigieren,
+erzeugt der Weltgenerator den Clusterwert direkt räumlich kohärent: je
+Rohstoff entstehen einige wenige zufällige "Hotspots" mit zufälliger Stärke,
+verteilt über die gesamte Galaxiekarte. Der Clusterwert eines Systems an
+Position (x, y) ist der mit einem Gauß-Kern distanzgewichtete Mittelwert
+dieser Hotspot-Stärken.
 
-```text
-| stärkstes Vorkommen in System A - stärkstes Vorkommen in System B | ≤ 10
-```
+Ergebnis: benachbarte Systeme haben automatisch ähnliche Clusterwerte (glatter
+Feldverlauf), weit entfernte Regionen der Galaxie streuen dagegen unabhängig.
+Jede Gegend der Galaxie bekommt so ein eigenes wirtschaftliches Profil mit
+eigenen Stärken und Schwächen, und Systeme mit ähnlichen Stärken liegen mit
+hoher Wahrscheinlichkeit nebeneinander – ganz ohne Neuwürfeln einzelner
+Planetentypen oder eine explizite Prüfung je Gateway-Kante.
 
-Nach der Planetenerzeugung läuft eine Validierungsphase über alle direkten
-Nachbarn. Ausreißer werden innerhalb ihres Planetentypbereichs angepasst.
-Reicht der Bereich dafür nicht aus, muss der Weltgenerator den Planetentyp neu
-ziehen. So bleiben Cluster räumlich zusammenhängend, ohne die Unterschiede der
-Planetentypen aufzulösen.
+### 7.3 Signatur- und Manglerohstoffe
 
-### 7.3 Signatur und Nebenprofil
+Die frühere Idee, Signatur- und Manglerohstoffe je EINZELNEM Planeten neu zu
+würfeln, entfällt: Signaturrohstoffe sind stattdessen fest im Fördergüte-
+Bereich des Planetentyps verankert (§6) – ein Planetentyp hat höchstens zwei
+Signaturrohstoffe, alle übrigen liegen für JEDEN Planeten dieses Typs unter 15
+Prozent. Das ist einfacher als eine Zufallsauswahl je Planet, ergibt aber
+denselben Effekt: kein einzelner Planet ist zufällig in allen Bereichen
+gleichzeitig Spitzenklasse, und ein Planetentyp bleibt über die ganze Galaxie
+hinweg wiedererkennbar spezialisiert.
 
-Jeder Planet erhält zusätzlich:
+### 7.4 Besiedelbare und unbesiedelbare Himmelskörper
 
-- zwei Signaturrohstoffe, die bevorzugt im oberen Drittel ihres Bereichs
-  liegen;
-- drei Manglerohstoffe, die bevorzugt im unteren Drittel liegen;
-- alle übrigen Rohstoffe als Nebenprofil;
-- höchstens einen außergewöhnlichen Wert ab 90, sofern der Planetentyp diesen
-  zulässt.
+Nicht jeder Himmelskörper eines Systems ist besiedelbar – realistischerweise
+wäre eine Masse über 1,5 g Oberflächenschwerkraft für eine Kolonie ungünstig,
+ebenso eine zu geringe Masse (kein Halt für Atmosphäre/Wasser) oder ein
+Gasriese/Eisriese ohne feste Oberfläche (§5). Jedes System besteht deshalb aus:
 
-Diese Regel verhindert, dass ein einzelner Planet zufällig in allen Bereichen
-Spitzenwerte erreicht.
+- 3 bis 5 besiedelbaren Himmelskörpern mit vollem Fördergüte-Profil (§6);
+- zusätzlich rund 4 bis 6 unbesiedelbaren Himmelskörpern OHNE
+  Rohstoffanzeige – Gasriesen, Eisriesen oder Körper mit ungünstiger Masse.
+
+Enthält ein System einen Gasriesen oder Eisriesen, kann einer der
+besiedelbaren Himmelskörper stattdessen ein **Gasriesenmond** sein: ein Mond,
+der einen Teil der Fluide seines Gasriesen (Atmosphärenfluid, Edelgase)
+mitnutzbar macht und dadurch selbst besiedelbar ist, obwohl sein Mutterkörper
+es nicht ist.
 
 ## 8. Heimatplanet und Grundversorgung
 
 Ein neuer Spieler startet auf einem temperierten Biosphärenplaneten. Für den
-konkreten Heimatplaneten gelten folgende Mindestwerte:
+konkreten Heimatplaneten gilt statt der üblichen Planetentyp-Fördergütebereiche
+(§6) eine feste Regel (Nutzervorgabe), unabhängig vom regionalen Cluster des
+Heimatsystems:
 
-| Rohstoff               | Mindestfördergüte | Begründung                             |
-| ---------------------- | -----------------:| -------------------------------------- |
-| Wassereis              | 80                | Trinkwasser, Sauerstoff und Hygiene    |
-| Atmosphärenfluid       | 80                | Atemluft, Stickstoff und Bioproduktion |
-| Salzmineral            | 60                | Nährstoffe, Dünger, Chemie und Medizin |
-| Kohlenstoffmineral     | 50                | Biomasse, Werkstoffe und Chemie        |
-| Silikatmineral         | 45                | Glas, Keramik und einfache Bauprodukte |
-| Leichtmetallerz        | 30                | Behälter, Rahmen und Haushaltswaren    |
-| Kohlenwasserstofflager | 30                | Polymere, Textilien und Chemikalien    |
-| Ferrometallerz         | 25                | Maschinen, Werkzeuge und Struktur      |
-| Leitmetallerz          | 15                | elektrische Grundausstattung           |
-| Technologiemetallerz   | 12                | einfache Steuertechnik                 |
-| Eleriumspuren          | 15                | lokale Energiegrundversorgung          |
+- Die vier Nahrungsrohstoffe **Wasser**, **Atmosphärenfluid**, **Salzmineral**
+  und **Kohlenstoffmineral** sowie **Eleriumspuren** liegen IMMER zwischen 50
+  und 60 Prozent.
+- Genau EIN weiterer, zufällig gewählter Rohstoff liegt ebenfalls zwischen 50
+  und 60 Prozent.
+- Alle übrigen Rohstoffe liegen zwischen 1 und 9 Prozent.
+
+Jeder Heimatplanet kann damit von Anfang an seine Bevölkerung ernähren und
+seinen Eleriumbedarf lokal decken, ist bei allem anderen aber überwiegend arm
+– genau wie jeder andere Planet auch auf Handel angewiesen. Welcher der
+übrigen Rohstoffe die eine Ausnahme ist, unterscheidet sich von Heimatwelt zu
+Heimatwelt und gibt jedem Start eine eigene, kleine Spezialisierung mit.
 
 Zusätzlich beginnt die Kolonie mit einer versiegelten Eleriumreserve, einem
-einfachen Eleriumgenerator und je einer primitiven Förderanlage für Wasser,
-Atmosphärenfluid, Salz, Kohlenstoff und Elerium. Die Reserve verhindert einen
-Startstillstand, ersetzt aber keine laufende Förderung.
+einfachen Eleriumgenerator, je einer primitiven Förderanlage für Wasser,
+Atmosphärenfluid, Salz, Kohlenstoff und Elerium sowie einem kleinen Startvorrat
+an Eleriumkapseln für die ersten Gateway-Sprünge (§9.4). Die Reserve verhindert
+einen Startstillstand, ersetzt aber keine laufende Förderung.
 
 Der Heimatplanet kann damit alle Grundkonsumgüter selbst herstellen. Für
 leistungsfähige Chips, Großschiffe und hochspezialisierte Module bleiben Handel
@@ -317,6 +350,22 @@ Ebene 7: Schiff, Kraftwerk oder militärisches Ausrüstungspaket
 | Eleriumtreibstoffkern | Schiffsreaktor und Hochenergieantrieb           | hohe Leistung, benötigt weiterhin Reaktionsmasse       |
 | Eleriuminitiator      | schwere Gefechtsköpfe und strategische Ladungen | sehr hoher Spitzenenergiebedarf, Verbrauch bei Einsatz |
 
+### 9.4 Eleriumkapseln als Sprungtreibstoff
+
+Jeder Gateway-Sprung einer Flotte verbraucht Eleriumkapseln: 0,01 Stück je
+Schiff und Sprung, unabhängig von Schiffsklasse oder Fracht. Ein neuer
+Kommandant startet mit 10 Kapseln im Heimatkolonielager – genug für viele
+Sprünge einer kleinen Startflotte, ohne dass eigene Kapselproduktion sofort
+nötig wäre. Reicht der gesamte Kapselvorrat über alle eigenen Kolonien
+zusammen nicht für einen geplanten (auch mehrsprungigen) Flug, wird der
+Sprung abgelehnt, bevor die Flotte losfliegt.
+
+Damit bleibt Reisen für kleine Flotten praktisch kostenlos, während ein
+Kommandant mit vielen Frachtern und großen Flotten die Sprungkosten zunehmend
+einplanen und eigene Eleriumkapsel-Produktion aufbauen muss – eine weiche
+Bremse gegen beliebig weite, beliebig große Flottenbewegungen, ohne neue
+Spieler zu behindern.
+
 ## 10. Vollständiger Produktionsbaum
 
 ### 10.1 Ebene 2: aufbereitete Rohstoffe
@@ -334,7 +383,7 @@ Ebene 7: Schiff, Kraftwerk oder militärisches Ausrüstungspaket
 | Kohlenstoffraffinat         | Kohlenstoffmineral           |
 | Industriesalze              | Salzmineral                  |
 | Radionuklidkonzentrat       | Radionukliderz               |
-| Prozesswasser               | Wassereis                    |
+| Prozesswasser               | Wasser                    |
 | Getrennte Atmosphärengase   | Atmosphärenfluid             |
 | Edelgasfraktion             | Edelgaskonzentrat            |
 | Kohlenwasserstofffraktion   | Kohlenwasserstofflager       |
@@ -634,7 +683,7 @@ kleine Eleriummenge trotzdem ein hoher Kosten- und Engpassfaktor sein.
 | Kohlenstoffmineral     | 8        | 6         | 5       | 8        | 5            | 7                      |
 | Salzmineral            | 1        | 2         | 1       | 2        | 1            | 3                      |
 | Radionukliderz         | 1        | 4         | 3       | 1        | 2            | 1                      |
-| Wassereis              | 2        | 2         | 1       | 3        | 2            | 5                      |
+| Wasser              | 2        | 2         | 1       | 3        | 2            | 5                      |
 | Atmosphärenfluid       | 1        | 2         | 1       | 2        | 2            | 4                      |
 | Edelgaskonzentrat      | 3        | 2         | 3       | 2        | 2            | 1                      |
 | Kohlenwasserstofflager | 2        | 6         | 2       | 8        | 1            | 10                     |

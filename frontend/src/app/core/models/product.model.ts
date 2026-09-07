@@ -1,16 +1,22 @@
 import { Id } from './common.model';
 
 /**
- * 'Fuel': Elerium-115-Kette (Antriebs- und Energieversorgungs-Treibstoff,
- * siehe `Umsetzungskonzept/01_...`, §3 "PowerUpkeepJob") – eigene Kategorie
- * statt BuildingMaterial, da sowohl einmalig verbaut (Antriebsmodul) als
- * auch laufend verbraucht (Energienetz-Unterhalt).
+ * 'EnergyModule': Elerium-115-Kette (Antriebs- und Energieversorgungs-
+ * Treibstoff, siehe `Umsetzungskonzept/01_...`, §3 "PowerUpkeepJob") –
+ * eigene Kategorie statt BuildingMaterial, da sowohl einmalig verbaut
+ * (Antriebsmodul) als auch laufend verbraucht (Energienetz-Unterhalt).
+ * Bis Umsetzungskonzept/20_...md hieß die Kategorie `Fuel`.
+ * 'ShipModule': die je Schiffstyp einmal produzierten Baugruppen
+ * (Rumpf/Antrieb/Energie/Elektronik/Versorgung/Waffen/Ladung/Hangar/
+ * Truppen), bis Umsetzungskonzept/20_...md Teil von `BuildingMaterial` –
+ * ausschließlich Eingang von `Ship`-Rezepten, nirgends sonst verbaut.
  * 'Facility': planetare Anlagen (Ebene 7 im Produktionsbaum, z. B.
  * Schiffswerft, Koloniehabitat) – aktuell als Katalogeintrag vorhanden,
  * aber noch nicht mit dem Gebäude-Ausbausystem verknüpft (siehe
  * product-catalog.ts Kopfkommentar).
  */
-export type ProductCategory = 'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'RawResource' | 'Fuel';
+export type ProductCategory =
+  'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'ShipModule' | 'RawResource' | 'EnergyModule';
 
 export interface RecipeInput {
   inputProductTypeId: Id;

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../core/sim/game-api.token';
+import { PlayerRole } from '../core/models';
 
 @Component({
   selector: 'app-new-game',
@@ -17,6 +18,8 @@ export class NewGameComponent {
 
   protected commanderName = '';
   protected homeworldName = '';
+  protected role: PlayerRole = 'Normal';
+  protected campId = '';
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
@@ -24,7 +27,9 @@ export class NewGameComponent {
     this.error.set(null);
     this.busy.set(true);
     try {
-      await this.api.registerPlayer(this.commanderName, this.homeworldName);
+      await this.api.registerPlayer(
+        this.commanderName, this.homeworldName, this.role,
+        this.role === 'Npc' ? this.campId : undefined);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Unbekannter Fehler.');
     } finally {

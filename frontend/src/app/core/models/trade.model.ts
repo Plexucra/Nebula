@@ -39,14 +39,36 @@ export interface SellOrder {
   sourceFleetId: Id | null;
 }
 
-export interface BuyOrder {
+export type HubOrderSide = 'Buy' | 'Sell';
+
+/**
+ * Kauf- oder Verkaufs-Order im Orderbuch einer Handelsgilde-Station
+ * (Konzeption/Umsetzungskonzept/22_...md) – anders als {@link SellOrder} ist
+ * das hier ein echtes zweiseitiges Orderbuch mit sofortiger (Teil-)Ausführung
+ * beim Kreuzen. `ownerId === null` kennzeichnet eine Order der Handelsgilde
+ * selbst (Market-Maker) statt eines Spielers – solche Orders lassen sich
+ * nicht zurückziehen.
+ */
+export interface HubOrder {
   id: Id;
   systemId: Id;
-  buyerId: Id;
+  productTypeId: Id;
+  side: HubOrderSide;
+  ownerId: Id | null;
+  ownerName: string;
+  limitPrice: number;
+  quantity: number;
+  remainingQuantity: number;
+  escrowedCredits: number;
+  createdAt: number;
+}
+
+/** Eine Warenposition im unbegrenzten Depot eines Kommandanten an einer Handelsgilde-Station. */
+export interface HubDepotEntry {
+  systemId: Id;
+  ownerId: Id;
   productTypeId: Id;
   quantity: number;
-  pricePerUnit: number;
-  createdAt: number;
 }
 
 export interface ConsumptionState {

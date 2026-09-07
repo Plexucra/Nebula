@@ -58,14 +58,22 @@ industrielle Produktion, Konsum der Bevölkerung, Nachfrage der
 dortigen Kolonien, Importe und Exporte. Dadurch bilden sich von System
 zu System deutlich unterschiedliche Preise.
 
-Waren müssen für den lokalen Handel nicht erst physisch zur zentralen
+Waren müssen für den lokalen Handel nicht erst physisch zu einer zentralen
 Station transportiert werden: Die Gilde unterhält auf jedem Planeten
-eigene **Depots**, die nur bei tatsächlichem Bedarf zur Station
-transportiert werden. Kauf und Verkauf kosten Gebühren, die wiederum an
+eigene **Depots**. Kauf und Verkauf kosten Gebühren, die wiederum an
 die Planeten des Systems ausgeschüttet werden – in Abhängigkeit von
 deren Bevölkerungsanzahl. Dadurch profitieren Spieler unmittelbar von
 gut laufenden Handelsposten in ihrem System und haben einen
 wirtschaftlichen Anreiz, ihre Grenzen offen zu halten.
+
+> **Präzisierung:** Es gibt in einem normalen Sonnensystem KEINEN
+> anonymen, für jeden frei zugänglichen Systemhandel mehr – gehandelt
+> wird ausschließlich am **Planetaren Handelsposten** einer konkreten
+> Kolonie, und ein tatsächlicher Kauf/Verkauf dort setzt einen gültigen
+> **Handelsvertrag** zwischen den beiden beteiligten Kommandanten voraus
+> (siehe §14). Die einzige Ausnahme sind die sektoralen
+> Handelsstationen der Gilde (§5) – dort gilt weiterhin uneingeschränkter
+> Zugang für alle.
 
 ## 5. Sektorale Handelsstationen
 
@@ -82,6 +90,15 @@ zweite Preisbildungsebene entsteht (lokal vs. sektoral). Bei der
 Erzeugung bzw. Erweiterung der Galaxie muss sichergestellt werden, dass
 jedes relevante Gateway-Gebiet mindestens eine sektorale Handelsstation
 sinnvoll erreichen kann.
+
+> **Präzisierung (Umsetzungskonzept/22_...md):** An einer sektoralen
+> Handelsstation hat jeder Kommandant ein eigenes, unbegrenztes Depot,
+> beliefert per Flotte mit Frachtern. Neben Verkaufs-Orders gibt es dort
+> jetzt auch Kauf-Orders, die sich mit bestehenden Gegen-Orders sofort
+> kreuzen – auch teilweise. Eine Handelsgilde-eigene, sich selbst
+> nachjustierende Grundordnung auf beiden Seiten sorgt dafür, dass an jeder
+> Station für jede Ware überhaupt ein Markt existiert, auch ohne wartenden
+> zweiten Spieler.
 
 ## 6. Garantierter physischer Zugang
 
@@ -107,14 +124,16 @@ entdeckt ist.)
 
 Präzisierung gegenüber der ursprünglichen Grundidee: Pro Sonnensystem
 existiert ein **gemeinsamer Markt** der Handelsgilde, keine getrennte
-Preisbildung auf jedem einzelnen Planeten. Orders werden nach
-physischem Ausführungsort unterschieden (Station vs. planetares Depot),
-gehören aber zu diesem einen Systemmarkt. Kolonien auf demselben
-Planeten wie ein Handelsdepot können unmittelbar mit diesem Depot
-handeln, ohne einen eigenen ausgespielten lokalen Frachtertransport.
-Für die Bevölkerung gilt dasselbe: Sie kauft über denselben Systemmarkt
-und zu denselben tatsächlichen Preisen wie Spieler, ohne künstlichen
-Sonderpreis.
+Preisbildung auf jedem einzelnen Planeten – Orders an unterschiedlichen
+Planetaren Handelsposten desselben Systems gehören preislich zu diesem
+einen Systemmarkt, auch wenn ihre Sichtbarkeit/Zugänglichkeit füreinander
+fremde Kommandanten inzwischen an einen Handelsvertrag geknüpft ist (§14).
+Kolonien auf demselben Planeten wie ein Handelsdepot können unmittelbar
+mit diesem Depot handeln, ohne einen eigenen ausgespielten lokalen
+Frachtertransport. Für die Bevölkerung gilt dasselbe: Sie kauft über
+denselben Systemmarkt und zu denselben tatsächlichen Preisen wie Spieler,
+ohne künstlichen Sonderpreis und ohne Handelsvertrag-Pflicht (Bevölkerung
+ist keine Vertragspartei).
 
 ## 8. Geografischer Wert und wichtige Verkehrsknoten
 
@@ -178,11 +197,63 @@ potenziell auch Kredite. Zur geldwirtschaftlichen Einordnung siehe
 
 ## 13. Möglicher Schutz um sektorale Handelsstationen
 
-Noch nicht abschließend entschieden ist ein direkter militärischer
-Schutz des unmittelbaren Raums um sektorale Handelsstationen durch die
-Handelsgilde selbst, damit ein Großspieler keine zentrale
+Für die Station SELBST inzwischen entschieden (§14, konkret umgesetzt in
+Umsetzungskonzept/21_...md): An ihr ist grundsätzlich KEINE Blockade
+möglich, sie kann also von niemandem eingenommen oder für einzelne
+Kommandanten gesperrt werden. Noch nicht abschließend entschieden ist ein
+darüber hinausgehender direkter militärischer Schutz des UMLIEGENDEN
+Raums (z. B. der Anflugrouten) durch die Handelsgilde selbst, damit ein
+Großspieler keine zentrale
 Handelsstation dauerhaft blockieren und damit einen ganzen regionalen
 Markt faktisch privatisieren kann.
+
+## 14. Handelsverträge und Vertragspflicht am Planetaren Handelsposten
+
+Planetarer Handel (Kauf- oder Verkaufsvorgang an einem Planetaren
+Handelsposten, §4) ist nur noch zwischen Kommandanten möglich, die
+einen **Handelsvertrag** miteinander haben. Ohne Handelsvertrag lässt
+sich eine fremde Verkaufsorder dort weder kaufen noch selbst
+eine eigene Fracht bei einer fremden Kolonie zum Verkauf einstellen –
+das eigene Lager bleibt davon unberührt, ein Kommandant kann jederzeit an
+seinem EIGENEN Handelsposten verkaufen und einlagern.
+
+Der **Handelsvertrag** ist ein neues, eigenständiges Konstrukt zusätzlich
+zum **Friedensvertrag** (siehe unten) – beide zusammen ergänzen den
+bisherigen einfachen Kriegs-/Friedenszustand (`04_...md`) um eine
+förmliche, freiwillige Vertragsebene:
+
+- Beide Vertragsarten sind unabhängig voneinander abschließbar: parallel,
+  jeweils einzeln, oder gar nicht.
+- Beide können nur geschlossen werden, solange die Parteien NICHT im
+  Krieg stehen.
+- Beide werden nur wirksam, wenn BEIDE Parteien zustimmen: die Anfrage
+  läuft über das Benachrichtigungssystem und lässt sich über die
+  Diplomatie-Ansicht einsehen, annehmen oder zurückweisen.
+- Beide haben eine **Kündigungsfrist**: eine Kündigung beendet den
+  Vertrag nicht sofort, sondern erst nach Ablauf dieser Frist – bis dahin
+  gilt er unverändert weiter. Für den Friedensvertrag sind das 7 Spieltage
+  (danach erst wird eine Kriegserklärung zwischen den beiden wieder
+  möglich), für den Handelsvertrag 2 Spieltage (danach erst endet der
+  gegenseitige Handelszugang tatsächlich).
+
+Der **Friedensvertrag** ist bewusst vom Handelsvertrag getrennt: sein
+einziger Zweck ist es, einen Angriff zwischen den Parteien auszuschließen
+(er blockiert die Kriegserklärung vollständig), OHNE dabei automatisch
+auch die eigenen lokalen Märkte für die Gegenseite zu öffnen. Wer nur vor
+einem Angriff sicher sein will, aber (noch) keinen Handelspartner sucht,
+schließt also nur einen Friedensvertrag; wer umgekehrt handeln will, ohne
+sich formell zum Frieden zu verpflichten, schließt nur einen
+Handelsvertrag. Eine Kriegserklärung ist entsprechend nur möglich, wenn
+kein (auch kein gekündigter, noch laufender) Friedensvertrag zwischen den
+Parteien besteht; sie beendet dabei umgekehrt sofort und ohne
+Kündigungsfrist einen eventuell noch bestehenden Handelsvertrag – im
+Krieg handelt man nicht mehr planetar miteinander.
+
+Diese Vertragspflicht gilt AUSSCHLIESSLICH für den Planetaren
+Handelsposten. Der Handel an einer sektoralen Handelsstation der
+Handelsgilde (§5) ist davon vollständig unberührt: dort kann jeder mit
+jedem handeln, unabhängig von Krieg, Frieden oder Handelsvertrag, und
+eine Blockade ist dort ohnehin nicht möglich (§13).
 
 ## Offene konzeptionelle Fragen
 

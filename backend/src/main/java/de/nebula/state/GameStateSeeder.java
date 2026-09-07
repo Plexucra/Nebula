@@ -29,6 +29,7 @@ public final class GameStateSeeder {
     state.players.add(seed.player);
     state.systems.addAll(seed.systems);
     state.knownSystemIdsByPlayer.put(seed.player.id, new LinkedHashSet<>(Set.of(seed.player.homeSystemId)));
+    state.exploredSystemIdsByPlayer.put(seed.player.id, new LinkedHashSet<>(Set.of(seed.player.homeSystemId)));
     state.planets.addAll(seed.planets);
     state.colonies.addAll(seed.colonies);
     state.planetStats.addAll(seed.planetStats);
@@ -48,6 +49,9 @@ public final class GameStateSeeder {
     for (String colonyId : seed.productionQueue.stream().map(e -> e.colonyId).distinct().toList()) {
       ProductionCommands.tryStartNextProductionEntry(state, ids, colonyId);
     }
+    // Einmalig für die GESAMTE (frisch erzeugte) Galaxie: Handelsgilde-Orderbuch an jeder Station
+    // (Umsetzungskonzept/22_...md). Hier und nicht lazy beim ersten Stationsbesuch, siehe dortige Klassendoku.
+    HubMarketCommands.seedAllMarketMakers(state, ids);
   }
 
   /**
@@ -69,6 +73,7 @@ public final class GameStateSeeder {
     }
     state.players.add(seed.player);
     state.knownSystemIdsByPlayer.put(seed.player.id, new LinkedHashSet<>(Set.of(seed.newSystem.id)));
+    state.exploredSystemIdsByPlayer.put(seed.player.id, new LinkedHashSet<>(Set.of(seed.newSystem.id)));
     state.planets.addAll(seed.planets);
     state.colonies.add(seed.colony);
     state.planetStats.add(seed.planetStats);

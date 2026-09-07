@@ -18,6 +18,20 @@
       Heimatkolonie
       <input type="text" name="homeworld" [(ngModel)]="homeworldName" maxlength="28" required autocomplete="off" placeholder="Name eingeben" />
     </label>
+    <label>
+      Spielerart
+      <select name="role" [(ngModel)]="role">
+        <option value="Normal">Normaler Spieler</option>
+        <option value="Npc">NPC</option>
+        <option value="Test">Test Spieler</option>
+      </select>
+    </label>
+    @if (role === 'Npc') {
+      <label>
+        Lager
+        <input type="text" name="campId" [(ngModel)]="campId" maxlength="16" required autocomplete="off" placeholder="z. B. NORD" />
+      </label>
+    }
 
     @if (error()) {
       <div class="error">{{ error() }}</div>

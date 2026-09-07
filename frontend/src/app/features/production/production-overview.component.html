@@ -7,11 +7,38 @@
   <div class="panel-header"><h2>Kolonien</h2></div>
   <div class="panel-body colony-summary">
     @for (c of colonies(); track c.id) {
-      <a class="summary-row" [routerLink]="['/planeten', c.id]" [queryParams]="{ tab: 'produktion' }">
-        <span>{{ c.name }}</span>
-        <span class="mono">{{ queueLength(c.id) }} Aufträge in Warteschlange</span>
-        <span class="mono">{{ warehouseCount(c.id) }} Warentypen im Lager</span>
-      </a>
+      <div class="colony-card">
+        <a class="colony-card-head" [routerLink]="['/planeten', c.id]" [queryParams]="{ tab: 'produktion' }">
+          <strong>{{ c.name }}</strong>
+          <span class="hint">{{ warehouseCount(c.id) }} Warentypen im Lager</span>
+        </a>
+
+        @if (runningEntry(c.id); as entry) {
+          <div class="colony-current">
+            <span class="product-image small">{{ productIcon(entry.productTypeId) }}</span>
+            <div class="colony-current-info">
+              <span>{{ productName(entry.productTypeId) }} × {{ entry.quantity }}</span>
+              <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
+            </div>
+            <span class="mono">{{ countdown(entry.endsAt! - clock.now()) }}</span>
+          </div>
+        } @else {
+          <p class="hint">Keine laufende Produktion.</p>
+        }
+
+        @if (nextEntry(c.id); as next) {
+          <div class="colony-next">
+            <span class="hint">Als Nächstes:</span>
+            <span class="product-image small">{{ productIcon(next.productTypeId) }}</span>
+            <span>{{ productName(next.productTypeId) }} × {{ next.quantity }}</span>
+            @if (next.status === 'stopped') { <span class="tag warn">angehalten</span> }
+          </div>
+        }
+
+        @if (remainingQueueCount(c.id) > 0) {
+          <span class="hint">+{{ remainingQueueCount(c.id) }} weitere Aufträge in Warteschlange</span>
+        }
+      </div>
     } @empty { <p class="empty-hint">Keine Kolonien.</p> }
   </div>
 </div>
@@ -22,99 +49,171 @@
     <span class="hint">Rohstoff → Zwischenprodukt → Baugruppe → Endprodukt</span>
   </div>
   <div class="panel-body">
-    @for (tier of tiers; track tier) {
-      <div class="tier-block">
-        <span class="eyebrow">Stufe {{ tier }}</span>
-        <div class="tier-grid">
-          @for (p of productsByTier(tier); track p.id) {
-            <div class="product-card">
-              <div class="product-card-head">
-                <span class="product-image">{{ productIcon(p.id) }}</span>
-                <div>
-                  <strong>{{ p.name }}</strong>
-                  <span class="tag">{{ p.category }}</span>
-                </div>
-              </div>
-              @if (p.recipe.length > 0) {
-                <div class="recipe">
-                  @for (r of p.recipe; track r.inputProductTypeId) {
-                    <span class="recipe-item">{{ r.quantity }}× {{ productName(r.inputProductTypeId) }}</span>
-                  }
-                </div>
-              } @else {
-                <span class="recipe-item">Extraktion aus Planetenkonzentration</span>
-              }
-              <div class="product-facts">
-                <span title="Arbeitsstunden, die ein Stück kostet. Zusammen mit der Fertigungsdauer ergibt sich, wie viele Arbeitskräfte dabei gebunden sind – hat die Kolonie weniger Einwohner, dauert es entsprechend länger.">👷 {{ p.workHoursPerUnit }} Ah</span>
-                <span title="Fertigungsdauer je Einheit unter Idealbedingungen – Industrie, Bevölkerung und Spezialisierung verkürzen sie">⏱ {{ p.baseProductionHours }}h</span>
-                <span title="Masse je Einheit – begrenzt zusammen mit dem Volumen, wie viel eine Flotte laden kann">⚖ {{ formatMass(p.massKg) }}</span>
-                <span title="Volumen je Einheit – begrenzt zusammen mit der Masse, wie viel eine Flotte laden kann">📐 {{ formatVolume(p.volumeM3) }}</span>
-              </div>
-              @if (isIndustryProduct(p)) {
-                <button class="small" type="button" (click)="openModal(p)">
-                  Produzieren
-                  @if (activeColonyCount(p.id) > 0) { <span class="hint">· in {{ activeColonyCount(p.id) }} Kolonie(n) aktiv</span> }
-                </button>
-              }
-            </div>
-          }
-        </div>
+    @if (!selectedCategory()) {
+      <span class="hint">Kategorie wählen</span>
+      <div class="category-grid">
+        @for (cat of categoriesPresent(); track cat) {
+          <button type="button" class="category-card" (click)="chooseCategory(cat)">
+            <span class="category-name">{{ categoryLabels[cat] }}</span>
+            <span class="category-count mono">{{ countInCategory(cat) }}</span>
+          </button>
+        }
       </div>
+    } @else {
+      <div class="picker-head">
+        <button type="button" class="ghost small" (click)="backToCategories()">← Kategorien</button>
+        <span class="eyebrow">{{ categoryLabels[selectedCategory()!] }}</span>
+      </div>
+      @for (tier of tiersInCategory(selectedCategory()!); track tier) {
+        <div class="tier-block">
+          <span class="eyebrow">Stufe {{ tier }}</span>
+          <div class="tier-grid">
+            @for (p of productsInCategoryTier(selectedCategory()!, tier); track p.id) {
+              <button type="button" class="product-card" (click)="openDetail(p)">
+                <div class="product-card-head">
+                  <span class="product-image">{{ productIcon(p.id) }}</span>
+                  <div>
+                    <strong>{{ p.name }}</strong>
+                    @if (activeColonyCount(p.id) > 0) {
+                      <span class="tag good">in {{ activeColonyCount(p.id) }} Kolonie(n) aktiv</span>
+                    }
+                  </div>
+                </div>
+                <div class="product-facts">
+                  <span title="Arbeitsstunden je Stück">👷 {{ p.workHoursPerUnit }} Ah</span>
+                  <span title="Fertigungsdauer je Einheit unter Idealbedingungen">⏱ {{ p.baseProductionHours }}h</span>
+                  <span title="Masse je Einheit">⚖ {{ formatMass(p.massKg) }}</span>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
     }
   </div>
 </div>
 
 @if (selectedProduct(); as product) {
-  <div class="modal-backdrop" (click)="closeModal()">
-    <div class="panel corner-frame modal-panel" (click)="$event.stopPropagation()">
+  <div class="modal-backdrop" (click)="closeDetail()">
+    <div class="panel corner-frame modal-panel detail-panel" (click)="$event.stopPropagation()">
       <div class="panel-header">
-        <h2>{{ productIcon(product.id) }} {{ product.name }} produzieren</h2>
-        <button class="ghost small" type="button" (click)="closeModal()">✕</button>
+        <h2>{{ productIcon(product.id) }} {{ product.name }}</h2>
+        <button class="ghost small" type="button" (click)="closeDetail()">✕</button>
       </div>
       <div class="panel-body">
-        <p class="hint">
-          Kolonie wählen, um dort einen sequentiellen Produktionsauftrag einzureihen. Pro Kolonie läuft
-          immer nur ein Auftrag gleichzeitig. „Vorprodukte automatisch mitproduzieren" berechnet einmalig
-          die komplette Kette; ohne dieses Häkchen hält die Warteschlange bei fehlenden Vorprodukten an
-          und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach
-          Fertigstellung wieder ans Ende der Liste.
-        </p>
+        <div class="tag-row">
+          <span class="tag">{{ categoryLabels[product.category] }}</span>
+          <span class="tag">Stufe {{ product.tier }}</span>
+        </div>
+        <p class="hint">{{ product.description }}</p>
+
+        <div class="product-facts big">
+          <span title="Arbeitsstunden, die ein Stück kostet">👷 {{ product.workHoursPerUnit }} Ah / Stk.</span>
+          <span title="Fertigungsdauer je Einheit unter Idealbedingungen">⏱ {{ product.baseProductionHours }} h / Stk. (Basis)</span>
+          <span title="Masse je Einheit">⚖ {{ formatMass(product.massKg) }}</span>
+          <span title="Volumen je Einheit">📐 {{ formatVolume(product.volumeM3) }}</span>
+          @if (product.eleriumG > 0) { <span title="Eleriumbedarf je Charge">☢️ {{ product.eleriumG }} g Elerium</span> }
+        </div>
+
+        <span class="eyebrow">Produktionsbaum</span>
+        <div class="production-tree">
+          @if (productionTree(); as root) {
+            <ng-container *ngTemplateOutlet="treeNodeTpl; context: { $implicit: root, depth: 0 }"></ng-container>
+          }
+          <ng-template #treeNodeTpl let-node let-depth="depth">
+            <div class="tree-row" [style.paddingLeft.px]="depth * 18">
+              <span class="tree-icon">{{ node.icon }}</span>
+              <span class="mono tree-qty">{{ node.quantity }}×</span>
+              <span class="tree-name">{{ node.name }}</span>
+              @if (node.isRaw) { <span class="tag">Rohstoff</span> }
+            </div>
+            @for (child of node.children; track child.productTypeId) {
+              <ng-container *ngTemplateOutlet="treeNodeTpl; context: { $implicit: child, depth: depth + 1 }"></ng-container>
+            }
+          </ng-template>
+        </div>
+
         @if (error()) { <div class="error">{{ error() }}</div> }
-        <div class="modal-colony-list">
-          @for (row of modalRows(); track row.colonyId) {
-            <div class="modal-colony-row">
-              <div class="modal-colony-name">
-                <strong>{{ row.colonyName }}</strong>
-                <span class="mono hint">Lager: {{ row.stock }}</span>
-              </div>
-              @if (row.industryLevel < 1) {
-                <span class="hint">Benötigt Industriekomplex</span>
-              } @else {
-                <div class="modal-colony-actions">
-                  <label class="hint">Stückzahl
-                    <input type="number" min="1" [(ngModel)]="draftQty[row.colonyId]" />
-                  </label>
-                  <label class="checkbox-inline">
-                    <input type="checkbox" [(ngModel)]="draftAutoMissing[row.colonyId]" /> Vorprodukte automatisch mitproduzieren
-                  </label>
-                  <label class="checkbox-inline">
-                    <input type="checkbox" [(ngModel)]="draftRequeue[row.colonyId]" /> Nach Erfolg erneut einreihen
-                  </label>
-                  <button class="small" type="button" [disabled]="busy() === row.colonyId" (click)="queueHere(row.colonyId)">Einreihen</button>
-                  @if (row.existingEntry; as entry) {
-                    <span class="tag" [class.good]="entry.status === 'running'" [class.warn]="entry.status === 'stopped'">
-                      {{ queueStatusLabel(entry) }} · {{ entry.quantity }} Stk.
-                    </span>
-                    @if (entry.status === 'stopped') {
-                      <button class="ghost small" type="button" [disabled]="busy() === row.colonyId" (click)="resumeHere(row.colonyId, entry.id)">Fortsetzen</button>
+
+        @if (isIndustryProduct(product)) {
+          @if (!produceOpen()) {
+            <button class="primary" type="button" (click)="openProduce()">Produzieren</button>
+          } @else {
+            <span class="eyebrow">Kolonie wählen</span>
+            <p class="hint">
+              Kolonie wählen, um dort einen sequentiellen Produktionsauftrag einzureihen. Pro Kolonie läuft
+              immer nur ein Auftrag gleichzeitig. „Vorschau" berechnet die für diese Kolonie tatsächlich
+              anfallenden Realwerte (Kettenschritte, Dauer, gebundene Arbeitskräfte) unter dem aktuellen
+              Lagerbestand. „Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette;
+              ohne dieses Häkchen hält die Warteschlange bei fehlenden Vorprodukten an und muss manuell
+              fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung
+              wieder ans Ende der Liste.
+            </p>
+            <div class="modal-colony-list">
+              @for (row of modalRows(); track row.colonyId) {
+                <div class="modal-colony-row">
+                  <div class="modal-colony-name">
+                    <strong>{{ row.colonyName }}</strong>
+                    <span class="mono hint">Lager: {{ row.stock }}</span>
+                  </div>
+                  @if (row.industryLevel < 1) {
+                    <span class="hint">Benötigt Industriekomplex</span>
+                  } @else {
+                    <div class="modal-colony-actions">
+                      <label class="hint">Stückzahl
+                        <input type="number" min="1" [(ngModel)]="draftQty[row.colonyId]" />
+                      </label>
+                      <label class="checkbox-inline">
+                        <input type="checkbox" [(ngModel)]="draftAutoMissing[row.colonyId]" /> Vorprodukte automatisch mitproduzieren
+                      </label>
+                      <label class="checkbox-inline">
+                        <input type="checkbox" [(ngModel)]="draftRequeue[row.colonyId]" /> Nach Erfolg erneut einreihen
+                      </label>
+                      <button class="ghost small" type="button" (click)="previewFor(row.colonyId)">Vorschau</button>
+                      <button class="small" type="button" [disabled]="busy() === row.colonyId" (click)="queueHere(row.colonyId)">Einreihen</button>
+                      @if (row.existingEntry; as entry) {
+                        <span class="tag" [class.good]="entry.status === 'running'" [class.warn]="entry.status === 'stopped'">
+                          {{ queueStatusLabel(entry) }} · {{ entry.quantity }} Stk.
+                        </span>
+                        @if (entry.status === 'stopped') {
+                          <button class="ghost small" type="button" [disabled]="busy() === row.colonyId" (click)="resumeHere(row.colonyId, entry.id)">Fortsetzen</button>
+                        }
+                        <button class="ghost small danger" type="button" [disabled]="busy() === row.colonyId" (click)="cancelHere(row.colonyId, entry.id)">Abbrechen</button>
+                      }
+                    </div>
+                    @if (chainPreviewLoading() === row.colonyId) {
+                      <span class="hint calculating">Wird berechnet…</span>
+                    } @else {
+                      @if (chainPreview[row.colonyId]; as plan) {
+                        <div class="chain-plan">
+                          <span class="hint">
+                            Realwerte für diese Kolonie — Gesamtdauer: {{ plan.totalHours | number:'1.1-1' }} h ·
+                            benötigte Arbeitskräfte: {{ plan.workersBoundPerHour | number:'1.0-0' }}
+                            @if (!plan.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }
+                          </span>
+                          @for (step of plan.steps; track step.productTypeId) {
+                            <div class="chain-step">
+                              <span>{{ productName(step.productTypeId) }}</span>
+                              <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
+                              <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
+                              <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
+                              <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                              @if (step.workforceLimited) {
+                                <span class="hint warn step-factors">Bremst hier: es fehlen Arbeitskräfte – dieser Schritt bindet {{ step.workersBoundPerHour | number:'1.0-0' }} Arbeitskräfte je Stunde, mehr als die Kolonie hat.</span>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
                     }
-                    <button class="ghost small danger" type="button" [disabled]="busy() === row.colonyId" (click)="cancelHere(row.colonyId, entry.id)">Abbrechen</button>
                   }
                 </div>
-              }
+              } @empty { <p class="empty-hint">Keine Kolonien.</p> }
             </div>
-          } @empty { <p class="empty-hint">Keine Kolonien.</p> }
-        </div>
+          }
+        } @else {
+          <p class="hint">Wird über die Werft bzw. das Ausbildungszentrum der jeweiligen Kolonie gebaut, nicht über die reguläre Produktionswarteschlange.</p>
+        }
       </div>
     </div>
   </div>

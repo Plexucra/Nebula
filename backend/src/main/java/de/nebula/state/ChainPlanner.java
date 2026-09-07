@@ -170,7 +170,12 @@ public final class ChainPlanner {
     java.util.Collections.reverse(steps);
 
     double totalHours = 0;
-    for (ChainPlanStep s : steps) totalHours += s.hours;
+    double totalWorkHours = 0;
+    for (ChainPlanStep s : steps) {
+      totalHours += s.hours;
+      totalWorkHours += ProductCatalog.find(s.productTypeId).workHoursPerUnit * s.quantityToProduce;
+    }
+    double workersBoundPerHour = totalHours > 0 ? totalWorkHours / totalHours : 0;
 
     boolean feasible = true;
     for (int i = 0; i < steps.size(); i++) {
@@ -181,7 +186,7 @@ public final class ChainPlanner {
       }
     }
 
-    return new ChainPlan(totalHours, steps, feasible);
+    return new ChainPlan(totalHours, steps, feasible, totalWorkHours, workersBoundPerHour);
   }
 
   private static void discover(String productTypeId, Set<String> reachable) {

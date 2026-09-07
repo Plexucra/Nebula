@@ -1,9 +1,9 @@
 import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
-  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
+  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
 
@@ -47,7 +47,7 @@ export interface GameApi {
    * `createAdditionalPlayerSeed`) – die Galaxie selbst (NPCs, andere
    * Kommandanten, Systemmarkt) bleibt unverändert bestehen.
    */
-  registerPlayer(commanderName: string, homeworldName: string): Promise<void>;
+  registerPlayer(commanderName: string, homeworldName: string, role: PlayerRole, campId?: string): Promise<void>;
   /** Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) – danach leere Galaxie, der nächste `registerPlayer`-Aufruf erzeugt sie neu. */
   resetGame(): Promise<void>;
 
@@ -158,6 +158,10 @@ export interface GameApi {
   loadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
   /** Entlädt Fracht zurück ins Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist. */
   unloadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
+  /** Lädt Ware aus dem unbegrenzten Stations-Depot des Kommandanten in die Fracht einer dort stationierten Flotte – Gegenstück zu `loadCargo`, nur an einer Handelsgilde-Station statt einer Kolonie. */
+  loadCargoFromHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
+  /** Entlädt Fracht der Flotte in das Stations-Depot des Kommandanten – Gegenstück zu `unloadCargo`. */
+  unloadCargoToHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
   /**
    * Schickt eine stationierte, eigene Flotte über das (uneingeschränkt
    * offene, siehe `Gateway`) Netz los – Reisezeit richtet sich nach der
@@ -219,6 +223,19 @@ export interface GameApi {
    * Anfang an als besucht.
    */
   hasVisitedSystem(systemId: Id): Signal<boolean>;
+  /**
+   * true, sobald ein Kommandant die Rohstoffkonzentration der Planeten dieses Systems kennt –
+   * getrennt von `hasVisitedSystem` ("schon mal dort gewesen"): erst das explizite Erforschen
+   * (`exploreSystem`) oder eine eigene Kolonisierung dort deckt sie auf. Bis dahin liefert
+   * `planet`/`planetsInSystem` für dieses System eine leere `resourceConcentration`.
+   */
+  hasExploredSystem(systemId: Id): Signal<boolean>;
+  /**
+   * Erforscht das System, in dem `fleetId` gerade `Stationed` ist – deckt die
+   * Rohstoffkonzentration aller dortigen Planeten für den eigenen Kommandanten auf
+   * (`hasExploredSystem`). Funktioniert mit jeder eigenen Flotte, unabhängig vom Schiffstyp.
+   */
+  exploreSystem(fleetId: Id): Promise<void>;
 
   // --- Handel ---------------------------------------------------------------
   sellOrders(systemId: Id): Signal<SellOrder[]>;
@@ -239,6 +256,28 @@ export interface GameApi {
   cancelSellOrder(orderId: Id): Promise<void>;
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
 
+  // --- Handelsgilde-Station: Depot & Orderbuch (Umsetzungskonzept/22_...md) ---
+  /** Das unbegrenzte Depot des angemeldeten Kommandanten an EINER Handelsgilde-Station. */
+  hubDepot(systemId: Id): Signal<HubDepotEntry[]>;
+  /** Das gesamte Orderbuch (Kauf UND Verkauf, alle Kommandanten sowie die Handelsgilde selbst) an einer Station. */
+  hubOrders(systemId: Id): Signal<HubOrder[]>;
+  /**
+   * Verkauf ab dem eigenen Stationsdepot – bucht die Ware sofort aus dem
+   * Depot aus. Kreuzt die Order sofort bestehende Kauf-Orders (auch die der
+   * Handelsgilde), wird SOFORT ausgeführt, auch in Teilausführung, zum Preis
+   * der jeweils älteren (ruhenden) Gegenseite.
+   */
+  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void>;
+  /**
+   * Kauf-Order – bucht Menge × Preis SOFORT als Escrow aus dem Wallet aus
+   * (Rückerstattung nur durch Zurückziehen der Order). Kreuzt sie sofort
+   * bestehende Verkaufs-Orders, wird SOFORT ausgeführt, auch in
+   * Teilausführung; gekaufte Ware fließt ins eigene Stationsdepot.
+   */
+  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void>;
+  /** Zieht eine eigene Kauf- oder Verkaufs-Order zurück und erstattet den nicht ausgeführten Rest (Credits bzw. Ware) zurück. Orders der Handelsgilde lassen sich nicht zurückziehen. */
+  cancelHubOrder(orderId: Id): Promise<void>;
+
   // --- Diplomatie (Mechanik/06_..., vereinfacht, siehe DiplomacyCommands im Backend) ---
   /** Status gegenüber einem beliebigen anderen Kommandanten – `'Peace'` ohne Beziehungseintrag (impliziter Grundzustand). */
   diplomaticStatus(otherPlayerId: Id): Signal<DiplomaticStatus>;
@@ -258,6 +297,28 @@ export interface GameApi {
   offerPeace(otherPlayerId: Id): Promise<void>;
   /** Nur der Empfänger darf antworten; Ablehnen löscht das Angebot ersatzlos, der Krieg läuft weiter. */
   respondToPeaceOffer(offerId: Id, accept: boolean): Promise<void>;
+
+  // --- Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) ---------------
+  /** Alle Friedens-/Handelsverträge des angemeldeten Kommandanten, jeder Typ separat. */
+  treaties(): Signal<Treaty[]>;
+  /** An den angemeldeten Kommandanten gerichtete, noch unbeantwortete Vertragsangebote. */
+  incomingTreatyOffers(): Signal<TreatyOffer[]>;
+  /** Vom angemeldeten Kommandanten selbst gestellte, noch offene Vertragsangebote. */
+  outgoingTreatyOffers(): Signal<TreatyOffer[]>;
+  /** Gültiger (inkl. gekündigt, aber noch nicht abgelaufener) Friedensvertrag mit diesem Kommandanten – blockiert `declareWar`. */
+  hasPeaceTreaty(otherPlayerId: Id): Signal<boolean>;
+  /** Gültiger Handelsvertrag mit diesem Kommandanten – Voraussetzung für planetaren Handel (Kauf/Verkauf) außerhalb einer Handelsgilde-Station. */
+  hasTradeAgreement(otherPlayerId: Id): Signal<boolean>;
+  /** Einseitiges Angebot, wirksam erst nach Annahme durch den Empfänger (`respondToTreatyOffer`). Nur außerhalb eines Kriegs mit dieser Partei möglich. */
+  offerTreaty(otherPlayerId: Id, type: TreatyType): Promise<void>;
+  /** Nur der Empfänger darf antworten; Ablehnen löscht das Angebot ersatzlos. */
+  respondToTreatyOffer(offerId: Id, accept: boolean): Promise<void>;
+  /**
+   * Kündigt einen bestehenden Vertrag – er bleibt bis zum Ende der
+   * Kündigungsfrist (7 Spieltage Friedensvertrag, 2 Spieltage Handelsvertrag)
+   * unverändert gültig.
+   */
+  terminateTreaty(otherPlayerId: Id, type: TreatyType): Promise<void>;
 
   // --- Raumgefechte (Mechanik/04_..., Kernformeln; vereinfacht ggü. 06_...) ---
   /** Alle laufenden Gefechte des angemeldeten Kommandanten (Angreifer oder Verteidiger). */

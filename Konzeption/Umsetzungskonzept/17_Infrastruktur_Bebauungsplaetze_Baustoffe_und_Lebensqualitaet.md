@@ -90,7 +90,7 @@ bleiben bewusst stehen – sie sind Handelsware bzw. Spezialisierungsziele der
 Bots, kein toter Ballast wie die Facilities.
 
 **Grundnahrung/Grundmedizin abgeflacht** (Teil C): beide Tier 1 mit 2 h direkt
-aus Rohstoffen (Nahrung: Wassereis + Kohlenstoffmineral, Medizin: Wassereis +
+aus Rohstoffen (Nahrung: Wasser + Kohlenstoffmineral, Medizin: Wasser +
 Salzmineral) statt Tier 2 über Prozesswasser/Kohlenstoffraffinat bzw.
 Industriesalze.
 

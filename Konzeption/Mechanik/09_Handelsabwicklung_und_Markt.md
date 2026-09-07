@@ -27,6 +27,14 @@ Depotverkauf / Depotkauf:        Ware in einem Handelsdepot auf einem
 Depotorders werden nach Planet aufgetrennt angezeigt, gehören aber zum
 gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 
+> **Änderung (Konzeption/Spieldesign/05_...md, §14; Umsetzungskonzept/
+> 21_...md):** Stationsverkauf/-kauf (siehe Kasten) ist in einem NORMALEN
+> Sonnensystem nicht mehr möglich – nur noch an einer sektoralen
+> Handelsstation der Handelsgilde. Depotverkauf/-kauf bleibt überall
+> möglich, erfordert zwischen den beiden beteiligten Kommandanten aber
+> einen gültigen Handelsvertrag (nicht für die Bevölkerung, siehe §4/§12).
+> An einer Handelsstation gilt keine dieser beiden Einschränkungen.
+
 ## 3. Planetare Handelsdepots
 
 - Reale Lagerorte der Handelsgilde, kein virtueller Verweis auf das
@@ -62,6 +70,11 @@ Bevölkerungskäufe an der System-Handelsstation sind ab wirksamer
 Blockade ebenfalls gesperrt; bereits vor Blockadebeginn ausgeführte
 Orders gelten als abgeschlossen. Käufe aus bereits vorhandenen
 planetaren Depots sind davon nicht automatisch betroffen.
+
+An einer sektoralen Handelsstation der Handelsgilde ist grundsätzlich
+KEINE Blockade möglich (Konzeption/Spieldesign/05_...md, §6/§13) – dieser
+gesamte Abschnitt betrifft also ausschließlich den Handel in normalen
+Sonnensystemen.
 
 ## 6. Konsumbudget der Bevölkerung (geglättet)
 
@@ -216,6 +229,9 @@ Stufe 4+: zunehmend luxuriöse Güter
   auf demselben Planeten).
 - Bevölkerung erzeugt **keine** Buy Orders – nur Käufer bestehender
   Sell Orders.
+- Die Handelsvertrag-Pflicht (§2-Kasten) gilt NUR zwischen Spieler-
+  Kommandanten. Bevölkerung ist keine Vertragspartei und kauft
+  unverändert aus jedem erreichbaren Depot/jeder Station.
 
 ## 13. Handelsdepots, Lager und Orders – Regeln
 
@@ -233,6 +249,19 @@ Stufe 4+: zunehmend luxuriöse Güter
 Handelsgewinn = Preisunterschied − Transportkosten − Gateway-Gebühren
                 − sonstige Risiken und Kosten
 ```
+
+## 15. Handelsgilde-Station: Depot und Orderbuch (Umsetzungskonzept/22_...md)
+
+Präzisierung gegenüber §2/§13: An einer sektoralen Handelsstation ist
+"Stationsverkauf/-kauf" (Kasten in §2) nicht mehr rein fracht- bzw.
+kolonie-basiert, sondern läuft über ein eigenes, unbegrenztes Depot je
+Kommandant (beliefert per Frachter-Flotte) mit einem echten zweiseitigen
+Orderbuch (Kauf- UND Verkaufs-Orders, sofortige Ausführung auch in
+Teilausführung beim Kreuzen). Ware einer Verkaufs-Order und Credits einer
+Kauf-Order sind ab dem Einstellen gebunden (§1 traf diese Aussage für
+Kauf-Orders bereits vorausschauend). Eine Handelsgilde-eigene Grundordnung
+auf beiden Seiten stellt sicher, dass für jede Ware überhaupt ein Markt
+existiert.
 
 ## Offene Zahlenfragen
 

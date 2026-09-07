@@ -75,7 +75,7 @@
                     <div class="stat-bar"><span [style.width.%]="rc.concentration"></span></div>
                     <span class="mono">{{ rc.concentration }}%</span>
                   </div>
-                }
+                } @empty { <p class="empty-hint">Nicht erforscht.</p> }
               </div>
             }
           </div>
@@ -278,7 +278,7 @@
               <span class="hint calculating">Wird berechnet…</span>
             } @else if (newOrderPreview()) {
               @let preview = newOrderPreview()!;
-              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
+              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h · benötigte Arbeitskräfte: {{ preview.workersBoundPerHour | number:'1.0-0' }} @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
               @for (step of preview.steps; track step.productTypeId) {
                 <div class="chain-step">
                   <span>{{ productName(step.productTypeId) }}</span>
@@ -291,6 +291,9 @@
                       @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
                       @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
                     </span>
+                    @if (step.workforceLimited) {
+                      <span class="hint warn">Bremst hier: es fehlen Arbeitskräfte – dieser Schritt bindet {{ step.workersBoundPerHour | number:'1.0-0' }} Arbeitskräfte je Stunde, mehr als die Kolonie hat.</span>
+                    }
                   }
                 </div>
               }
@@ -318,7 +321,10 @@
                     @if (entry.status !== 'running' && queuePreviewLoading() === entry.id) {
                       <span class="hint calculating">Wird berechnet…</span>
                     } @else {
-                      <span class="hint">{{ entry.status === 'running' ? 'Gesamtdauer' : 'Prognose unter aktuellem Lagerbestand — Gesamtdauer' }}: {{ planFor(entry).totalHours | number:'1.1-1' }} h</span>
+                      <span class="hint">{{ entry.status === 'running' ? 'Gesamtdauer' : 'Prognose unter aktuellem Lagerbestand — Gesamtdauer' }}: {{ planFor(entry).totalHours | number:'1.1-1' }} h · benötigte Arbeitskräfte: {{ planFor(entry).workersBoundPerHour | number:'1.0-0' }}</span>
+                      @if (entry.status === 'running') {
+                        <span class="hint">Der Fertigstellungstermin steht seit Auftragsstart fest — spätere Änderungen an Bevölkerung, Spezialisierung oder Anlagenausbau verschieben ihn nicht mehr.</span>
+                      }
                       @for (step of planFor(entry).steps; track step.productTypeId) {
                         <div class="chain-step">
                           <span>{{ productName(step.productTypeId) }}</span>
@@ -331,6 +337,9 @@
                               @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
                               @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
                             </span>
+                            @if (step.workforceLimited) {
+                              <span class="hint warn">Bremst hier: es fehlen Arbeitskräfte – dieser Schritt bindet {{ step.workersBoundPerHour | number:'1.0-0' }} Arbeitskräfte je Stunde, mehr als die Kolonie hat.</span>
+                            }
                           }
                         </div>
                       }
@@ -538,11 +547,13 @@
                 <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }}</span>
                 @if (o.sellerId === playerId()) {
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
-                } @else {
+                } @else if (canBuyFrom(o.sellerId)) {
                   <div class="buy-controls">
                     <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
                     <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
                   </div>
+                } @else {
+                  <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
                 }
               </div>
             } @empty { <p class="empty-hint">Diese Kolonie hat nichts im Angebot.</p> }
@@ -551,8 +562,8 @@
 
         <div class="panel corner-frame">
           <div class="panel-header">
-            <h2>System Handel</h2>
-            <span class="hint">Übrige Orders im Sternsystem (Systemhandelsposten und andere Kolonien), Lieferung direkt in diese Kolonie.</span>
+            <h2>Handel mit anderen Kolonien im System</h2>
+            <span class="hint">Orders anderer Kolonien in diesem Sternsystem, Lieferung direkt in diese Kolonie. Kauf nur mit Kommandanten möglich, mit denen ein Handelsvertrag besteht – Systemhandelsposten-Orders ohne Kolonie-Landung gibt es außerhalb einer Handelsgilde-Station nicht mehr.</span>
           </div>
           <div class="panel-body wh-list">
             @for (o of systemOrders(); track o.id) {
@@ -562,14 +573,16 @@
                 <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }} · {{ depotColonyName(o.depotColonyId) }}</span>
                 @if (o.sellerId === playerId()) {
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
-                } @else {
+                } @else if (canBuyFrom(o.sellerId)) {
                   <div class="buy-controls">
                     <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
                     <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
                   </div>
+                } @else {
+                  <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
                 }
               </div>
-            } @empty { <p class="empty-hint">Keine offenen Orders in diesem System.</p> }
+            } @empty { <p class="empty-hint">Keine offenen Orders anderer Kolonien in diesem System.</p> }
           </div>
         </div>
       </div>

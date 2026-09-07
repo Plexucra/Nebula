@@ -210,7 +210,7 @@
   },
   {
     "id": "p_eis",
-    "name": "Wassereis",
+    "name": "Wasser",
     "category": "RawResource",
     "tier": 0,
     "recipe": [],
@@ -607,7 +607,7 @@
     "massKg": 1800000.0,
     "volumeM3": 1800.0,
     "eleriumG": 0.0032,
-    "description": "Geschmolzenes und gereinigtes Wassereis.",
+    "description": "Geschmolzenes und gereinigtes Wasser.",
     "workHoursPerUnit": 80.0
   },
   {
@@ -709,7 +709,7 @@
   {
     "id": "p_elerium_stabil",
     "name": "Stabilisiertes Elerium",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 1,
     "recipe": [
       {
@@ -2305,7 +2305,7 @@
   {
     "id": "p_elerium_kapsel",
     "name": "Eleriumkapsel",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 2,
     "recipe": [
       {
@@ -2841,7 +2841,7 @@
   {
     "id": "p_elerium_energiezelle",
     "name": "Eleriumenergiezelle",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 4,
     "recipe": [
       {
@@ -2881,7 +2881,7 @@
   {
     "id": "p_elerium_treibstoffkern",
     "name": "Eleriumtreibstoffkern",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 4,
     "recipe": [
       {
@@ -2925,7 +2925,7 @@
   {
     "id": "p_elerium_initiator",
     "name": "Eleriuminitiator",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 4,
     "recipe": [
       {
@@ -3393,7 +3393,7 @@
   {
     "id": "p_schwerer_gefechtskopf",
     "name": "Schwerer Gefechtskopf",
-    "category": "Fuel",
+    "category": "EnergyModule",
     "tier": 4,
     "recipe": [
       {
@@ -4193,7 +4193,7 @@
   {
     "id": "p_korvette_rumpf",
     "name": "Korvettenrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4233,7 +4233,7 @@
   {
     "id": "p_korvette_antrieb",
     "name": "Korvettenantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4277,7 +4277,7 @@
   {
     "id": "p_korvette_energie",
     "name": "Korvettenenergiemodul",
-    "category": "Fuel",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4317,7 +4317,7 @@
   {
     "id": "p_korvette_elektronik",
     "name": "Korvettenelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4357,7 +4357,7 @@
   {
     "id": "p_korvette_waffen",
     "name": "Korvettenwaffenmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4397,7 +4397,7 @@
   {
     "id": "p_korvette_versorgung",
     "name": "Korvettenversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4437,7 +4437,7 @@
   {
     "id": "p_zerstoerer_rumpf",
     "name": "Zerstörerrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4477,7 +4477,7 @@
   {
     "id": "p_zerstoerer_antrieb",
     "name": "Zerstörerantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4521,7 +4521,7 @@
   {
     "id": "p_zerstoerer_energie",
     "name": "Zerstörerenergiemodul",
-    "category": "Fuel",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4561,7 +4561,7 @@
   {
     "id": "p_zerstoerer_elektronik",
     "name": "Zerstörerelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4601,7 +4601,7 @@
   {
     "id": "p_zerstoerer_waffen",
     "name": "Zerstörerwaffenmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4641,7 +4641,7 @@
   {
     "id": "p_zerstoerer_versorgung",
     "name": "Zerstörerversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4681,7 +4681,7 @@
   {
     "id": "p_kreuzer_rumpf",
     "name": "Kreuzerrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4721,7 +4721,7 @@
   {
     "id": "p_kreuzer_antrieb",
     "name": "Kreuzerantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4765,7 +4765,7 @@
   {
     "id": "p_kreuzer_energie",
     "name": "Kreuzerenergiemodul",
-    "category": "Fuel",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4805,7 +4805,7 @@
   {
     "id": "p_kreuzer_elektronik",
     "name": "Kreuzerelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4849,7 +4849,7 @@
   {
     "id": "p_kreuzer_waffen",
     "name": "Kreuzerwaffenmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4893,7 +4893,7 @@
   {
     "id": "p_kreuzer_versorgung",
     "name": "Kreuzerversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4933,7 +4933,7 @@
   {
     "id": "p_frachter_rumpf",
     "name": "Frachterrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -4973,7 +4973,7 @@
   {
     "id": "p_frachter_antrieb",
     "name": "Frachterantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5017,7 +5017,7 @@
   {
     "id": "p_frachter_energie",
     "name": "Frachterenergiemodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5057,7 +5057,7 @@
   {
     "id": "p_frachter_elektronik",
     "name": "Frachterelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5097,7 +5097,7 @@
   {
     "id": "p_frachter_ladung",
     "name": "Frachterladungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5137,7 +5137,7 @@
   {
     "id": "p_frachter_versorgung",
     "name": "Frachterversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5177,7 +5177,7 @@
   {
     "id": "p_traeger_rumpf",
     "name": "Trägerschiffrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5217,7 +5217,7 @@
   {
     "id": "p_traeger_antrieb",
     "name": "Trägerschiffantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5261,7 +5261,7 @@
   {
     "id": "p_traeger_energie",
     "name": "Trägerschiffenergiemodul",
-    "category": "Fuel",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5301,7 +5301,7 @@
   {
     "id": "p_traeger_elektronik",
     "name": "Trägerschiffelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5345,7 +5345,7 @@
   {
     "id": "p_traeger_hangar",
     "name": "Trägerschiffhangarmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5385,7 +5385,7 @@
   {
     "id": "p_traeger_versorgung",
     "name": "Trägerschiffversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5425,7 +5425,7 @@
   {
     "id": "p_transport_rumpf",
     "name": "Mannschaftstransportrumpfmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5465,7 +5465,7 @@
   {
     "id": "p_transport_antrieb",
     "name": "Mannschaftstransportantriebsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5509,7 +5509,7 @@
   {
     "id": "p_transport_energie",
     "name": "Mannschaftstransportenergiemodul",
-    "category": "Fuel",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5549,7 +5549,7 @@
   {
     "id": "p_transport_elektronik",
     "name": "Mannschaftstransportelektronikmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5589,7 +5589,7 @@
   {
     "id": "p_transport_truppen",
     "name": "Mannschaftstransporttruppenmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5629,7 +5629,7 @@
   {
     "id": "p_transport_versorgung",
     "name": "Mannschaftstransportversorgungsmodul",
-    "category": "BuildingMaterial",
+    "category": "ShipModule",
     "tier": 5,
     "recipe": [
       {
@@ -5735,7 +5735,7 @@
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Einfache Nährstoffration direkt aus Wassereis und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung.",
+    "description": "Einfache Nährstoffration direkt aus Wasser und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung.",
     "workHoursPerUnit": 60.0
   },
   {
@@ -5911,7 +5911,7 @@
     "massKg": 100.0,
     "volumeM3": 0.2,
     "eleriumG": 0.0048,
-    "description": "Einfaches Salinen-Erste-Hilfe-Präparat direkt aus Wassereis und Salzmineral – bewusst flache Kette, weniger wirksam als Erweiterte Medizin.",
+    "description": "Einfaches Salinen-Erste-Hilfe-Präparat direkt aus Wasser und Salzmineral – bewusst flache Kette, weniger wirksam als Erweiterte Medizin.",
     "workHoursPerUnit": 60.0
   },
   {

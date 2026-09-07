@@ -31,3 +31,13 @@
   gap: 14px;
 }
 .planet-card h3 { margin: 0; }
+
+.conc-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.conc-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 50px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  text-transform: capitalize;
+}

@@ -39,6 +39,7 @@ export class SystemViewComponent {
   protected readonly systemId: Id = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly system = this.api.system(this.systemId);
   protected readonly visited = this.api.hasVisitedSystem(this.systemId);
+  protected readonly explored = this.api.hasExploredSystem(this.systemId);
   protected readonly planets = this.api.planetsInSystem(this.systemId);
   protected readonly colonies = this.api.coloniesInSystem(this.systemId);
   protected readonly allFleets = this.api.allFleets();
@@ -141,6 +142,23 @@ export class SystemViewComponent {
       this.destinationChoice[fleet.id] = null;
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Bewegung fehlgeschlagen.');
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  /** Erforschen ist mit jeder eigenen, HIER stationierten Flotte möglich – unabhängig vom Schiffstyp. */
+  protected canExplore(fleet: Fleet): boolean {
+    return !this.explored() && fleet.systemId === this.systemId && fleet.status === 'Stationed';
+  }
+
+  protected async exploreSystem(fleet: Fleet): Promise<void> {
+    this.error.set(null);
+    this.busy.set('explore:' + fleet.id);
+    try {
+      await this.api.exploreSystem(fleet.id);
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : 'Erforschen fehlgeschlagen.');
     } finally {
       this.busy.set(null);
     }

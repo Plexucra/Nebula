@@ -8,6 +8,7 @@ import de.nebula.model.Fleet;
 import de.nebula.model.FleetLocationType;
 import de.nebula.model.FleetStatus;
 import de.nebula.model.Player;
+import de.nebula.model.StarSystem;
 
 import java.util.List;
 
@@ -17,6 +18,11 @@ import java.util.List;
  * Mechanik/06_...md (siehe dortige TS-Klassendoku): nur zwei Ankerarten,
  * kein Blockade-Anker-Objekt mit räumlicher Hierarchie, keine
  * Mobilmachungsrampe, kein Expositionslimit, keine Mehrparteien-Blockaden.
+ *
+ * <p>Neutrale Handelsgilde-Stationen ({@code StarSystem.isTradeHub}) sind
+ * gemäß Umsetzungskonzept/21_...md von KEINER Blockade betroffen –
+ * {@link #formBlockade} lehnt dort jeden Versuch ab (Konzeption/Spieldesign/
+ * 05_...md, §6: garantierter physischer Zugang).</p>
  */
 public final class BlockadeCommands {
   private BlockadeCommands() {
@@ -33,6 +39,10 @@ public final class BlockadeCommands {
     if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte ist unterwegs.");
     if (fleet.ships.stream().noneMatch(s -> s.quantity > 0)) throw new CommandException("Eine Flotte ohne Schiffe kann keine Blockade bilden.");
     if (state.blockades.stream().anyMatch(b -> b.fleetId.equals(fleetId))) throw new CommandException("Diese Flotte blockiert bereits einen Ort.");
+    StarSystem system = state.systems.stream().filter(s -> s.id.equals(fleet.systemId)).findFirst().orElse(null);
+    if (system != null && system.isTradeHub) {
+      throw new CommandException("Neutrale Handelsgilde-Stationen können nicht blockiert werden.");
+    }
 
     String planetId;
     BlockadeAnchorKind kind;

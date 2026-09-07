@@ -5,7 +5,8 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   RawResource: 'Rohstoffe',
   ConsumerGood: 'Konsumgüter',
   BuildingMaterial: 'Baumaterial',
-  Fuel: 'Treibstoff',
+  ShipModule: 'Schiffsmodule',
+  EnergyModule: 'Energiemodule',
   Ship: 'Schiffe',
   GroundUnit: 'Bodeneinheiten',
 };

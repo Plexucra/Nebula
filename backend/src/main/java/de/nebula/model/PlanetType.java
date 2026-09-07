@@ -8,5 +8,7 @@ package de.nebula.model;
  */
 public enum PlanetType {
   TemperierterBiosphaerenplanet, Silikatplanet, Wuestenplanet, Ozeanplanet, Eisplanet,
-  Vulkanplanet, Metallplanet, Kohlenstoffplanet, Supererde, Planetoid, Gasriese, Eisriese, Schwefelplanet
+  Vulkanplanet, Metallplanet, Kohlenstoffplanet, Supererde, Planetoid, Gasriese, Eisriese, Schwefelplanet,
+  /** Mond eines Gasriesen – im Gegensatz zum Gasriesen selbst besiedelbar, siehe {@code WorldSeed}. */
+  Gasriesenmond
 }

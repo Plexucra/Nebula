@@ -7,6 +7,7 @@ import de.nebula.model.DiplomaticStatus;
 import de.nebula.model.NotificationType;
 import de.nebula.model.PeaceOffer;
 import de.nebula.model.Player;
+import de.nebula.model.Treaty;
 
 import java.util.List;
 
@@ -68,6 +69,14 @@ public final class DiplomacyCommands {
     if (existing != null && existing.status == DiplomaticStatus.War) {
       throw new CommandException("Sie befinden sich bereits im Krieg mit diesem Kommandanten.");
     }
+    Treaty peaceTreaty = TreatyCommands.findActivePeaceTreaty(state, me.id, otherPlayerId);
+    if (peaceTreaty != null) {
+      if (peaceTreaty.terminationEffectiveAt == null) {
+        throw new CommandException("Mit diesem Kommandanten besteht ein Friedensvertrag – kündigen Sie ihn zuerst über die Diplomatie.");
+      }
+      long remainingHours = (long) Math.ceil(Clock.msToHours(peaceTreaty.terminationEffectiveAt - Clock.now()));
+      throw new CommandException("Der gekündigte Friedensvertrag mit diesem Kommandanten läuft noch " + Math.max(1, remainingHours) + " Spielstunden – erst danach ist eine Kriegserklärung möglich.");
+    }
     long t = Clock.now();
     String[] key = relationKey(me.id, otherPlayerId);
     if (existing != null) {
@@ -84,6 +93,9 @@ public final class DiplomacyCommands {
     }
     state.peaceOffers.removeIf(o ->
         (o.fromPlayerId.equals(me.id) && o.toPlayerId.equals(otherPlayerId)) || (o.fromPlayerId.equals(otherPlayerId) && o.toPlayerId.equals(me.id)));
+    // Krieg beendet automatisch einen ggf. noch laufenden Handelsvertrag (und dessen Angebote/Kündigungsfrist) –
+    // ein Friedensvertrag kann hier nicht mehr bestehen, siehe Sperre oben.
+    TreatyCommands.endAllImmediately(state, me.id, otherPlayerId);
     Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_WAR_DECLARED,
         me.name + " hat Ihnen den Krieg erklärt.", other.homeworldColonyId, null);
   }

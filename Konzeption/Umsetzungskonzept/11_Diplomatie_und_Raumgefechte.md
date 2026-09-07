@@ -43,6 +43,13 @@ Beziehungseintrag, gilt impliziter Frieden.
 - Diplomatie ist ausschließlich zwischen Spieler-Kommandanten möglich;
   NPCs sind laut ihrem Modell nicht-kriegerisch und bleiben außen vor.
 
+> **Erweiterung (Umsetzungskonzept/21_...md):** Zusätzlich zu diesem
+> einfachen Kriegs-/Friedenszustand gibt es seit dort förmliche,
+> beidseitig anzunehmende **Friedens-** und **Handelsverträge**
+> (`Treaty`/`TreatyOffer`) mit Kündigungsfrist. Ein aktiver Friedensvertrag
+> blockiert `declareWar` vollständig; ein Handelsvertrag ist Voraussetzung
+> für planetaren Handel zwischen den Parteien (siehe dort, §E).
+
 UI: neuer Bereich „Diplomatie / Krieg“ (`features/diplomacy`) – Liste
 aller anderen Kommandanten mit Status-Badge und Aktion
 („Krieg erklären“ bzw. „Frieden anbieten“), Liste ein-/ausgehender

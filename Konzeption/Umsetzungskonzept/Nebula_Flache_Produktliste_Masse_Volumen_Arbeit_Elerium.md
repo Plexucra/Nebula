@@ -71,7 +71,7 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 009 | 1 | Kohlenstoffmineral | Grundrohstoff | 500 000 | 555,56 | 900 | 0,001 | 100 | 1 | 100 | — |
 | 010 | 1 | Salzmineral | Grundrohstoff | 800 000 | 666,67 | 1 200 | 0,001 | 100 | 1 | 100 | — |
 | 011 | 1 | Radionukliderz | Grundrohstoff | 15 000 | 6 | 2 500 | 0,001 | 100 | 1 | 100 | — |
-| 012 | 1 | Wassereis | Grundrohstoff | 2 000 000 | 2 105,26 | 950 | 0,001 | 100 | 1 | 100 | — |
+| 012 | 1 | Wasser | Grundrohstoff | 2 000 000 | 2 105,26 | 950 | 0,001 | 100 | 1 | 100 | — |
 | 013 | 1 | Atmosphärenfluid | Grundrohstoff | 5 000 000 | 166 666,67 | 30 | 0,001 | 100 | 1 | 100 | — |
 | 014 | 1 | Edelgaskonzentrat | Grundrohstoff | 80 000 | 2 000 | 40 | 0,001 | 100 | 1 | 100 | — |
 | 015 | 1 | Kohlenwasserstofflager | Grundrohstoff | 1 000 000 | 1 538,46 | 650 | 0,001 | 100 | 1 | 100 | — |
@@ -88,7 +88,7 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 026 | 2 | Kohlenstoffraffinat | Aufbereitung | 250 000 | 312,5 | 800 | 0,0032 | 80 | 4 | 320 | Kohlenstoffmineral |
 | 027 | 2 | Industriesalze | Aufbereitung | 400 000 | 285,71 | 1 400 | 0,0032 | 80 | 4 | 320 | Salzmineral |
 | 028 | 2 | Radionuklidkonzentrat | Aufbereitung | 5 000 | 1,56 | 3 200 | 0,0072 | 120 | 6 | 720 | Radionukliderz |
-| 029 | 2 | Prozesswasser | Aufbereitung | 1 800 000 | 1 800 | 1 000 | 0,0032 | 80 | 4 | 320 | Wassereis |
+| 029 | 2 | Prozesswasser | Aufbereitung | 1 800 000 | 1 800 | 1 000 | 0,0032 | 80 | 4 | 320 | Wasser |
 | 030 | 2 | Getrennte Atmosphärengase | Aufbereitung | 2 000 000 | 25 000 | 80 | 0,0018 | 60 | 3 | 180 | Atmosphärenfluid |
 | 031 | 2 | Edelgasfraktion | Aufbereitung | 30 000 | 250 | 120 | 0,0018 | 60 | 3 | 180 | Edelgaskonzentrat |
 | 032 | 2 | Kohlenwasserstofffraktion | Aufbereitung | 700 000 | 1 000 | 700 | 0,0032 | 80 | 4 | 320 | Kohlenwasserstofflager |

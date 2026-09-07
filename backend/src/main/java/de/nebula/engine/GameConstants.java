@@ -69,11 +69,32 @@ public final class GameConstants {
   public static final double NOTIFICATION_RETENTION_GAME_HOURS = SharedConstants.notificationRetentionGameHours();
   public static final double MESSAGE_RETENTION_GAME_HOURS = SharedConstants.messageRetentionGameHours();
 
+  /**
+   * Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md,
+   * {@code TreatyCommands.terminateTreaty}): eine Kündigung endet den Vertrag
+   * NICHT sofort, sondern erst nach dieser Frist – bis dahin bleibt er voll
+   * gültig (Friedensvertrag blockiert weiter {@code declareWar}, Handelsvertrag
+   * erlaubt weiter planetaren Handel zwischen den Parteien).
+   */
+  public static final double PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS = SharedConstants.peaceTreatyTerminationNoticeGameHours();
+  public static final double TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS = SharedConstants.tradeAgreementTerminationNoticeGameHours();
+
   /** Ohne neue Produktion sinkt eine Spezialisierung nach dieser Gnadenfrist um eine Stufe pro erneut überschrittener Frist. */
   public static final long SPECIALIZATION_DECAY_GRACE_MS = 16000;
 
   /** Reisezeit je einzelnem Gateway-Sprung (Spielstunden), siehe {@code Fleet.pendingHops}. */
   public static final double HOURS_PER_GATEWAY_HOP = 4;
+
+  /**
+   * Treibstoff für Gateway-Sprünge (Nutzervorgabe): jeder Sprung verbraucht je Schiff der
+   * springenden Flotte {@link #JUMP_FUEL_PER_SHIP_PER_HOP} Eleriumkapseln, entnommen aus den
+   * Kolonielagern des Flottenbesitzers (siehe {@code FleetCommands.moveFleet}). Neue
+   * Kommandanten starten mit einem kleinen Vorrat ({@code WorldSeed.STARTER_JUMP_FUEL_QUANTITY}),
+   * der für viele Sprünge weniger Schiffe reicht; wer viele Frachter gleichzeitig bewegt, muss
+   * die Sprungkosten zunehmend einplanen und selbst Eleriumkapseln nachproduzieren.
+   */
+  public static final String JUMP_FUEL_PRODUCT_ID = "p_elerium_kapsel";
+  public static final double JUMP_FUEL_PER_SHIP_PER_HOP = 0.01;
 
   /** Bodentruppen-Crewing (Mechanik/05_..., §3-4). */
   public static final List<String> DRONE_PRODUCT_IDS = List.of("p_drone_light", "p_drone_medium", "p_drone_heavy");

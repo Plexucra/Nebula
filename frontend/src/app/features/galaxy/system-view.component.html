@@ -9,7 +9,7 @@
 @if (!visited()) {
   <div class="panel corner-frame">
     <div class="panel-body empty-state">
-      <p class="empty-hint">Dieses System wurde noch nicht bereist – eine eigene Flotte muss es erst über die
+      <p class="empty-hint">Nicht erforscht – dieses System wurde noch nicht bereist. Eine eigene Flotte muss es erst über die
         Galaxiekarte erreichen (Tab „Flotten" → Bewegen), bevor hier Details sichtbar werden.</p>
     </div>
   </div>
@@ -32,6 +32,9 @@
               }
             </select>
             <button class="primary small" (click)="moveFleet(fleet)" [disabled]="!destinationChoice[fleet.id] || busy() === ('move:' + fleet.id)">Bewegen</button>
+            @if (canExplore(fleet)) {
+              <button class="ghost small" (click)="exploreSystem(fleet)" [disabled]="busy() === ('explore:' + fleet.id)">System erforschen</button>
+            }
             @if (blockadeForFleet(fleet.id); as b) {
               <span class="tag warn">🛡 Blockade aktiv</span>
               <button class="ghost small danger" (click)="liftBlockade(b)" [disabled]="busy() === ('unblockade:' + b.id)">Blockade aufheben</button>
@@ -75,13 +78,31 @@
         <div class="panel-header"><h3>{{ planet.name }}</h3></div>
         <div class="panel-body">
           <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }}</span>
-          @if (colony) {
+          @if (!planet.usable) {
+            <p class="hint">Nicht besiedelbar.</p>
+          } @else if (colony) {
             <p class="hint"><a [routerLink]="['/planeten', colony.id]">{{ colony.name }}</a> — {{ ownerDisplay(colony.ownerId) }}</p>
           } @else {
             <p class="hint">Unbesiedelt.</p>
           }
           @if (planetBlockade(planet.id); as pb) {
             <p class="hint">🛡 Orbit blockiert von <strong>{{ ownerDisplay(pb.ownerId) }}</strong></p>
+          }
+          @if (planet.usable) {
+            <span class="eyebrow">Rohstoffkonzentration</span>
+            @if (explored()) {
+              <div class="conc-list">
+                @for (rc of planet.resourceConcentration; track rc.resourceTypeId) {
+                  <div class="conc-row">
+                    <span>{{ rc.resourceTypeId.replace('res_','') }}</span>
+                    <div class="stat-bar"><span [style.width.%]="rc.concentration"></span></div>
+                    <span class="mono">{{ rc.concentration }}%</span>
+                  </div>
+                } @empty { <p class="empty-hint">Keine Rohstoffvorkommen.</p> }
+              </div>
+            } @else {
+              <p class="empty-hint">Nicht erforscht – erst eine hier stationierte eigene Flotte kann die Fördergüten aufdecken.</p>
+            }
           }
           <div class="fleets-here-list">
             @for (f of fleetsAtPlanet(planet.id); track f.id) {

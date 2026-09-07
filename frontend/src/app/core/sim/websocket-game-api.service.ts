@@ -3,9 +3,9 @@ import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
-  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
+  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
 
@@ -174,8 +174,8 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
     this.player.set(null);
   }
 
-  async registerPlayer(commanderName: string, homeworldName: string): Promise<void> {
-    this.player.set(await this.send<Player>('registerPlayer', { commanderName, homeworldName }));
+  async registerPlayer(commanderName: string, homeworldName: string, role: PlayerRole, campId?: string): Promise<void> {
+    this.player.set(await this.send<Player>('registerPlayer', { commanderName, homeworldName, role, campId }));
   }
 
   async resetGame(): Promise<void> {
@@ -345,6 +345,12 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   unloadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void> {
     return this.send('unloadCargo', { fleetId, productTypeId, quantity });
   }
+  loadCargoFromHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void> {
+    return this.send('loadCargoFromHubDepot', { fleetId, productTypeId, quantity });
+  }
+  unloadCargoToHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void> {
+    return this.send('unloadCargoToHubDepot', { fleetId, productTypeId, quantity });
+  }
   moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void> {
     return this.send('moveFleet', { fleetId, destinationSystemId });
   }
@@ -404,6 +410,12 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   hasVisitedSystem(systemId: Id): Signal<boolean> {
     return this.poll('hasVisitedSystem', () => ({ systemId }), false);
   }
+  hasExploredSystem(systemId: Id): Signal<boolean> {
+    return this.poll('hasExploredSystem', () => ({ systemId }), false);
+  }
+  exploreSystem(fleetId: Id): Promise<void> {
+    return this.send('exploreSystem', { fleetId });
+  }
 
   // ==========================================================================
   // Handel
@@ -423,6 +435,22 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void> {
     return this.send('buyFromOrder', { orderId, quantity, deliverToColonyId });
+  }
+
+  hubDepot(systemId: Id): Signal<HubDepotEntry[]> {
+    return this.poll('hubDepot', () => ({ systemId }), []);
+  }
+  hubOrders(systemId: Id): Signal<HubOrder[]> {
+    return this.poll('hubOrders', () => ({ systemId }), []);
+  }
+  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void> {
+    return this.send('createHubSellOrder', { systemId, productTypeId, quantity, pricePerUnit });
+  }
+  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void> {
+    return this.send('createHubBuyOrder', { systemId, productTypeId, quantity, pricePerUnit });
+  }
+  cancelHubOrder(orderId: Id): Promise<void> {
+    return this.send('cancelHubOrder', { orderId });
   }
 
   // ==========================================================================
@@ -449,6 +477,31 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   respondToPeaceOffer(offerId: Id, accept: boolean): Promise<void> {
     return this.send('respondToPeaceOffer', { offerId, accept });
+  }
+
+  treaties(): Signal<Treaty[]> {
+    return this.poll('treaties', () => ({}), []);
+  }
+  incomingTreatyOffers(): Signal<TreatyOffer[]> {
+    return this.poll('incomingTreatyOffers', () => ({}), []);
+  }
+  outgoingTreatyOffers(): Signal<TreatyOffer[]> {
+    return this.poll('outgoingTreatyOffers', () => ({}), []);
+  }
+  hasPeaceTreaty(otherPlayerId: Id): Signal<boolean> {
+    return this.poll('hasPeaceTreaty', () => ({ otherPlayerId }), false);
+  }
+  hasTradeAgreement(otherPlayerId: Id): Signal<boolean> {
+    return this.poll('hasTradeAgreement', () => ({ otherPlayerId }), false);
+  }
+  offerTreaty(otherPlayerId: Id, type: TreatyType): Promise<void> {
+    return this.send('offerTreaty', { otherPlayerId, type });
+  }
+  respondToTreatyOffer(offerId: Id, accept: boolean): Promise<void> {
+    return this.send('respondToTreatyOffer', { offerId, accept });
+  }
+  terminateTreaty(otherPlayerId: Id, type: TreatyType): Promise<void> {
+    return this.send('terminateTreaty', { otherPlayerId, type });
   }
 
   // ==========================================================================

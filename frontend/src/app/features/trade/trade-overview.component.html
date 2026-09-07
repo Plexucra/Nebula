@@ -5,8 +5,8 @@
 
 <div class="panel corner-frame">
   <div class="panel-header">
-    <h2>System Handel — Aurelia-System</h2>
-    <span class="hint">Neue Orders über "Anbieten" im Lagerbestand einer Kolonie (Tab „Produktion"). Grundnahrung, Grundmedizin und Unterhaltungselektronik kauft die Bevölkerung des Systems von selbst – das ist Ihre verlässlichste Einnahmequelle.</span>
+    <h2>Planetare Handelsposten — Aurelia-System</h2>
+    <span class="hint">Neue Orders über "Anbieten" im Lagerbestand einer Kolonie (Tab „Produktion"). Grundnahrung, Grundmedizin und Unterhaltungselektronik kauft die Bevölkerung des Systems von selbst – das ist Ihre verlässlichste Einnahmequelle. Kauf bei einer fremden Kolonie ist nur mit Kommandanten möglich, mit denen ein <a routerLink="/diplomatie">Handelsvertrag</a> besteht – Systemhandelsposten ohne Kolonie-Landung gibt es außerhalb einer Handelsgilde-Station nicht mehr.</span>
   </div>
   <div class="panel-body order-list">
     @for (o of orders(); track o.id) {
@@ -25,19 +25,112 @@
 </div>
 
 <div class="panel corner-frame" [class.locked]="!gatewayActive()">
-  <div class="panel-header"><h2>Sektorale Handelsstation</h2></div>
-  <div class="panel-body empty-state">
+  <div class="panel-header">
+    <h2>Handelsgilde-Station</h2>
+    <span class="hint">Neutraler Boden — dort kann jeder Kommandant mit jedem handeln, ganz ohne Handelsvertrag,
+      und eine Blockade ist dort nicht möglich. Jeder Kommandant hat dort ein <strong>unbegrenztes Depot</strong> —
+      beliefert wird es über eine Flotte mit Frachtern (Flotten-Seite, "Ins Depot entladen"). Kauf- UND
+      Verkaufs-Orders kreuzen sich sofort, auch teilweise, zum Preis der jeweils älteren Order. Die Handelsgilde
+      selbst hält immer eine kleine Order je Seite, damit überhaupt Handel entsteht.</span>
+  </div>
+  <div class="panel-body">
     @if (gatewayActive()) {
-      @if (nearestTradeHub(); as hub) {
-        <p><strong>{{ hub.system.name }}</strong> ist Ihre nächstgelegene sektorale Handelsstation —
-          {{ hub.hops }} Gateway-Sprung(e) entfernt. Zugang ist grundsätzlich möglich, sobald Frachter
-          dorthin entsandt werden. Handel auf dieser Ebene folgt in einer späteren Ausbaustufe.</p>
+      @if (hubSystems().length > 0) {
+        @if (nearestTradeHub(); as hub) {
+          <p class="empty-hint"><strong>{{ hub.system.name }}</strong> ist Ihre nächstgelegene Handelsgilde-Station —
+            {{ hub.hops }} Gateway-Sprung(e) entfernt.</p>
+        }
+        <div class="hub-picker">
+          <label for="hub-select">Station:</label>
+          <select id="hub-select" [ngModel]="selectedHubId()" (ngModelChange)="selectHub($event)">
+            @for (s of hubSystems(); track s.id) {
+              <option [value]="s.id">{{ s.name }}</option>
+            }
+          </select>
+        </div>
+        @if (error(); as e) { <div class="error">{{ e }}</div> }
+
+        <span class="eyebrow">Mein Depot an dieser Station</span>
+        <div class="order-list depot-list">
+          @for (d of depot(); track d.productTypeId) {
+            <div class="order-row">
+              <span>{{ productName(d.productTypeId) }}</span>
+              <span class="mono">{{ d.quantity }} Einh.</span>
+              <span class="hint">im Depot</span>
+              <div class="sell-controls">
+                <input type="number" min="1" [max]="d.quantity" [ngModel]="depotSellQty[d.productTypeId] ?? d.quantity" (ngModelChange)="depotSellQty[d.productTypeId] = $event" title="Menge" />
+                <input type="number" min="0" step="0.01" [ngModel]="depotSellPrice[d.productTypeId] ?? 0" (ngModelChange)="depotSellPrice[d.productTypeId] = $event" title="Preis je Einheit" />
+                <button class="primary small" (click)="sellFromDepot(d.productTypeId, d.quantity)" [disabled]="busy() === ('sell-depot:' + d.productTypeId)">Verkaufen</button>
+              </div>
+            </div>
+          } @empty {
+            <p class="empty-hint">Depot ist leer. Eine Flotte mit Frachtern hierher entsenden und auf der
+              Flotten-Seite "Ins Depot entladen" nutzen.</p>
+          }
+        </div>
+
+        <span class="eyebrow">Orderbuch</span>
+        <div class="form-row">
+          <button type="button" class="product-select-btn" (click)="openProductPicker()">
+            {{ productName(selectedProductId()) }} <span class="hint">— ändern</span>
+          </button>
+        </div>
+        <div class="order-book">
+          <div class="order-book-side">
+            <span class="hint">Kauf-Orders (Gebote)</span>
+            <div class="order-list">
+              @for (o of bids(); track o.id) {
+                <div class="order-row">
+                  <span class="mono">{{ o.limitPrice | number:'1.0-2' }} Cr</span>
+                  <span class="mono">{{ o.remainingQuantity }} Einh.</span>
+                  <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }}</span>
+                  @if (o.ownerId === playerId()) {
+                    <button class="ghost small danger" (click)="cancelHubOrder(o)" [disabled]="busy() === o.id">Zurückziehen</button>
+                  }
+                </div>
+              } @empty { <p class="empty-hint">Keine Kauf-Orders.</p> }
+            </div>
+          </div>
+          <div class="order-book-side">
+            <span class="hint">Verkaufs-Orders (Briefe)</span>
+            <div class="order-list">
+              @for (o of asks(); track o.id) {
+                <div class="order-row">
+                  <span class="mono">{{ o.limitPrice | number:'1.0-2' }} Cr</span>
+                  <span class="mono">{{ o.remainingQuantity }} Einh.</span>
+                  <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }}</span>
+                  @if (o.ownerId === playerId()) {
+                    <button class="ghost small danger" (click)="cancelHubOrder(o)" [disabled]="busy() === o.id">Zurückziehen</button>
+                  }
+                </div>
+              } @empty { <p class="empty-hint">Keine Verkaufs-Orders.</p> }
+            </div>
+          </div>
+        </div>
+
+        <span class="eyebrow">Order aufgeben</span>
+        <div class="form-row">
+          <select [(ngModel)]="newOrderSide">
+            <option value="Buy">Kaufen</option>
+            <option value="Sell">Verkaufen</option>
+          </select>
+          <input type="number" min="1" [(ngModel)]="newOrderQty" title="Menge" />
+          <input type="number" min="0" step="0.01" [(ngModel)]="newOrderPrice" title="Preis je Einheit" />
+          <button class="primary small" (click)="submitNewOrder()" [disabled]="busy() === 'new-order'">Order aufgeben</button>
+        </div>
+
+        <app-product-picker-dialog
+          [products]="productTypes"
+          [open]="productPickerOpen()"
+          (closed)="productPickerOpen.set(false)"
+          (picked)="onProductPicked($event)"
+        />
       } @else {
-        <p>Keine sektorale Handelsstation im bekannten Netz gefunden.</p>
+        <p class="empty-hint">Keine Handelsgilde-Station im bekannten Netz gefunden.</p>
       }
     } @else {
       <span class="eyebrow">🔒 Gesperrt</span>
-      <p>Der überregionale Handel über sektorale Handelsstationen der Handelsgilde wird erst mit der
+      <p>Der überregionale Handel über Handelsgilde-Stationen wird erst mit der
         Aktivierung Ihres Gateways relevant.</p>
     }
   </div>

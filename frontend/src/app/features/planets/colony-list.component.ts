@@ -35,7 +35,7 @@ export class ColonyListComponent {
 
   protected uncolonizedPlanets() {
     const colonizedIds = new Set(this.colonies().map(c => c.planetId));
-    return this.planetsInSystem().filter(p => !colonizedIds.has(p.id));
+    return this.planetsInSystem().filter(p => p.usable && !colonizedIds.has(p.id));
   }
 
   protected async colonize(planetId: Id): Promise<void> {
