@@ -6,9 +6,13 @@ import de.nebula.npcbot.ws.GameConnection;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,6 +65,13 @@ public class Bot {
   private String combatFleetId;
   private int initialCombatShipCount;
   private long readyAtMs;
+  private String freighterFleetId;
+  /** Nächstgelegene Handelsgilde-Station (per BFS, siehe {@link #findNearestTradeHub}) – einmalig ermittelt, Topologie ist statisch. */
+  private String hubSystemId;
+
+  private enum TradeState {IDLE, TRAVELING_TO_HUB, TRAVELING_HOME}
+
+  private TradeState tradeState = TradeState.IDLE;
 
   private final boolean coordinator;
   private String mySpecialtyProduct;
@@ -150,7 +161,8 @@ public class Bot {
       if (isCombatFleet(f)) {
         combatFleetId = text(f, "id");
         initialCombatShipCount = shipCount(f);
-        break;
+      } else if (hasFreighter(f)) {
+        freighterFleetId = text(f, "id");
       }
     }
     if (combatFleetId == null) throw new IllegalStateException("Keine Kampfflotte in der Startausstattung gefunden.");
@@ -163,6 +175,7 @@ public class Bot {
     safe(this::refreshPlayers);
     safe(this::coordinateSpecialization);
     safe(this::maintainEconomy);
+    safe(this::maintainTrade);
     safe(this::maintainDiplomacy);
     safe(this::maintainDefense);
     safe(this::maintainOffense);
@@ -210,7 +223,7 @@ public class Bot {
   private void coordinateSpecialization() {
     if (coordinator) {
       if (mySpecialtyProduct == null) {
-        mySpecialtyProduct = Catalog.SPECIALTY_PRODUCTS.get(0);
+        mySpecialtyProduct = Catalog.specialtyForIndex(index);
         log("Koordinator – eigene Spezialisierung: " + mySpecialtyProduct);
       }
       for (Map.Entry<String, String> e : playerIdByName.entrySet()) {
@@ -219,7 +232,7 @@ public class Bot {
         if (id.equals(playerId) || !isOwnCampName(name) || specializationSentTo.contains(id)) continue;
         int otherIndex = parseIndex(name);
         if (otherIndex <= 0) continue;
-        String product = Catalog.SPECIALTY_PRODUCTS.get((otherIndex - 1) % Catalog.SPECIALTY_PRODUCTS.size());
+        String product = Catalog.specialtyForIndex(otherIndex);
         connection.call("sendMessage", Map.of("toPlayerId", id, "subject", "Spezialisierung", "body", product));
         specializationSentTo.add(id);
         log("Spezialisierung an " + name + " gesendet: " + product);
@@ -354,6 +367,287 @@ public class Bot {
       }
     }
     return true;
+  }
+
+  // --- Teil 2: Handel an Handelsgilde-Stationen (Umsetzungskonzept/22_...md, §H) ---
+
+  /**
+   * Frachter-Kreislauf je Bot: Heimatkolonie beladen -> zur nächstgelegenen
+   * Handelsgilde-Station fliegen -> dort die eigene Spezialware ins
+   * unbegrenzte Stationsdepot entladen und sofort als Verkaufs-Order
+   * einstellen (Preis = bestes vorhandenes Kaufgebot, garantiert sofortige
+   * Ausführung gegen Market-Maker oder andere Kommandanten, siehe
+   * {@link #sellCargoAtHub}) -> mit den Erlösen genau die Grundbedarfe/
+   * Baustoffe nachkaufen, die die eigene Kolonie nicht selbst herstellt
+   * (siehe {@link #buyImportsAtHub}) -> zurück nach Hause -> Fracht ins
+   * Kolonielager entladen, wo sie automatisch die "schlafenden"
+   * Auto-Relist-Verkaufsorders der eigenen Bevölkerung bzw. die nächste
+   * Ausbaustufe speist ({@code MarketCommands.replenishDormantSellOrders}
+   * bzw. {@link #queueMissingMaterials}). Ein einzelner Frachter je Bot
+   * reicht für diesen Kreislauf – bewusst keine eigene Frachterflotten-
+   * Beschaffung, siehe {@link #hasFreighter}.
+   */
+  private void maintainTrade() {
+    if (mySpecialtyProduct == null) return; // Handelsrolle noch nicht zugeteilt
+    if (freighterFleetId == null) {
+      findFreighterFleet();
+      if (freighterFleetId == null) return;
+    }
+    switch (tradeState) {
+      case IDLE -> tryStartExport();
+      case TRAVELING_TO_HUB -> checkHubArrival();
+      case TRAVELING_HOME -> checkHomeArrival();
+    }
+  }
+
+  private void findFreighterFleet() {
+    JsonNode fleets = connection.call("fleets");
+    for (JsonNode f : fleets) {
+      if (hasFreighter(f)) {
+        freighterFleetId = text(f, "id");
+        return;
+      }
+    }
+  }
+
+  private void tryStartExport() {
+    JsonNode fleet = ownFleet(freighterFleetId);
+    if (fleet == null || !"Stationed".equals(text(fleet, "status")) || !homeColonyId.equals(text(fleet, "locationColonyId"))) {
+      return; // Frachter ist noch unterwegs oder nicht zu Hause gelandet
+    }
+    if (hubSystemId == null) {
+      hubSystemId = findNearestTradeHub();
+      // Kollision Heimatsystem == Handelsposten ist laut Umsetzungskonzept/22_...md, §G
+      // möglich, aber selten – der Frachter kann dann nicht "dorthin reisen" (Ziel ==
+      // Ausgangssystem), diese Kolonie handelt schlicht nicht am eigenen Heimatposten.
+      if (hubSystemId == null || hubSystemId.equals(homeSystemId)) return;
+    }
+    double exportable = warehouseQty(mySpecialtyProduct) - Catalog.TRADE_RESERVE_QTY;
+    double capacityQty = maxLoadable(freighterFleetId, mySpecialtyProduct);
+    double loadQty = Math.floor(Math.min(exportable, capacityQty));
+    if (loadQty < Catalog.TRADE_MIN_EXPORT_BATCH) return;
+    try {
+      connection.call("loadCargo", Map.of("fleetId", freighterFleetId, "productTypeId", mySpecialtyProduct, "quantity", loadQty));
+      connection.call("moveFleet", Map.of("fleetId", freighterFleetId, "destinationSystemId", hubSystemId));
+      tradeState = TradeState.TRAVELING_TO_HUB;
+      log("Handelsfahrt gestartet: " + (long) loadQty + "x " + mySpecialtyProduct + " -> Station " + hubSystemId);
+    } catch (CommandException e) {
+      log("Verladung zur Handelsfahrt abgelehnt: " + e.getMessage());
+    }
+  }
+
+  private void checkHubArrival() {
+    JsonNode fleet = ownFleet(freighterFleetId);
+    if (fleet == null || !"Stationed".equals(text(fleet, "status")) || !hubSystemId.equals(text(fleet, "systemId"))) {
+      return; // noch unterwegs
+    }
+    sellCargoAtHub();
+    buyImportsAtHub();
+    try {
+      connection.call("moveFleet", Map.of("fleetId", freighterFleetId, "destinationSystemId", homeSystemId));
+      tradeState = TradeState.TRAVELING_HOME;
+      log("Rückreise zur Heimatkolonie gestartet.");
+    } catch (CommandException e) {
+      log("Rückreise fehlgeschlagen: " + e.getMessage());
+    }
+  }
+
+  private void checkHomeArrival() {
+    JsonNode fleet = ownFleet(freighterFleetId);
+    if (fleet == null || !"Stationed".equals(text(fleet, "status")) || !homeSystemId.equals(text(fleet, "systemId"))) {
+      return; // noch unterwegs
+    }
+    // moveFleet setzt die Flotte nach der Ankunft nur allgemein "im System" ab
+    // (locationColonyId bleibt null, siehe FleetCommands.moveFleetWithinSystem)
+    // – zum Ent-/Beladen am Kolonielager muss erst explizit an der Kolonie
+    // angedockt werden, ein reiner Ortswechsel INNERHALB desselben Systems
+    // ohne Reisezeit.
+    if (!homeColonyId.equals(text(fleet, "locationColonyId"))) {
+      try {
+        connection.call("moveFleetWithinSystem", Map.of(
+            "fleetId", freighterFleetId, "target", Map.of("kind", "ColonyOrbit", "colonyId", homeColonyId)));
+      } catch (CommandException e) {
+        log("Andocken an der Heimatkolonie fehlgeschlagen: " + e.getMessage());
+        return;
+      }
+      fleet = ownFleet(freighterFleetId);
+    }
+    for (JsonNode c : fleet.path("cargo")) {
+      String productTypeId = text(c, "productTypeId");
+      double qty = c.path("quantity").asDouble(0);
+      if (qty < 1e-9) continue;
+      try {
+        connection.call("unloadCargo", Map.of("fleetId", freighterFleetId, "productTypeId", productTypeId, "quantity", qty));
+      } catch (CommandException e) {
+        log("Entladen der Handelsfracht zu Hause fehlgeschlagen: " + e.getMessage());
+      }
+    }
+    tradeState = TradeState.IDLE;
+    log("Handelsfahrt abgeschlossen.");
+  }
+
+  private void sellCargoAtHub() {
+    JsonNode fleet = ownFleet(freighterFleetId);
+    double onboard = fleet == null ? 0 : cargoQty(fleet, mySpecialtyProduct);
+    if (onboard >= 1) {
+      try {
+        connection.call("unloadCargoToHubDepot", Map.of(
+            "fleetId", freighterFleetId, "productTypeId", mySpecialtyProduct, "quantity", onboard));
+      } catch (CommandException e) {
+        log("Entladen ins Stationsdepot fehlgeschlagen: " + e.getMessage());
+      }
+    }
+    double depotQty = Math.floor(hubDepotQty(mySpecialtyProduct));
+    if (depotQty < 1) return;
+    double bidPrice = bestPrice(mySpecialtyProduct, "Buy");
+    if (bidPrice <= 0) return; // keine Gegenseite vorhanden (sollte wegen Market-Maker nicht vorkommen)
+    try {
+      connection.call("createHubSellOrder", Map.of(
+          "systemId", hubSystemId, "productTypeId", mySpecialtyProduct, "quantity", depotQty, "pricePerUnit", bidPrice));
+      log("Verkaufsorder aufgegeben: " + (long) depotQty + "x " + mySpecialtyProduct + " @ " + bidPrice);
+    } catch (CommandException e) {
+      log("Verkaufsorder abgelehnt: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Kauft am Handelsposten genau die Grundbedarfe/Baustoffe nach, die die
+   * eigene Kolonie NICHT selbst herstellt: Nahrung und Medizin für jeden
+   * außer dem jeweiligen Erzeuger (beide speisen sonst dauerhaft leere
+   * Auto-Relist-Orders der Bevölkerung), zusätzlich {@link
+   * Catalog#TRADE_IMPORT_MATERIAL} für jeden, der nicht ohnehin
+   * Baustoff-Spezialist ist (Nutzervorgabe: Baustoff-Spezialisten sind
+   * bewusst wenige, siehe {@link Catalog#MATERIALS_SPECIALIST_EVERY}).
+   */
+  private void buyImportsAtHub() {
+    List<String> needs = new ArrayList<>();
+    if (!Catalog.FOOD_PRODUCT.equals(mySpecialtyProduct)) needs.add(Catalog.FOOD_PRODUCT);
+    if (!Catalog.MEDICINE_PRODUCT.equals(mySpecialtyProduct)) needs.add(Catalog.MEDICINE_PRODUCT);
+    if (!isMaterialsSpecialist()) needs.add(Catalog.TRADE_IMPORT_MATERIAL);
+    for (String productTypeId : needs) {
+      if (warehouseQty(productTypeId) >= Catalog.TRADE_IMPORT_LOW_WATERMARK) continue;
+      buyOneProductAtHub(productTypeId);
+    }
+  }
+
+  private void buyOneProductAtHub(String productTypeId) {
+    cancelOwnOrders(productTypeId, "Buy"); // Reste einer evtl. nicht voll ausgeführten Order von einem früheren Besuch aufräumen
+    double askPrice = bestPrice(productTypeId, "Sell");
+    if (askPrice <= 0) return;
+    double affordable = Math.floor(walletBalance() / askPrice);
+    double quantity = Math.min(affordable, Catalog.TRADE_IMPORT_BATCH);
+    if (quantity < 1) return;
+    try {
+      connection.call("createHubBuyOrder", Map.of(
+          "systemId", hubSystemId, "productTypeId", productTypeId, "quantity", quantity, "pricePerUnit", askPrice));
+    } catch (CommandException e) {
+      log("Einkaufsorder abgelehnt (" + productTypeId + "): " + e.getMessage());
+      return;
+    }
+    double loadable = Math.floor(maxLoadable(freighterFleetId, productTypeId));
+    if (loadable < 1) return; // Order nicht (sofort) ausgeführt – Rest bleibt für den nächsten Besuch im Orderbuch
+    try {
+      connection.call("loadCargoFromHubDepot", Map.of("fleetId", freighterFleetId, "productTypeId", productTypeId, "quantity", loadable));
+      log("Eingekauft: " + (long) loadable + "x " + productTypeId + " @ " + askPrice);
+    } catch (CommandException e) {
+      log("Verladung des Einkaufs fehlgeschlagen: " + e.getMessage());
+    }
+  }
+
+  private boolean isMaterialsSpecialist() {
+    return Catalog.SPECIALTY_PRODUCTS.contains(mySpecialtyProduct);
+  }
+
+  /** BFS über das (öffentlich bekannte, siehe {@code GatewayCommands.visibleSystems}) Gateway-Netz zur nächstgelegenen Handelsgilde-Station. */
+  private String findNearestTradeHub() {
+    JsonNode systems = connection.call("visibleSystems");
+    Set<String> hubIds = new HashSet<>();
+    for (JsonNode s : systems) {
+      if (s.path("isTradeHub").asBoolean(false)) hubIds.add(text(s, "id"));
+    }
+    if (hubIds.isEmpty()) return null;
+    JsonNode routes = connection.call("galaxyRoutes");
+    Map<String, List<String>> adjacency = new HashMap<>();
+    for (JsonNode r : routes) {
+      String a = text(r, "a");
+      String b = text(r, "b");
+      adjacency.computeIfAbsent(a, k -> new ArrayList<>()).add(b);
+      adjacency.computeIfAbsent(b, k -> new ArrayList<>()).add(a);
+    }
+    Set<String> visited = new HashSet<>();
+    Deque<String> queue = new ArrayDeque<>();
+    visited.add(homeSystemId);
+    queue.add(homeSystemId);
+    while (!queue.isEmpty()) {
+      String current = queue.poll();
+      if (hubIds.contains(current)) return current;
+      for (String neighbor : adjacency.getOrDefault(current, List.of())) {
+        if (visited.add(neighbor)) queue.add(neighbor);
+      }
+    }
+    return null;
+  }
+
+  private double hubDepotQty(String productTypeId) {
+    JsonNode entries = connection.call("hubDepot", Map.of("systemId", hubSystemId));
+    for (JsonNode e : entries) {
+      if (productTypeId.equals(text(e, "productTypeId"))) return e.path("quantity").asDouble(0);
+    }
+    return 0;
+  }
+
+  /** Bestes Kursangebot im Orderbuch der aktuellen Handelsgilde-Station für {@code side} ("Buy"/"Sell") – höchstes Gebot bzw. günstigster Brief. */
+  private double bestPrice(String productTypeId, String side) {
+    JsonNode orders = connection.call("hubOrders", Map.of("systemId", hubSystemId));
+    double best = -1;
+    for (JsonNode o : orders) {
+      if (!productTypeId.equals(text(o, "productTypeId")) || !side.equals(text(o, "side"))) continue;
+      if (o.path("remainingQuantity").asDouble(0) <= 0) continue;
+      double price = o.path("limitPrice").asDouble(0);
+      if ("Buy".equals(side)) {
+        if (price > best) best = price;
+      } else if (best < 0 || price < best) {
+        best = price;
+      }
+    }
+    return best;
+  }
+
+  private void cancelOwnOrders(String productTypeId, String side) {
+    JsonNode orders = connection.call("hubOrders", Map.of("systemId", hubSystemId));
+    for (JsonNode o : orders) {
+      if (!productTypeId.equals(text(o, "productTypeId")) || !side.equals(text(o, "side"))) continue;
+      if (!playerId.equals(text(o, "ownerId"))) continue;
+      try {
+        connection.call("cancelHubOrder", Map.of("orderId", text(o, "id")));
+      } catch (CommandException ignored) {
+        // Order wurde zwischen Abfrage und Stornierung evtl. bereits voll ausgeführt – kein Problem.
+      }
+    }
+  }
+
+  private double walletBalance() {
+    JsonNode wallet = connection.call("wallet");
+    return wallet.path("balance").asDouble(0);
+  }
+
+  private double maxLoadable(String fleetId, String productTypeId) {
+    JsonNode capacity = connection.call("fleetCargoCapacity", Map.of("fleetId", fleetId, "productTypeId", productTypeId));
+    return capacity.path("maxLoadableQuantity").asDouble(0);
+  }
+
+  private static double cargoQty(JsonNode fleet, String productTypeId) {
+    for (JsonNode c : fleet.path("cargo")) {
+      if (productTypeId.equals(text(c, "productTypeId"))) return c.path("quantity").asDouble(0);
+    }
+    return 0;
+  }
+
+  private static boolean hasFreighter(JsonNode fleet) {
+    for (JsonNode s : fleet.path("ships")) {
+      if ("p_freighter".equals(text(s, "shipProductTypeId")) && s.path("quantity").asDouble(0) > 0) return true;
+    }
+    return false;
   }
 
   // --- Diplomatie: pauschaler Krieg gegen das gesamte gegnerische Lager ------
@@ -520,19 +814,27 @@ public class Bot {
   // --- Hilfsmethoden -----------------------------------------------------
 
   private double eleriumStock() {
+    return warehouseQty("p_elerium_stabil");
+  }
+
+  private double warehouseQty(String productTypeId) {
     JsonNode warehouse = connection.call("warehouse", Map.of("colonyId", homeColonyId));
     for (JsonNode w : warehouse) {
-      if ("p_elerium_stabil".equals(text(w, "productTypeId"))) return w.path("quantity").asDouble(0);
+      if (productTypeId.equals(text(w, "productTypeId"))) return w.path("quantity").asDouble(0);
     }
     return 0;
   }
 
-  private JsonNode ownCombatFleet() {
+  private JsonNode ownFleet(String fleetId) {
     JsonNode fleets = connection.call("fleets");
     for (JsonNode f : fleets) {
-      if (text(f, "id").equals(combatFleetId)) return f;
+      if (text(f, "id").equals(fleetId)) return f;
     }
     return null;
+  }
+
+  private JsonNode ownCombatFleet() {
+    return ownFleet(combatFleetId);
   }
 
   private int currentCombatShipCount() {

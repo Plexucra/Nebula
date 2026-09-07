@@ -28,6 +28,53 @@ final class Catalog {
       "p_katalysatormetall", "p_magnetwerkstoff", "p_halbleiterrohstoff", "p_keramikwerkstoff",
       "p_glaswerkstoff", "p_verbundwerkstoff");
 
+  /** Tier-1-Grundbedarf Nahrung – Handelsrolle der meisten Bots, siehe {@link #specialtyForIndex}. */
+  static final String FOOD_PRODUCT = "p_grundnahrung";
+  /** Tier-1-Grundbedarf Medizin – zweite Handelsrolle der meisten Bots, siehe {@link #specialtyForIndex}. */
+  static final String MEDICINE_PRODUCT = "p_grundmedizin";
+  /**
+   * Baustoff, den Nahrungs-/Medizin-Spezialisten am Handelsposten für den
+   * eigenen Infrastruktur-/Industrieausbau einkaufen (Umsetzungskonzept/
+   * 17_...md): {@code p_stahl} ist in {@code buildings.json} das einzige
+   * Material, das JEDER der drei Ausbaupfade ({@link #BUILD_PRIORITY} plus
+   * Infrastruktur) bereits ab Stufe 1 braucht.
+   */
+  static final String TRADE_IMPORT_MATERIAL = "p_stahl";
+
+  /**
+   * Nur jeder {@code MATERIALS_SPECIALIST_EVERY}-te Bot (nach Index)
+   * spezialisiert sich auf Baustoffe statt auf Nahrung/Medizin – Nutzervorgabe:
+   * "sehr wenige" sollen sich um Baustoffe kümmern, die breite Masse um die
+   * Grundbedarfe der eigenen Bevölkerung.
+   */
+  static final int MATERIALS_SPECIALIST_EVERY = 5;
+
+  /** Menge der eigenen Spezialware, die IMMER im Heimatlager bleibt (füttert die lokale Auto-Relist-Verkaufsorder der Bevölkerung). */
+  static final double TRADE_RESERVE_QTY = 5;
+  /** Erst ab dieser exportierbaren Menge lohnt sich eine Handelsfahrt (ein Frachter je Fahrt). */
+  static final double TRADE_MIN_EXPORT_BATCH = 5;
+  /** Unterhalb dieses Lagerbestands wird ein Grundbedarf/Baustoff am Handelsposten nachgekauft. */
+  static final double TRADE_IMPORT_LOW_WATERMARK = 10;
+  /** Feste Einkaufslosgröße je Grundbedarf/Baustoff und Stationsbesuch. */
+  static final double TRADE_IMPORT_BATCH = 10;
+
+  /**
+   * Verteilt die Handelsrolle über den Bot-Index (Umsetzungskonzept/22_...md,
+   * §H: "das mit den NPC machen wir später" – dies ist die Nachreichung).
+   * Die meisten Bots produzieren abwechselnd Nahrungs- oder Medizin-
+   * Grundbedarf für den eigenen Handelsposten-Export, nur jeder
+   * {@link #MATERIALS_SPECIALIST_EVERY}-te stellt stattdessen eines der
+   * Tier-2-Baustoffe aus {@link #SPECIALTY_PRODUCTS} her (rotierend über
+   * mehrere Baustoff-Spezialisten hinweg).
+   */
+  static String specialtyForIndex(int index) {
+    if (index % MATERIALS_SPECIALIST_EVERY == 0) {
+      int materialIndex = (index / MATERIALS_SPECIALIST_EVERY - 1) % SPECIALTY_PRODUCTS.size();
+      return SPECIALTY_PRODUCTS.get(materialIndex);
+    }
+    return index % 2 == 1 ? FOOD_PRODUCT : MEDICINE_PRODUCT;
+  }
+
   /** Kampfschiffstypen in Bau-Rotation, siehe {@code ShipCatalog} – deckt bewusst den vollen Konterkreis ab. */
   static final List<String> WARSHIP_TYPES = List.of("p_corvette", "p_destroyer", "p_cruiser");
 

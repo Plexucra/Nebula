@@ -10,7 +10,7 @@ jede handelbare Ware eine kleine Kauf- und Verkaufs-Order, damit überhaupt
 Handel entsteht, und verschiebt seinen eigenen Preis nach jeder Ausführung
 weiter nach außen. Echtes Handeln der NPC-Bot-Prozesse (`npc-bot/`) ist
 NICHT Teil dieses Vorhabens (Nutzerentscheidung: "das mit den NPC machen
-wir später").
+wir später" – nachgereicht in Umsetzungskonzept/23_...md).
 
 ## A. Ausgangslage und abgelöste Vorgabe
 
@@ -195,10 +195,10 @@ die hier nicht angetastet wurde.
 
 ## H. Bewusst nicht umgesetzt
 
-- **Echte NPC-Bot-Handelsteilnahme** (Nutzerentscheidung: "das mit den NPC
-  machen wir später") – die 20 laufenden `npc-bot`-Prozesse handeln an
-  Handelsgilde-Stationen bislang nicht; alle Liquidität dort kommt vom
-  Market-Maker.
+- ~~**Echte NPC-Bot-Handelsteilnahme**~~ (Nutzerentscheidung: "das mit den
+  NPC machen wir später") – nachgereicht in Umsetzungskonzept/23_...md: die
+  20 laufenden `npc-bot`-Prozesse handeln jetzt selbstständig an
+  Handelsgilde-Stationen.
 - **Keine Preisrahmen-Rückkehr zur Mitte**: die ±10 %-Leiter läuft nur nach
   außen, nichts zieht Kauf-/Verkaufspreis der Handelsgilde nach starkem
   einseitigem Handel wieder in Richtung Produktionskosten zurück. Nicht
