@@ -1,0 +1,37 @@
+<div class="pop-chart">
+  <div class="chart-head">
+    <div>
+      <span class="eyebrow">Bevölkerungsverlauf</span>
+      <span class="phase" [class]="phaseTone()">{{ phaseLabel() }}</span>
+    </div>
+    @if (current(); as c) {
+      <div class="current mono">
+        {{ c.population | number:'1.0-0' }}
+        <span class="hint">von {{ c.housingCapacity | number:'1.0-0' }} Plätzen ({{ occupancyPct() | number:'1.0-1' }}% belegt)</span>
+      </div>
+    }
+  </div>
+
+  @if (hasCurve()) {
+    <svg class="chart" [attr.viewBox]="'0 0 ' + width + ' ' + height" preserveAspectRatio="none" role="img"
+         aria-label="Verlauf der Bevölkerung im beobachteten Zeitfenster">
+      @for (label of axisLabels(); track label.y) {
+        <line class="grid" x1="52" [attr.y1]="label.y" [attr.x2]="width - 14" [attr.y2]="label.y" />
+        <text class="axis" x="46" [attr.y]="label.y + 4" text-anchor="end">{{ label.value | number:'1.0-0' }}</text>
+      }
+      <path class="area" [attr.d]="areaPath()" />
+      <path class="line" [attr.d]="path()" />
+    </svg>
+    <div class="chart-foot">
+      <span class="hint">letzte {{ windowGameDays() | number:'1.0-0' }} Spieltage</span>
+      <span class="hint">jetzt</span>
+    </div>
+  } @else {
+    <p class="empty-hint">Der Verlauf wird gerade aufgezeichnet – in einem Moment erscheint hier die Kurve.</p>
+  }
+
+  <p class="hint">{{ explanation() }}</p>
+  @if (limitText(); as limit) {
+    <p class="hint warn">{{ limit }}</p>
+  }
+</div>
