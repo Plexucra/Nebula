@@ -7,3 +7,4 @@ army.pids
 *.iml
 .vscode
 .DS_Store
+logs*/

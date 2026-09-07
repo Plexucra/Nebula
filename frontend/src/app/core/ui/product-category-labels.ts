@@ -6,7 +6,6 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   ConsumerGood: 'Konsumgüter',
   BuildingMaterial: 'Baumaterial',
   Fuel: 'Treibstoff',
-  Facility: 'Anlagen',
   Ship: 'Schiffe',
   GroundUnit: 'Bodeneinheiten',
 };

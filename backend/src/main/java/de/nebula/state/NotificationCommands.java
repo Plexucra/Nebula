@@ -44,4 +44,16 @@ public final class NotificationCommands {
     Set<String> myIds = forPlayer(state, playerId).stream().map(n -> n.id).collect(java.util.stream.Collectors.toSet());
     for (GameNotification n : state.notifications) if (myIds.contains(n.id)) n.read = true;
   }
+
+  /**
+   * "Beibehalten" umschalten – schützt die Benachrichtigung vor dem
+   * automatischen Aufräumen nach {@code NOTIFICATION_RETENTION_GAME_HOURS}
+   * (siehe {@link RetentionCleanup}). Nur für eigene Benachrichtigungen
+   * wirksam (gleiche Sichtbarkeitsregel wie {@link #notifications}).
+   */
+  public static void setNotificationKeep(GameState state, String playerId, String id, boolean keep) {
+    Set<String> myIds = forPlayer(state, playerId).stream().map(n -> n.id).collect(java.util.stream.Collectors.toSet());
+    if (!myIds.contains(id)) return;
+    for (GameNotification n : state.notifications) if (n.id.equals(id)) n.keep = keep;
+  }
 }

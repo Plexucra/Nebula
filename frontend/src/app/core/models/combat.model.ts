@@ -27,7 +27,7 @@ export interface BattleTickResult {
  * Raumgefecht zwischen genau zwei Flotten zweier miteinander im Krieg
  * stehender Kommandanten (bewusste Vereinfachung ggü. der vollen
  * Blockade-/Mobilmachungs-/Expositions-Mechanik aus Mechanik/06_...md –
- * siehe Kommentar über `SimulatedGameApiService.engageBattle`). Kein
+ * siehe Kommentar über `BattleCommands.engageBattle` im Backend). Kein
  * Bodenkampf: Bodentruppen (`GroundForceGroup`) nehmen an einem `Battle`
  * NICHT teil, siehe dortiger Kommentar.
  */

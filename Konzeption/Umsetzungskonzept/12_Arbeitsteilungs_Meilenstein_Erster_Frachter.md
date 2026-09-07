@@ -1,5 +1,14 @@
 # 12. Balancing-Ziel: Erster Frachter in Arbeitsteilung durch 10 Kommandanten
 
+> **Hinweis (Stand Dokument 17):** Die hier hergeleiteten Start-Gebäudestufen
+> (Industriekomplex 4, Werft 3) gelten seit dem Minimalstart aus
+> `17_Infrastruktur_Bebauungsplaetze_Baustoffe_und_Lebensqualitaet.md` nicht
+> mehr – eine Heimatkolonie startet nur noch mit Wohnkomplex 1,
+> Industriekomplex 1 und Infrastruktur 2, jeder Ausbau kostet Baustoffe. Das Ziel "erster
+> Frachter in einer Spielwoche" ist damit bewusst aufgegeben; den neuen,
+> realistischen Zeitrahmen schätzt Dokument 17, Abschnitt D ab. Die Analyse
+> unten bleibt als Herleitung der Kettenzeiten gültig.
+
 ## 1. Ziel
 
 Es soll möglich sein, dass sich 10 Kommandanten zusammenschließen und – jeder

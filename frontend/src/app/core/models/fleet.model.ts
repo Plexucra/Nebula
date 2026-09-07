@@ -109,3 +109,18 @@ export interface ShipyardQueueEntry {
   startedAt: number | null;
   endsAt: number | null;
 }
+
+/**
+ * Frachtkapazität, Auslastung und maximal ladbare Stückzahl einer Flotte –
+ * kommt fertig berechnet vom Backend (`fleetCargoCapacity`), damit die
+ * Kapazitätsregel aus `FleetCommands.loadCargo` nicht ein zweites Mal im
+ * Client nachgebildet wird (Umsetzungskonzept/15_...md, Auftrag 3).
+ */
+export interface FleetCargoCapacity {
+  capacityMassKg: number;
+  capacityVolumeM3: number;
+  usedMassKg: number;
+  usedVolumeM3: number;
+  /** Maximal ladbare Stückzahl des angefragten Produkts. */
+  maxLoadableQuantity: number;
+}

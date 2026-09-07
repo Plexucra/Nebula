@@ -31,7 +31,7 @@
           <div class="panel-body stat-grid">
             @if (stats(); as s) {
               <div class="stat-block">
-                <div class="stat-block-head"><span>Infrastruktur</span><span class="mono">{{ s.infrastructurePct | number:'1.0-0' }}%</span></div>
+                <div class="stat-block-head"><span>Wohnraum</span><span class="mono">{{ s.infrastructurePct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big"><span [style.width.%]="s.infrastructurePct > 100 ? 100 : s.infrastructurePct"></span></div>
                 <p class="hint">Trägt die Bevölkerung – kein direkter Produktionsbonus.</p>
               </div>
@@ -61,7 +61,10 @@
               <dl class="fact-list">
                 <div><dt>Planetentyp</dt><dd>{{ planetTypeLabel(p.type) }}</dd></div>
                 <div><dt>Größe</dt><dd>{{ p.size }}</dd></div>
-                <div><dt>Bebauungskapazität</dt><dd>{{ p.buildCapacity }} <span class="hint">(Faktor {{ overbuild() | number:'1.2-2' }}×)</span></dd></div>
+                @if (slots(); as sl) {
+                  <div><dt>Bebauungsplätze</dt><dd>{{ sl.used }} / {{ sl.total }} belegt <span class="hint">({{ sl.free }} frei)</span></dd></div>
+                  <div><dt>Infrastruktur planetweit</dt><dd>{{ sl.planetInfrastructureTotal }} / {{ sl.planetInfrastructureMax }} <span class="hint">(Grenze durch Planetengröße)</span></dd></div>
+                }
               </dl>
               <div class="divider"></div>
               <span class="eyebrow">Fördergüte</span>
@@ -84,34 +87,56 @@
       <div class="panel corner-frame">
         <div class="panel-header">
           <h2>Bebauung</h2>
-          <span class="tag" [class.warn]="overbuild() > 1" [class.good]="overbuild() <= 1">Überbebauungsfaktor {{ overbuild() | number:'1.2-2' }}×</span>
+          @if (slots(); as sl) {
+            <span class="tag" [class.good]="sl.free > 0" [class.warn]="sl.free <= 0" title="Jede Infrastruktur-Stufe liefert einen Bebauungsplatz, jede Stufe jedes anderen Gebäudes belegt einen.">
+              Bebauungsplätze {{ sl.used }} / {{ sl.total }} · {{ sl.free }} frei
+            </span>
+          }
         </div>
         <div class="panel-body building-list">
+          @if (speedBreakdown(); as sb) {
+            <p class="hint">
+              Bevölkerung: <strong>{{ growthStateLabel() }}</strong>
+              ({{ sb.growthPerHour >= 0 ? '+' : '' }}{{ sb.growthPerHour | number:'1.2-2' }}/h) ·
+              Wohnraum {{ sb.population | number:'1.0-0' }} / {{ sb.housingCapacity | number:'1.0-0' }} ·
+              Lebensstandard unter {{ sb.shrinkBelowPct }} % schrumpft, ab {{ sb.growthFromPct }} % wächst, dazwischen hält die Bevölkerung.
+            </p>
+            @if (sb.growthState === 'Holding' || sb.growthState === 'Shrinking') {
+              <p class="hint warn">
+                Die Bevölkerung wächst nicht mehr, weil die Versorgung nicht mitkommt – nicht wegen des Wohnraums.
+                Deckung: @for (g of coverageEntries(); track g.productTypeId) { {{ productName(g.productTypeId) }} {{ g.coverage * 100 | number:'1.0-0' }}%@if (!$last) { · } }.
+                Mehr Produktion dieser Güter (oder Zukauf am Markt) hebt den Lebensstandard über {{ sb.growthFromPct }} % und damit das Wachstum.
+              </p>
+            }
+          }
           @for (bt of buildingTypes; track bt.id) {
             @if (bt.category !== 'PlanetaryDefense') {
               <div class="building-row">
                 <div class="building-info">
                   <strong>{{ bt.name }}</strong>
-                  @if (bt.id === 'b_powergrid' && powerCoverage() < 0.999) {
+                  @if (bt.category === 'Infrastructure' && powerCoverage() < 0.999) {
                     <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Stabilisiertes Elerium</span>
                   }
                   <span class="hint">{{ bt.description }}</span>
-                  @if (bt.id === 'b_powergrid' && buildingLevel(bt.id) > 0) {
-                    <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.2-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
+                  @if (bt.category === 'Infrastructure' && buildingLevel(bt.id) > 0) {
+                    <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.3-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
+                  }
+                  @if (bt.category === 'Infrastructure' && slots(); as sl) {
+                    <span class="hint mono">Liefert {{ sl.total }} Bebauungsplätze · planetweit {{ sl.planetInfrastructureTotal }} / {{ sl.planetInfrastructureMax }} (Kosten steigen mit der Summe aller Kolonien des Planeten)</span>
+                  }
+                  @if (bt.category === 'Housing' && speedBreakdown(); as sb) {
+                    <span class="hint mono">Wohnkapazität {{ sb.housingCapacity | number:'1.0-0' }} · jede Stufe verdoppelt sie</span>
                   }
                   @if (bt.category === 'ProductionFacility') {
                     <span class="hint mono">
-                      Produktionstempo: {{ productionSpeedPct(buildingLevel(bt.id)) | number:'1.0-0' }}%
-                      @if (buildingLevel(bt.id) < bt.maxLevel) {
-                        (nächste Stufe: {{ productionSpeedPct(buildingLevel(bt.id) + 1) | number:'1.0-0' }}%)
-                      }
+                      Produktionstempo: {{ productionSpeedPct(bt.id) | number:'1.0-0' }}%
+                      (nächste Stufe: {{ nextProductionSpeedPct(bt.id) | number:'1.0-0' }}%)
                     </span>
                   }
                 </div>
                 <div class="building-level">
                   <span class="eyebrow">Stufe</span>
                   <span class="mono big">{{ buildingLevel(bt.id) }}</span>
-                  <span class="hint">/ {{ bt.maxLevel }}</span>
                 </div>
                 @if (buildingFor(bt.id)?.pendingOrder; as order) {
                   <div class="building-progress">
@@ -121,10 +146,14 @@
                   </div>
                 } @else {
                   <div class="building-actions">
-                    @if (buildingLevel(bt.id) < bt.maxLevel) {
-                      <span class="hint mono">{{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }}h</span>
+                    <span class="hint mono">Stufe {{ buildingLevel(bt.id) + 1 }}: {{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }}h{{ bt.category !== 'Infrastructure' ? ' · 1 Platz' : '' }}</span>
+                    @for (m of upgradeMaterials(bt); track m.productTypeId) {
+                      <span class="hint mono material" [class.bad]="m.available < m.required" [class.good]="m.available >= m.required">
+                        {{ productName(m.productTypeId) }} {{ m.required | number:'1.0-0' }} <span class="hint">(Lager {{ m.available | number:'1.0-0' }})</span>
+                      </span>
                     }
-                    <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || buildingLevel(bt.id) >= bt.maxLevel">
+                    @if (upgradeBlockedReason(bt); as reason) { <span class="hint bad">{{ reason }}</span> }
+                    <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || !upgradeAffordable(bt)">
                       {{ busy() === 'build:' + bt.id ? 'Beauftrage…' : 'Ausbauen' }}
                     </button>
                     @if (buildingLevel(bt.id) > 0) {
@@ -150,7 +179,6 @@
                 <div class="building-level">
                   <span class="eyebrow">Stufe</span>
                   <span class="mono big">{{ buildingLevel(bt.id) }}</span>
-                  <span class="hint">/ {{ bt.maxLevel }}</span>
                 </div>
 
                 @if (buildingFor(bt.id)?.pendingOrder; as order) {
@@ -159,7 +187,14 @@
                     <span class="mono">{{ countdown(order.completesAt - clock.now()) }}</span>
                   </div>
                 } @else {
-                  <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || buildingLevel(bt.id) >= bt.maxLevel">Ausbauen</button>
+                  <div class="building-actions">
+                    <span class="hint mono">Stufe {{ buildingLevel(bt.id) + 1 }}: {{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }}h · 1 Platz</span>
+                    @for (m of upgradeMaterials(bt); track m.productTypeId) {
+                      <span class="hint mono material" [class.bad]="m.available < m.required" [class.good]="m.available >= m.required">{{ productName(m.productTypeId) }} {{ m.required | number:'1.0-0' }} <span class="hint">(Lager {{ m.available | number:'1.0-0' }})</span></span>
+                    }
+                    @if (upgradeBlockedReason(bt); as reason) { <span class="hint bad">{{ reason }}</span> }
+                    <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || !upgradeAffordable(bt)">Ausbauen</button>
+                  </div>
                 }
 
                 @if (buildingLevel(bt.id) > 0) {
@@ -250,7 +285,7 @@
                   <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
                   @if (step.quantityToProduce > 0) {
                     <span class="hint step-factors">
-                      @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(specLevel(step.productTypeId)) }}%) }
+                      @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
                       @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
                     </span>
                   }
@@ -290,7 +325,7 @@
                           <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
                           @if (step.quantityToProduce > 0) {
                             <span class="hint step-factors">
-                              @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(specLevel(step.productTypeId)) }}%) }
+                              @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
                               @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
                             </span>
                           }
@@ -345,7 +380,7 @@
               <div class="spec-row">
                 <span>{{ productName(s.productTypeId) }}</span>
                 <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
-                <span class="mono">Stufe {{ s.currentLevel }} <span class="hint">(+{{ specSpeedBonusPct(s.currentLevel) }}% Tempo)</span></span>
+                <span class="mono">Stufe {{ s.currentLevel }} <span class="hint">(+{{ specSpeedBonusPct(s.productTypeId) }}% Tempo)</span></span>
               </div>
             } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
           </div>

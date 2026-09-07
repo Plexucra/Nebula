@@ -3,7 +3,7 @@ import { Id } from './common.model';
 /**
  * Die zwei Blockade-Anker, die eine Flotte in einem System bilden kann
  * (Mechanik/06_..., stark vereinfacht – siehe
- * `SimulatedGameApiService.formBlockade`): `'Gateway'` = ausgehend vom
+ * `BlockadeCommands.formBlockade` im Backend): `'Gateway'` = ausgehend vom
  * Systemhandelsposten ("Gateway blockieren"), `'PlanetOrbit'` = ausgehend
  * vom Orbit eines konkreten Planeten ("Planet blockieren"), auch bei
  * unbesiedelten Planeten möglich.

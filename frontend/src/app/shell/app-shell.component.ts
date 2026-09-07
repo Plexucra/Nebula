@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NOTIFICATION_RETENTION_GAME_HOURS, gameHoursToGameDays, gameHoursToRealMinutes } from '../core/shared-constants';
 import { GAME_API } from '../core/sim/game-api.token';
 import { Id, NotificationType } from '../core/models';
 import { UiClockService } from '../core/ui/ui-clock.service';
@@ -33,6 +34,20 @@ export class AppShellComponent {
   protected readonly notifications = this.api.notifications();
   protected readonly unreadNotificationCount = this.api.unreadNotificationCount();
   protected readonly notificationPanelOpen = signal(false);
+  /**
+   * Eingeklappte Hauptnavigation auf schmalen Displays (Umsetzungskonzept/16_...md).
+   * Auf dem Desktop ist die Seitenleiste unverändert dauerhaft sichtbar – dieser
+   * Schalter wirkt ausschließlich unterhalb des Mobil-Breakpoints.
+   */
+  protected readonly mobileNavOpen = signal(false);
+
+  protected toggleMobileNav(): void {
+    this.mobileNavOpen.update(v => !v);
+  }
+
+  protected closeMobileNav(): void {
+    this.mobileNavOpen.set(false);
+  }
   protected readonly unreadMessageCount = this.api.unreadMessageCount();
 
   protected toggleNotificationPanel(): void {
@@ -45,6 +60,19 @@ export class AppShellComponent {
 
   protected async markAllRead(): Promise<void> {
     await this.api.markAllNotificationsRead();
+  }
+
+  /** Hinweistext zur Aufbewahrungsfrist – Zahlen aus `shared/game-constants.json` (siehe Backend `SharedConstants`). */
+  protected readonly keepHint =
+    `Ohne "Beibehalten" wird diese Benachrichtigung nach ${gameHoursToGameDays(NOTIFICATION_RETENTION_GAME_HOURS)} Spieltagen `
+    + `(ca. ${Math.round(gameHoursToRealMinutes(NOTIFICATION_RETENTION_GAME_HOURS))} Minuten Echtzeit) automatisch gelöscht.`;
+
+  /**
+   * "Beibehalten": ohne diesen Schalter räumt der Server Benachrichtigungen
+   * nach 2 Spieltagen automatisch weg (siehe `RetentionCleanup` im Backend).
+   */
+  protected async toggleNotificationKeep(id: Id, keep: boolean): Promise<void> {
+    await this.api.setNotificationKeep(id, keep);
   }
 
   protected notificationIcon(type: NotificationType): string {

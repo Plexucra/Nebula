@@ -305,3 +305,35 @@ input:focus, select:focus {
   color: var(--text-dim);
 }
 .empty-state .eyebrow { display: block; margin-bottom: 8px; }
+
+/* ============================================================================
+   Globale Mobil-Ergänzungen (Umsetzungskonzept/16_...md) – rein additiv:
+   greifen erst unterhalb des Breakpoints, der Desktop bleibt unverändert.
+   ========================================================================= */
+@media (max-width: 720px) {
+  /* Die SEITE darf nie horizontal scrollen – breite Inhalte scrollen in
+     ihrem eigenen Container (siehe .npc-table, .tabs, .scroll-x). */
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  .panel-body { padding: 12px; }
+  .panel-header { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .page-head { flex-wrap: wrap; gap: 8px; }
+
+  /* Tippflächen: auf Touch sind 11px-Buttons zu klein zum Treffen. */
+  button, .btn { min-height: 40px; }
+  button.small, .btn.small { min-height: 36px; padding: 8px 12px; }
+  input, select, textarea { min-height: 40px; font-size: 16px; } /* 16px verhindert iOS-Auto-Zoom */
+
+  /* Formularzeilen stapeln statt nebeneinander zu quetschen. */
+  .form-row, .compose-form, .compose-actions { flex-direction: column; align-items: stretch; }
+  .compose-actions button { width: 100%; }
+
+  /* Lange, ungetrennte Produktnamen ("Strahlenwaffenbaugruppe") sprengen sonst
+     ihre Karte um wenige Pixel und werden abgeschnitten. */
+  .panel, .panel-body, .product-card, .tier-grid, .colony-grid, .tile-grid { min-width: 0; }
+  .product-card, .summary-row, .order-row, .tx-row, .colony-card { overflow-wrap: anywhere; }
+}
+
+/* Wiederverwendbarer Container für breite Inhalte (Listen im Tabellenlook):
+   scrollt in sich selbst, statt die ganze Seite breit zu machen. */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }

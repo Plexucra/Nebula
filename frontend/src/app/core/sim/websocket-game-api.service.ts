@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
-  Battle, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
   PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
@@ -116,7 +116,7 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
    * dieselbe Query-Methode oft direkt im Template auf (z. B.
    * `{{ population(colony.id)()?.currentCount }}`), was bei JEDEM
    * Change-Detection-Durchlauf ein NEUES Signal erzeugen würde – bei
-   * `SimulatedGameApiService`s reinen `computed()`-Signalen unproblematisch
+   * rein lokal berechneten `computed()`-Signalen unproblematisch wäre
    * (billig, kein eigener Zustand), bei einem Polling-Signal mit echtem
    * Netzwerk-Roundtrip aber fatal: das alte, gerade erst gestartete Signal
    * würde verworfen, bevor seine Antwort je gelesen werden kann – die
@@ -211,6 +211,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   consumptionCoverage(colonyId: Id): Signal<Record<Id, number>> {
     return this.poll('consumptionCoverage', () => ({ colonyId }), {});
   }
+
+  colonySpeedBreakdown(colonyId: Id): Signal<ColonySpeedBreakdown | null> {
+    return this.poll('colonySpeedBreakdown', () => ({ colonyId }), null);
+  }
   planet(id: Id): Signal<Planet | undefined> {
     return this.poll('planet', () => ({ id }), undefined);
   }
@@ -243,14 +247,18 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   deactivateDefense(colonyId: Id, buildingId: Id): Promise<void> {
     return this.send('deactivateDefense', { colonyId, buildingId });
   }
-  overbuildFactor(planetId: Id): Signal<number> {
-    return this.poll('overbuildFactor', () => ({ planetId }), 1);
+  buildSlots(colonyId: Id): Signal<BuildSlots | null> {
+    return this.poll('buildSlots', () => ({ colonyId }), null);
   }
   housingCapacity(colonyId: Id): Signal<number> {
     return this.poll('housingCapacity', () => ({ colonyId }), 0);
   }
   powerCoverage(colonyId: Id): Signal<number> {
     return this.poll('powerCoverage', () => ({ colonyId }), 1);
+  }
+
+  isBlackout(colonyId: Id): Signal<boolean> {
+    return this.poll('isBlackout', () => ({ colonyId }), false);
   }
   powerUpkeepPerHour(colonyId: Id): Signal<number> {
     return this.poll('powerUpkeepPerHour', () => ({ colonyId }), 0);
@@ -341,6 +349,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null> {
     return this.poll('routePreview', () => ({ fleetId, destinationSystemId }), null);
+  }
+
+  fleetCargoCapacity(fleetId: Id, productTypeId: Id | null): Signal<FleetCargoCapacity | null> {
+    return this.poll('fleetCargoCapacity', () => ({ fleetId, productTypeId }), null);
   }
   moveFleetWithinSystem(fleetId: Id, target: FleetSystemTarget): Promise<void> {
     return this.send('moveFleetWithinSystem', { fleetId, target });
@@ -485,6 +497,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   unreadNotificationCount(): Signal<number> {
     return this.poll('unreadNotificationCount', () => ({}), 0);
   }
+  setNotificationKeep(id: Id, keep: boolean): Promise<void> {
+    return this.send('setNotificationKeep', { id, keep });
+  }
+
   markNotificationRead(id: Id): Promise<void> {
     return this.send('markNotificationRead', { id });
   }
@@ -508,6 +524,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   sendMessage(toPlayerId: Id, subject: string, body: string): Promise<void> {
     return this.send('sendMessage', { toPlayerId, subject, body });
   }
+  setMessageKeep(id: Id, keep: boolean): Promise<void> {
+    return this.send('setMessageKeep', { id, keep });
+  }
+
   markMessageRead(id: Id): Promise<void> {
     return this.send('markMessageRead', { id });
   }

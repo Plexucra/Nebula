@@ -81,3 +81,15 @@
 .message-from { font-weight: 600; opacity: 1; }
 .message-subject { font-weight: 600; margin-bottom: 2px; }
 .message-body { opacity: 0.85; white-space: pre-wrap; }
+
+/* "Beibehalten"-Schalter je Nachricht (Aufbewahrungsfrist, siehe RetentionCleanup im Backend). */
+.keep-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.keep-toggle input { cursor: pointer; }

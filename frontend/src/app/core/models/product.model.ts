@@ -10,7 +10,7 @@ import { Id } from './common.model';
  * aber noch nicht mit dem Gebäude-Ausbausystem verknüpft (siehe
  * product-catalog.ts Kopfkommentar).
  */
-export type ProductCategory = 'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'RawResource' | 'Fuel' | 'Facility';
+export type ProductCategory = 'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'RawResource' | 'Fuel';
 
 export interface RecipeInput {
   inputProductTypeId: Id;

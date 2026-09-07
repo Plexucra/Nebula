@@ -156,30 +156,32 @@ export class FleetsOverviewComponent {
     return cur?.fleetId === fleetId && cur.panel === panel;
   }
 
-  protected fleetCargoMassKg(fleet: Fleet): number {
-    return fleet.cargo.reduce((sum, c) => sum + this.api.productTypes().find(p => p.id === c.productTypeId)!.massKg * c.quantity, 0);
-  }
-  protected fleetCargoVolumeM3(fleet: Fleet): number {
-    return fleet.cargo.reduce((sum, c) => sum + this.api.productTypes().find(p => p.id === c.productTypeId)!.volumeM3 * c.quantity, 0);
-  }
-  protected fleetCapacityMassKg(fleet: Fleet): number {
-    return fleet.ships.reduce((sum, g) => sum + (this.api.shipTypes().find(s => s.productTypeId === g.shipProductTypeId)?.cargoMassKg ?? 0) * g.quantity, 0);
-  }
-  protected fleetCapacityVolumeM3(fleet: Fleet): number {
-    return fleet.ships.reduce((sum, g) => sum + (this.api.shipTypes().find(s => s.productTypeId === g.shipProductTypeId)?.cargoVolumeM3 ?? 0) * g.quantity, 0);
+  /**
+   * Frachtkapazität/Auslastung und maximal ladbare Stückzahl kommen fertig
+   * vom Backend (`fleetCargoCapacity`) – die Kapazitätsgrenze ist eine
+   * SPIELREGEL, die `loadCargo` durchsetzt, und darf hier nicht abweichend
+   * nachgerechnet werden (Umsetzungskonzept/15_...md, Auftrag 3).
+   */
+  private capacity(fleet: Fleet, productTypeId: Id | null = null) {
+    return this.api.fleetCargoCapacity(fleet.id, productTypeId)();
   }
 
-  /** Maximal ladbare Menge eines Produkts: begrenzt durch Lagerbestand UND verbleibende Massen-/Volumenkapazität der Flotte. */
+  protected fleetCargoMassKg(fleet: Fleet): number {
+    return this.capacity(fleet)?.usedMassKg ?? 0;
+  }
+  protected fleetCargoVolumeM3(fleet: Fleet): number {
+    return this.capacity(fleet)?.usedVolumeM3 ?? 0;
+  }
+  protected fleetCapacityMassKg(fleet: Fleet): number {
+    return this.capacity(fleet)?.capacityMassKg ?? 0;
+  }
+  protected fleetCapacityVolumeM3(fleet: Fleet): number {
+    return this.capacity(fleet)?.capacityVolumeM3 ?? 0;
+  }
+
+  /** Maximal ladbare Menge eines Produkts: begrenzt durch Lagerbestand UND verbleibende Massen-/Volumenkapazität der Flotte (vom Backend berechnet). */
   protected maxLoadable(fleet: Fleet, productTypeId: Id): number {
-    if (!fleet.locationColonyId) return 0;
-    const stock = this.api.warehouse(fleet.locationColonyId)().find(w => w.productTypeId === productTypeId)?.quantity ?? 0;
-    const product = this.api.productTypes().find(p => p.id === productTypeId);
-    if (!product) return 0;
-    const remainingMass = this.fleetCapacityMassKg(fleet) - this.fleetCargoMassKg(fleet);
-    const remainingVolume = this.fleetCapacityVolumeM3(fleet) - this.fleetCargoVolumeM3(fleet);
-    const byMass = product.massKg > 0 ? Math.floor(remainingMass / product.massKg) : Infinity;
-    const byVolume = product.volumeM3 > 0 ? Math.floor(remainingVolume / product.volumeM3) : Infinity;
-    return Math.max(0, Math.min(Math.floor(stock), byMass, byVolume));
+    return this.capacity(fleet, productTypeId)?.maxLoadableQuantity ?? 0;
   }
 
   protected readonly loadProductId: Partial<Record<Id, Id>> = {};

@@ -41,7 +41,6 @@ function keywordIcon(p: ProductType): string {
   if (n.includes('paket')) return '🎁';
   if (p.category === 'Ship') return '🛸';
   if (p.category === 'GroundUnit') return '🤖';
-  if (p.category === 'Facility') return '🏭';
   if (p.category === 'RawResource') return '⛏️';
   if (p.category === 'Fuel') return '🔋';
   return '⚙️';

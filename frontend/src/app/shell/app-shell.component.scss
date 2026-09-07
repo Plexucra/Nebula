@@ -196,3 +196,93 @@
   .nav-label, .brand-sub { display: none; }
   .status-chip .eyebrow { display: none; }
 }
+
+/* "Beibehalten"-Schalter je Benachrichtigung (Aufbewahrungsfrist, siehe RetentionCleanup im Backend). */
+.keep-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  cursor: pointer;
+}
+.keep-toggle input { cursor: pointer; }
+
+/* ============================================================================
+   Mobile Ergänzungen (Umsetzungskonzept/16_...md) – AUSSCHLIESSLICH additiv:
+   Der Desktop-Zustand oberhalb des Breakpoints bleibt unverändert. Auf dem
+   Handy klappt die Hauptnavigation zu einer über den Inhalt gelegten
+   Schublade ein, die per ☰ geöffnet und beim Navigieren wieder geschlossen
+   wird (zehn Menüpunkte passen sonst nicht neben den Inhalt).
+   ========================================================================= */
+
+/* Der ☰-Schalter existiert nur auf schmalen Displays. */
+.nav-toggle { display: none; }
+
+@media (max-width: 720px) {
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+    margin-right: 10px;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 56px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .brand { gap: 8px; min-width: 0; }
+  .brand-sub { display: inline; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40vw; }
+
+  .status-strip { flex-wrap: wrap; gap: 6px; }
+  /* Tippflächen: alle Kopfzeilen-Schalter auf mindestens 40px Höhe. */
+  .status-strip button,
+  .status-chip { min-height: 40px; }
+
+  /* Die Schublade liegt ÜBER dem Inhalt, statt ihm Breite wegzunehmen. */
+  .sidenav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
+    width: 232px;
+    flex-basis: auto;
+    padding-top: 18px;
+    background: var(--bg-inset, rgba(6, 9, 16, 0.98));
+    background-color: #0a0e18;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    overflow-y: auto;
+  }
+  .sidenav.mobile-open { transform: translateX(0); }
+  /* In der geöffneten Schublade sind die Beschriftungen wieder sinnvoll. */
+  .sidenav .nav-label { display: block; }
+  .nav-item { min-height: 44px; }
+
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .content { padding: 14px 12px 48px; }
+
+  /* Benachrichtigungs-Panel darf nicht breiter als der Bildschirm werden. */
+  .notification-panel {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    max-height: 70vh;
+  }
+}

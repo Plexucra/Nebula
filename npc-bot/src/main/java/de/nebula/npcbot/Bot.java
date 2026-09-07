@@ -72,6 +72,8 @@ public class Bot {
   private final Set<String> declaredWarWith = new HashSet<>();
 
   private boolean blockading;
+  /** Baustoffe, für die bereits ein Produktionsauftrag läuft – wird geleert, sobald die Warteschlange sie nicht mehr enthält. */
+  private final Set<String> materialOrdersQueued = new HashSet<>();
   private int shipTypeRotation;
 
   private AttackState attackState = AttackState.IDLE;
@@ -249,11 +251,37 @@ public class Bot {
 
   private void maintainEconomy() {
     if (mySpecialtyProduct != null && !specializationQueued) {
+      // Kleine Charge OHNE Dauerauftrag (Umsetzungskonzept/17_...md): bei
+      // Industriekomplex 1 ist die sequentielle Warteschlange der Engpass –
+      // ein ×20-Dauerauftrag würde Nahrung/Medizin/Elerium für Stunden
+      // blockieren und die Kolonie in den Blackout treiben.
       connection.call("queueProduction", Map.of(
           "colonyId", homeColonyId, "productTypeId", mySpecialtyProduct,
-          "quantity", 20.0, "autoProduceMissing", true, "requeueOnComplete", true));
+          "quantity", 3.0, "autoProduceMissing", true, "requeueOnComplete", false));
       specializationQueued = true;
-      log("Spezialisierungsproduktion eingereiht: " + mySpecialtyProduct);
+      log("Spezialisierungsproduktion eingereiht: " + mySpecialtyProduct + " x3");
+    }
+
+    JsonNode queue = connection.call("productionQueue", Map.of("colonyId", homeColonyId));
+    Set<String> queuedProducts = new HashSet<>();
+    for (JsonNode q : queue) queuedProducts.add(text(q, "productTypeId"));
+    materialOrdersQueued.retainAll(queuedProducts);
+    // Spezialisierung als kleine Charge immer wieder nachlegen, sobald sie abgearbeitet ist.
+    if (mySpecialtyProduct != null && !queuedProducts.contains(mySpecialtyProduct)) specializationQueued = false;
+    // Elerium-Nachschub: der Startauftrag ist auf Infrastruktur 2/3 ausgelegt –
+    // jede weitere Stufe verbraucht überlinear mehr, deshalb bei knappem Lager
+    // eine Extra-Charge (einmalig, solange sie in der Warteschlange steht).
+    if (!queuedProducts.contains("p_elerium_stabil") || eleriumStock() < 10) {
+      if (!materialOrdersQueued.contains("p_elerium_stabil") && eleriumStock() < 10) {
+        try {
+          connection.call("queueProduction", Map.of("colonyId", homeColonyId, "productTypeId", "p_elerium_stabil",
+              "quantity", 4.0, "autoProduceMissing", true, "requeueOnComplete", false));
+          materialOrdersQueued.add("p_elerium_stabil");
+          log("Elerium-Nachschub eingereiht (Lager " + eleriumStock() + ").");
+        } catch (CommandException e) {
+          log("Elerium-Nachschub abgelehnt: " + e.getMessage());
+        }
+      }
     }
 
     JsonNode buildings = connection.call("buildings", Map.of("colonyId", homeColonyId));
@@ -273,8 +301,21 @@ public class Bot {
         log("Ausbau eingereiht: " + typeId + " (Stufe " + level + " -> " + (level + 1) + ")");
         break;
       } catch (CommandException e) {
-        // z. B. nicht genug Credits für DIESE Stufe – nächstgünstigere Priorität versuchen
-        // statt jeden Tick denselben (zu teuren) Ausbau erneut anzustoßen.
+        // Umsetzungskonzept/17_...md: die beiden strukturellen Ablehnungen
+        // löst der Bot selbst auf – ohne das stünde er dauerhaft still.
+        if (e.getMessage().contains("Bebauungsplatz")) {
+          if (!pendingTypes.contains(Catalog.INFRASTRUCTURE)) {
+            try {
+              connection.call("queueBuilding", Map.of("colonyId", homeColonyId, "buildingTypeId", Catalog.INFRASTRUCTURE));
+              log("Kein Bebauungsplatz – Infrastruktur-Ausbau eingereiht.");
+            } catch (CommandException infra) {
+              queueMissingMaterials(infra.getMessage());
+            }
+          }
+          break;
+        }
+        if (queueMissingMaterials(e.getMessage())) break;
+        // sonst z. B. nicht genug Credits für DIESE Stufe – nächstgünstigere Priorität versuchen
       }
     }
 
@@ -288,6 +329,31 @@ public class Bot {
           "quantity", 2.0, "autoProduceMissing", true, "requeueOnComplete", false));
       log("Werftauftrag eingereiht: " + shipType + " x2");
     }
+  }
+
+  /**
+   * Parst "Fehlende Baustoffe: p_stahl (10 benötigt, 3 vorhanden), ..." und
+   * reiht die fehlenden Produkte mit automatischer Vorkette ein (einmalig je
+   * Produkt, solange der Auftrag in der Warteschlange steht).
+   */
+  private boolean queueMissingMaterials(String message) {
+    if (message == null || !message.startsWith("Fehlende Baustoffe")) return false;
+    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(p_[a-z_]+) \\((\\d+) benötigt, (\\d+) vorhanden\\)").matcher(message);
+    while (m.find()) {
+      String productTypeId = m.group(1);
+      double missing = Double.parseDouble(m.group(2)) - Double.parseDouble(m.group(3));
+      if (materialOrdersQueued.contains(productTypeId)) continue;
+      try {
+        connection.call("queueProduction", Map.of(
+            "colonyId", homeColonyId, "productTypeId", productTypeId,
+            "quantity", Math.max(1, Math.ceil(missing)), "autoProduceMissing", true, "requeueOnComplete", false));
+        materialOrdersQueued.add(productTypeId);
+        log("Baustoff-Produktion eingereiht: " + productTypeId + " x" + (long) Math.ceil(missing));
+      } catch (CommandException e) {
+        log("Baustoff-Produktion abgelehnt: " + e.getMessage());
+      }
+    }
+    return true;
   }
 
   // --- Diplomatie: pauschaler Krieg gegen das gesamte gegnerische Lager ------
@@ -452,6 +518,14 @@ public class Bot {
   }
 
   // --- Hilfsmethoden -----------------------------------------------------
+
+  private double eleriumStock() {
+    JsonNode warehouse = connection.call("warehouse", Map.of("colonyId", homeColonyId));
+    for (JsonNode w : warehouse) {
+      if ("p_elerium_stabil".equals(text(w, "productTypeId"))) return w.path("quantity").asDouble(0);
+    }
+    return 0;
+  }
 
   private JsonNode ownCombatFleet() {
     JsonNode fleets = connection.call("fleets");

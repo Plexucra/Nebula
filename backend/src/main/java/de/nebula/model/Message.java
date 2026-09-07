@@ -16,4 +16,12 @@ public class Message {
   public long sentAt;
   /** Nur vom Empfänger ({@code toPlayerId}) gesetzt. */
   public boolean read;
+  /**
+   * "Beibehalten": schützt die Nachricht vor der automatischen Löschung nach
+   * {@code GameConstants.MESSAGE_RETENTION_GAME_HOURS} (siehe
+   * {@code RetentionCleanup}). Standard {@code false}; sowohl Absender als
+   * auch Empfänger dürfen ihn setzen, da beide dieselbe Nachricht in
+   * Postausgang bzw. Posteingang sehen.
+   */
+  public boolean keep;
 }

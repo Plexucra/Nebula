@@ -16,7 +16,14 @@
     "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2022",
-    "module": "ES2022"
+    "module": "ES2022",
+    /* Gemeinsame Ausgangswerte aus /shared/game-constants.json direkt importieren
+       (Umsetzungskonzept/15_...md, Auftrag 3) - EINE Quelle für Frontend und Backend. */
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

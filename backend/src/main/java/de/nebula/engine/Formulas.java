@@ -22,10 +22,6 @@ public final class Formulas {
   }
 
   /** Bebauungspunkte, die ein Gebäude auf Ziel-Level {@code level} belegt. */
-  public static double buildPointsUsed(double pointsPerLevel, int level) {
-    return pointsPerLevel * level;
-  }
-
   /** Kosten für den Ausbau von {@code fromLevel} auf {@code fromLevel + 1}. */
   public static double buildingUpgradeCost(double baseCostPerLevel, int fromLevel) {
     return Math.round(baseCostPerLevel * (fromLevel + 1) * (1 + fromLevel * 0.08));
@@ -35,11 +31,50 @@ public final class Formulas {
     return baseHoursPerLevel * (fromLevel + 1);
   }
 
-  /** Überbebauungsmalus: {@code > 1}, sobald die Summe aller Bebauungspunkte auf dem Planeten dessen buildCapacity übersteigt (Konzeption/01_..., §2). */
-  public static double overbuildFactor(double totalBuildPointsUsed, double buildCapacity) {
-    if (totalBuildPointsUsed <= buildCapacity) return 1;
-    double overshoot = totalBuildPointsUsed / buildCapacity;
-    return clamp(overshoot, 1, 3);
+  /**
+   * Kosten der nächsten Infrastruktur-Stufe (Umsetzungskonzept/17_...md, Teil A):
+   * {@code T} = Summe der Infrastruktur-Stufen ALLER Kolonien des Planeten –
+   * ein dicht besiedelter Planet wird für alle teurer (Mechanik/07 §2,
+   * "planetweiter Malus, Summe aller Spieler"). Deutlich steiler als die
+   * normale Gebäudekurve ({@code 1 + 0,12·T} statt {@code 1 + 0,08·Stufe}).
+   */
+  public static double infrastructureUpgradeCost(double baseCostPerLevel, int planetTotal) {
+    return Math.round(baseCostPerLevel * (planetTotal + 1) * (1 + planetTotal * GameConstants.INFRASTRUCTURE_COST_GROWTH_PER_LEVEL));
+  }
+
+  public static double infrastructureUpgradeHours(double baseHoursPerLevel, int planetTotal) {
+    return baseHoursPerLevel * (planetTotal + 1);
+  }
+
+  /** Baustoffbedarf eines Ausbaus auf {@code targetLevel}: {@code ceil(base × Stufe^1,3)} (Umsetzungskonzept/17_...md, Teil B). */
+  public static double buildingMaterialQuantity(double baseQuantity, int targetLevel) {
+    return Math.ceil(baseQuantity * Math.pow(targetLevel, GameConstants.BUILDING_MATERIAL_LEVEL_EXPONENT));
+  }
+
+  /**
+   * Wohnkomplex (Umsetzungskonzept/17_...md, Teil C): Kapazität = {@code 20 000 × 2^(Stufe−1)}
+   * (Stufe 20 ≈ 10,5 Mrd.). Credits und Baustoffe verdoppeln sich deshalb ebenfalls je Stufe –
+   * eine polynomiale Kurve wäre gegenüber der verdoppelten Kapazität faktisch gratis. Die
+   * BAUZEIT bleibt bewusst polynomial ({@link #buildingUpgradeHours}): der Engpass soll die
+   * Investition sein, nicht das Warten.
+   */
+  public static double housingCapacity(double capacityPerLevel, int level) {
+    if (level <= 0) return 0;
+    return capacityPerLevel * Math.pow(GameConstants.HOUSING_GROWTH_FACTOR, level - 1);
+  }
+
+  public static double housingUpgradeCost(double baseCostPerLevel, int fromLevel) {
+    return Math.round(baseCostPerLevel * Math.pow(GameConstants.HOUSING_GROWTH_FACTOR, fromLevel));
+  }
+
+  public static double housingMaterialQuantity(double baseQuantity, int targetLevel) {
+    return Math.ceil(baseQuantity * Math.pow(GameConstants.HOUSING_GROWTH_FACTOR, targetLevel - 1));
+  }
+
+  /** Elerium-Verbrauch der Infrastruktur je Spielstunde: {@code BASE × Stufe^1,25}, leicht überlinear (Umsetzungskonzept/17_...md, Teil A). */
+  public static double infrastructureEleriumPerHour(int level) {
+    if (level <= 0) return 0;
+    return GameConstants.ELERIUM_UPKEEP_BASE_PER_HOUR * Math.pow(level, GameConstants.ELERIUM_UPKEEP_LEVEL_EXPONENT);
   }
 
   /**
@@ -134,10 +169,55 @@ public final class Formulas {
     return livingFactor * securityFactor;
   }
 
+  /** Basis-Wachstumsrate des logistischen Wachstums, siehe {@link #populationGrowthDelta}. */
+  public static final double POPULATION_BASE_GROWTH_RATE_PER_HOUR = SharedConstants.populationBaseGrowthRatePerHour();
+
+  /** Schwellen des Lebensstandard-Totbands, siehe {@link #populationGrowthState} – Werte aus {@code shared/game-constants.json}. */
+  public static final double LIVING_STANDARD_SHRINK_BELOW_PCT = SharedConstants.livingStandardShrinkBelowPct();
+  public static final double LIVING_STANDARD_GROWTH_FROM_PCT = SharedConstants.livingStandardGrowthFromPct();
+  public static final double POPULATION_SHRINK_RATE_PER_HOUR = SharedConstants.populationShrinkRatePerHour();
+
+  /**
+   * Zustand der Bevölkerungsentwicklung (Umsetzungskonzept/17_...md, Teil C):
+   * Überbevölkerung schrumpft leicht; Lebensstandard unter
+   * {@link #LIVING_STANDARD_SHRINK_BELOW_PCT} schrumpft proportional zum
+   * Fehlbetrag; dazwischen (Totband bis {@link #LIVING_STANDARD_GROWTH_FROM_PCT})
+   * hält die Bevölkerung; darüber wächst sie wie bisher. Das Totband sorgt
+   * dafür, dass sich die Bevölkerung bei konstanter Güterzufuhr von selbst
+   * in dem Bereich einpendelt, den die Versorgung trägt, ohne zu oszillieren.
+   */
+  public static de.nebula.model.PopulationGrowthState populationGrowthState(double population, double capacity, double standardOfLivingPct) {
+    if (population >= capacity) return de.nebula.model.PopulationGrowthState.Overcrowded;
+    if (standardOfLivingPct < LIVING_STANDARD_SHRINK_BELOW_PCT) return de.nebula.model.PopulationGrowthState.Shrinking;
+    if (standardOfLivingPct < LIVING_STANDARD_GROWTH_FROM_PCT) return de.nebula.model.PopulationGrowthState.Holding;
+    return de.nebula.model.PopulationGrowthState.Growing;
+  }
+
+  /**
+   * Bevölkerungsänderung je Spielstunde – LOGISTISCH: proportional zur
+   * Bevölkerung selbst und gedämpft nahe der Wohnkapazität
+   * ({@code BASE × Bev × (1 − Bev/Kapazität) × Zustandsfaktor}), mit dem
+   * Lebensstandard-Totband darüber (siehe {@link #populationGrowthState}).
+   *
+   * <p>Umgestellt mit Umsetzungskonzept/17_...md, Teil C: die frühere Formel
+   * war proportional zum FREIEN Wohnraum ({@code Rest × 0,018}) – mit einer
+   * Wohnkapazität von 20 000 hätte eine 120-Einwohner-Kolonie damit ~358
+   * Einwohner je Spielstunde zugelegt. Logistisch ist der Wohnraum wieder
+   * eine echte Obergrenze statt eines Wachstumstreibers; der begrenzende
+   * Faktor im Frühspiel ist damit die Nahrungsversorgung (über den
+   * Lebensstandard im Totband). Überbevölkerung braucht keinen Sonderfall
+   * mehr – oberhalb der Kapazität wird der Klammerterm von selbst negativ.</p>
+   */
   public static double populationGrowthDelta(double population, double capacity, double standardOfLivingPct, double securityPct) {
-    double room = capacity - population;
-    if (room <= 0) return population * -0.002; // leichte Schrumpfung bei Überbevölkerung
-    return room * 0.018 * growthConditionFactor(standardOfLivingPct, securityPct);
+    double logistic = POPULATION_BASE_GROWTH_RATE_PER_HOUR * population
+        * (capacity > 0 ? 1 - population / capacity : -1) * growthConditionFactor(standardOfLivingPct, securityPct);
+    return switch (populationGrowthState(population, capacity, standardOfLivingPct)) {
+      case Overcrowded -> logistic; // Klammerterm ist hier negativ
+      case Shrinking -> -population * POPULATION_SHRINK_RATE_PER_HOUR
+          * (LIVING_STANDARD_SHRINK_BELOW_PCT - standardOfLivingPct) / LIVING_STANDARD_SHRINK_BELOW_PCT;
+      case Holding -> 0;
+      case Growing -> logistic;
+    };
   }
 
   public static final double CREDITS_PER_NEW_INHABITANT = 8;

@@ -1,0 +1,21 @@
+[ {
+  "productTypeId" : "p_soldier",
+  "transportSlotUsage" : 0.05,
+  "countersClass" : null,
+  "class" : "Soldier"
+}, {
+  "productTypeId" : "p_drone_light",
+  "transportSlotUsage" : 1.0,
+  "countersClass" : "HeavyDrone",
+  "class" : "LightDrone"
+}, {
+  "productTypeId" : "p_drone_medium",
+  "transportSlotUsage" : 1.0,
+  "countersClass" : "LightDrone",
+  "class" : "MediumDrone"
+}, {
+  "productTypeId" : "p_drone_heavy",
+  "transportSlotUsage" : 20.0,
+  "countersClass" : "MediumDrone",
+  "class" : "HeavyDrone"
+} ]

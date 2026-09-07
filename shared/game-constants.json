@@ -1,0 +1,22 @@
+{
+  "_comment": "Gemeinsame Ausgangswerte für Backend UND Frontend (Umsetzungskonzept/15_...md, Auftrag 3). Das Backend liest die Datei zur Laufzeit aus dem Klassenpfad (siehe SharedConstants.java, Maven-Resource-Mapping in backend/pom.xml), das Frontend importiert sie beim Build (resolveJsonModule). Genau EINE Quelle - Werte hier ändern wirkt auf beiden Seiten.",
+  "realMsPerGameHour": 2500,
+  "notificationRetentionGameHours": 48,
+  "messageRetentionGameHours": 168,
+  "slotsPerInfrastructureLevel": 1,
+  "eleriumUpkeepBasePerHour": 0.005,
+  "eleriumUpkeepLevelExponent": 1.25,
+  "maxInfrastructureByPlanetSize": {
+    "Klein": 16,
+    "Mittel": 24,
+    "Groß": 36,
+    "Riesig": 50
+  },
+  "infrastructureCostGrowthPerLevel": 0.12,
+  "buildingMaterialLevelExponent": 1.3,
+  "livingStandardShrinkBelowPct": 30,
+  "livingStandardGrowthFromPct": 50,
+  "populationShrinkRatePerHour": 0.01,
+  "populationBaseGrowthRatePerHour": 0.01,
+  "housingCapacityGrowthFactor": 2
+}

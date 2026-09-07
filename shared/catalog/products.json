@@ -1,0 +1,6913 @@
+[
+  {
+    "id": "p_ferrometall",
+    "name": "Ferrometallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 800000.0,
+    "volumeM3": 363.64,
+    "eleriumG": 0.001,
+    "description": "Eisen-, nickel- und kobalthaltige Erze für Stahl, Struktur und Maschinen."
+  },
+  {
+    "id": "p_leichtmetall",
+    "name": "Leichtmetallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 500000.0,
+    "volumeM3": 333.33,
+    "eleriumG": 0.001,
+    "description": "Aluminium- und magnesiumhaltige Erze für Leichtbau und schnelle Schiffe."
+  },
+  {
+    "id": "p_refraktaer",
+    "name": "Refraktärmetallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 180000.0,
+    "volumeM3": 69.23,
+    "eleriumG": 0.001,
+    "description": "Titan-, wolfram-, molybdän- und niobhaltige Erze für Hitze, Reaktoren und Düsen."
+  },
+  {
+    "id": "p_leitmetall",
+    "name": "Leitmetallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 350000.0,
+    "volumeM3": 152.17,
+    "eleriumG": 0.001,
+    "description": "Vor allem kupfer-, zinn- und zinkhaltige Erze für Leitungen und Kontakte."
+  },
+  {
+    "id": "p_edelmetall",
+    "name": "Edelmetallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 12000.0,
+    "volumeM3": 4.0,
+    "eleriumG": 0.001,
+    "description": "Gold, Silber und Platingruppenmetalle für Kontakte, Katalysatoren und Sensorik."
+  },
+  {
+    "id": "p_seltenerden",
+    "name": "Seltenerdenerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 40000.0,
+    "volumeM3": 20.0,
+    "eleriumG": 0.001,
+    "description": "Lanthanoide, Yttrium und Scandium für Magnete, Optik und Hochleistungselektronik."
+  },
+  {
+    "id": "p_technometall",
+    "name": "Technologiemetallerz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 20000.0,
+    "volumeM3": 11.11,
+    "eleriumG": 0.001,
+    "description": "Lithium, Gallium, Germanium, Indium und verwandte Spurenmetalle für Halbleiter und Batterien."
+  },
+  {
+    "id": "p_silikat",
+    "name": "Silikatmineral",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 1500000.0,
+    "volumeM3": 937.5,
+    "eleriumG": 0.001,
+    "description": "Quarz, Feldspäte und silikatische Gesteine für Glas, Keramik und Silizium."
+  },
+  {
+    "id": "p_kohlenstoff",
+    "name": "Kohlenstoffmineral",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 500000.0,
+    "volumeM3": 555.56,
+    "eleriumG": 0.001,
+    "description": "Graphit, Karbonate und kohlenstoffreiche Minerale für Verbundstoffe und Chemie."
+  },
+  {
+    "id": "p_salz",
+    "name": "Salzmineral",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 800000.0,
+    "volumeM3": 666.67,
+    "eleriumG": 0.001,
+    "description": "Chloride, Phosphate, Nitrate und Sulfate für Chemie, Dünger und Medizin."
+  },
+  {
+    "id": "p_radionuklid",
+    "name": "Radionukliderz",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_radionuklid",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 15000.0,
+    "volumeM3": 6.0,
+    "eleriumG": 0.001,
+    "description": "Uran-, Thorium- und andere radioaktive Minerale für Strahlenquellen und Spezialenergie."
+  },
+  {
+    "id": "p_eis",
+    "name": "Wassereis",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 2000000.0,
+    "volumeM3": 2105.26,
+    "eleriumG": 0.001,
+    "description": "Eis, Grundwasser und wasserhaltige Minerale für Trinkwasser, Sauerstoff und Reaktionsmasse."
+  },
+  {
+    "id": "p_atmosphaere",
+    "name": "Atmosphärenfluid",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 5000000.0,
+    "volumeM3": 166666.67,
+    "eleriumG": 0.001,
+    "description": "Stickstoff, Sauerstoff, Kohlendioxid, Wasserstoff und Prozessgase für Atemluft und Chemie."
+  },
+  {
+    "id": "p_edelgas",
+    "name": "Edelgaskonzentrat",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 80000.0,
+    "volumeM3": 2000.0,
+    "eleriumG": 0.001,
+    "description": "Helium, Neon, Argon, Krypton und Xenon für Kühlung und Ionentriebwerke."
+  },
+  {
+    "id": "p_kohlenwasserstoff",
+    "name": "Kohlenwasserstofflager",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 1000000.0,
+    "volumeM3": 1538.46,
+    "eleriumG": 0.001,
+    "description": "Methan, höhere Kohlenwasserstoffe und organische Sedimente für Polymere und Treibstoffe."
+  },
+  {
+    "id": "p_isotopentraeger",
+    "name": "Isotopenträger",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_isotopentraeger",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 10000.0,
+    "volumeM3": 33.33,
+    "eleriumG": 0.001,
+    "description": "Deuterium-, helium-3- und lithiumreiche Trägerstoffe für Fusionsisotope und Hochenergieantriebe."
+  },
+  {
+    "id": "p_elerium",
+    "name": "Eleriumspuren",
+    "category": "RawResource",
+    "tier": 0,
+    "recipe": [],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 0.001,
+    "volumeM3": 2.5e-07,
+    "eleriumG": 0.001,
+    "description": "Fiktives Elerium-115 in stabilen Mineral- oder Fluidmatrizen – sehr selten, extrem energiedicht."
+  },
+  {
+    "id": "p_ferrometall_konz",
+    "name": "Ferrometallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_ferrometall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 500000.0,
+    "volumeM3": 178.57,
+    "eleriumG": 0.0032,
+    "description": "Angereichertes Ferrometallerz."
+  },
+  {
+    "id": "p_leichtmetall_konz",
+    "name": "Leichtmetallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leichtmetall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 300000.0,
+    "volumeM3": 166.67,
+    "eleriumG": 0.0032,
+    "description": "Angereichertes Leichtmetallerz."
+  },
+  {
+    "id": "p_refraktaer_konz",
+    "name": "Refraktärmetallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_refraktaer",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 80000.0,
+    "volumeM3": 25.0,
+    "eleriumG": 0.0032,
+    "description": "Angereichertes Refraktärmetallerz."
+  },
+  {
+    "id": "p_leitmetall_konz",
+    "name": "Leitmetallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leitmetall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 180000.0,
+    "volumeM3": 69.23,
+    "eleriumG": 0.0032,
+    "description": "Angereichertes Leitmetallerz."
+  },
+  {
+    "id": "p_edelmetall_konz",
+    "name": "Edelmetallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_edelmetall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 5000.0,
+    "volumeM3": 1.25,
+    "eleriumG": 0.0072,
+    "description": "Angereichertes Edelmetallerz."
+  },
+  {
+    "id": "p_seltenerd_konz",
+    "name": "Seltenerdkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_seltenerden",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 15000.0,
+    "volumeM3": 6.0,
+    "eleriumG": 0.0072,
+    "description": "Angereichertes Seltenerdenerz."
+  },
+  {
+    "id": "p_technometall_konz",
+    "name": "Technologiemetallkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_technometall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 8000.0,
+    "volumeM3": 3.48,
+    "eleriumG": 0.0072,
+    "description": "Angereichertes Technologiemetallerz."
+  },
+  {
+    "id": "p_silikat_raffinat",
+    "name": "Silikatraffinat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_silikat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 900000.0,
+    "volumeM3": 529.41,
+    "eleriumG": 0.0032,
+    "description": "Gereinigtes Silikatmineral."
+  },
+  {
+    "id": "p_kohlenstoff_raffinat",
+    "name": "Kohlenstoffraffinat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kohlenstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 250000.0,
+    "volumeM3": 312.5,
+    "eleriumG": 0.0032,
+    "description": "Gereinigtes Kohlenstoffmineral."
+  },
+  {
+    "id": "p_industriesalze",
+    "name": "Industriesalze",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_salz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 400000.0,
+    "volumeM3": 285.71,
+    "eleriumG": 0.0032,
+    "description": "Aufbereitetes Salzmineral."
+  },
+  {
+    "id": "p_radionuklid_konz",
+    "name": "Radionuklidkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_radionuklid",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_radionuklid",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 5000.0,
+    "volumeM3": 1.56,
+    "eleriumG": 0.0072,
+    "description": "Angereichertes Radionukliderz."
+  },
+  {
+    "id": "p_prozesswasser",
+    "name": "Prozesswasser",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_eis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 2.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 1800000.0,
+    "volumeM3": 1800.0,
+    "eleriumG": 0.0032,
+    "description": "Geschmolzenes und gereinigtes Wassereis."
+  },
+  {
+    "id": "p_atmogase",
+    "name": "Getrennte Atmosphärengase",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_atmosphaere",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 3.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 2000000.0,
+    "volumeM3": 25000.0,
+    "eleriumG": 0.0018,
+    "description": "Fraktioniertes Atmosphärenfluid."
+  },
+  {
+    "id": "p_edelgas_fraktion",
+    "name": "Edelgasfraktion",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_edelgas",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 3.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 30000.0,
+    "volumeM3": 250.0,
+    "eleriumG": 0.0018,
+    "description": "Fraktioniertes Edelgaskonzentrat."
+  },
+  {
+    "id": "p_kw_fraktion",
+    "name": "Kohlenwasserstofffraktion",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kohlenwasserstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 4.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 700000.0,
+    "volumeM3": 1000.0,
+    "eleriumG": 0.0032,
+    "description": "Fraktioniertes Kohlenwasserstofflager."
+  },
+  {
+    "id": "p_isotopen_konz",
+    "name": "Isotopenkonzentrat",
+    "category": "BuildingMaterial",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_isotopentraeger",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_isotopentraeger",
+        "weight": 1.0
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 2000.0,
+    "volumeM3": 6.67,
+    "eleriumG": 0.0072,
+    "description": "Angereicherter Isotopenträger."
+  },
+  {
+    "id": "p_elerium_stabil",
+    "name": "Stabilisiertes Elerium",
+    "category": "Fuel",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 1.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 0.0006,
+    "volumeM3": 2.4e-08,
+    "eleriumG": 0.793,
+    "description": "Stabilisierte, lagerfähige Eleriumform – Betriebsstoff des Energienetzes."
+  },
+  {
+    "id": "p_stahl",
+    "name": "Stahllegierung",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_ferrometall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 100000.0,
+    "volumeM3": 15.38,
+    "eleriumG": 0.012,
+    "description": "Grundlegende Struktur- und Panzerlegierung."
+  },
+  {
+    "id": "p_leichtmetalllegierung",
+    "name": "Leichtmetalllegierung",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leichtmetall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_ferrometall_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 70000.0,
+    "volumeM3": 28.0,
+    "eleriumG": 0.012,
+    "description": "Leichtbaulegierung für Rahmen und schnelle Schiffe."
+  },
+  {
+    "id": "p_hochtemplegierung",
+    "name": "Hochtemperaturlegierung",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_refraktaer_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_ferrometall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerd_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 16.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 20000.0,
+    "volumeM3": 2.86,
+    "eleriumG": 0.029,
+    "description": "Hitzebeständige Legierung für Reaktoren und Düsen."
+  },
+  {
+    "id": "p_leitermetall",
+    "name": "Leitermetall",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leitmetall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_edelmetall_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 20000.0,
+    "volumeM3": 2.67,
+    "eleriumG": 0.012,
+    "description": "Hochleitfähiges Metall für Leitungen und Kontakte."
+  },
+  {
+    "id": "p_katalysatormetall",
+    "name": "Katalysatormetall",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_edelmetall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerd_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 2000.0,
+    "volumeM3": 0.222,
+    "eleriumG": 0.012,
+    "description": "Katalytisch aktives Metall für Chemie und Reaktoren."
+  },
+  {
+    "id": "p_magnetwerkstoff",
+    "name": "Magnetwerkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_seltenerd_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_ferrometall_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 8000.0,
+    "volumeM3": 1.33,
+    "eleriumG": 0.012,
+    "description": "Hochleistungsmagnetwerkstoff."
+  },
+  {
+    "id": "p_halbleiterrohstoff",
+    "name": "Halbleiterrohstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_technometall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_silikat_raffinat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 16.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 5000.0,
+    "volumeM3": 2.27,
+    "eleriumG": 0.029,
+    "description": "Grundstoff für Halbleiterfertigung."
+  },
+  {
+    "id": "p_keramikwerkstoff",
+    "name": "Keramikwerkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_silikat_raffinat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriesalze",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 80000.0,
+    "volumeM3": 28.57,
+    "eleriumG": 0.012,
+    "description": "Hitzefeste Keramik."
+  },
+  {
+    "id": "p_glaswerkstoff",
+    "name": "Glaswerkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_silikat_raffinat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriesalze",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 100000.0,
+    "volumeM3": 40.0,
+    "eleriumG": 0.012,
+    "description": "Optisches und strukturelles Glas."
+  },
+  {
+    "id": "p_verbundwerkstoff",
+    "name": "Verbundwerkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_silikat_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 50000.0,
+    "volumeM3": 31.25,
+    "eleriumG": 0.012,
+    "description": "Leichter, fester Verbundwerkstoff."
+  },
+  {
+    "id": "p_strahlenschutzwerkstoff",
+    "name": "Strahlenschutzwerkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_ferrometall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_refraktaer_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 50000.0,
+    "volumeM3": 10.0,
+    "eleriumG": 0.012,
+    "description": "Dichter Verbund für Strahlenschutz."
+  },
+  {
+    "id": "p_polymergrundstoff",
+    "name": "Polymergrundstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kw_fraktion",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 80000.0,
+    "volumeM3": 88.89,
+    "eleriumG": 0.012,
+    "description": "Grundstoff für Kunststoffe und Textilien."
+  },
+  {
+    "id": "p_industriechemikalien",
+    "name": "Industriechemikalien",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_industriesalze",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atmogase",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 10.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 100000.0,
+    "volumeM3": 100.0,
+    "eleriumG": 0.012,
+    "description": "Vielseitige industrielle Chemikalien."
+  },
+  {
+    "id": "p_naehrloesung",
+    "name": "Nährlösung",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriesalze",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atmogase",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 100000.0,
+    "volumeM3": 100.0,
+    "eleriumG": 0.0064,
+    "description": "Nährstofflösung für biologische Kultivierung."
+  },
+  {
+    "id": "p_atemgasgemisch",
+    "name": "Atemgasgemisch",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_atmogase",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 50000.0,
+    "volumeM3": 625.0,
+    "eleriumG": 0.0064,
+    "description": "Atembares Gasgemisch."
+  },
+  {
+    "id": "p_kryofluid",
+    "name": "Kryofluid",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_edelgas_fraktion",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atmogase",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 20000.0,
+    "volumeM3": 25.0,
+    "eleriumG": 0.0064,
+    "description": "Kühlfluid für Supraleiter und Reaktoren."
+  },
+  {
+    "id": "p_reaktionsmasse",
+    "name": "Reaktionsmasse",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atmogase",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 80.0,
+    "massKg": 100000.0,
+    "volumeM3": 100.0,
+    "eleriumG": 0.0064,
+    "description": "Reaktionsmasse für konventionelle Antriebe."
+  },
+  {
+    "id": "p_fusionsisotope",
+    "name": "Fusionsisotope",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_isotopen_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_edelgas_fraktion",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_isotopentraeger",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 16.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 500.0,
+    "volumeM3": 1.0,
+    "eleriumG": 0.029,
+    "description": "Fusionsfähige Isotopenmischung."
+  },
+  {
+    "id": "p_radiowerkstoff",
+    "name": "Radiologischer Werkstoff",
+    "category": "BuildingMaterial",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_radionuklid_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_radionuklid",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 16.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 3000.0,
+    "volumeM3": 0.857,
+    "eleriumG": 0.029,
+    "description": "Strahlungsquelle in keramischer Matrix."
+  },
+  {
+    "id": "p_strukturplatte",
+    "name": "Strukturplatte",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_stahl",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.5
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.5
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 20000.0,
+    "volumeM3": 11.11,
+    "eleriumG": 0.021,
+    "description": "Gewalzte Strukturplatte."
+  },
+  {
+    "id": "p_leichtrahmen",
+    "name": "Leichtrahmen",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_verbundwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 12000.0,
+    "volumeM3": 6.67,
+    "eleriumG": 0.021,
+    "description": "Leichter Strukturrahmen."
+  },
+  {
+    "id": "p_panzersegment",
+    "name": "Panzersegment",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_stahl",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hochtemplegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_verbundwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 25000.0,
+    "volumeM3": 3.85,
+    "eleriumG": 0.021,
+    "description": "Panzerungssegment."
+  },
+  {
+    "id": "p_hitzeschildsegment",
+    "name": "Hitzeschildsegment",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_hochtemplegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 8000.0,
+    "volumeM3": 4.44,
+    "eleriumG": 0.021,
+    "description": "Hitzeschutzsegment."
+  },
+  {
+    "id": "p_strahlenschutzsegment",
+    "name": "Strahlenschutzsegment",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strahlenschutzwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_verbundwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 15000.0,
+    "volumeM3": 5.0,
+    "eleriumG": 0.053,
+    "description": "Strahlenschutzsegment."
+  },
+  {
+    "id": "p_leiterbuendel",
+    "name": "Leiterbündel",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 3000.0,
+    "volumeM3": 1.67,
+    "eleriumG": 0.021,
+    "description": "Isoliertes Leiterbündel."
+  },
+  {
+    "id": "p_magnetspule",
+    "name": "Magnetspule",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_magnetwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kryofluid",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 5000.0,
+    "volumeM3": 0.769,
+    "eleriumG": 0.021,
+    "description": "Gekühlte Magnetspule."
+  },
+  {
+    "id": "p_optikkristall",
+    "name": "Optikkristall",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_glaswerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerd_konz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 20.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 500.0,
+    "volumeM3": 0.278,
+    "eleriumG": 0.036,
+    "description": "Präzisionsoptik."
+  },
+  {
+    "id": "p_halbleiterwafer",
+    "name": "Halbleiterwafer",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterrohstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_edelgas_fraktion",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 100.0,
+    "volumeM3": 0.056,
+    "eleriumG": 0.021,
+    "description": "Geätzter Halbleiterwafer."
+  },
+  {
+    "id": "p_keramiksubstrat",
+    "name": "Keramiksubstrat",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 500.0,
+    "volumeM3": 0.167,
+    "eleriumG": 0.021,
+    "description": "Elektronisches Keramiksubstrat."
+  },
+  {
+    "id": "p_energiespeicherzelle",
+    "name": "Energiespeicherzelle",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_technometall_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 20.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 2000.0,
+    "volumeM3": 1.11,
+    "eleriumG": 0.036,
+    "description": "Wiederaufladbare Energiespeicherzelle."
+  },
+  {
+    "id": "p_supraleitersegment",
+    "name": "Supraleitersegment",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerd_konz",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kryofluid",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 20.0,
+    "baseWorkforceRequired": 180.0,
+    "massKg": 1000.0,
+    "volumeM3": 0.556,
+    "eleriumG": 0.036,
+    "description": "Gekühltes Supraleitersegment."
+  },
+  {
+    "id": "p_dichtungssystem",
+    "name": "Dichtungssystem",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 500.0,
+    "volumeM3": 0.278,
+    "eleriumG": 0.021,
+    "description": "Druckdichtungssystem."
+  },
+  {
+    "id": "p_rohrleitungssystem",
+    "name": "Rohrleitungssystem",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_stahl",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 3000.0,
+    "volumeM3": 1.67,
+    "eleriumG": 0.021,
+    "description": "Rohrleitungssystem für Fluide."
+  },
+  {
+    "id": "p_kuehlmittelbehaelter",
+    "name": "Kühlmittelbehälter",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kryofluid",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 6000.0,
+    "volumeM3": 3.33,
+    "eleriumG": 0.021,
+    "description": "Isolierter Kühlmittelbehälter."
+  },
+  {
+    "id": "p_aktuatoreinheit",
+    "name": "Aktuatoreinheit",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_magnetwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_stahl",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 4000.0,
+    "volumeM3": 2.22,
+    "eleriumG": 0.021,
+    "description": "Elektromechanische Aktuatoreinheit."
+  },
+  {
+    "id": "p_reaktorkammer",
+    "name": "Reaktorkammer",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_hochtemplegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_strahlenschutzwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 20000.0,
+    "volumeM3": 3.08,
+    "eleriumG": 0.053,
+    "description": "Druck- und hitzefeste Reaktorkammer."
+  },
+  {
+    "id": "p_druckhabitatsegment",
+    "name": "Druckhabitatsegment",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_verbundwerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_glaswerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 15000.0,
+    "volumeM3": 8.33,
+    "eleriumG": 0.021,
+    "description": "Druckdichtes Habitatsegment."
+  },
+  {
+    "id": "p_lebenserhaltungszelle",
+    "name": "Lebenserhaltungszelle",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_atemgasgemisch",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 5000.0,
+    "volumeM3": 2.78,
+    "eleriumG": 0.012,
+    "description": "Kreislauf-Lebenserhaltungszelle."
+  },
+  {
+    "id": "p_biomassekultur",
+    "name": "Biomassekultur",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_naehrloesung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atemgasgemisch",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 20000.0,
+    "volumeM3": 25.0,
+    "eleriumG": 0.012,
+    "description": "Kultivierte Biomasse."
+  },
+  {
+    "id": "p_pharmakultur",
+    "name": "Pharmakultur",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_naehrloesung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_atemgasgemisch",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 2000.0,
+    "volumeM3": 2.5,
+    "eleriumG": 0.012,
+    "description": "Kultivierte Pharmabiomasse."
+  },
+  {
+    "id": "p_chem_energiesatz",
+    "name": "Chemischer Energiesatz",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff_raffinat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 14.0,
+    "baseWorkforceRequired": 150.0,
+    "massKg": 5000.0,
+    "volumeM3": 2.78,
+    "eleriumG": 0.021,
+    "description": "Chemischer Treibsatz."
+  },
+  {
+    "id": "p_fusionskapsel",
+    "name": "Fusionskapsel",
+    "category": "BuildingMaterial",
+    "tier": 3,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_fusionsisotope",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hochtemplegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_isotopentraeger",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelgas",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 1000.0,
+    "volumeM3": 0.556,
+    "eleriumG": 0.053,
+    "description": "Fusionsbrennstoffkapsel."
+  },
+  {
+    "id": "p_elerium_kapsel",
+    "name": "Eleriumkapsel",
+    "category": "Fuel",
+    "tier": 2,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_stabil",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 200.0,
+    "massKg": 500.0,
+    "volumeM3": 0.2,
+    "eleriumG": 0.648,
+    "description": "Sicher verkapseltes Elerium."
+  },
+  {
+    "id": "p_steuerchip",
+    "name": "Steuerchip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramiksubstrat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 50.0,
+    "volumeM3": 0.083,
+    "eleriumG": 0.053,
+    "description": "Steuerungschip."
+  },
+  {
+    "id": "p_sensorchip",
+    "name": "Sensorchip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 60.0,
+    "volumeM3": 0.1,
+    "eleriumG": 0.053,
+    "description": "Sensorchip."
+  },
+  {
+    "id": "p_navchip",
+    "name": "Navigationschip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 80.0,
+    "volumeM3": 0.133,
+    "eleriumG": 0.053,
+    "description": "Navigationschip."
+  },
+  {
+    "id": "p_kommchip",
+    "name": "Kommunikationschip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 60.0,
+    "volumeM3": 0.1,
+    "eleriumG": 0.053,
+    "description": "Kommunikationschip."
+  },
+  {
+    "id": "p_gefechtschip",
+    "name": "Gefechtschip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramiksubstrat",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 100.0,
+    "volumeM3": 0.167,
+    "eleriumG": 0.053,
+    "description": "Gefechtsleitchip."
+  },
+  {
+    "id": "p_logistikchip",
+    "name": "Logistikchip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramiksubstrat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 70.0,
+    "volumeM3": 0.117,
+    "eleriumG": 0.053,
+    "description": "Logistikchip."
+  },
+  {
+    "id": "p_medizinchip",
+    "name": "Medizinchip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramiksubstrat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 70.0,
+    "volumeM3": 0.117,
+    "eleriumG": 0.053,
+    "description": "Medizinischer Diagnosechip."
+  },
+  {
+    "id": "p_energiechip",
+    "name": "Energiechip",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_halbleiterwafer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramiksubstrat",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_supraleitersegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 220.0,
+    "massKg": 90.0,
+    "volumeM3": 0.15,
+    "eleriumG": 0.053,
+    "description": "Energiesteuerungschip."
+  },
+  {
+    "id": "p_strukturzelle",
+    "name": "Strukturzelle",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturplatte",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtrahmen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_dichtungssystem",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 600.0,
+    "massKg": 45000.0,
+    "volumeM3": 81.82,
+    "eleriumG": 0.288,
+    "description": "Modulare Strukturzelle."
+  },
+  {
+    "id": "p_panzerbaugruppe",
+    "name": "Panzerbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_panzersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hitzeschildsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 600.0,
+    "massKg": 35000.0,
+    "volumeM3": 5.38,
+    "eleriumG": 0.288,
+    "description": "Panzerbaugruppe."
+  },
+  {
+    "id": "p_energieverteiler",
+    "name": "Energieverteiler",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_energiechip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_supraleitersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 8000.0,
+    "volumeM3": 14.55,
+    "eleriumG": 0.126,
+    "description": "Energieverteiler."
+  },
+  {
+    "id": "p_fusionsreaktorkern",
+    "name": "Fusionsreaktorkern",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_reaktorkammer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_fusionskapsel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiechip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_strahlenschutzsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 600.0,
+    "massKg": 35000.0,
+    "volumeM3": 5.38,
+    "eleriumG": 0.288,
+    "description": "Fusionsreaktorkern."
+  },
+  {
+    "id": "p_elerium_energiezelle",
+    "name": "Eleriumenergiezelle",
+    "category": "Fuel",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_kapsel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiechip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_strahlenschutzsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 300.0,
+    "massKg": 3000.0,
+    "volumeM3": 5.45,
+    "eleriumG": 0.708,
+    "description": "Eleriumbetriebene Energiezelle für Kraftwerke und Netze."
+  },
+  {
+    "id": "p_elerium_treibstoffkern",
+    "name": "Eleriumtreibstoffkern",
+    "category": "Fuel",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_kapsel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_reaktorkammer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiechip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kryofluid",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 300.0,
+    "massKg": 5000.0,
+    "volumeM3": 9.09,
+    "eleriumG": 0.708,
+    "description": "Eleriumbetriebener Reaktor- und Antriebskern."
+  },
+  {
+    "id": "p_elerium_initiator",
+    "name": "Eleriuminitiator",
+    "category": "Fuel",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_kapsel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_strahlenschutzsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 300.0,
+    "massKg": 1000.0,
+    "volumeM3": 1.82,
+    "eleriumG": 0.708,
+    "description": "Eleriumbasierter Initiator für schwere Gefechtsköpfe."
+  },
+  {
+    "id": "p_triebwerkskern",
+    "name": "Triebwerkskern",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_reaktorkammer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_magnetspule",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hitzeschildsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 600.0,
+    "massKg": 25000.0,
+    "volumeM3": 45.45,
+    "eleriumG": 0.288,
+    "description": "Haupttriebwerkskern."
+  },
+  {
+    "id": "p_manoevertriebwerk",
+    "name": "Manövertriebwerk",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_magnetspule",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmasse",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 5000.0,
+    "volumeM3": 9.09,
+    "eleriumG": 0.126,
+    "description": "Manövriertriebwerk."
+  },
+  {
+    "id": "p_reaktionsmassensystem",
+    "name": "Reaktionsmassensystem",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_rohrleitungssystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kuehlmittelbehaelter",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmasse",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 15000.0,
+    "volumeM3": 15.0,
+    "eleriumG": 0.126,
+    "description": "Reaktionsmassen-Versorgungssystem."
+  },
+  {
+    "id": "p_sensorfeld",
+    "name": "Sensorfeld",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_sensorchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 2000.0,
+    "volumeM3": 3.64,
+    "eleriumG": 0.126,
+    "description": "Sensorfeld."
+  },
+  {
+    "id": "p_kommfeld",
+    "name": "Kommunikationsfeld",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kommchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 1500.0,
+    "volumeM3": 2.73,
+    "eleriumG": 0.126,
+    "description": "Kommunikationsfeld."
+  },
+  {
+    "id": "p_navsystem",
+    "name": "Navigationssystem",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 3000.0,
+    "volumeM3": 5.45,
+    "eleriumG": 0.126,
+    "description": "Navigationssystem."
+  },
+  {
+    "id": "p_gefechtsleitsystem",
+    "name": "Gefechtsleitsystem",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 2500.0,
+    "volumeM3": 4.55,
+    "eleriumG": 0.126,
+    "description": "Gefechtsleitsystem."
+  },
+  {
+    "id": "p_projektilwaffe",
+    "name": "Projektilwaffenbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_panzersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_chem_energiesatz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 12000.0,
+    "volumeM3": 21.82,
+    "eleriumG": 0.126,
+    "description": "Projektilwaffenbaugruppe."
+  },
+  {
+    "id": "p_strahlenwaffe",
+    "name": "Strahlenwaffenbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_optikkristall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_supraleitersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 8000.0,
+    "volumeM3": 14.55,
+    "eleriumG": 0.126,
+    "description": "Strahlenwaffenbaugruppe."
+  },
+  {
+    "id": "p_lenkwaffe",
+    "name": "Lenkflugkörperbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtrahmen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_chem_energiesatz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 10000.0,
+    "volumeM3": 18.18,
+    "eleriumG": 0.126,
+    "description": "Lenkflugkörperbaugruppe."
+  },
+  {
+    "id": "p_schwerer_gefechtskopf",
+    "name": "Schwerer Gefechtskopf",
+    "category": "Fuel",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_initiator",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_panzersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 2000.0,
+    "volumeM3": 3.64,
+    "eleriumG": 0.126,
+    "description": "Schwerer eleriumbasierter Gefechtskopf."
+  },
+  {
+    "id": "p_schildemitter",
+    "name": "Schildemitterbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_supraleitersegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_magnetspule",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiechip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_edelmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 8000.0,
+    "volumeM3": 14.55,
+    "eleriumG": 0.126,
+    "description": "Schildemitterbaugruppe."
+  },
+  {
+    "id": "p_hangarbaugruppe",
+    "name": "Hangarbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_logistikchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 600.0,
+    "massKg": 50000.0,
+    "volumeM3": 90.91,
+    "eleriumG": 0.288,
+    "description": "Hangarbaugruppe."
+  },
+  {
+    "id": "p_frachtumschlag",
+    "name": "Frachtumschlagbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_logistikchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 25000.0,
+    "volumeM3": 45.45,
+    "eleriumG": 0.126,
+    "description": "Frachtumschlagbaugruppe."
+  },
+  {
+    "id": "p_lebenserhaltungsbaugruppe",
+    "name": "Lebenserhaltungsbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungszelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_rohrleitungssystem",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 10000.0,
+    "volumeM3": 18.18,
+    "eleriumG": 0.126,
+    "description": "Lebenserhaltungsbaugruppe."
+  },
+  {
+    "id": "p_besatzungsbaugruppe",
+    "name": "Besatzungsbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 20000.0,
+    "volumeM3": 36.36,
+    "eleriumG": 0.126,
+    "description": "Besatzungsbaugruppe."
+  },
+  {
+    "id": "p_truppenunterbringung",
+    "name": "Truppenunterbringungsbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 36.0,
+    "baseWorkforceRequired": 350.0,
+    "massKg": 35000.0,
+    "volumeM3": 63.64,
+    "eleriumG": 0.126,
+    "description": "Truppenunterbringungsbaugruppe."
+  },
+  {
+    "id": "p_foerdermaschinenbaugruppe",
+    "name": "Fördermaschinenbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturplatte",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_rohrleitungssystem",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 60000.0,
+    "volumeM3": 109.09,
+    "eleriumG": 0.24,
+    "description": "Fördermaschinenbaugruppe."
+  },
+  {
+    "id": "p_raffineriebaugruppe",
+    "name": "Raffineriebaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_reaktorkammer",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_rohrleitungssystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hitzeschildsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 70000.0,
+    "volumeM3": 127.27,
+    "eleriumG": 0.24,
+    "description": "Raffineriebaugruppe."
+  },
+  {
+    "id": "p_fertigungsmaschinenbaugruppe",
+    "name": "Fertigungsmaschinenbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturplatte",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_aktuatoreinheit",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 80000.0,
+    "volumeM3": 145.45,
+    "eleriumG": 0.24,
+    "description": "Fertigungsmaschinenbaugruppe."
+  },
+  {
+    "id": "p_reinraumbaugruppe",
+    "name": "Reinraumbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lebenserhaltungszelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 30000.0,
+    "volumeM3": 54.55,
+    "eleriumG": 0.24,
+    "description": "Reinraumbaugruppe."
+  },
+  {
+    "id": "p_bioreaktorbaugruppe",
+    "name": "Bioreaktorbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_biomassekultur",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lebenserhaltungszelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_rohrleitungssystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 30000.0,
+    "volumeM3": 4.62,
+    "eleriumG": 0.24,
+    "description": "Bioreaktorbaugruppe."
+  },
+  {
+    "id": "p_energienetzbaugruppe",
+    "name": "Energienetzbaugruppe",
+    "category": "BuildingMaterial",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 48.0,
+    "baseWorkforceRequired": 500.0,
+    "massKg": 40000.0,
+    "volumeM3": 72.73,
+    "eleriumG": 0.24,
+    "description": "Energienetzbaugruppe."
+  },
+  {
+    "id": "p_nahrungsbasis",
+    "name": "Nahrungsbasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_biomassekultur",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_naehrloesung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 20000.0,
+    "volumeM3": 25.0,
+    "eleriumG": 0.014,
+    "description": "Biologische Nahrungsbasis."
+  },
+  {
+    "id": "p_textilfaserbasis",
+    "name": "Textilfaserbasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_biomassekultur",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 10000.0,
+    "volumeM3": 12.5,
+    "eleriumG": 0.014,
+    "description": "Textilfaserbasis."
+  },
+  {
+    "id": "p_hygienebasis",
+    "name": "Hygienebasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_biomassekultur",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 10000.0,
+    "volumeM3": 12.5,
+    "eleriumG": 0.014,
+    "description": "Hygienebasis."
+  },
+  {
+    "id": "p_pharmabasis",
+    "name": "Pharmabasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_pharmakultur",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_industriechemikalien",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 2000.0,
+    "volumeM3": 2.5,
+    "eleriumG": 0.014,
+    "description": "Pharmabasis."
+  },
+  {
+    "id": "p_haushaltswarenbasis",
+    "name": "Haushaltswarenbasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetalllegierung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_glaswerkstoff",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_keramikwerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 20000.0,
+    "volumeM3": 36.36,
+    "eleriumG": 0.014,
+    "description": "Haushaltswarenbasis."
+  },
+  {
+    "id": "p_unterhaltungselektronikbasis",
+    "name": "Unterhaltungselektronikbasis",
+    "category": "ConsumerGood",
+    "tier": 4,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_steuerchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_leiterbuendel",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_polymergrundstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 1000.0,
+    "volumeM3": 1.82,
+    "eleriumG": 0.014,
+    "description": "Unterhaltungselektronikbasis."
+  },
+  {
+    "id": "p_korvette_rumpf",
+    "name": "Korvettenrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 108000.0,
+    "volumeM3": 337.5,
+    "eleriumG": 0.504,
+    "description": "Rumpfmodul der Korvette."
+  },
+  {
+    "id": "p_korvette_antrieb",
+    "name": "Korvettenantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 59500.0,
+    "volumeM3": 123.96,
+    "eleriumG": 1.1,
+    "description": "Antriebsmodul der Korvette."
+  },
+  {
+    "id": "p_korvette_energie",
+    "name": "Korvettenenergiemodul",
+    "category": "Fuel",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_energiezelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 14100.0,
+    "volumeM3": 29.38,
+    "eleriumG": 1.1,
+    "description": "Energiemodul der Korvette."
+  },
+  {
+    "id": "p_korvette_elektronik",
+    "name": "Korvettenelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 7030.0,
+    "volumeM3": 27.04,
+    "eleriumG": 0.504,
+    "description": "Elektronikmodul der Korvette."
+  },
+  {
+    "id": "p_korvette_waffen",
+    "name": "Korvettenwaffenmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strahlenwaffe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lenkwaffe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtsleitsystem",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 22200.0,
+    "volumeM3": 46.25,
+    "eleriumG": 0.504,
+    "description": "Waffenmodul der Korvette."
+  },
+  {
+    "id": "p_korvette_versorgung",
+    "name": "Korvettenversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 72.0,
+    "baseWorkforceRequired": 700.0,
+    "massKg": 59500.0,
+    "volumeM3": 330.56,
+    "eleriumG": 0.504,
+    "description": "Versorgungsmodul der Korvette."
+  },
+  {
+    "id": "p_zerstoerer_rumpf",
+    "name": "Zerstörerrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 194400.0,
+    "volumeM3": 607.5,
+    "eleriumG": 1.44,
+    "description": "Rumpfmodul des Zerstörers."
+  },
+  {
+    "id": "p_zerstoerer_antrieb",
+    "name": "Zerstörerantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 81000.0,
+    "volumeM3": 168.75,
+    "eleriumG": 2.04,
+    "description": "Antriebsmodul des Zerstörers."
+  },
+  {
+    "id": "p_zerstoerer_energie",
+    "name": "Zerstörerenergiemodul",
+    "category": "Fuel",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_fusionsreaktorkern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_energiezelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 49700.0,
+    "volumeM3": 103.54,
+    "eleriumG": 2.04,
+    "description": "Energiemodul des Zerstörers."
+  },
+  {
+    "id": "p_zerstoerer_elektronik",
+    "name": "Zerstörerelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtsleitsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 7570.0,
+    "volumeM3": 29.12,
+    "eleriumG": 1.44,
+    "description": "Elektronikmodul des Zerstörers."
+  },
+  {
+    "id": "p_zerstoerer_waffen",
+    "name": "Zerstörerwaffenmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_projektilwaffe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_lenkwaffe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_schwerer_gefechtskopf",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leitmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 49700.0,
+    "volumeM3": 103.54,
+    "eleriumG": 1.44,
+    "description": "Waffenmodul des Zerstörers."
+  },
+  {
+    "id": "p_zerstoerer_versorgung",
+    "name": "Zerstörerversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 59500.0,
+    "volumeM3": 330.56,
+    "eleriumG": 1.44,
+    "description": "Versorgungsmodul des Zerstörers."
+  },
+  {
+    "id": "p_kreuzer_rumpf",
+    "name": "Kreuzerrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_strahlenschutzsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 275400.0,
+    "volumeM3": 860.62,
+    "eleriumG": 3.6,
+    "description": "Rumpfmodul des Kreuzers."
+  },
+  {
+    "id": "p_kreuzer_antrieb",
+    "name": "Kreuzerantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 129700.0,
+    "volumeM3": 270.21,
+    "eleriumG": 4.2,
+    "description": "Antriebsmodul des Kreuzers."
+  },
+  {
+    "id": "p_kreuzer_energie",
+    "name": "Kreuzerenergiemodul",
+    "category": "Fuel",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_energiezelle",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_fusionsreaktorkern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 2.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 61600.0,
+    "volumeM3": 128.33,
+    "eleriumG": 4.8,
+    "description": "Energiemodul des Kreuzers."
+  },
+  {
+    "id": "p_kreuzer_elektronik",
+    "name": "Kreuzerelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtsleitsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 11900.0,
+    "volumeM3": 45.77,
+    "eleriumG": 3.6,
+    "description": "Elektronikmodul des Kreuzers."
+  },
+  {
+    "id": "p_kreuzer_waffen",
+    "name": "Kreuzerwaffenmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strahlenwaffe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_projektilwaffe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_lenkwaffe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_schildemitter",
+        "quantity": 2.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 58400.0,
+    "volumeM3": 121.67,
+    "eleriumG": 3.6,
+    "description": "Waffenmodul des Kreuzers."
+  },
+  {
+    "id": "p_kreuzer_versorgung",
+    "name": "Kreuzerversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 180.0,
+    "baseWorkforceRequired": 2000.0,
+    "massKg": 91800.0,
+    "volumeM3": 510.0,
+    "eleriumG": 3.6,
+    "description": "Versorgungsmodul des Kreuzers."
+  },
+  {
+    "id": "p_frachter_rumpf",
+    "name": "Frachterrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_leichtrahmen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 175000.0,
+    "volumeM3": 546.88,
+    "eleriumG": 1.44,
+    "description": "Rumpfmodul des Frachters."
+  },
+  {
+    "id": "p_frachter_antrieb",
+    "name": "Frachterantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 70200.0,
+    "volumeM3": 146.25,
+    "eleriumG": 2.04,
+    "description": "Antriebsmodul des Frachters."
+  },
+  {
+    "id": "p_frachter_energie",
+    "name": "Frachterenergiemodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_fusionsreaktorkern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energiespeicherzelle",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 48600.0,
+    "volumeM3": 101.25,
+    "eleriumG": 1.44,
+    "description": "Energiemodul des Frachters."
+  },
+  {
+    "id": "p_frachter_elektronik",
+    "name": "Frachterelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_logistikchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 4940.0,
+    "volumeM3": 19.0,
+    "eleriumG": 1.44,
+    "description": "Elektronikmodul des Frachters."
+  },
+  {
+    "id": "p_frachter_ladung",
+    "name": "Frachterladungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_logistikchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 129700.0,
+    "volumeM3": 720.56,
+    "eleriumG": 1.44,
+    "description": "Ladungsmodul des Frachters."
+  },
+  {
+    "id": "p_frachter_versorgung",
+    "name": "Frachterversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_fertigungsmaschinenbaugruppe",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 120.0,
+    "baseWorkforceRequired": 1200.0,
+    "massKg": 118900.0,
+    "volumeM3": 660.56,
+    "eleriumG": 1.44,
+    "description": "Versorgungsmodul des Frachters."
+  },
+  {
+    "id": "p_traeger_rumpf",
+    "name": "Trägerschiffrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 4.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 2.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 340200.0,
+    "volumeM3": 1063.12,
+    "eleriumG": 7.2,
+    "description": "Rumpfmodul des Trägerschiffs."
+  },
+  {
+    "id": "p_traeger_antrieb",
+    "name": "Trägerschiffantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 145800.0,
+    "volumeM3": 303.75,
+    "eleriumG": 7.8,
+    "description": "Antriebsmodul des Trägerschiffs."
+  },
+  {
+    "id": "p_traeger_energie",
+    "name": "Trägerschiffenergiemodul",
+    "category": "Fuel",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_energiezelle",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_fusionsreaktorkern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 2.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 64900.0,
+    "volumeM3": 135.21,
+    "eleriumG": 9.0,
+    "description": "Energiemodul des Trägerschiffs."
+  },
+  {
+    "id": "p_traeger_elektronik",
+    "name": "Trägerschiffelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtsleitsystem",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 13500.0,
+    "volumeM3": 51.92,
+    "eleriumG": 7.2,
+    "description": "Elektronikmodul des Trägerschiffs."
+  },
+  {
+    "id": "p_traeger_hangar",
+    "name": "Trägerschiffhangarmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_hangarbaugruppe",
+        "quantity": 4.0
+      },
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_logistikchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 270100.0,
+    "volumeM3": 1500.56,
+    "eleriumG": 7.2,
+    "description": "Hangarmodul des Trägerschiffs."
+  },
+  {
+    "id": "p_traeger_versorgung",
+    "name": "Trägerschiffversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_fertigungsmaschinenbaugruppe",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 3000.0,
+    "massKg": 183600.0,
+    "volumeM3": 1020.0,
+    "eleriumG": 7.2,
+    "description": "Versorgungsmodul des Trägerschiffs."
+  },
+  {
+    "id": "p_transport_rumpf",
+    "name": "Mannschaftstransportrumpfmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_druckhabitatsegment",
+        "quantity": 2.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 253900.0,
+    "volumeM3": 793.44,
+    "eleriumG": 2.59,
+    "description": "Rumpfmodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_transport_antrieb",
+    "name": "Mannschaftstransportantriebsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_triebwerkskern",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_reaktionsmassensystem",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_elerium_treibstoffkern",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_seltenerden",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 102600.0,
+    "volumeM3": 213.75,
+    "eleriumG": 3.19,
+    "description": "Antriebsmodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_transport_energie",
+    "name": "Mannschaftstransportenergiemodul",
+    "category": "Fuel",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_elerium_energiezelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_fusionsreaktorkern",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_energieverteiler",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_elerium",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 49700.0,
+    "volumeM3": 103.54,
+    "eleriumG": 3.19,
+    "description": "Energiemodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_transport_elektronik",
+    "name": "Mannschaftstransportelektronikmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_navsystem",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommfeld",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 7030.0,
+    "volumeM3": 27.04,
+    "eleriumG": 2.59,
+    "description": "Elektronikmodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_transport_truppen",
+    "name": "Mannschaftstransporttruppenmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_truppenunterbringung",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_frachtumschlag",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 140500.0,
+    "volumeM3": 780.56,
+    "eleriumG": 2.59,
+    "description": "Truppenmodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_transport_versorgung",
+    "name": "Mannschaftstransportversorgungsmodul",
+    "category": "BuildingMaterial",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
+        "quantity": 3.0
+      },
+      {
+        "inputProductTypeId": "p_besatzungsbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_pharmabasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 144.0,
+    "baseWorkforceRequired": 1800.0,
+    "massKg": 77800.0,
+    "volumeM3": 432.22,
+    "eleriumG": 2.59,
+    "description": "Versorgungsmodul des Mannschaftstransporters."
+  },
+  {
+    "id": "p_trinkwasserration",
+    "name": "Trinkwasserration",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_nahrungsbasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_prozesswasser",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1000.0,
+    "volumeM3": 1.0,
+    "eleriumG": 0.0048,
+    "description": "Trinkwasserration."
+  },
+  {
+    "id": "p_grundnahrung",
+    "name": "Grundnahrung",
+    "category": "ConsumerGood",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_eis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1000.0,
+    "volumeM3": 2.0,
+    "eleriumG": 0.0048,
+    "description": "Einfache Nährstoffration direkt aus Wassereis und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung."
+  },
+  {
+    "id": "p_standardnahrung",
+    "name": "Standardnahrung",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_nahrungsbasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hygienebasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1000.0,
+    "volumeM3": 2.0,
+    "eleriumG": 0.0048,
+    "description": "Standardnahrung."
+  },
+  {
+    "id": "p_hygienewaren",
+    "name": "Hygienewaren",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_hygienebasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_haushaltswarenbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 500.0,
+    "volumeM3": 1.0,
+    "eleriumG": 0.0048,
+    "description": "Hygienewaren."
+  },
+  {
+    "id": "p_grundkleidung",
+    "name": "Grundkleidung",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_textilfaserbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 500.0,
+    "volumeM3": 1.0,
+    "eleriumG": 0.0048,
+    "description": "Grundkleidung."
+  },
+  {
+    "id": "p_schutzkleidung",
+    "name": "Schutzkleidung",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_textilfaserbasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_haushaltswarenbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 500.0,
+    "volumeM3": 1.0,
+    "eleriumG": 0.0048,
+    "description": "Schutzkleidung."
+  },
+  {
+    "id": "p_grundmedizin",
+    "name": "Grundmedizin",
+    "category": "ConsumerGood",
+    "tier": 1,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_eis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_salz",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 100.0,
+    "volumeM3": 0.2,
+    "eleriumG": 0.0048,
+    "description": "Einfaches Salinen-Erste-Hilfe-Präparat direkt aus Wassereis und Salzmineral – bewusst flache Kette, weniger wirksam als Erweiterte Medizin."
+  },
+  {
+    "id": "p_erweiterte_medizin",
+    "name": "Erweiterte Medizin",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_pharmabasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_medizinchip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 100.0,
+    "massKg": 50.0,
+    "volumeM3": 0.1,
+    "eleriumG": 0.012,
+    "description": "Erweiterte Medizin."
+  },
+  {
+    "id": "p_haushaltswaren",
+    "name": "Haushaltswaren",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_haushaltswarenbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1000.0,
+    "volumeM3": 2.0,
+    "eleriumG": 0.0048,
+    "description": "Haushaltswaren."
+  },
+  {
+    "id": "p_hw_haushaltswaren",
+    "name": "Hochwertige Haushaltswaren",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_haushaltswarenbasis",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_unterhaltungselektronikbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1000.0,
+    "volumeM3": 2.0,
+    "eleriumG": 0.0048,
+    "description": "Hochwertige Haushaltswaren."
+  },
+  {
+    "id": "p_unterhaltungselektronik",
+    "name": "Unterhaltungselektronik",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_unterhaltungselektronikbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_technometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_silikat",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 200.0,
+    "volumeM3": 0.4,
+    "eleriumG": 0.0048,
+    "description": "Unterhaltungselektronik."
+  },
+  {
+    "id": "p_infanterieausruestung",
+    "name": "Infanterieausrüstung",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_schutzkleidung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kommchip",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_haushaltswarenbasis",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 8.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 3000.0,
+    "volumeM3": 6.0,
+    "eleriumG": 0.0048,
+    "description": "Infanterieausrüstung."
+  },
+  {
+    "id": "p_schwere_bodenausruestung",
+    "name": "Schwere Bodenausrüstung",
+    "category": "ConsumerGood",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_projektilwaffe",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_gefechtschip",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 24.0,
+    "baseWorkforceRequired": 200.0,
+    "massKg": 10000.0,
+    "volumeM3": 20.0,
+    "eleriumG": 0.048,
+    "description": "Schwere Bodenausrüstung."
+  },
+  {
+    "id": "p_drone_light",
+    "name": "Leichte Drohne",
+    "category": "GroundUnit",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.29,
+    "baseWorkforceRequired": 17.0,
+    "massKg": 31505.48,
+    "volumeM3": 13.0598,
+    "eleriumG": 0.126,
+    "description": "Leichte autonome Kampfdrohne, wird von Soldaten ferngesteuert."
+  },
+  {
+    "id": "p_drone_medium",
+    "name": "Mittlere Drohne",
+    "category": "GroundUnit",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_strukturzelle",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.53,
+    "baseWorkforceRequired": 19.0,
+    "massKg": 60780.36,
+    "volumeM3": 22.9992,
+    "eleriumG": 0.252,
+    "description": "Mittlere autonome Kampfdrohne, wird von Soldaten ferngesteuert."
+  },
+  {
+    "id": "p_drone_heavy",
+    "name": "Schwere Drohne",
+    "category": "GroundUnit",
+    "tier": 5,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_panzerbaugruppe",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_manoevertriebwerk",
+        "quantity": 2.0
+      },
+      {
+        "inputProductTypeId": "p_sensorfeld",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_refraktaer",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.65,
+    "baseWorkforceRequired": 20.0,
+    "massKg": 97210.96,
+    "volumeM3": 33.6464,
+    "eleriumG": 0.414,
+    "description": "Schwere autonome Kampfdrohne, hohe Haltbarkeit, wird von Soldaten ferngesteuert."
+  },
+  {
+    "id": "p_corvette",
+    "name": "Korvette",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_korvette_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_korvette_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_korvette_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_korvette_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_korvette_waffen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_korvette_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 240.0,
+    "baseWorkforceRequired": 2500.0,
+    "massKg": 278500.0,
+    "volumeM3": 1265.91,
+    "eleriumG": 7.2,
+    "description": "Schnelles, leichtes Kampfschiff. Kontert Zerstörer, unterliegt Kreuzern."
+  },
+  {
+    "id": "p_destroyer",
+    "name": "Zerstörer",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_zerstoerer_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_zerstoerer_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_zerstoerer_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_zerstoerer_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_zerstoerer_waffen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_zerstoerer_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 360.0,
+    "baseWorkforceRequired": 4500.0,
+    "massKg": 455200.0,
+    "volumeM3": 1750.77,
+    "eleriumG": 17.4,
+    "description": "Vielseitiger Zerstörer. Kontert Kreuzer, unterliegt Korvetten."
+  },
+  {
+    "id": "p_cruiser",
+    "name": "Kreuzer",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kreuzer_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kreuzer_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kreuzer_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kreuzer_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kreuzer_waffen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_kreuzer_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 600.0,
+    "baseWorkforceRequired": 8000.0,
+    "massKg": 647700.0,
+    "volumeM3": 2024.06,
+    "eleriumG": 49.8,
+    "description": "Schwerer Kreuzer. Kontert Korvetten, unterliegt Zerstörern."
+  },
+  {
+    "id": "p_freighter",
+    "name": "Frachter",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_frachter_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachter_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachter_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachter_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachter_ladung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_frachter_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 300.0,
+    "baseWorkforceRequired": 4000.0,
+    "massKg": 563800.0,
+    "volumeM3": 5125.45,
+    "eleriumG": 12.6,
+    "description": "Reiner Warentransporter, keine Kampfkraft."
+  },
+  {
+    "id": "p_carrier",
+    "name": "Trägerschiff",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_traeger_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_traeger_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_traeger_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_traeger_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_traeger_hangar",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_traeger_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 720.0,
+    "baseWorkforceRequired": 12000.0,
+    "massKg": 1048700.0,
+    "volumeM3": 7490.71,
+    "eleriumG": 88.8,
+    "description": "Einziges Schiff mit Sprungantrieb – langsame, gatewayunabhängige Reise."
+  },
+  {
+    "id": "p_trooptransport",
+    "name": "Mannschaftstransporter",
+    "category": "Ship",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_transport_rumpf",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_transport_antrieb",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_transport_energie",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_transport_elektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_transport_truppen",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_transport_versorgung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 420.0,
+    "baseWorkforceRequired": 6000.0,
+    "massKg": 650500.0,
+    "volumeM3": 4065.62,
+    "eleriumG": 26.4,
+    "description": "Transport für Bodentruppen."
+  },
+  {
+    "id": "p_grundversorgungspaket",
+    "name": "Grundversorgungspaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_trinkwasserration",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundnahrung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hygienewaren",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundkleidung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 3090.0,
+    "volumeM3": 7.36,
+    "eleriumG": 0.0036,
+    "description": "Verhindert akute Unterversorgung."
+  },
+  {
+    "id": "p_standardversorgungspaket",
+    "name": "Standardversorgungspaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_trinkwasserration",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_standardnahrung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hygienewaren",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundkleidung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_haushaltswaren",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 4120.0,
+    "volumeM3": 9.81,
+    "eleriumG": 0.0036,
+    "description": "Stabiler normaler Lebensstandard."
+  },
+  {
+    "id": "p_medizinpaket",
+    "name": "Medizinpaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_trinkwasserration",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundmedizin",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_erweiterte_medizin",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hygienewaren",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 1700.0,
+    "volumeM3": 4.05,
+    "eleriumG": 0.0036,
+    "description": "Gesundheit, Epidemieschutz und Genesung."
+  },
+  {
+    "id": "p_komfortpaket",
+    "name": "Komfortpaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_standardnahrung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_schutzkleidung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_haushaltswaren",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_unterhaltungselektronik",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 2790.0,
+    "volumeM3": 6.64,
+    "eleriumG": 0.0036,
+    "description": "Zufriedenheit und Loyalität."
+  },
+  {
+    "id": "p_luxuspaket",
+    "name": "Luxuspaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_standardnahrung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_erweiterte_medizin",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_unterhaltungselektronik",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hw_haushaltswaren",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_eis",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_atmosphaere",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 6.0,
+    "baseWorkforceRequired": 60.0,
+    "massKg": 2320.0,
+    "volumeM3": 5.52,
+    "eleriumG": 0.0036,
+    "description": "Prestige, hohe Zufriedenheit und Geldsenke."
+  },
+  {
+    "id": "p_infanteriepaket",
+    "name": "Infanteriepaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_infanterieausruestung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundmedizin",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_trinkwasserration",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_grundnahrung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_hygienewaren",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 5770.0,
+    "volumeM3": 13.74,
+    "eleriumG": 0.014,
+    "description": "Ausrüstung einer leichten Bodeneinheit."
+  },
+  {
+    "id": "p_schweres_truppenpaket",
+    "name": "Schweres Truppenpaket",
+    "category": "ConsumerGood",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_schwere_bodenausruestung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_schutzkleidung",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_erweiterte_medizin",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_trinkwasserration",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_standardnahrung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 12.0,
+    "baseWorkforceRequired": 120.0,
+    "massKg": 13000.0,
+    "volumeM3": 30.95,
+    "eleriumG": 0.014,
+    "description": "Schweres Feldausrüstungspaket für Bodentruppen im Einsatz."
+  },
+  {
+    "id": "p_soldier",
+    "name": "Soldat",
+    "category": "GroundUnit",
+    "tier": 6,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_infanterieausruestung",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_kohlenwasserstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_salz",
+        "weight": 0.34
+      }
+    ],
+    "baseProductionHours": 2.52,
+    "baseWorkforceRequired": 19.0,
+    "massKg": 25605.36,
+    "volumeM3": 11.1813,
+    "eleriumG": 0.0048,
+    "description": "Ausgerüsteter Infanterist aus der Kolonie-Bevölkerung. Besitzt keine eigene Kampfwirkung, sondern kommandiert Kampfdrohnen aus der Ferne."
+  }
+]

@@ -11,6 +11,7 @@ import de.nebula.model.FleetCargoEntry;
 import de.nebula.model.FleetLocationType;
 import de.nebula.model.FleetShipGroup;
 import de.nebula.model.FleetStatus;
+import de.nebula.model.FleetCargoCapacity;
 import de.nebula.model.FleetSystemTarget;
 import de.nebula.model.Planet;
 import de.nebula.model.ProductType;
@@ -122,6 +123,40 @@ public final class FleetCommands {
       ships.add(new FleetShipGroup(shipProductTypeId, quantity));
       fleet.ships = ships;
     }
+  }
+
+  /**
+   * Frachtkapazität und aktuelle Auslastung EINER Flotte, plus – falls ein
+   * Produkt angegeben ist – die maximal ladbare Stückzahl unter Berücksichtigung
+   * von Lagerbestand UND Massen-/Volumengrenze.
+   *
+   * <p>Existiert, damit die Oberfläche diese Regel nicht ein zweites Mal
+   * nachbilden muss: die Kapazitätsgrenze ist eine SPIELREGEL und wird in
+   * {@link #loadCargo} durchgesetzt – die Anzeige darf sie nicht abweichend
+   * nachrechnen (Umsetzungskonzept/15_...md, Auftrag 3).</p>
+   */
+  public static FleetCargoCapacity fleetCargoCapacity(GameState state, String fleetId, String productTypeId) {
+    Fleet fleet = find(state, fleetId);
+    if (fleet == null) throw new CommandException("Unbekannte Flotte.");
+    Capacity capacity = fleetCargoCapacity(fleet);
+    Capacity used = fleetCargoUsed(fleet);
+
+    FleetCargoCapacity result = new FleetCargoCapacity();
+    result.capacityMassKg = capacity.massKg();
+    result.capacityVolumeM3 = capacity.volumeM3();
+    result.usedMassKg = used.massKg();
+    result.usedVolumeM3 = used.volumeM3();
+    result.maxLoadableQuantity = 0;
+
+    if (productTypeId == null || fleet.locationColonyId == null) return result;
+    ProductType product = ProductCatalog.find(productTypeId);
+    double stock = Warehouse.qty(state, fleet.locationColonyId, productTypeId);
+    double remainingMass = capacity.massKg() - used.massKg();
+    double remainingVolume = capacity.volumeM3() - used.volumeM3();
+    double byMass = product.massKg > 0 ? Math.floor(remainingMass / product.massKg) : Double.MAX_VALUE;
+    double byVolume = product.volumeM3 > 0 ? Math.floor(remainingVolume / product.volumeM3) : Double.MAX_VALUE;
+    result.maxLoadableQuantity = Math.max(0, Math.min(Math.floor(stock), Math.min(byMass, byVolume)));
+    return result;
   }
 
   public static void loadCargo(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {

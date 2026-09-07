@@ -23,17 +23,51 @@ public final class GameConstants {
   public static final double WEALTH_TAX_RATE = 0.001;
   public static final double COLONY_TAX_RATE = 0.01;
 
-  /** PowerUpkeepJob (Umsetzungskonzept/01_..., §3). */
-  public static final double ELERIUM_UPKEEP_PER_POWERGRID_LEVEL = 0.005;
-  public static final String POWERGRID_FUEL_PRODUCT_ID = "p_elerium_stabil";
+  /**
+   * Elerium-Verbrauch des Gebäudes "Infrastruktur" (Umsetzungskonzept/17_...md,
+   * Teil A): je Spielstunde {@code BASE × Stufe^EXPONENT} – leicht überlinear,
+   * Werte aus {@code shared/game-constants.json}.
+   */
+  public static final double ELERIUM_UPKEEP_BASE_PER_HOUR = SharedConstants.eleriumUpkeepBasePerHour();
+  public static final double ELERIUM_UPKEEP_LEVEL_EXPONENT = SharedConstants.eleriumUpkeepLevelExponent();
+  public static final String INFRASTRUCTURE_FUEL_PRODUCT_ID = "p_elerium_stabil";
+  public static final String INFRASTRUCTURE_BUILDING_ID = "b_infrastructure";
+  /** Bebauungsplätze je Infrastruktur-Stufe; jede Stufe jedes anderen Gebäudes belegt genau einen. */
+  public static final int SLOTS_PER_INFRASTRUCTURE_LEVEL = SharedConstants.slotsPerInfrastructureLevel();
+  public static final double INFRASTRUCTURE_COST_GROWTH_PER_LEVEL = SharedConstants.infrastructureCostGrowthPerLevel();
+  public static final double BUILDING_MATERIAL_LEVEL_EXPONENT = SharedConstants.buildingMaterialLevelExponent();
+  /** Faktor je Wohnkomplex-Stufe für Kapazität, Credits und Baustoffe (Umsetzungskonzept/17_...md, Teil C). */
+  public static final double HOUSING_GROWTH_FACTOR = SharedConstants.housingCapacityGrowthFactor();
 
-  /** Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut. */
+  /**
+   * Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut
+   * UND TICK. Mit Umsetzungskonzept/17_...md, Teil C gesenkt (Grundnahrung
+   * 0,0004 → 0,00008, Grundmedizin 0,00015 → 0,00004, Elektronik 0,0001 →
+   * 0,00004), damit die Startkolonie (120 Einwohner, Industriekomplex 1) ihre
+   * Bevölkerung mit ≈ 50 % Warteschlangen-Auslastung aus eigener Kraft
+   * versorgen kann – Herleitung aus echten ChainPlan-Stunden dort.
+   */
   public static final List<String> CONSUMER_GOODS_ORDER = List.of("p_grundnahrung", "p_grundmedizin", "p_unterhaltungselektronik");
   public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA = Map.of(
-      "p_grundnahrung", 0.0004, "p_grundmedizin", 0.00015, "p_unterhaltungselektronik", 0.0001);
+      "p_grundnahrung", 0.00008, "p_grundmedizin", 0.00004, "p_unterhaltungselektronik", 0.00004);
 
   public static final long STATS_SNAPSHOT_INTERVAL_MS = 10000;
   public static final int STATS_HISTORY_LIMIT = 400;
+
+  /**
+   * Aufbewahrungsfristen für Benachrichtigungen und Nachrichten OHNE gesetztes
+   * "Beibehalten"-Kennzeichen, gezählt in SPIELZEIT (siehe
+   * {@code RetentionCleanup}, Umsetzungskonzept/15_...md, Auftrag 2). Die
+   * Zahlenwerte stehen an EINER Stelle in {@code shared/game-constants.json}
+   * (siehe {@link SharedConstants}), damit auch das Frontend sie für seine
+   * Hinweistexte kennt, ohne sie zu duplizieren.
+   *
+   * <p>Umrechnung in Realzeit bei {@code Clock.REAL_MS_PER_GAME_HOUR = 2500}:
+   * 48 Spielstunden (2 Spieltage) ≈ 2 Realminuten, 168 Spielstunden
+   * (7 Spieltage) ≈ 7 Realminuten.</p>
+   */
+  public static final double NOTIFICATION_RETENTION_GAME_HOURS = SharedConstants.notificationRetentionGameHours();
+  public static final double MESSAGE_RETENTION_GAME_HOURS = SharedConstants.messageRetentionGameHours();
 
   /** Ohne neue Produktion sinkt eine Spezialisierung nach dieser Gnadenfrist um eine Stufe pro erneut überschrittener Frist. */
   public static final long SPECIALIZATION_DECAY_GRACE_MS = 16000;

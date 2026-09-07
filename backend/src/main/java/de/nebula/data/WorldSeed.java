@@ -23,7 +23,9 @@ import de.nebula.model.Population;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.ProductionQueueEntry;
 import de.nebula.model.ProductionQueueStatus;
+import de.nebula.model.SellOrder;
 import de.nebula.model.StarSystem;
+import de.nebula.model.TradeLocationType;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 import de.nebula.model.WarehouseEntry;
@@ -48,10 +50,76 @@ public final class WorldSeed {
 
   private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
 
-  private static final List<String> STARTER_CONSUMER_GOODS = List.of("p_grundnahrung");
+  /**
+   * Grundkonsumgüter, die eine frische Heimatkolonie von Anfang an SELBST
+   * produziert (Dauerauftrag mit {@code requeueOnComplete}) UND per
+   * Auto-Relist-Verkaufsorder am eigenen Depot anbietet – siehe
+   * {@link #starterSellOrders} und Umsetzungskonzept/15_...md, Auftrag 1.
+   *
+   * <p>Bewusst NUR die beiden billigen Tier-2-Güter aus
+   * {@code GameConstants.CONSUMER_GOODS_ORDER}: das dritte
+   * ({@code p_unterhaltungselektronik}) ist Tier 5 mit tiefer Vorkette
+   * (Steuerchip/Kommchip/Leiterbündel/Polymergrundstoff …) und würde die
+   * SEQUENTIELLE Produktionswarteschlange der Kolonie über lange Zeit
+   * blockieren und damit ausgerechnet die Nahrungsproduktion aushungern.
+   * Diesen Zweig baut der Kommandant selbst auf, sobald seine Industrie
+   * es hergibt.</p>
+   */
+  private static final List<String> STARTER_CONSUMER_GOODS = List.of("p_grundnahrung", "p_grundmedizin");
   private static final double STARTER_CONSUMER_GOODS_QUANTITY = 5;
-  private static final double STARTER_ELERIUM_QUANTITY = 1;
-  private static final Map<String, Double> STARTER_WAREHOUSE_STOCK = Map.of("p_grundnahrung", 50.0);
+  /**
+   * Stabilisiertes Elerium je Warteschlangen-Umlauf. Seit dem Minimalstart
+   * (Umsetzungskonzept/17_...md) dauert ein Umlauf der Startaufträge bei
+   * Industriekomplex 1 rund 134 Spielstunden (Grundnahrung 55 h + Grundmedizin
+   * 53 h + 3 × 9 h Elerium); Infrastruktur 2 verbraucht in dieser Zeit
+   * 0,0119 × 134 ≈ 1,6 Stück. Mit nur 1 Stück je Umlauf (früherer Wert) lief
+   * die 25er-Reserve in ≈ 5 Realstunden leer, danach Blackout-Todesspirale
+   * (Produktion ×0,1 kann kein Elerium mehr nachliefern). 3 Stück je Umlauf
+   * decken den Bedarf bis Infrastruktur 3 (0,0198/h ≈ 2,7 je Umlauf) mit Puffer.
+   */
+  private static final double STARTER_ELERIUM_QUANTITY = 3;
+
+  /** Gesamter Startbestand je Grundkonsumgut, aufgeteilt in Lager + sofort eingestellte Verkaufsorder. */
+  private static final double STARTER_CONSUMER_GOODS_STOCK = 50;
+  /**
+   * Menge je Start-Verkaufsorder (aus {@link #STARTER_CONSUMER_GOODS_STOCK}
+   * reserviert, Rest bleibt im Lager als Puffer für das erste Auto-Relist).
+   * {@code EconomyTick.runConsumption} kauft je Tick höchstens
+   * {@code ceil(Bedarf)} = 1 Stück je Gut (Startbevölkerung 420 ⇒ Bedarf
+   * 0,168 bzw. 0,063 Stück/Tick), 20 Stück puffern also rund 20 Ticks, bevor
+   * die Order schlafend wird und aus dem Lager nachgefüllt werden muss.
+   */
+  private static final double STARTER_SELL_ORDER_QUANTITY = 20;
+  /**
+   * Preis je Stück – mit Umsetzungskonzept/17_...md, Teil C strukturell
+   * hergeleitet. Geld wird im Spiel nicht vernichtet, sondern kreist:
+   * Löhne, Gebäude- und Flottenunterhalt fließen vom Spieler- ins
+   * Bevölkerungs-Wallet, zurück kommt es NUR über den Konsum. Neues Geld
+   * entsteht ausschließlich beim Bevölkerungswachstum über den bisherigen
+   * Höchststand ({@code CREDITS_PER_NEW_INHABITANT}); am Wohnraum-Limit
+   * versiegt diese Quelle. Im Gleichgewicht muss der Konsum die Abflüsse
+   * deshalb EXAKT decken – ein dauerhafter Überschuss der einen Seite ist
+   * zwangsläufig das Verarmen der anderen.
+   *
+   * <p>Bilanz je Tick ({@code TICK_GAME_HOURS} = 0,4): Einnahme =
+   * {@code Bevölkerung × (0,00008 + 0,00004) × Preis} (nur Grundnahrung und
+   * Grundmedizin werden geliefert), Abfluss = Löhne
+   * {@code Bevölkerung × 0,008} + Gebäudeunterhalt (Wohnkomplex 1,5 +
+   * Infrastruktur 2×1,5 + Industrie 3,0 = 7,5/Spielstunde ⇒ 3,0) +
+   * Flottenunterhalt (0,2 je Schiff an der Kolonie). Gleichgewichtspreis
+   * {@code P* = (0,008·Bev + 3,0 + 0,2·Schiffe) / (0,00012·Bev)}: bei der
+   * eingeschwungenen Bevölkerung (Wohnkomplex 1 ⇒ 200 Einwohner) und der
+   * Startflotte (13 Schiffe) sind das <b>300 Credits/Stück</b>.</p>
+   *
+   * <p>Während der Aufbauphase (120 → 200 Einwohner) liegt der
+   * Gleichgewichtspreis höher (456 bei 120), die Kolonie macht dort also ein
+   * kleines, sich selbst korrigierendes Minus von ≈ 600 Credits – gedeckt aus
+   * dem Startguthaben und dem gleichzeitig geschöpften Wachstumsgeld
+   * (80 × 8 = 640 Cr). Verworfene Werte: 20 (Spieler-Wallet nach ≈ 20
+   * Realminuten leer) und 500 (Spieler +3,1/Tick, dafür Bevölkerungs-Wallet
+   * 1865 → 263 in 10 Minuten – dieselbe Krankheit mit vertauschten Rollen).</p>
+   */
+  private static final double STARTER_SELL_ORDER_PRICE = 300;
 
   private static final double SEALED_ELERIUM_RESERVE_HOME = 25;
 
@@ -122,6 +190,43 @@ public final class WorldSeed {
     e.productTypeId = "p_elerium_stabil";
     e.quantity = quantity;
     return e;
+  }
+
+  /**
+   * Wiederkehrende Verkaufsorders ({@code autoRelist}) für die
+   * Grundkonsumgüter am Depot der eigenen Heimatkolonie. Ohne sie hat die
+   * Bevölkerung NICHTS zu kaufen: {@code EconomyTick.runConsumption} kauft
+   * ausschließlich aus {@code state.sellOrders} und kann NICHT direkt aus dem
+   * Kolonielager essen – die Folge wäre Versorgung 0 ⇒ Lebensstandard 0 % ⇒
+   * {@code growthConditionFactor} bei 0,15 ⇒ Loyalitätsverfall, und das
+   * Spieler-Wallet kennte ausschließlich Abflüsse (Review-Befund, siehe
+   * Umsetzungskonzept/15_...md, Auftrag 1). Mit ihnen schließt sich der
+   * Kreislauf: Produktion → Lager → Verkaufsorder → Bevölkerung kauft →
+   * Spieler verdient; das Auto-Relist füllt die Order jeden Tick aus dem
+   * nachproduzierten Lagerbestand wieder auf
+   * ({@code MarketCommands.replenishDormantSellOrders}).
+   */
+  private static List<SellOrder> starterSellOrders(String colonyId, String systemId, String sellerId,
+                                                     String sellerName, long t, IdGenerator ids) {
+    List<SellOrder> orders = new ArrayList<>();
+    for (String productTypeId : STARTER_CONSUMER_GOODS) {
+      SellOrder o = new SellOrder();
+      o.id = ids.next("so");
+      o.systemId = systemId;
+      o.locationType = TradeLocationType.Depot;
+      o.depotColonyId = colonyId;
+      o.sellerId = sellerId;
+      o.sellerName = sellerName;
+      o.productTypeId = productTypeId;
+      o.quantity = STARTER_SELL_ORDER_QUANTITY;
+      o.remainingQuantity = STARTER_SELL_ORDER_QUANTITY;
+      o.pricePerUnit = STARTER_SELL_ORDER_PRICE;
+      o.createdAt = t;
+      o.autoRelist = true;
+      o.sourceFleetId = null;
+      orders.add(o);
+    }
+    return orders;
   }
 
   /** Bei mehr Systemen als Namen im Pool hängt ein Zähler an, statt exakte Namensdopplungen zu erzeugen. */
@@ -275,25 +380,11 @@ public final class WorldSeed {
     return result;
   }
 
-  /**
-   * Wählt eine Wohnkomplex-Stufe, die zusammen mit {@code powergridLevel} die
-   * Startbevölkerung komfortabel deckt (Ziel ~110% Infrastruktur, siehe
-   * Konzeption/07_..., §4).
-   */
-  private static int habitatLevelFor(double population, int powergridLevel, double targetPct) {
-    double habitatCap = BuildingCatalog.find("b_habitat").populationCapacityPerLevel != null
-        ? BuildingCatalog.find("b_habitat").populationCapacityPerLevel : 60;
-    double powergridCap = BuildingCatalog.find("b_powergrid").populationCapacityPerLevel != null
-        ? BuildingCatalog.find("b_powergrid").populationCapacityPerLevel : 25;
-    double remaining = population * targetPct - powergridLevel * powergridCap;
-    return (int) Math.max(1, Math.ceil(remaining / habitatCap));
-  }
-
   private record HomeworldBundle(Player player, List<Planet> planets, Colony colony, PlanetStats planetStats,
                                   Population population, PopulationMoneySupplyState moneySupplyState,
                                   List<Wallet> wallets, List<Building> buildings, List<WarehouseEntry> warehouse,
                                   List<ProductionQueueEntry> productionQueue, List<Fleet> fleets,
-                                  GroundForceGroup groundForceGroup) {
+                                  GroundForceGroup groundForceGroup, List<SellOrder> sellOrders) {
   }
 
   /**
@@ -328,7 +419,6 @@ public final class WorldSeed {
       planet.name = name;
       planet.size = PLANET_SIZES.get((int) Math.floor(rnd.next() * 4));
       planet.type = planetType;
-      planet.buildCapacity = i == 0 ? 90 : 55 + Math.floor(rnd.next() * 30);
       planet.resourceConcentration = conc;
       planet.orbitIndex = i;
       planets.add(planet);
@@ -344,9 +434,18 @@ public final class WorldSeed {
     colony.isHomeworld = true;
     player.homeworldColonyId = colony.id;
 
-    double homePopulationCount = 420;
-    int homePowergridLevel = 4;
-    int homeHabitatLevel = habitatLevelFor(homePopulationCount, homePowergridLevel, 1.1);
+    // Minimalstart (Umsetzungskonzept/17_...md): 120 Einwohner in einem
+    // Wohnkomplex Stufe 1 (Kapazität 20.000 – der Wohnraum ist im Frühspiel
+    // bewusst NICHT die Grenze; begrenzend ist die Nahrungsversorgung, die
+    // Bevölkerung plateauiert rechnerisch bei ≈ 390), Industriekomplex
+    // Stufe 1 und Infrastruktur Stufe 2 (beide Bebauungsplätze belegt, keiner
+    // frei). Keine Baustoffe im Lager – jeder weitere Ausbau kostet Baustoffe,
+    // die der Industriekomplex Stufe 1 selbst produzieren muss; der erste Zug
+    // ist deshalb zwangsläufig Infrastruktur → 3.
+    double homePopulationCount = 120;
+    int homeHabitatLevel = 1;
+    int homeIndustryLevel = 1;
+    int homeInfrastructureLevel = 2;
 
     PlanetStats planetStats = new PlanetStats();
     planetStats.colonyId = colony.id;
@@ -380,22 +479,23 @@ public final class WorldSeed {
 
     List<Building> buildings = new ArrayList<>();
     buildings.add(buildInstance(colony.id, "b_habitat", homeHabitatLevel, ids));
-    buildings.add(buildInstance(colony.id, "b_powergrid", homePowergridLevel, ids));
-    // Industriekomplex/Werft bewusst höher als ein absolutes Minimum (siehe
-    // Umsetzungskonzept/12_...md, "10-Spieler-Arbeitsteilungs-Meilenstein"):
-    // erst ab hier ist der Bau eines ersten Frachters in Arbeitsteilung
-    // innerhalb einer Spielwoche überhaupt in Reichweite.
-    buildings.add(buildInstance(colony.id, "b_industry", 4, ids));
-    buildings.add(buildInstance(colony.id, "b_shipyard", 3, ids));
-    buildings.add(buildInstance(colony.id, "b_academy", 1, ids));
+    buildings.add(buildInstance(colony.id, "b_infrastructure", homeInfrastructureLevel, ids));
+    buildings.add(buildInstance(colony.id, "b_industry", homeIndustryLevel, ids));
+    // Bewusst KEINE Werft und KEIN Ausbildungszentrum mehr (Nutzerentscheidung,
+    // Umsetzungskonzept/17_...md). Der frühere Start mit Industrie 4/Werft 3
+    // aus Dokument 12 gilt damit nicht mehr, siehe dort.
 
     List<WarehouseEntry> warehouse = new ArrayList<>();
     warehouse.add(eleriumReserveEntry(colony.id, SEALED_ELERIUM_RESERVE_HOME));
-    for (Map.Entry<String, Double> entry : STARTER_WAREHOUSE_STOCK.entrySet()) {
+    // Startbestand je Grundkonsumgut: der in die Start-Verkaufsorder
+    // reservierte Teil liegt NICHT mehr im Lager (gleiche Buchführung wie
+    // MarketCommands.createSellOrderCore), der Rest bleibt als Puffer für das
+    // erste Auto-Relist liegen.
+    for (String productTypeId : STARTER_CONSUMER_GOODS) {
       WarehouseEntry w = new WarehouseEntry();
       w.colonyId = colony.id;
-      w.productTypeId = entry.getKey();
-      w.quantity = entry.getValue();
+      w.productTypeId = productTypeId;
+      w.quantity = STARTER_CONSUMER_GOODS_STOCK - STARTER_SELL_ORDER_QUANTITY;
       warehouse.add(w);
     }
 
@@ -410,7 +510,8 @@ public final class WorldSeed {
 
     return new HomeworldBundle(player, planets, colony, planetStats, population, moneySupplyState,
         List.of(playerWallet, popWallet), buildings, warehouse, starterProductionQueue(colony.id, ids),
-        List.of(freighter, combat), groundForceGroup);
+        List.of(freighter, combat), groundForceGroup,
+        starterSellOrders(colony.id, homeSystemId, player.id, player.name, t, ids));
   }
 
   /** Ergebnis von {@link #createWorldSeed}: eine komplett neu generierte Galaxie samt erstem Kommandanten. */
@@ -429,6 +530,8 @@ public final class WorldSeed {
     public List<Gateway> gateways;
     public List<Fleet> fleets;
     public List<GroundForceGroup> groundForceGroups;
+    /** Start-Verkaufsorders für Grundkonsumgüter, siehe {@link #starterSellOrders}. */
+    public List<SellOrder> sellOrders;
   }
 
   public static Seed createWorldSeed(String commanderName, String homeworldName, IdGenerator ids) {
@@ -502,6 +605,7 @@ public final class WorldSeed {
     seed.productionQueue = home.productionQueue();
     seed.fleets = home.fleets();
     seed.groundForceGroups = List.of(home.groundForceGroup());
+    seed.sellOrders = home.sellOrders();
     seed.gateways = gateways;
     return seed;
   }
@@ -523,6 +627,8 @@ public final class WorldSeed {
     public List<ProductionQueueEntry> productionQueue;
     public List<Fleet> fleets;
     public GroundForceGroup groundForceGroup;
+    /** Start-Verkaufsorders für Grundkonsumgüter, siehe {@link #starterSellOrders}. */
+    public List<SellOrder> sellOrders;
   }
 
   /**
@@ -590,6 +696,7 @@ public final class WorldSeed {
     seed.productionQueue = home.productionQueue();
     seed.fleets = home.fleets();
     seed.groundForceGroup = home.groundForceGroup();
+    seed.sellOrders = home.sellOrders();
     return seed;
   }
 

@@ -42,19 +42,25 @@ final class Catalog {
   static final Map<String, Double> SHIP_MILITARY_WEIGHT = Map.of(
       "p_corvette", 1.0, "p_destroyer", 2.0, "p_cruiser", 4.0);
 
-  /** Ausbaupriorität und Obergrenzen je Gebäudetyp – "bis zu sinnvollen Obergrenzen", nicht bis Maxstufe (dort 15-20). */
+  /**
+   * Ausbaupriorität und Obergrenzen je Gebäudetyp (Umsetzungskonzept/17_...md):
+   * aus dem Minimalstart (nur Wohnkomplex 1 + Infrastruktur 2) heraus zuerst
+   * der Industriekomplex – ohne ihn gibt es weder Produktion noch Baustoffe.
+   * Infrastruktur hat keine eigene Obergrenze in der Liste: sie wird gebaut,
+   * sobald ein anderer Ausbau mangels Bebauungsplatz abgelehnt wird.
+   */
   static final Map<String, Integer> BUILD_CAP;
 
   static {
     Map<String, Integer> caps = new LinkedHashMap<>();
-    caps.put("b_industry", 10);
-    caps.put("b_shipyard", 7);
-    caps.put("b_habitat", 12);
-    caps.put("b_powergrid", 8);
+    caps.put("b_industry", 8);
+    caps.put("b_shipyard", 5);
+    caps.put("b_habitat", 6);
     BUILD_CAP = Map.copyOf(caps);
   }
 
-  static final List<String> BUILD_PRIORITY = List.of("b_industry", "b_shipyard", "b_habitat", "b_powergrid");
+  static final List<String> BUILD_PRIORITY = List.of("b_industry", "b_shipyard", "b_habitat");
+  static final String INFRASTRUCTURE = "b_infrastructure";
 
   /** Obergrenze der insgesamt gehaltenen Kampfschiffe (Summe aller drei Klassen) – verhindert unbegrenztes Werft-Wachstum. */
   static final int MAX_COMBAT_SHIPS = 40;

@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  Battle, Blockade, BlockadeAnchor, Building, BuildingType, ChainPlan, Colony, DiplomaticRelation, DiplomaticStatus, Fleet, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, Id, Message, PeaceOffer, Planet, PlanetStats, Player, Population,
   PopulationMoneySupplyState, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, UniverseStatSnapshot, Wallet,
@@ -10,14 +10,14 @@ import {
 /**
  * Vertrag des Backends aus Sicht des Clients.
  *
- * Diese Schnittstelle ist die Kapselgrenze zwischen UI und Simulation: Jede
+ * Diese Schnittstelle ist die Kapselgrenze zwischen UI und Backend: Jede
  * Komponente hängt ausschließlich von `GameApi` (über den Injection-Token
- * `GAME_API`) ab, nie von der konkreten Implementierung. Aktuell erfüllt
- * `SimulatedGameApiService` diesen Vertrag rein im Browser-Speicher; ein
- * späteres echtes Backend müsste nur eine `HttpGameApiService`-Klasse
- * bereitstellen, die dieselbe Schnittstelle über REST/WebSocket erfüllt
- * (vgl. Umsetzungskonzept/00_..., §5 – Order/Job-Rückgabeobjekte,
- * Push-Topics). Kein anderer Teil der App müsste sich ändern.
+ * `GAME_API`) ab, nie von der konkreten Implementierung. Erfüllt wird der
+ * Vertrag ausschließlich von `WebSocketGameApiService` gegen das
+ * Quarkus-Backend – die früher parallel existierende Browser-Simulation
+ * wurde gelöscht, weil zwei Regelimplementierungen zwangsläufig
+ * auseinanderlaufen (Umsetzungskonzept/15_...md, Auftrag 3). Alle
+ * Spielregeln leben damit ausschließlich im Backend.
  *
  * Query-Methoden liefern reaktive `Signal`s (analog zu einem serverseitig
  * gepushten/gepollten Zustand). Befehle (mutierende Aktionen) sind
@@ -32,8 +32,8 @@ export interface GameApi {
   /**
    * Alle in der gemeinsamen Galaxie registrierten Kommandanten (für die
    * Login-Auswahl) – reaktiv, da `registerPlayer` sie zur Laufzeit erweitert.
-   * Beim allerersten Start dieses Browsers wird automatisch genau einer
-   * registriert (aber nicht eingeloggt), siehe `SimulatedGameApiService`.
+   * Der ERSTE `registerPlayer`-Aufruf überhaupt erzeugt serverseitig die
+   * komplette Galaxie (siehe `GameSocket.handleRegisterPlayer`).
    */
   players(): Signal<Player[]>;
   /** Meldet den gewählten Kommandanten an. Wechselt dabei weg von einem eventuell zuvor angemeldeten anderen. */
@@ -48,7 +48,7 @@ export interface GameApi {
    * Kommandanten, Systemmarkt) bleibt unverändert bestehen.
    */
   registerPlayer(commanderName: string, homeworldName: string): Promise<void>;
-  /** Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) – danach wieder Startseite mit genau einem neu registrierten Standard-Kommandanten. */
+  /** Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) – danach leere Galaxie, der nächste `registerPlayer`-Aufruf erzeugt sie neu. */
   resetGame(): Promise<void>;
 
   // --- Katalog (statisch, synchron) --------------------------------------
@@ -65,6 +65,13 @@ export interface GameApi {
   colonyStats(id: Id): Signal<PlanetStats | undefined>;
   /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, kein Snapshot-Feld. */
   consumptionCoverage(colonyId: Id): Signal<Record<Id, number>>;
+  /**
+   * Fertig berechnete Aufschlüsselung ALLER Produktionstempo-Faktoren dieser
+   * Kolonie (Bevölkerung/Workforce, Gebäudestufe, Spezialisierung, Fördergüte,
+   * Blackout, Ausbaukosten-Vorschau) für die Transparenz-Panels – kommt
+   * vollständig aus dem Backend, damit die Formeln nur dort existieren.
+   */
+  colonySpeedBreakdown(colonyId: Id): Signal<ColonySpeedBreakdown | null>;
   planet(id: Id): Signal<Planet | undefined>;
   planetsInSystem(systemId: Id): Signal<Planet[]>;
   colonizePlanet(planetId: Id): Promise<Colony>;
@@ -76,11 +83,18 @@ export interface GameApi {
   demolishBuilding(colonyId: Id, buildingId: Id): Promise<void>;
   activateDefense(colonyId: Id, buildingId: Id): Promise<void>;
   deactivateDefense(colonyId: Id, buildingId: Id): Promise<void>;
-  overbuildFactor(planetId: Id): Signal<number>;
+  /** Bebauungsplätze der Kolonie (Umsetzungskonzept/17_...md) – DIE strategische Größe der Bebauung, vom Backend berechnet. */
+  buildSlots(colonyId: Id): Signal<BuildSlots | null>;
   /** Wohnkapazität aus Infrastructure-Gebäuden – Energienetz-Anteil bereits um `powerCoverage` gemindert. */
   housingCapacity(colonyId: Id): Signal<number>;
   /** 0..1: wie viel des Elerium-Bedarfs des Energienetzes zuletzt gedeckt war (1 = voll versorgt, kein Energienetz = 1). */
   powerCoverage(colonyId: Id): Signal<number>;
+  /**
+   * true = das Energienetz dieser Kolonie ist unterversorgt ("Blackout").
+   * Die Schwelle ist eine Spielregel (`Formulas.BLACKOUT_THRESHOLD`) und wird
+   * deshalb vom Backend entschieden, statt im Client nachgebildet zu werden.
+   */
+  isBlackout(colonyId: Id): Signal<boolean>;
   /** Aktueller Elerium-Energiezelle-Bedarf des Energienetzes pro Spielstunde (0 ohne Energienetz) – unabhängig davon, ob er gerade gedeckt ist (siehe `powerCoverage`). */
   powerUpkeepPerHour(colonyId: Id): Signal<number>;
 
@@ -160,6 +174,12 @@ export interface GameApi {
   /** Reine Vorschau (keine Bewegung) für "Bewegen" auf der Galaxiekarte: Sprunganzahl + geschätzte Reisezeit (ms) zu einem Zielsystem – `null`, wenn kein Gateway-Pfad bekannt ist. Dieselbe Berechnung wie `moveFleet`, damit Vorschau und tatsächliche Ankunft nie auseinanderlaufen. */
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null>;
   /**
+   * Frachtkapazität/Auslastung einer Flotte und die maximal ladbare Stückzahl
+   * des angegebenen Produkts – vom Backend berechnet (dieselbe Regel, die
+   * `loadCargo` durchsetzt), statt sie im Client nachzubilden.
+   */
+  fleetCargoCapacity(fleetId: Id, productTypeId: Id | null): Signal<FleetCargoCapacity | null>;
+  /**
    * Bewegt eine im System angekommene (nicht unterwegs befindliche) Flotte
    * INSTANT (keine Flugzeit) zwischen den drei Orten desselben Systems –
    * Systemhandelsposten, Orbit eines beliebigen Planeten (auch unbesiedelt)
@@ -213,7 +233,7 @@ export interface GameApi {
   cancelSellOrder(orderId: Id): Promise<void>;
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
 
-  // --- Diplomatie (Mechanik/06_..., vereinfacht, siehe SimulatedGameApiService) ---
+  // --- Diplomatie (Mechanik/06_..., vereinfacht, siehe DiplomacyCommands im Backend) ---
   /** Status gegenüber einem beliebigen anderen Kommandanten – `'Peace'` ohne Beziehungseintrag (impliziter Grundzustand). */
   diplomaticStatus(otherPlayerId: Id): Signal<DiplomaticStatus>;
   /** Alle laufenden Kriege des angemeldeten Kommandanten. */
@@ -265,6 +285,8 @@ export interface GameApi {
   unreadNotificationCount(): Signal<number>;
   markNotificationRead(id: Id): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
+  /** "Beibehalten" umschalten – schützt die Benachrichtigung vor der automatischen Löschung nach 2 Spieltagen. */
+  setNotificationKeep(id: Id, keep: boolean): Promise<void>;
 
   // --- Nachrichten (ausschließlich Spieler-zu-Spieler, keine Gruppen-/Broadcast-Nachrichten) ---
   /** Empfangene Nachrichten des angemeldeten Kommandanten, neueste zuerst. */
@@ -275,6 +297,8 @@ export interface GameApi {
   sendMessage(toPlayerId: Id, subject: string, body: string): Promise<void>;
   /** Nur der Empfänger darf seine eigene Nachricht als gelesen markieren. */
   markMessageRead(id: Id): Promise<void>;
+  /** "Beibehalten" umschalten – schützt die Nachricht vor der automatischen Löschung nach 7 Spieltagen. Absender UND Empfänger dürfen das setzen. */
+  setMessageKeep(id: Id, keep: boolean): Promise<void>;
 
   // --- Universums-Statistik ------------------------------------------
   /** Zeitreihe aggregierter Stabilitätskennzahlen über die gesamte Galaxie. */

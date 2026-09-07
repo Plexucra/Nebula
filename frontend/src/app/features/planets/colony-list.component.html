@@ -21,7 +21,7 @@
       @if (stats(colony.id)(); as s) {
         <div class="stat-row">
           <div class="stat-item">
-            <span class="label">Infra</span>
+            <span class="label">Wohnraum</span>
             <div class="stat-bar"><span [style.width.%]="s.infrastructurePct"></span></div>
           </div>
           <div class="stat-item">
@@ -56,7 +56,7 @@
           <div class="planet-row">
             <div>
               <strong>{{ planet.name }}</strong>
-              <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }} · Bebauungskapazität {{ planet.buildCapacity }}</span>
+              <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }}</span>
             </div>
             <button
               class="primary small"

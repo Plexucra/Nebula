@@ -1,0 +1,190 @@
+[
+  {
+    "id": "b_infrastructure",
+    "name": "Infrastruktur",
+    "category": "Infrastructure",
+    "description": "Energie-, Versorgungs- und Erschließungsnetz der Kolonie. Jede Stufe schafft Bebauungsplätze für alle anderen Gebäude, verbraucht dafür laufend Stabilisiertes Elerium (überlinear steigend) und ist planetweit durch die Planetengröße begrenzt.",
+    "baseCostPerLevel": 90,
+    "baseHoursPerLevel": 0.8,
+    "upkeepPerLevel": 1.5,
+    "productionSlotsPerLevel": null,
+    "housingCapacityPerLevel": null,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_leitermetall",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_leiterbuendel",
+        "baseQuantity": 1,
+        "fromLevel": 4
+      },
+      {
+        "productTypeId": "p_energienetzbaugruppe",
+        "baseQuantity": 1,
+        "fromLevel": 8
+      }
+    ]
+  },
+  {
+    "id": "b_habitat",
+    "name": "Wohnkomplex",
+    "category": "Housing",
+    "description": "Lebensraum für die Kolonialbevölkerung. Stufe 1 fasst 20.000 Einwohner, jede weitere Stufe verdoppelt die Kapazität (Stufe 20 ≈ 10,5 Milliarden) – Kosten und Baustoffe verdoppeln sich mit.",
+    "baseCostPerLevel": 120,
+    "baseHoursPerLevel": 1,
+    "upkeepPerLevel": 1.5,
+    "productionSlotsPerLevel": null,
+    "housingCapacityPerLevel": 20000,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_glaswerkstoff",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_druckhabitatsegment",
+        "baseQuantity": 1,
+        "fromLevel": 5
+      }
+    ]
+  },
+  {
+    "id": "b_industry",
+    "name": "Industriekomplex",
+    "category": "ProductionFacility",
+    "description": "Extraktion und Fertigung von Rohstoffen, Bauteilen und Konsumgütern.",
+    "baseCostPerLevel": 160,
+    "baseHoursPerLevel": 1.2,
+    "upkeepPerLevel": 3,
+    "productionSlotsPerLevel": 1,
+    "housingCapacityPerLevel": null,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_strukturplatte",
+        "baseQuantity": 1,
+        "fromLevel": 4
+      },
+      {
+        "productTypeId": "p_fertigungsmaschinenbaugruppe",
+        "baseQuantity": 1,
+        "fromLevel": 8
+      }
+    ]
+  },
+  {
+    "id": "b_shipyard",
+    "name": "Werft",
+    "category": "ProductionFacility",
+    "description": "Voraussetzung für den Bau von Schiffen jeder Klasse.",
+    "baseCostPerLevel": 260,
+    "baseHoursPerLevel": 2,
+    "upkeepPerLevel": 5,
+    "productionSlotsPerLevel": 1,
+    "housingCapacityPerLevel": null,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_leichtmetalllegierung",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_strukturplatte",
+        "baseQuantity": 1,
+        "fromLevel": 4
+      },
+      {
+        "productTypeId": "p_leichtrahmen",
+        "baseQuantity": 1,
+        "fromLevel": 4
+      },
+      {
+        "productTypeId": "p_strukturzelle",
+        "baseQuantity": 1,
+        "fromLevel": 7
+      }
+    ]
+  },
+  {
+    "id": "b_academy",
+    "name": "Ausbildungszentrum",
+    "category": "ProductionFacility",
+    "description": "Voraussetzung für die Rekrutierung und Ausbildung von Bodentruppen.",
+    "baseCostPerLevel": 140,
+    "baseHoursPerLevel": 1,
+    "upkeepPerLevel": 2,
+    "productionSlotsPerLevel": 1,
+    "housingCapacityPerLevel": null,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_keramikwerkstoff",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_druckhabitatsegment",
+        "baseQuantity": 1,
+        "fromLevel": 5
+      }
+    ]
+  },
+  {
+    "id": "b_defense",
+    "name": "Planetare Abwehr",
+    "category": "PlanetaryDefense",
+    "description": "Autonome Abwehrsysteme gegen Landungsversuche. Muss nach Ausbau aktiviert werden (Anlaufzeit).",
+    "baseCostPerLevel": 300,
+    "baseHoursPerLevel": 2,
+    "upkeepPerLevel": 6,
+    "productionSlotsPerLevel": null,
+    "housingCapacityPerLevel": null,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_hochtemplegierung",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_panzersegment",
+        "baseQuantity": 1,
+        "fromLevel": 3
+      },
+      {
+        "productTypeId": "p_panzerbaugruppe",
+        "baseQuantity": 1,
+        "fromLevel": 6
+      }
+    ]
+  }
+]

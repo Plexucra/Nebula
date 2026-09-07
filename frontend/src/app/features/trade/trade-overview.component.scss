@@ -14,3 +14,14 @@
 .panel:not(:first-child) { margin-top: 16px; }
 
 .small-tag { padding: 1px 6px; font-size: 9.5px; margin-left: 6px; }
+
+/* Mobil (Umsetzungskonzept/16_...md): die fünfspaltige Order-Zeile
+   (Produkt | Menge | Preis | Verkäufer | Aktion) passt bei 390px nicht und
+   wird gestapelt. Desktop unverändert. */
+@media (max-width: 720px) {
+  .order-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+  .order-row > :nth-child(4) { grid-column: 1 / -1; }
+}

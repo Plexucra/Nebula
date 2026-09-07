@@ -64,6 +64,23 @@
     </dependencies>
 
     <build>
+        <resources>
+            <!-- Eigene Ressourcen des Backends. -->
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!--
+              Gemeinsame Ausgangsdaten aus /shared (Kataloge + Konstanten,
+              siehe Umsetzungskonzept/15_...md, Auftrag 3): gehören bewusst
+              keiner der beiden Anwendungen und werden hier unter dem Pfad
+              "shared/..." in den Klassenpfad kopiert, von wo CatalogJson und
+              SharedConstants sie zur Laufzeit lesen.
+            -->
+            <resource>
+                <directory>${project.basedir}/../shared</directory>
+                <targetPath>shared</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>

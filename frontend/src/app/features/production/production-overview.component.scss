@@ -122,3 +122,9 @@
 
   input[type='checkbox'] { flex: 0 0 auto; width: auto; }
 }
+
+/* Mobil (Umsetzungskonzept/16_...md): Produktkacheln enger rastern. Desktop unverändert. */
+@media (max-width: 720px) {
+  .tier-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .summary-row { grid-template-columns: 1fr; gap: 2px; }
+}

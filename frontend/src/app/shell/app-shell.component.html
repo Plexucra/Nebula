@@ -1,5 +1,7 @@
 <div class="shell">
   <header class="topbar">
+    <button class="ghost small nav-toggle" type="button" (click)="toggleMobileNav()"
+            [attr.aria-expanded]="mobileNavOpen()" aria-label="Navigation ein-/ausblenden">☰</button>
     <div class="brand">
       <span class="brand-mark">NEBULA</span>
       <span class="brand-sub">{{ player()?.name }}</span>
@@ -37,6 +39,10 @@
                     @if (n.link) {
                       <a class="notification-link" [routerLink]="n.link">Kampfbericht öffnen →</a>
                     }
+                    <label class="keep-toggle" (click)="$event.stopPropagation()" [title]="keepHint">
+                      <input type="checkbox" [checked]="n.keep" (change)="toggleNotificationKeep(n.id, !n.keep)" />
+                      <span>Beibehalten</span>
+                    </label>
                   </div>
                 </div>
               } @empty { <p class="empty-hint">Keine Benachrichtigungen.</p> }
@@ -50,9 +56,12 @@
   </header>
 
   <div class="body">
-    <nav class="sidenav">
+    @if (mobileNavOpen()) {
+      <div class="nav-backdrop" (click)="closeMobileNav()"></div>
+    }
+    <nav class="sidenav" [class.mobile-open]="mobileNavOpen()">
       @for (item of navItems; track item.path) {
-        <a class="nav-item" [routerLink]="item.path" routerLinkActive="active">
+        <a class="nav-item" [routerLink]="item.path" routerLinkActive="active" (click)="closeMobileNav()">
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-label">{{ item.label }}</span>
           @if (item.path === '/nachrichten' && unreadMessageCount() > 0) {

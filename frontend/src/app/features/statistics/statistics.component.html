@@ -86,7 +86,7 @@
             </span>
             <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
             <span>
-              @if (isBlackout(row.powerCoverage())) { <span class="tag blackout" title="Energienetz nicht ausreichend versorgt – Produktion läuft nur mit 10%, Sicherheit/Lebensstandard halbiert.">Blackout</span> }
+              @if (row.blackout()) { <span class="tag blackout" title="Energienetz nicht ausreichend versorgt – Produktion läuft nur mit 10%, Sicherheit/Lebensstandard halbiert.">Blackout</span> }
               @if (isStruggling(row.stats())) {
                 <span class="tag bad" [title]="strugglingReason(row.stats())">gefährdet</span>
               } @else {

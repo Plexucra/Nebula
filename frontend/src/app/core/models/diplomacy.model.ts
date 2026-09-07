@@ -4,7 +4,7 @@ export type DiplomaticStatus = 'Peace' | 'War';
 
 /**
  * Genau eine Beziehung je ungeordnetem Kommandanten-Paar (siehe
- * `SimulatedGameApiService.relationKey`, das `playerAId`/`playerBId` beim
+ * `DiplomacyCommands.relationKey` im Backend, das `playerAId`/`playerBId` beim
  * Anlegen kanonisch sortiert) – ohne Eintrag gilt implizit `'Peace'`
  * (Standardzustand, siehe `diplomaticStatus`). `War` entsteht einseitig
  * (`declareWar`), `Peace` erst nach beidseitiger Zustimmung (siehe

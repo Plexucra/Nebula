@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Id, Player } from '../../core/models';
+import { MESSAGE_RETENTION_GAME_HOURS, gameHoursToGameDays, gameHoursToRealMinutes } from '../../core/shared-constants';
 import { UiClockService } from '../../core/ui/ui-clock.service';
 
 type Tab = 'inbox' | 'sent';
@@ -82,6 +83,24 @@ export class MessagesComponent {
     if (!to) return;
     await this.run('send', () => this.api.sendMessage(to, this.composeSubject(), this.composeBody()));
     if (!this.error()) this.closeCompose();
+  }
+
+  /**
+   * Hinweistext zur Aufbewahrungsfrist – Zahlen kommen aus derselben
+   * `shared/game-constants.json`, die auch das Backend liest, statt hier
+   * erneut hartkodiert zu werden.
+   */
+  protected readonly keepHint =
+    `Ohne "Beibehalten" wird diese Nachricht nach ${gameHoursToGameDays(MESSAGE_RETENTION_GAME_HOURS)} Spieltagen `
+    + `(ca. ${Math.round(gameHoursToRealMinutes(MESSAGE_RETENTION_GAME_HOURS))} Minuten Echtzeit) automatisch gelöscht.`;
+
+  /**
+   * "Beibehalten": ohne diesen Schalter räumt der Server Nachrichten nach
+   * 7 Spieltagen automatisch weg (siehe `RetentionCleanup` im Backend).
+   * Absender UND Empfänger dürfen ihn setzen – beide sehen dieselbe Nachricht.
+   */
+  protected async toggleKeep(id: Id, keep: boolean): Promise<void> {
+    await this.run(`keep:${id}`, () => this.api.setMessageKeep(id, keep));
   }
 
   protected async openAndMarkRead(id: Id): Promise<void> {

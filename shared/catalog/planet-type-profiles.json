@@ -1,0 +1,1344 @@
+{
+  "resourceOrder" : [ "res_ferrometall", "res_leichtmetall", "res_refraktaer", "res_leitmetall", "res_edelmetall", "res_seltenerden", "res_technometall", "res_silikat", "res_kohlenstoff", "res_salz", "res_radionuklid", "res_eis", "res_atmosphaere", "res_edelgas", "res_kohlenwasserstoff", "res_isotopentraeger", "res_elerium" ],
+  "rangesByPlanetType" : {
+    "TemperierterBiosphaerenplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 35.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 45.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 45.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 60.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 80.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 80.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 30.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 20.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 15.0,
+        "max" : 30.0
+      }
+    } ],
+    "Silikatplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 35.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 30.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 70.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 5.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    } ],
+    "Wuestenplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 40.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 65.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 55.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 5.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 15.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    } ],
+    "Ozeanplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 35.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 90.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 70.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 25.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 30.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 8.0,
+        "max" : 25.0
+      }
+    } ],
+    "Eisplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 2.0,
+        "max" : 15.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 85.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 35.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 45.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    } ],
+    "Vulkanplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 55.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 30.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 50.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 35.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 30.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 65.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 30.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 40.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    } ],
+    "Metallplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 30.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 50.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 55.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 25.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 1.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 1.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 5.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 1.0,
+        "max" : 15.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    } ],
+    "Kohlenstoffplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 25.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 10.0,
+        "max" : 30.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 10.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 20.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 70.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    } ],
+    "Supererde" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 45.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 30.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 40.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 35.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 55.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 35.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 20.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 35.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 20.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 25.0,
+        "max" : 60.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 20.0,
+        "max" : 60.0
+      }
+    } ],
+    "Planetoid" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 10.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 10.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 10.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 10.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 5.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 5.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 1.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 1.0,
+        "max" : 65.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 1.0,
+        "max" : 70.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 1.0,
+        "max" : 80.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 5.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 2.0,
+        "max" : 65.0
+      }
+    } ],
+    "Gasriese" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 8.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 8.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 1.0,
+        "max" : 6.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 6.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 5.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 1.0,
+        "max" : 6.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 8.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 1.0,
+        "max" : 10.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 45.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 1.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 1.0,
+        "max" : 8.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 30.0,
+        "max" : 75.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 90.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 65.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 70.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 3.0,
+        "max" : 25.0
+      }
+    } ],
+    "Eisriese" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 12.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 12.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 1.0,
+        "max" : 10.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 10.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 1.0,
+        "max" : 8.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 1.0,
+        "max" : 12.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 2.0,
+        "max" : 15.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 1.0,
+        "max" : 15.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 50.0,
+        "max" : 90.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 1.0,
+        "max" : 12.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 70.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 90.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 65.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 75.0,
+        "max" : 100.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 8.0,
+        "max" : 35.0
+      }
+    } ],
+    "Schwefelplanet" : [ {
+      "resourceTypeId" : "res_ferrometall",
+      "range" : {
+        "min" : 25.0,
+        "max" : 55.0
+      }
+    }, {
+      "resourceTypeId" : "res_leichtmetall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_refraktaer",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_leitmetall",
+      "range" : {
+        "min" : 20.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelmetall",
+      "range" : {
+        "min" : 5.0,
+        "max" : 20.0
+      }
+    }, {
+      "resourceTypeId" : "res_seltenerden",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_technometall",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_silikat",
+      "range" : {
+        "min" : 55.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_salz",
+      "range" : {
+        "min" : 60.0,
+        "max" : 95.0
+      }
+    }, {
+      "resourceTypeId" : "res_radionuklid",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_eis",
+      "range" : {
+        "min" : 5.0,
+        "max" : 35.0
+      }
+    }, {
+      "resourceTypeId" : "res_atmosphaere",
+      "range" : {
+        "min" : 45.0,
+        "max" : 85.0
+      }
+    }, {
+      "resourceTypeId" : "res_edelgas",
+      "range" : {
+        "min" : 15.0,
+        "max" : 50.0
+      }
+    }, {
+      "resourceTypeId" : "res_kohlenwasserstoff",
+      "range" : {
+        "min" : 10.0,
+        "max" : 40.0
+      }
+    }, {
+      "resourceTypeId" : "res_isotopentraeger",
+      "range" : {
+        "min" : 15.0,
+        "max" : 45.0
+      }
+    }, {
+      "resourceTypeId" : "res_elerium",
+      "range" : {
+        "min" : 10.0,
+        "max" : 35.0
+      }
+    } ]
+  }
+}

@@ -50,6 +50,10 @@
           </div>
           <div class="message-subject">{{ m.subject }}</div>
           <div class="message-body">{{ m.body }}</div>
+          <label class="keep-toggle" (click)="$event.stopPropagation()" [title]="keepHint">
+            <input type="checkbox" [checked]="m.keep" (change)="toggleKeep(m.id, !m.keep)" />
+            <span>Beibehalten</span>
+          </label>
         </div>
       } @empty { <p class="empty-hint">Posteingang ist leer.</p> }
     } @else {
@@ -61,6 +65,10 @@
           </div>
           <div class="message-subject">{{ m.subject }}</div>
           <div class="message-body">{{ m.body }}</div>
+          <label class="keep-toggle" (click)="$event.stopPropagation()" [title]="keepHint">
+            <input type="checkbox" [checked]="m.keep" (change)="toggleKeep(m.id, !m.keep)" />
+            <span>Beibehalten</span>
+          </label>
         </div>
       } @empty { <p class="empty-hint">Noch keine Nachrichten gesendet.</p> }
     }

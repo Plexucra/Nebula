@@ -143,6 +143,7 @@ public class GameSocket {
       case "moneySupplyState" -> ColonyCommands.moneySupplyState(state, text(payload, "planetId"));
       case "populationWallet" -> GameQueries.findWallet(state, WalletOwnerType.Population, text(payload, "colonyId"));
       case "consumptionCoverage" -> ColonyCommands.consumptionCoverage(state, text(payload, "colonyId"));
+      case "colonySpeedBreakdown" -> ColonyCommands.colonySpeedBreakdown(state, text(payload, "colonyId"));
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
@@ -152,9 +153,10 @@ public class GameSocket {
 
       // --- Bebauung --------------------------------------------------------------
       case "buildings" -> BuildingCommands.buildingsForColony(state, text(payload, "colonyId"));
-      case "overbuildFactor" -> BuildingCommands.overbuildFactor(state, text(payload, "planetId"));
+      case "buildSlots" -> BuildingCommands.buildSlots(state, text(payload, "colonyId"));
       case "housingCapacity" -> de.nebula.state.PowerGrid.effectiveHousingCapacity(state, text(payload, "colonyId"));
       case "powerCoverage" -> de.nebula.state.PowerGrid.coverageRatio(state, text(payload, "colonyId"));
+      case "isBlackout" -> de.nebula.state.PowerGrid.isBlackout(state, text(payload, "colonyId"));
       case "powerUpkeepPerHour" -> de.nebula.state.PowerGrid.powerUpkeepPerHour(state, text(payload, "colonyId"));
       case "queueBuilding" -> {
         BuildingCommands.queueBuilding(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "buildingTypeId"));
@@ -235,6 +237,10 @@ public class GameSocket {
         NotificationCommands.markAllNotificationsRead(state, requirePlayerId());
         yield null;
       }
+      case "setNotificationKeep" -> {
+        NotificationCommands.setNotificationKeep(state, requirePlayerId(), text(payload, "id"), payload.path("keep").asBoolean(false));
+        yield null;
+      }
 
       // --- Nachrichten (ausschließlich Spieler-zu-Spieler) ----------------------
       case "inbox" -> MessageCommands.inbox(state, requirePlayerId());
@@ -251,6 +257,12 @@ public class GameSocket {
       case "markMessageRead" -> {
         String playerId = requirePlayerId();
         MessageCommands.markMessageRead(state, playerId, text(payload, "id"));
+        pushMessages(playerId);
+        yield null;
+      }
+      case "setMessageKeep" -> {
+        String playerId = requirePlayerId();
+        MessageCommands.setMessageKeep(state, playerId, text(payload, "id"), payload.path("keep").asBoolean(false));
         pushMessages(playerId);
         yield null;
       }
@@ -295,6 +307,7 @@ public class GameSocket {
         yield null;
       }
       case "routePreview" -> FleetCommands.routePreview(state, text(payload, "fleetId"), text(payload, "destinationSystemId"));
+      case "fleetCargoCapacity" -> FleetCommands.fleetCargoCapacity(state, text(payload, "fleetId"), text(payload, "productTypeId"));
       case "moveFleetWithinSystem" -> {
         FleetCommands.moveFleetWithinSystem(state, requirePlayerId(), text(payload, "fleetId"), parseFleetSystemTarget(payload.path("target")));
         yield null;

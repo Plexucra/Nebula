@@ -143,6 +143,12 @@ public final class ProductionCommands {
   // --- Produktion: sequentielle Ausführung -----------------------------------
 
   public static void tryStartNextProductionEntry(GameState state, IdGenerator ids, String colonyId) {
+    // Ohne Industriekomplex bleiben wartende Aufträge einfach "queued" – kein
+    // Fehler, kein stopped-Status: sie starten von selbst, sobald das Gebäude
+    // fertig ist (siehe GameTick.processBuildingCompletions). Nötig seit dem
+    // Minimalstart aus Umsetzungskonzept/17_...md, bei dem die Start-
+    // Daueraufträge vor dem ersten Industriekomplex eingereiht werden.
+    if (GameQueries.getBuildingLevel(state, colonyId, "b_industry") < 1) return;
     List<ProductionQueueEntry> queue = productionQueueFor(state, colonyId);
     for (ProductionQueueEntry e : queue) if (e.status == ProductionQueueStatus.running) return;
     for (ProductionQueueEntry e : queue) {

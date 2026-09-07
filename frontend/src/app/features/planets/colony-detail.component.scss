@@ -246,3 +246,15 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
 .trend.good { color: var(--good); }
 .trend.bad { color: var(--danger); }
 .trend.blackout { color: var(--violet); }
+
+/* Mobil (Umsetzungskonzept/16_...md): Der Tab-Streifen scrollt bereits
+   horizontal (siehe .tabs oben); hier zusätzlich größere Tippflächen und
+   gestapelte Detailraster. Desktop unverändert. */
+@media (max-width: 720px) {
+  .tab-btn { min-height: 44px; padding: 10px 12px; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+/* Baustoff-Zeilen der Ausbau-Vorschau (Umsetzungskonzept/17_...md, Teil B). */
+.material.good { color: var(--good); }
+.material.bad { color: var(--danger); }

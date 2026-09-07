@@ -35,7 +35,7 @@ export interface GroundUnitTypeDef {
  *   ausreichend Soldaten zur Fernsteuerung.
  * Wird nach jeder Rekrutierung/Produktion durch die Besatzungslogik im
  * Simulations-Backend neu verteilt (proportional über alle drei
- * Drohnenklassen, siehe SimulatedGameApiService.recalcCrewing).
+ * Drohnenklassen, siehe RecruitmentCommands.recalcCrewing im Backend).
  */
 export interface GroundForceUnitStack {
   unitProductTypeId: Id;

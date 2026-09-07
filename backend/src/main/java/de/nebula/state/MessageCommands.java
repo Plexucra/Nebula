@@ -53,6 +53,7 @@ public final class MessageCommands {
     message.body = trimmedBody;
     message.sentAt = Clock.now();
     message.read = false;
+    message.keep = false;
     state.messages.add(message);
   }
 
@@ -60,6 +61,19 @@ public final class MessageCommands {
   public static void markMessageRead(GameState state, String playerId, String id) {
     for (Message m : state.messages) {
       if (m.id.equals(id) && m.toPlayerId.equals(playerId)) m.read = true;
+    }
+  }
+
+  /**
+   * "Beibehalten" umschalten – schützt die Nachricht vor dem automatischen
+   * Aufräumen nach {@code MESSAGE_RETENTION_GAME_HOURS} (siehe
+   * {@link RetentionCleanup}). Sowohl Absender als auch Empfänger dürfen das
+   * setzen: beide sehen dieselbe Nachricht (Postausgang bzw. Posteingang),
+   * und für beide wäre ein Verlust gleichermaßen ärgerlich.
+   */
+  public static void setMessageKeep(GameState state, String playerId, String id, boolean keep) {
+    for (Message m : state.messages) {
+      if (m.id.equals(id) && (m.toPlayerId.equals(playerId) || m.fromPlayerId.equals(playerId))) m.keep = keep;
     }
   }
 }

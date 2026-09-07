@@ -46,14 +46,13 @@ public final class EconomyTick {
       Wallet popWallet = GameQueries.findWallet(state, WalletOwnerType.Population, colony.id);
       if (ownerWallet == null || popWallet == null) continue;
 
-      double overbuild = BuildingCommands.overbuildFactor(state, colony.planetId);
       double buildingUpkeep = 0;
       for (Building b : state.buildings) {
         if (b.colonyId.equals(colony.id) && b.level > 0) {
           buildingUpkeep += BuildingCatalog.find(b.typeId).upkeepPerLevel * b.level;
         }
       }
-      buildingUpkeep *= overbuild * GameConstants.TICK_GAME_HOURS;
+      buildingUpkeep *= GameConstants.TICK_GAME_HOURS;
 
       double fleetUpkeep = 0;
       for (var f : state.fleets) {
@@ -117,11 +116,15 @@ public final class EconomyTick {
         orders.sort((a, b) -> Double.compare(a.pricePerUnit, b.pricePerUnit));
         double spend = 0;
         double bought = 0;
+        // Bedarf in Bruchteilen kaufen (Umsetzungskonzept/17_...md, Teil C): das
+        // frühere Aufrunden auf ganze Stück je Tick (ceil) machte aus 0,05
+        // Stück Bedarf eine ganze Einheit je Sekunde – ein Sechsfaches der
+        // Bevölkerungsgröße, das keine Startproduktion je decken konnte.
         for (SellOrder order : orders) {
-          if (spend >= goodBudget || bought >= need) break;
-          double affordableQty = Math.floor((goodBudget - spend) / order.pricePerUnit);
-          double qty = Math.min(Math.min(affordableQty, order.remainingQuantity), Math.ceil(need - bought));
-          if (qty <= 0) continue;
+          if (spend >= goodBudget || bought >= need - 1e-9) break;
+          double affordableQty = (goodBudget - spend) / order.pricePerUnit;
+          double qty = Math.min(Math.min(affordableQty, order.remainingQuantity), need - bought);
+          if (qty <= 1e-9) continue;
           double cost = qty * order.pricePerUnit;
           Wallet sellerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, order.sellerId);
           MarketCommands.settleSellOrderPurchase(state, ids, order, qty);
@@ -224,7 +227,7 @@ public final class EconomyTick {
   public static void consumePowerUpkeep(GameState state) {
     List<ColonyPowerState> next = new ArrayList<>();
     for (Colony colony : state.colonies) {
-      int level = GameQueries.getBuildingLevel(state, colony.id, "b_powergrid");
+      int level = GameQueries.getBuildingLevel(state, colony.id, GameConstants.INFRASTRUCTURE_BUILDING_ID);
       double prevRatio = 1;
       for (ColonyPowerState p : state.powerStates) if (p.colonyId.equals(colony.id)) prevRatio = p.coverageRatio;
       ColonyPowerState ps = new ColonyPowerState();
@@ -234,10 +237,10 @@ public final class EconomyTick {
         next.add(ps);
         continue;
       }
-      double need = level * GameConstants.ELERIUM_UPKEEP_PER_POWERGRID_LEVEL * GameConstants.TICK_GAME_HOURS;
-      double stock = Warehouse.qty(state, colony.id, GameConstants.POWERGRID_FUEL_PRODUCT_ID);
+      double need = Formulas.infrastructureEleriumPerHour(level) * GameConstants.TICK_GAME_HOURS;
+      double stock = Warehouse.qty(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
       double covered = Math.min(need, stock);
-      if (covered > 0) Warehouse.add(state, colony.id, GameConstants.POWERGRID_FUEL_PRODUCT_ID, -covered);
+      if (covered > 0) Warehouse.add(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, -covered);
       double instantRatio = need > 0 ? covered / need : 1;
       ps.coverageRatio = prevRatio * 0.8 + instantRatio * 0.2;
       next.add(ps);

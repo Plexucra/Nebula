@@ -16,4 +16,10 @@ export interface Message {
   sentAt: number;
   /** Nur vom Empfänger (`toPlayerId`) gesetzt/gesetzt werden. */
   read: boolean;
+  /**
+   * "Beibehalten": schützt die Nachricht vor der automatischen Löschung nach
+   * 7 Spieltagen (siehe `RetentionCleanup` im Backend). Absender UND Empfänger
+   * dürfen den Schalter setzen.
+   */
+  keep: boolean;
 }

@@ -56,6 +56,7 @@ public class GameTick {
       EconomyTick.growPopulationAndMoneySupply(state, ids);
       EconomyTick.runWealthRedistributionIfDue(state, ids, t);
       EconomyTick.recordStatsSnapshotIfDue(state, t);
+      RetentionCleanup.purgeExpired(state, t);
     }
   }
 
@@ -64,6 +65,8 @@ public class GameTick {
       if (b.pendingOrder != null && b.pendingOrder.completesAt <= t) {
         b.level = b.pendingOrder.targetLevel;
         b.pendingOrder = null;
+        // Ein fertiger Industriekomplex weckt wartende Produktionsaufträge (Minimalstart, Umsetzungskonzept/17_...md).
+        ProductionCommands.tryStartNextProductionEntry(state, ids, b.colonyId);
       }
     }
   }

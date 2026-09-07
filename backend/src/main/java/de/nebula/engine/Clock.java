@@ -11,7 +11,12 @@ public final class Clock {
   private Clock() {
   }
 
-  public static final double REAL_MS_PER_GAME_HOUR = 2500;
+  /**
+   * Zeitkompression – der Wert steht in {@code shared/game-constants.json}
+   * und wird von BEIDEN Anwendungen gelesen (siehe {@link SharedConstants}),
+   * damit Backend und Frontend garantiert dieselbe Zeitbasis verwenden.
+   */
+  public static final double REAL_MS_PER_GAME_HOUR = SharedConstants.realMsPerGameHour();
 
   public static double hoursToMs(double hours) {
     return hours * REAL_MS_PER_GAME_HOUR;

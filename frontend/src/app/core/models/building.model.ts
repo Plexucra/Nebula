@@ -1,26 +1,32 @@
 import { Id } from './common.model';
 
-export type BuildingCategory = 'Infrastructure' | 'ProductionFacility' | 'PlanetaryDefense';
+/**
+ * `Infrastructure`: ausschließlich das Gebäude "Infrastruktur" (Bebauungsplätze,
+ * Elerium-Verbrauch, planetweit begrenzt). `Housing`: Wohnkomplex – liefert
+ * allein die Wohnkapazität. Siehe Umsetzungskonzept/17_...md.
+ */
+export type BuildingCategory = 'Infrastructure' | 'Housing' | 'ProductionFacility' | 'PlanetaryDefense';
 
-/** Statischer Bauplan/Katalogeintrag – siehe Umsetzungskonzept/01_..., §1. */
+/** Baustoffbedarf ab Zielstufe `fromLevel`: `ceil(baseQuantity × Stufe^1,3)` je Ausbau (Backend rechnet, siehe `MaterialRequirement`). */
+export interface BuildingMaterial {
+  productTypeId: Id;
+  baseQuantity: number;
+  fromLevel: number;
+}
+
+/** Statischer Bauplan/Katalogeintrag – Daten in `shared/catalog/buildings.json`, Regeln in Umsetzungskonzept/17_...md. */
 export interface BuildingType {
   id: Id;
   name: string;
   category: BuildingCategory;
   description: string;
-  maxLevel: number;
-  /** Bebauungspunkte, die Level `n` belegt (Index 0 = Level 1). */
-  buildPointsPerLevel: number;
-  /** Basis-Credits-Kosten für Level `n` (linear mit level skaliert). */
   baseCostPerLevel: number;
-  /** Basis-Bauzeit in Spielstunden für Level `n`. */
   baseHoursPerLevel: number;
-  /** laufender Unterhalt pro Level, in Credits pro Intervall. */
   upkeepPerLevel: number;
-  /** Für ProductionFacility: wie viele parallele Produktionsslots ein Level gibt. */
-  productionSlotsPerLevel?: number;
-  /** Für Infrastructure: wie viel Bevölkerungs-Referenzkapazität ein Level deckt. */
-  populationCapacityPerLevel?: number;
+  productionSlotsPerLevel: number | null;
+  /** Für Housing: Wohnkapazität pro Level. */
+  housingCapacityPerLevel: number | null;
+  materials: BuildingMaterial[];
 }
 
 export type DefenseActivationState = 'Inactive' | 'Activating' | 'Active';
@@ -38,12 +44,30 @@ export interface Building {
 }
 
 /**
- * Betriebszustand des Energienetzes (b_powergrid), siehe
- * Umsetzungskonzept/01_..., §3 "PowerUpkeepJob": Das Energienetz
- * verbraucht laufend Elerium-Zellen aus dem Kolonielager. Reicht der
- * Bestand nicht, sinkt `coverageRatio` unter 1 und mindert anteilig die
- * Wohnkapazitäts-Kapazität, die das Energienetz sonst beisteuert
- * (Blackout) – geglättet, kein hartes Ein/Aus.
+ * Bebauungsplätze einer Kolonie (Umsetzungskonzept/17_...md): jede
+ * Infrastruktur-Stufe liefert einen Platz, jede Stufe jedes anderen Gebäudes
+ * (inkl. laufender Ausbauten) belegt einen. Kommt fertig vom Backend (`buildSlots`).
+ */
+export interface BuildSlots {
+  total: number;
+  used: number;
+  free: number;
+  infrastructureLevel: number;
+  planetInfrastructureTotal: number;
+  planetInfrastructureMax: number;
+}
+
+/** Ein Baustoff eines Ausbauschritts mit Bedarf und Lagerbestand – Kosten sind VOR dem Klick sichtbar. */
+export interface MaterialRequirement {
+  productTypeId: Id;
+  required: number;
+  available: number;
+}
+
+/**
+ * Versorgungszustand der Infrastruktur: sie verbraucht laufend Stabilisiertes
+ * Elerium; reicht der Bestand nicht, sinkt `coverageRatio` (Blackout: Produktion
+ * 10 %, Kernwerte halbiert) – geglättet, kein hartes Ein/Aus.
  */
 export interface ColonyPowerState {
   colonyId: Id;

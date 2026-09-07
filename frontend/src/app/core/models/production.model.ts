@@ -21,7 +21,7 @@ export interface WarehouseEntry {
  * Auftrags (siehe `ChainPlan`) – vom Rohstoff bis zum angeforderten
  * Endprodukt selbst (letzter Eintrag). Rein informativ für die aufklappbare
  * Detailansicht; für die Ausführung zählt nur `ChainPlan.totalHours` bzw.
- * die aggregierten Mengen je Schritt (siehe `SimulatedGameApiService.
+ * die aggregierten Mengen je Schritt (siehe `ChainPlanner.
  * planChain`, Konzeption/Umsetzungskonzept/10_...).
  */
 export interface ChainPlanStep {

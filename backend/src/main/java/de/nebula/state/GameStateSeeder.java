@@ -41,6 +41,7 @@ public final class GameStateSeeder {
     state.gateways.addAll(seed.gateways);
     state.fleets.addAll(seed.fleets);
     state.groundForceGroups.addAll(seed.groundForceGroups);
+    state.sellOrders.addAll(seed.sellOrders);
     // Start-Auftragsliste kommt direkt über addAll herein statt über
     // queueProduction, das sonst automatisch den nächsten wartenden Eintrag
     // anstößt – deshalb hier manuell nachholen (siehe TS `hydrate`).
@@ -79,6 +80,7 @@ public final class GameStateSeeder {
     state.productionQueue.addAll(seed.productionQueue);
     state.fleets.addAll(seed.fleets);
     state.groundForceGroups.add(seed.groundForceGroup);
+    state.sellOrders.addAll(seed.sellOrders);
     ProductionCommands.tryStartNextProductionEntry(state, ids, seed.colony.id);
   }
 }

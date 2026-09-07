@@ -1,0 +1,43 @@
+[ {
+  "productTypeId" : "p_corvette",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 1.0,
+  "countersClass" : "Cruiser",
+  "class" : "Corvette"
+}, {
+  "productTypeId" : "p_destroyer",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 2.0,
+  "countersClass" : "Corvette",
+  "class" : "Destroyer"
+}, {
+  "productTypeId" : "p_cruiser",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 4.0,
+  "countersClass" : "Destroyer",
+  "class" : "Cruiser"
+}, {
+  "productTypeId" : "p_freighter",
+  "cargoMassKg" : 2000000.0,
+  "cargoVolumeM3" : 3000.0,
+  "carrierSlotUsage" : 3.0,
+  "countersClass" : null,
+  "class" : "Freighter"
+}, {
+  "productTypeId" : "p_carrier",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 0.0,
+  "countersClass" : null,
+  "class" : "Carrier"
+}, {
+  "productTypeId" : "p_trooptransport",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 2.0,
+  "countersClass" : null,
+  "class" : "TroopTransport"
+} ]

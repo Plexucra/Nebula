@@ -54,3 +54,16 @@
 .amount.good { color: var(--good); }
 .amount.bad { color: var(--danger); }
 .time { color: var(--text-faint); text-align: right; }
+
+/* Mobil (Umsetzungskonzept/16_...md): die vierspaltige Transaktionszeile
+   (130px | 1fr | auto | 90px) passt bei 390px nicht – sie wird gestapelt,
+   der Betrag bleibt rechtsbündig. Desktop unverändert. */
+@media (max-width: 720px) {
+  .tx-row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 10px;
+  }
+  .tx-row .note { grid-column: 1 / -1; }
+  .breakdown-row { grid-template-columns: 1fr auto; }
+  .breakdown-row .stat-bar { grid-column: 1 / -1; }
+}

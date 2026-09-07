@@ -200,6 +200,37 @@ async function main() {
   log(`A registriert: ${playerA.name} (${playerA.id}), Heimatsystem ${playerA.homeSystemId}`);
   log(`B registriert: ${playerB.name} (${playerB.id}), Heimatsystem ${playerB.homeSystemId}`);
 
+  // --- Startverkaufsorders für die Grundkonsumgüter ------------------------
+  // Umsetzungskonzept/15_...md, Auftrag 1: ohne sie kann die Bevölkerung gar
+  // nichts kaufen (EconomyTick.runConsumption kauft NUR aus sellOrders, nicht
+  // aus dem Kolonielager) – Lebensstandard bliebe dauerhaft 0 %.
+  const starterOrders = await a.call('sellOrders', { systemId: playerA.homeSystemId });
+  const starterFood = starterOrders.find(o => o.productTypeId === 'p_grundnahrung');
+  const starterMed = starterOrders.find(o => o.productTypeId === 'p_grundmedizin');
+  assert.ok(starterFood, 'Eine frische Heimatkolonie muss eine Verkaufsorder für Grundnahrung haben');
+  assert.ok(starterMed, 'Eine frische Heimatkolonie muss eine Verkaufsorder für Grundmedizin haben');
+  assert.ok(starterFood.autoRelist && starterMed.autoRelist, 'Die Start-Verkaufsorders müssen wiederkehrend sein (autoRelist)');
+  log(`Start-Verkaufsorders vorhanden: ${starterFood.productTypeId} ${starterFood.remainingQuantity}× à ${starterFood.pricePerUnit} Cr, `
+    + `${starterMed.productTypeId} ${starterMed.remainingQuantity}× à ${starterMed.pricePerUnit} Cr (autoRelist).`);
+
+  // Der Lebensstandard muss tickgetrieben über 0 steigen – der eigentliche
+  // Beweis, dass der Kreislauf greift und nicht nur Orders existieren.
+  const earlyStats = await waitUntil(async () => {
+    const stats = await a.call('colonyStats', { id: playerA.homeworldColonyId });
+    return stats.standardOfLivingPct > 0 ? stats : undefined;
+  }, { timeoutMs: 30000, description: 'Lebensstandard > 0 (Bevölkerung kauft aus den Start-Verkaufsorders)' });
+  log(`Lebensstandard tickgetrieben auf ${earlyStats.standardOfLivingPct.toFixed(1)}% gestiegen (vor Auftrag 1 dauerhaft 0 %).`);
+
+  // Und der Gegenbeweis auf der Geldseite: die Käufe der Bevölkerung landen
+  // als Einnahme im Spieler-Wallet (vorher kannte es ausschließlich Abflüsse).
+  const consumptionTx = await waitUntil(async () => {
+    const txs = await a.call('transactions');
+    const consumption = txs.filter(t => t.reason === 'Consumption');
+    return consumption.length > 0 ? consumption : undefined;
+  }, { timeoutMs: 30000, description: 'Konsum-Transaktionen im Spieler-Wallet' });
+  const income = consumptionTx.reduce((sum, t) => sum + t.amount, 0);
+  log(`${consumptionTx.length} Konsum-Transaktionen, ${income.toFixed(0)} Credits Einnahmen – Kreislauf Produktion → Order → Bevölkerung → Spieler-Wallet geschlossen.`);
+
   const coloniesA = await a.call('colonies');
   const colonyA = coloniesA.find(c => c.id === playerA.homeworldColonyId);
   assert.ok(colonyA, 'Heimatkolonie von A muss in colonies() auftauchen');
@@ -207,22 +238,72 @@ async function main() {
   const colonyB = coloniesB.find(c => c.id === playerB.homeworldColonyId);
   assert.ok(colonyB, 'Heimatkolonie von B muss in colonies() auftauchen');
 
-  // --- Schritt 2a: Bebauung – Werft ausbauen, tickgetriebene Fertigstellung ---
+  // --- Schritt 2a: Bebauung – Minimalstart, Bebauungsplätze, Baustoffe -----
+  // Umsetzungskonzept/17_...md: Heimatkolonie startet mit Wohnkomplex 1 +
+  // Industriekomplex 1 + Infrastruktur 2 (beide Plätze belegt). Jeder Ausbau
+  // kostet Baustoffe; das Startlager enthält keine – der erste Zug ist daher
+  // Infrastruktur 3, für die Industriekomplex 1 die Baustoffe erst produzieren muss.
   const buildingsBefore = await a.call('buildings', { colonyId: colonyA.id });
-  const shipyardBefore = buildingsBefore.find(x => x.typeId === 'b_shipyard');
-  assert.ok(shipyardBefore, 'Startkolonie muss eine Werft besitzen (world-seed: Stufe 3)');
-  const shipyardLevelBefore = shipyardBefore.level;
-  log(`Werft vor Ausbau: Stufe ${shipyardLevelBefore}`);
+  assert.deepEqual(
+    buildingsBefore.map(x => `${x.typeId}:${x.level}`).sort(),
+    ['b_habitat:1', 'b_industry:1', 'b_infrastructure:2'],
+    'Minimalstart: Wohnkomplex 1 + Industriekomplex 1 + Infrastruktur 2');
+  const slots0 = await a.call('buildSlots', { colonyId: colonyA.id });
+  assert.deepEqual([slots0.total, slots0.used, slots0.free], [2, 2, 0], 'Start: 2 Plätze, beide belegt');
+  log(`Minimalstart bestätigt: ${buildingsBefore.map(x => x.typeId + ' ' + x.level).join(', ')} · Plätze ${slots0.used}/${slots0.total} (${slots0.free} frei), Infrastruktur planetweit ${slots0.planetInfrastructureTotal}/${slots0.planetInfrastructureMax}`);
 
-  await a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_shipyard' });
-  const upgraded = await waitUntil(async () => {
+  const queueAtStart = await a.call('productionQueue', { colonyId: colonyA.id });
+  assert.ok(queueAtStart.some(q => q.status === 'running'), 'Startaufträge müssen mit Industriekomplex 1 sofort laufen');
+  log(`Startaufträge laufen sofort an: ${queueAtStart.filter(q => q.status === 'running').length} running, ${queueAtStart.filter(q => q.status === 'queued').length} queued.`);
+
+  await assert.rejects(() => a.call('queueShip', { colonyId: colonyA.id, shipProductTypeId: 'p_corvette', quantity: 1, autoProduceMissing: true, requeueOnComplete: false }),
+    /Werft/, 'Ohne Werft muss ein Werft-Auftrag abgelehnt werden');
+  await assert.rejects(() => a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_shipyard' }),
+    /Bebauungsplatz/, 'Ohne freien Platz muss der Werft-Bau abgelehnt werden');
+  log('Werft-Auftrag ohne Werft und Werft-Bau ohne freien Bebauungsplatz korrekt abgelehnt.');
+
+  const breakdown0 = await a.call('colonySpeedBreakdown', { colonyId: colonyA.id });
+  const infraPreview = breakdown0.buildingUpgrades.find(u => u.typeId === 'b_infrastructure');
+  assert.ok(infraPreview.materials.length >= 2, 'Infrastruktur 3 muss Baustoffe verlangen');
+  assert.ok(infraPreview.materials.every(m => m.available === 0), 'Startlager enthält keine Baustoffe');
+  assert.equal(infraPreview.affordable, false);
+  assert.equal(infraPreview.needsSlot, false, 'Infrastruktur belegt selbst keinen Platz');
+  await assert.rejects(() => a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_infrastructure' }),
+    /Fehlende Baustoffe: p_/, 'Ohne Baustoffe muss der Infrastruktur-Ausbau mit Auflistung abgelehnt werden');
+  log(`Infrastruktur 2→3 ohne Baustoffe korrekt abgelehnt; Vorschau: ${infraPreview.upgradeCost} Cr, ${infraPreview.upgradeHours}h, Baustoffe ${infraPreview.materials.map(m => `${m.productTypeId} ${m.required} (Lager ${m.available})`).join(', ')}.`);
+
+  // Baustoffe für Infrastruktur 3 produzieren (echte Kettenzeiten bei Industrie 1),
+  // dann tatsächlich ausbauen – Baustoffe werden abgezogen, ein Platz wird frei.
+  // Die Startaufträge (Daueraufträge) werden dafür vorab abgebrochen, sonst
+  // belegen sie die EINE sequentielle Warteschlange abwechselnd mit.
+  for (const q of await a.call('productionQueue', { colonyId: colonyA.id })) {
+    await a.call('cancelProduction', { colonyId: colonyA.id, entryId: q.id });
+  }
+  for (const m of infraPreview.materials) {
+    await a.call('queueProduction', { colonyId: colonyA.id, productTypeId: m.productTypeId, quantity: m.required, autoProduceMissing: true, requeueOnComplete: false });
+  }
+  const materialsReady = await waitUntil(async () => {
+    const wh = await a.call('warehouse', { colonyId: colonyA.id });
+    const ok = infraPreview.materials.every(m => (wh.find(w => w.productTypeId === m.productTypeId)?.quantity ?? 0) >= m.required);
+    return ok ? wh : undefined;
+  }, { timeoutMs: 2_700_000, intervalMs: 5000, description: 'Baustoffe für Infrastruktur 3 produziert (Industrie 1, echte Kettenzeiten)' });
+  const materialsDoneAt = Date.now();
+  log(`Baustoffe produziert: ${infraPreview.materials.map(m => `${m.productTypeId} ${materialsReady.find(w => w.productTypeId === m.productTypeId)?.quantity}`).join(', ')}.`);
+  await a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_infrastructure' });
+  const whAfter = await a.call('warehouse', { colonyId: colonyA.id });
+  for (const m of infraPreview.materials) {
+    const rest = whAfter.find(w => w.productTypeId === m.productTypeId)?.quantity ?? 0;
+    assert.ok(rest < m.required, `Baustoff ${m.productTypeId} muss beim Einreihen abgezogen werden`);
+  }
+  const infra3 = await waitUntil(async () => {
     const list = await a.call('buildings', { colonyId: colonyA.id });
-    const sy = list.find(x => x.typeId === 'b_shipyard');
-    return sy.level > shipyardLevelBefore ? sy : undefined;
-  }, { timeoutMs: 60_000, description: 'Werft-Ausbau tickgetrieben fertiggestellt' });
-  assert.equal(upgraded.level, shipyardLevelBefore + 1, 'Werft muss nach Fertigstellung genau eine Stufe höher stehen');
-  assert.equal(upgraded.pendingOrder, null, 'Nach Fertigstellung darf kein pendingOrder mehr offen sein');
-  log(`Werft-Ausbau tickgetrieben fertiggestellt: Stufe ${shipyardLevelBefore} → ${upgraded.level}`);
+    const inf = list.find(x => x.typeId === 'b_infrastructure');
+    return inf.level >= 3 ? inf : undefined;
+  }, { timeoutMs: 60_000, description: 'Infrastruktur 3 tickgetrieben fertiggestellt' });
+  const slots3 = await a.call('buildSlots', { colonyId: colonyA.id });
+  assert.deepEqual([slots3.total, slots3.used, slots3.free], [3, 2, 1], 'Infrastruktur 3 liefert einen dritten Platz');
+  log(`Infrastruktur ${infra3.level} fertig, Baustoffe abgezogen, Plätze ${slots3.used}/${slots3.total} (${slots3.free} frei).`);
+  globalThis.__materialsDoneAt = materialsDoneAt;
 
   // --- Schritt 2b: Produktionskette (Rohstoff) einreihen und abwarten --------
   // Die Start-Auftragsliste (Grundnahrung/Elerium) belegt den einzigen
@@ -261,22 +342,6 @@ async function main() {
   const ferroAfter = warehouseAfter.find(w => w.productTypeId === 'p_ferrometall')?.quantity ?? 0;
   assert.equal(ferroAfter, ferroBefore + 3, `Lagerbestand p_ferrometall muss um genau 3 gestiegen sein (${ferroBefore} → erwartet ${ferroBefore + 3}, tatsächlich ${ferroAfter})`);
   log(`Produktionskette tickgetrieben abgeschlossen: Lagerbestand p_ferrometall ${ferroBefore} → ${ferroAfter}`);
-
-  // --- Schritt 3: Werft-Warteschlange anstoßen (nur Befehlsmechanik) ---------
-  const shipyardQueueBefore = await a.call('shipyardQueue', { colonyId: colonyA.id });
-  assert.equal(shipyardQueueBefore.length, 0, 'Werft-Warteschlange sollte zu diesem Zeitpunkt leer sein');
-  await a.call('queueShip', {
-    colonyId: colonyA.id, shipProductTypeId: 'p_corvette', quantity: 1,
-    autoProduceMissing: true, requeueOnComplete: false,
-  });
-  const shipEntry = await waitUntil(async () => {
-    const q = await a.call('shipyardQueue', { colonyId: colonyA.id });
-    const e = q.find(x => x.shipProductTypeId === 'p_corvette');
-    return e && e.status === 'running' ? e : undefined;
-  }, { timeoutMs: 10_000, intervalMs: 200, description: 'Werft-Auftrag p_corvette startet' });
-  assert.ok(shipEntry.plan.totalHours > 0, 'Werft-Auftrag muss einen berechneten ChainPlan haben');
-  log(`Werft-Auftrag p_corvette×1 läuft (Befehlsmechanik verifiziert), ChainPlan.totalHours=${shipEntry.plan.totalHours.toFixed(1)} `
-    + '– Fertigstellung wird NICHT abgewartet (siehe Kopfkommentar); Kampf nutzt die bereits vorhandene Startflotte.');
 
   // --- Schritt 4: Kampfflotte per echtem Gateway-Sprung bewegen --------------
   const fleetsA = await a.call('fleets');
@@ -441,6 +506,47 @@ async function main() {
     'sendMessage an sich selbst muss mit einer Fehlermeldung abgelehnt werden',
   );
   log('sendMessage an sich selbst korrekt abgelehnt.');
+
+  // --- Schritt 7: "Beibehalten" (Aufbewahrungsfristen) --------------------
+  // Umsetzungskonzept/15_...md, Auftrag 2: ungemarkierte Einträge räumt der
+  // Server nach Ablauf der Frist weg, markierte bleiben. Hier wird die
+  // Befehlsmechanik geprüft (die Frist selbst dauert 7 Spieltage und wird
+  // separat mit verkürzter Frist live verifiziert).
+  // Geprüft aus Sicht des ABSENDERS (Postausgang) – laut MessageCommands.setMessageKeep
+  // dürfen sowohl Absender als auch Empfänger das Kennzeichen setzen.
+  const keepTarget = (await attackerClient.call('sentMessages')).find(m => m.id === inboxB.id);
+  assert.ok(keepTarget, 'Die gesendete Nachricht muss im Postausgang des Absenders liegen');
+  assert.strictEqual(keepTarget.keep, false, 'Neue Nachrichten starten ohne "Beibehalten"');
+  await attackerClient.call('setMessageKeep', { id: inboxB.id, keep: true });
+  const afterKeep = (await attackerClient.call('sentMessages')).find(m => m.id === inboxB.id);
+  assert.strictEqual(afterKeep.keep, true, 'setMessageKeep muss das Kennzeichen setzen');
+  await attackerClient.call('setMessageKeep', { id: inboxB.id, keep: false });
+  const afterUnkeep = (await attackerClient.call('sentMessages')).find(m => m.id === inboxB.id);
+  assert.strictEqual(afterUnkeep.keep, false, 'setMessageKeep muss das Kennzeichen auch wieder entfernen können');
+  log('Nachrichten-"Beibehalten" (als Absender) gesetzt und wieder entfernt.');
+
+  const notifications = await attackerClient.call('notifications');
+  assert.ok(notifications.length > 0, 'Nach Kriegserklärung/Gefecht müssen Benachrichtigungen vorliegen');
+  assert.strictEqual(notifications[0].keep, false, 'Neue Benachrichtigungen starten ohne "Beibehalten"');
+  await attackerClient.call('setNotificationKeep', { id: notifications[0].id, keep: true });
+  const notifAfter = (await attackerClient.call('notifications')).find(n => n.id === notifications[0].id);
+  assert.strictEqual(notifAfter.keep, true, 'setNotificationKeep muss das Kennzeichen setzen');
+  log(`Benachrichtigungs-"Beibehalten" gesetzt (id=${notifications[0].id}).`);
+
+  // --- Schritt 8: Produktionstempo-Aufschlüsselung aus dem Backend ---------
+  // Umsetzungskonzept/15_...md, Auftrag 3: die Transparenz-Anzeige rechnet
+  // nicht mehr client-seitig, sondern bekommt alle Faktoren fertig geliefert.
+  const breakdown = await attackerClient.call('colonySpeedBreakdown', { colonyId: attackerPlayer.homeworldColonyId });
+  assert.ok(breakdown.population > 0, 'Aufschlüsselung muss die Bevölkerung enthalten');
+  assert.ok(breakdown.workforceFactor > 0, 'Aufschlüsselung muss den Workforce-Faktor enthalten');
+  assert.ok(breakdown.buildingSpeedFactor > 0, 'Aufschlüsselung muss den Gebäude-Tempofaktor enthalten');
+  assert.ok(breakdown.buildingUpgrades.length > 0, 'Aufschlüsselung muss Ausbau-Vorschauen enthalten');
+  assert.ok(Object.keys(breakdown.concentrationFactorByProduct).length > 0, 'Aufschlüsselung muss Fördergüte-Faktoren enthalten');
+  log(`Tempo-Aufschlüsselung vom Backend: Bevölkerung ${breakdown.population.toFixed(0)}, `
+    + `Workforce ×${breakdown.workforceFactor.toFixed(2)}, Industrie Stufe ${breakdown.industryLevel} `
+    + `(×${breakdown.buildingSpeedFactor}), Blackout=${breakdown.blackout}, `
+    + `${breakdown.buildingUpgrades.length} Ausbau-Vorschauen, `
+    + `${Object.keys(breakdown.concentrationFactorByProduct).length} Fördergüte-Faktoren.`);
 
   a.close();
   b.close();

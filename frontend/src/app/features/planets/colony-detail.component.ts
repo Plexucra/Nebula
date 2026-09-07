@@ -3,11 +3,10 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { BuildingType, ChainPlan, Id, PlanetType, ProductionQueueEntry } from '../../core/models';
+import { BuildingType, ChainPlan, Id, MaterialRequirement, PlanetType, ProductionQueueEntry } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
-import * as F from '../../core/sim/engine/formulas';
 
 type Tab = 'uebersicht' | 'bebauung' | 'verteidigung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
@@ -35,7 +34,6 @@ export class ColonyDetailComponent {
   protected readonly planet = this.api.planet(this.colony()?.planetId ?? '');
   protected readonly moneyState = this.api.moneySupplyState(this.colony()?.planetId ?? '');
   protected readonly buildings = this.api.buildings(this.colonyId);
-  protected readonly overbuild = this.api.overbuildFactor(this.colony()?.planetId ?? '');
   protected readonly warehouse = this.api.warehouse(this.colonyId);
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
@@ -45,6 +43,15 @@ export class ColonyDetailComponent {
   protected readonly housingCapacity = this.api.housingCapacity(this.colonyId);
   protected readonly powerCoverage = this.api.powerCoverage(this.colonyId);
   protected readonly powerUpkeepPerHour = this.api.powerUpkeepPerHour(this.colonyId);
+  /**
+   * Alle Tempo-/Kostenfaktoren dieser Kolonie – fertig BERECHNET vom Backend
+   * (siehe `GameApi.colonySpeedBreakdown`). Früher rechnete diese Komponente
+   * sie aus einer zweiten Formelkopie (`engine/formulas.ts`) nach; die Regeln
+   * leben jetzt ausschließlich im Backend, die Transparenz-Anzeige bleibt
+   * dabei vollständig erhalten (Umsetzungskonzept/15_...md, Auftrag 3).
+   */
+  protected readonly speedBreakdown = this.api.colonySpeedBreakdown(this.colonyId);
+  protected readonly consumptionCoverage = this.api.consumptionCoverage(this.colonyId);
 
   protected readonly playerId = this.api.player()?.id ?? '';
   protected readonly allPlayers = this.api.players();
@@ -119,17 +126,59 @@ export class ColonyDetailComponent {
     return this.buildingFor(typeId)?.level ?? 0;
   }
 
+  private upgradePreview(typeId: Id) {
+    return this.speedBreakdown()?.buildingUpgrades.find(u => u.typeId === typeId);
+  }
+
   protected upgradeCost(bt: BuildingType): number {
-    return F.buildingUpgradeCost(bt.baseCostPerLevel, this.buildingLevel(bt.id));
+    return this.upgradePreview(bt.id)?.upgradeCost ?? 0;
+  }
+
+  /** Baustoffe des nächsten Ausbauschritts (Bedarf + Lagerbestand), vom Backend – sichtbar VOR dem Klick. */
+  protected upgradeMaterials(bt: BuildingType): MaterialRequirement[] {
+    return this.upgradePreview(bt.id)?.materials ?? [];
+  }
+
+  protected upgradeBlockedReason(bt: BuildingType): string | null {
+    return this.upgradePreview(bt.id)?.blockedReason ?? null;
+  }
+
+  protected upgradeAffordable(bt: BuildingType): boolean {
+    return this.upgradePreview(bt.id)?.affordable ?? false;
+  }
+
+  /** Bebauungsplätze – DIE strategische Größe der Bebauung (Umsetzungskonzept/17_...md). */
+  protected slots() {
+    return this.speedBreakdown()?.buildSlots ?? null;
+  }
+
+  /** Versorgungsdeckung je Grundkonsumgut – erklärt am Plateau, WARUM das Wachstum stockt. */
+  protected coverageEntries(): { productTypeId: Id; coverage: number }[] {
+    return Object.entries(this.consumptionCoverage()).map(([productTypeId, coverage]) => ({ productTypeId, coverage }));
+  }
+
+  protected growthStateLabel(): string {
+    switch (this.speedBreakdown()?.growthState) {
+      case 'Shrinking': return 'Schrumpfung';
+      case 'Holding': return 'Halten';
+      case 'Growing': return 'Wachstum';
+      case 'Overcrowded': return 'Überbevölkert';
+      default: return '–';
+    }
   }
 
   protected upgradeHours(bt: BuildingType): number {
-    return F.buildingUpgradeHours(bt.baseHoursPerLevel, this.buildingLevel(bt.id));
+    return this.upgradePreview(bt.id)?.upgradeHours ?? 0;
   }
 
-  /** Produktionstempo einer Produktionsanlage (Industriekomplex/Werft/Ausbildungszentrum) als Prozentsatz – Stufe 1 = 100%, Stufe 4 = 400% (linear, siehe `buildingLevelSpeedFactor`). */
-  protected productionSpeedPct(level: number): number {
-    return F.buildingLevelSpeedFactor(level) * 100;
+  /** Produktionstempo einer Produktionsanlage (Industriekomplex/Werft/Ausbildungszentrum) als Prozentsatz – Stufe 1 = 100%, Stufe 4 = 400%. */
+  protected productionSpeedPct(typeId: Id): number {
+    return this.upgradePreview(typeId)?.productionSpeedPct ?? 0;
+  }
+
+  /** Produktionstempo nach dem nächsten Ausbauschritt in Prozent. */
+  protected nextProductionSpeedPct(typeId: Id): number {
+    return this.upgradePreview(typeId)?.nextProductionSpeedPct ?? 0;
   }
 
   protected capacityUsagePct(): number {
@@ -145,8 +194,7 @@ export class ColonyDetailComponent {
    * langsamer.
    */
   protected satisfactionPct(): number {
-    const s = this.stats();
-    return s ? F.growthConditionFactor(s.standardOfLivingPct, s.securityPct) * 100 : 0;
+    return this.speedBreakdown()?.satisfactionPct ?? 0;
   }
 
   protected readonly productName = (id: Id): string => {
@@ -161,9 +209,9 @@ export class ColonyDetailComponent {
     return this.specializations().find(s => s.productTypeId === productTypeId)?.currentLevel ?? 0;
   }
 
-  /** Tempo-Bonus durch Spezialisierung in %, siehe `F.specializationSpeedFactor`: 100% = doppelte Geschwindigkeit = nur noch die halbe Zeit. */
-  protected specSpeedBonusPct(level: number): number {
-    return Math.round((F.specializationSpeedFactor(level) - 1) * 100);
+  /** Tempo-Bonus durch Spezialisierung in % (vom Backend berechnet): 100% = doppelte Geschwindigkeit = nur noch die halbe Zeit. */
+  protected specSpeedBonusPct(productTypeId: Id): number {
+    return Math.round(this.speedBreakdown()?.specializationSpeedBonusPctByProduct[productTypeId] ?? 0);
   }
 
   /**
@@ -178,26 +226,19 @@ export class ColonyDetailComponent {
    * Fördergüte sind PRODUKTSPEZIFISCH, siehe `specLevel`/`concentrationFactorFor`.
    */
   protected colonySpeedFactors(): { population: number; workforceFactor: number; industryLevel: number; buildingSpeedFactor: number; blackout: boolean } {
-    const population = this.population()?.currentCount ?? 0;
-    const industryLevel = this.buildingLevel('b_industry');
+    const b = this.speedBreakdown();
     return {
-      population,
-      workforceFactor: F.workforceFactor(population),
-      industryLevel,
-      buildingSpeedFactor: F.buildingLevelSpeedFactor(industryLevel),
-      blackout: this.powerCoverage() < 0.999,
+      population: b?.population ?? 0,
+      workforceFactor: b?.workforceFactor ?? 0,
+      industryLevel: b?.industryLevel ?? 0,
+      buildingSpeedFactor: b?.buildingSpeedFactor ?? 0,
+      blackout: b?.blackout ?? false,
     };
   }
 
-  /** Fördergüte-Ausbeutefaktor (nur für Rohstoffe/Tier 0 – bei allem anderen `null`), siehe `F.resourceConcentrationFactor`. */
+  /** Fördergüte-Ausbeutefaktor (nur für Rohstoffe/Tier 0 – bei allem anderen `null`), vom Backend berechnet. */
   protected concentrationFactorFor(productTypeId: Id): number | null {
-    const product = this.api.productTypes().find(p => p.id === productTypeId);
-    if (!product || product.tier !== 0 || product.resourceProfile.length === 0) return null;
-    const planet = this.planet();
-    if (!planet) return null;
-    const resId = product.resourceProfile[0].resourceTypeId;
-    const conc = planet.resourceConcentration.find(c => c.resourceTypeId === resId)?.concentration ?? 50;
-    return F.resourceConcentrationFactor(conc);
+    return this.speedBreakdown()?.concentrationFactorByProduct[productTypeId] ?? null;
   }
 
   private async run(key: string, action: () => Promise<unknown>): Promise<void> {

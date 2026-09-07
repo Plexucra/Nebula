@@ -71,3 +71,10 @@
 
   &.low { color: var(--danger); border-color: rgba(255, 77, 94, 0.4); }
 }
+
+/* Mobil (Umsetzungskonzept/16_...md): Die Kennzahlenraster brechen auf eine
+   Spalte um; die breiten Kolonie-Tabellen behalten ihre min-width und
+   scrollen weiterhin in ihrem eigenen Container (.npc-table, overflow-x). */
+@media (max-width: 720px) {
+  .tile-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+}

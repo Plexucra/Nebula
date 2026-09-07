@@ -12,6 +12,7 @@ interface ColonyRow {
   wallet: Signal<Wallet | undefined>;
   coverage: Signal<Record<Id, number>>;
   powerCoverage: Signal<number>;
+  blackout: Signal<boolean>;
 }
 
 /** Reihenfolge/Kurzlabel für die Deckungsanzeige, siehe `CONSUMER_GOODS_ORDER` im Service (dort nicht exportiert). */
@@ -60,6 +61,7 @@ export class StatisticsComponent {
     wallet: this.api.populationWallet(colony.id),
     coverage: this.api.consumptionCoverage(colony.id),
     powerCoverage: this.api.powerCoverage(colony.id),
+    blackout: this.api.isBlackout(colony.id),
   }));
 
   protected readonly coverageGoods = COVERAGE_GOODS;
@@ -79,10 +81,6 @@ export class StatisticsComponent {
     if (stats.standardOfLivingPct < 30) reasons.push(`Lebensstandard ${stats.standardOfLivingPct.toFixed(0)}% < 30%`);
     if (stats.loyaltyPct < 20) reasons.push(`Loyalität ${stats.loyaltyPct.toFixed(0)}% < 20%`);
     return reasons.join(' · ');
-  }
-
-  protected isBlackout(powerCoverage: number): boolean {
-    return powerCoverage < 0.999;
   }
 
   /** Deckungswert in Prozent, gerundet – Helper statt `?? 0` im Template (TS kennt `Record`-Lücken zur Laufzeit nicht). */

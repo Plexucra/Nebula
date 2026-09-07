@@ -16,6 +16,12 @@ public class GameNotification {
   public String colonyId;
   public long createdAt;
   public boolean read;
+  /**
+   * "Beibehalten": schützt den Eintrag vor der automatischen Löschung nach
+   * {@code GameConstants.NOTIFICATION_RETENTION_GAME_HOURS} (siehe
+   * {@code RetentionCleanup}). Standard {@code false}.
+   */
+  public boolean keep;
   /** Interner Routen-Pfad (z. B. {@code /kampfbericht/<token>}) – wird im Benachrichtigungs-Panel als Link gerendert, wenn gesetzt. */
   public String link;
 }

@@ -30,8 +30,6 @@ export interface Planet {
   name: string;
   size: PlanetSize;
   type: PlanetType;
-  /** Gesamt-Bebauungskapazität des Himmelskörpers (über alle Kolonien hinweg). */
-  buildCapacity: number;
   resourceConcentration: PlanetResourceConcentration[];
   /** Bahn-Index im System, rein fürs Layout der Systemkarte. */
   orbitIndex: number;
