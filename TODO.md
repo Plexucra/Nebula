@@ -19,21 +19,29 @@
   Energieversorgung aus der sequentiellen Warteschlange herausnehmen) – bewusst
   nicht selbständig geändert.
 
-- [ ] **Baustoffe verbrauchen einander als Vorprodukt – Reihenfolge ist eine Falle.**
-  `p_leiterbuendel` enthält `p_leitermetall` (1:1). Wer die vom Server gemeldete
-  Fehlliste („Fehlende Baustoffe: p_stahl …, p_leitermetall …, p_leiterbuendel …")
-  in genau dieser Reihenfolge abarbeitet, produziert erst 13 Leitermetall und
-  lässt sie dann vom Leiterbündel-Auftrag wieder aufzehren (`autoProduceMissing`
-  bedient sich aus dem Lager) – die geforderten Mengen liegen nie GLEICHZEITIG im
-  Lager, der Ausbau bleibt dauerhaft abgelehnt. Direkt gemessen: Leitermetall
-  13 → 0 in dem Moment, in dem der Leiterbündel-Auftrag startet.
-  Betroffen ist auch `Bot.queueMissingMaterials` (npc-bot), das die Fehlliste in
-  Server-Reihenfolge abarbeitet; die Bot-Logs zeigen passend dazu wiederholtes
-  Nachbestellen derselben Menge (13, dann wieder 13; 15, dann wieder 15).
-  Der e2e-Test umgeht das inzwischen, indem er nach Tier ABSTEIGEND einreiht –
-  Bot und UI-Hinweis sollten nachziehen.
-
 ## Erledigt
+
+- [x] ~~Baustoffe verbrauchen einander als Vorprodukt – Reihenfolge ist eine Falle~~ –
+  behoben, und zwar an der Ursache, nicht nur mit einer Einreihungsreihenfolge:
+  `p_leiterbuendel` enthält `p_leitermetall` (1:1). Zwei GETRENNTE
+  `queueProduction`-Aufträge für beide (wie sie ein Bauauftrag direkt zugleich
+  braucht, z. B. `b_infrastructure` ab Stufe 4) konnten nie beide Sollmengen
+  gleichzeitig im Lager haben, unabhängig von der Reihenfolge: der zweite
+  Auftrag verbraucht per `autoProduceMissing` immer die Menge, die der erste
+  gerade erst eingelagert hat. `ChainPlanner.planChain` kannte bislang nur EIN
+  Wurzelprodukt je Aufruf. Jetzt gibt es eine Mehrfach-Wurzel-Variante
+  (`planChain(state, colonyId, Map<String,Double> demand, facilityTypeId)`,
+  `ChainPlanStep.isRoot`): mehrere direkt angeforderte Produkte werden als EIN
+  Auftrag geplant, ihr gemeinsamer Bedarf (z. B. Leitermetall: 13 direkt + 13
+  als Zutat des Leiterbündels = 26) wird in einem Rutsch produziert, aber bei
+  Fertigstellung landet exakt die angeforderte Menge jedes Wurzelprodukts im
+  Lager (`ProductionQueueEntry.bundledProducts`,
+  `ProductionCommands.queueProductionBundle`, WS-Befehl
+  `queueProductionBundle`). `Bot.queueMissingMaterials` (npc-bot) reiht die
+  komplette Fehlliste jetzt als einen Bündelauftrag ein statt als mehrere
+  Einzelaufträge; der e2e-Test tut für die Infrastruktur-Baustoffe dasselbe
+  (die frühere Tier-absteigend-Reihenfolge war nur ein Workaround, kein Fix,
+  und ist entfernt). Regressionstest: `ProductionBundleTest`.
 
 - [x] ~~Kolonisieren war in der Oberfläche auf das Heimatsystem beschränkt~~ –
   behoben. Der „Kolonisieren"-Knopf sitzt jetzt zusätzlich an jedem

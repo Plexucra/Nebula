@@ -8,6 +8,14 @@ package de.nebula.model;
  */
 public class ChainPlanStep {
   public String productTypeId;
+  /**
+   * true = dieses Produkt ist eines der direkt angeforderten Wurzelprodukte des Auftrags
+   * (nicht nur ein Vorprodukt): es wird nie aus dem Lager gedeckt, immer in voller Menge neu
+   * gebaut, und bei Fertigstellung landet exakt die angeforderte Menge im Lager – auch wenn
+   * ein Teil seiner Gesamtproduktion zusätzlich als Zutat eines anderen Wurzelprodukts
+   * verbraucht wird (siehe {@code ChainPlanner.planChain(..., Map, ...)}).
+   */
+  public boolean isRoot;
   /** Gesamtbedarf über alle georderten Einheiten des Wurzelprodukts hinweg. */
   public double quantityNeeded;
   /** Davon bereits im Kolonielager vorhanden (wird nicht erneut produziert). */

@@ -320,18 +320,17 @@ async function main() {
   // greift der Blackout (Produktion ×0,1), der Lebensstandard fällt auf 0, die
   // Bevölkerung schrumpft und die Fertigung kommt endgültig zum Erliegen: eine
   // Todesspirale, aus der die Kolonie sich nicht mehr selbst befreien kann.
-  // Reihenfolge nach Tier ABSTEIGEND: Baustoffe können einander als Vorprodukt
-  // enthalten (p_leiterbuendel = p_leitermetall + p_polymergrundstoff). Würde das
-  // niedrigere Tier zuerst gefertigt, verbräuchte der spätere Auftrag des höheren
-  // Tiers die gerade erst eingelagerte Menge wieder (`autoProduceMissing` bedient
-  // sich aus dem Lager) – beide Sollmengen lägen dann nie GLEICHZEITIG im Lager
-  // und die Wartebedingung unten könnte nie eintreten.
-  const productTiers = new Map((await a.call('productTypes')).map(p => [p.id, p.tier]));
-  const materialsDeepestFirst = [...infraPreview.materials]
-    .sort((x, y) => (productTiers.get(y.productTypeId) ?? 0) - (productTiers.get(x.productTypeId) ?? 0));
-  for (const m of materialsDeepestFirst) {
-    await a.call('queueProduction', { colonyId: colonyA.id, productTypeId: m.productTypeId, quantity: m.required, autoProduceMissing: true, requeueOnComplete: false });
-  }
+  // ALLE Baustoffe als EINEN gebündelten Auftrag einreihen (queueProductionBundle),
+  // nicht als separate Einzelaufträge: Baustoffe können einander als Vorprodukt
+  // enthalten (p_leiterbuendel = p_leitermetall + p_polymergrundstoff), Infrastruktur
+  // braucht ab Stufe 4 direkt BEIDE zugleich. Getrennte Aufträge würden sich
+  // gegenseitig den Lagerbestand wegnehmen (der spätere Auftrag bedient sich per
+  // `autoProduceMissing` aus dem, was der frühere gerade erst eingelagert hat) –
+  // beide Sollmengen lägen dann nie GLEICHZEITIG im Lager und die Wartebedingung
+  // unten könnte nie eintreten. Der Kettenplaner rechnet den gemeinsamen Bedarf
+  // stattdessen in einem Rutsch (ChainPlanner.planChain mit mehreren Wurzeln).
+  const products = Object.fromEntries(infraPreview.materials.map(m => [m.productTypeId, m.required]));
+  await a.call('queueProductionBundle', { colonyId: colonyA.id, products, autoProduceMissing: true, requeueOnComplete: false });
   const materialsReady = await waitUntil(async () => {
     const wh = await a.call('warehouse', { colonyId: colonyA.id });
     const ok = infraPreview.materials.every(m => (wh.find(w => w.productTypeId === m.productTypeId)?.quantity ?? 0) >= m.required);

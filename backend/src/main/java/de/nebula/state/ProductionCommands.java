@@ -12,8 +12,10 @@ import de.nebula.model.ProductionQueueStatus;
 import de.nebula.model.Specialization;
 import de.nebula.model.WarehouseEntry;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.function.DoubleConsumer;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * 1:1-Portierung der Produktions-Sektion (sequentielle Warteschlange) aus
@@ -49,22 +51,52 @@ public final class ProductionCommands {
   /** Ungeprüfter Kern von {@link #queueProduction} – für eine künftige NPC-KI gedacht (siehe TS-Original). */
   public static void queueProductionCore(GameState state, IdGenerator ids, String colonyId, String productTypeId,
                                           double quantity, boolean autoProduceMissing, boolean requeueOnComplete) {
-    // Nur ganze Stücke (Umsetzungskonzept/25_...md) – der Kettenplaner rechnet mit
-    // ganzzahligen Rezeptmengen weiter, damit im Lager nie ein Bruchteil landet.
-    quantity = Math.floor(quantity);
-    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
-    ProductType product = ProductCatalog.find(productTypeId);
-    if (product.category == ProductCategory.Ship || product.category == ProductCategory.GroundUnit) {
-      throw new CommandException("Schiffe und Bodeneinheiten werden über Werft bzw. Ausbildungszentrum in Auftrag gegeben.");
+    LinkedHashMap<String, Double> demand = new LinkedHashMap<>();
+    demand.put(productTypeId, quantity);
+    queueProductionBundleCore(state, ids, colonyId, demand, autoProduceMissing, requeueOnComplete);
+  }
+
+  /**
+   * Wie {@link #queueProduction}, aber für MEHRERE direkt angeforderte Wurzelprodukte in
+   * EINEM Auftrag (siehe {@link ProductionQueueEntry#bundledProducts}) – der Fix dafür, dass
+   * ein Bauauftrag mehrere Baustoffe direkt zugleich braucht, von denen einer Vorprodukt eines
+   * anderen ist (z. B. {@code p_leitermetall} und {@code p_leiterbuendel}, siehe TODO.md):
+   * getrennte Einzelaufträge würden sich sonst gegenseitig den Lagerbestand wegnehmen.
+   */
+  public static void queueProductionBundle(GameState state, IdGenerator ids, String playerId, String colonyId,
+                                            Map<String, Double> products, boolean autoProduceMissing,
+                                            boolean requeueOnComplete) {
+    GameQueries.requireOwnColony(state, playerId, colonyId);
+    queueProductionBundleCore(state, ids, colonyId, products, autoProduceMissing, requeueOnComplete);
+  }
+
+  /** Ungeprüfter Kern von {@link #queueProductionBundle} – für eine künftige NPC-KI gedacht. */
+  public static void queueProductionBundleCore(GameState state, IdGenerator ids, String colonyId,
+                                                Map<String, Double> products, boolean autoProduceMissing,
+                                                boolean requeueOnComplete) {
+    if (products.isEmpty()) throw new CommandException("Mindestens ein Produkt erforderlich.");
+    LinkedHashMap<String, Double> normalized = new LinkedHashMap<>();
+    for (Map.Entry<String, Double> e : products.entrySet()) {
+      // Nur ganze Stücke (Umsetzungskonzept/25_...md) – der Kettenplaner rechnet mit
+      // ganzzahligen Rezeptmengen weiter, damit im Lager nie ein Bruchteil landet.
+      double quantity = Math.floor(e.getValue());
+      if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+      ProductType product = ProductCatalog.find(e.getKey());
+      if (product.category == ProductCategory.Ship || product.category == ProductCategory.GroundUnit) {
+        throw new CommandException("Schiffe und Bodeneinheiten werden über Werft bzw. Ausbildungszentrum in Auftrag gegeben.");
+      }
+      normalized.put(e.getKey(), quantity);
     }
     if (GameQueries.getBuildingLevel(state, colonyId, "b_industry") < 1) {
       throw new CommandException("Ohne Industriekomplex ist keine Fertigung möglich.");
     }
+    Map.Entry<String, Double> first = normalized.entrySet().iterator().next();
     ProductionQueueEntry entry = new ProductionQueueEntry();
     entry.id = ids.next("pq");
     entry.colonyId = colonyId;
-    entry.productTypeId = productTypeId;
-    entry.quantity = quantity;
+    entry.productTypeId = first.getKey();
+    entry.quantity = first.getValue();
+    entry.bundledProducts = normalized.size() > 1 ? normalized : null;
     entry.autoProduceMissing = autoProduceMissing;
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
@@ -100,7 +132,7 @@ public final class ProductionCommands {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     ProductionQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null) return;
-    creditPartialChainProgress(state, colonyId, entry, qty -> Warehouse.add(state, colonyId, entry.productTypeId, qty));
+    creditPartialChainProgress(state, colonyId, entry, (pid, qty) -> Warehouse.add(state, colonyId, pid, qty));
     state.productionQueue.remove(entry);
     tryStartNextProductionEntry(state, ids, colonyId);
   }
@@ -118,24 +150,23 @@ public final class ProductionCommands {
    * verstrichener Zeitanteil)} gutgeschrieben (Abrundung – ein zu 90%
    * fertiges Einzelmodul zählt als 0, nicht als 0,9), der bereits aus dem
    * Lager entnommene, aber nicht mehr benötigte Anteil wird zurückerstattet.
-   * {@code creditRoot} bestimmt, wohin der Wurzelschritt-Anteil gebucht wird
-   * (Lager bei Produktion, künftig Flotte bei Schiffen, Garnison bei
-   * Rekrutierung) – alle anderen Schritte landen immer im Lager. Kein Effekt
-   * bei {@code queued}/{@code stopped} (dort wurde noch nichts entnommen).
+   * {@code creditRoot} bestimmt, wohin ein Wurzelschritt-Anteil gebucht wird (Produkt-Id
+   * mitgegeben, da ein Auftrag inzwischen mehrere Wurzelprodukte bündeln kann, siehe
+   * {@link ProductionQueueEntry#bundledProducts}; Lager bei Produktion, künftig Flotte bei
+   * Schiffen, Garnison bei Rekrutierung) – alle anderen Schritte landen immer im Lager. Kein
+   * Effekt bei {@code queued}/{@code stopped} (dort wurde noch nichts entnommen).
    */
-  public static void creditPartialChainProgress(GameState state, String colonyId, ProductionQueueEntry entry, DoubleConsumer creditRoot) {
+  public static void creditPartialChainProgress(GameState state, String colonyId, ProductionQueueEntry entry, BiConsumer<String, Double> creditRoot) {
     if (entry.status != ProductionQueueStatus.running || entry.startedAt == null || entry.endsAt == null) return;
     double elapsedFraction = Formulas.clamp(
         (double) (Clock.now() - entry.startedAt) / Math.max(entry.endsAt - entry.startedAt, 1), 0, 1);
     List<ChainPlanStep> steps = entry.plan.steps;
-    for (int i = 0; i < steps.size(); i++) {
-      ChainPlanStep step = steps.get(i);
-      boolean isRoot = i == steps.size() - 1;
+    for (ChainPlanStep step : steps) {
       double refund = Math.floor(step.quantityFromWarehouse * (1 - elapsedFraction));
       if (refund > 0) Warehouse.add(state, colonyId, step.productTypeId, refund);
       double credited = Math.floor(step.quantityToProduce * elapsedFraction);
       if (credited > 0) {
-        if (isRoot) creditRoot.accept(credited); else Warehouse.add(state, colonyId, step.productTypeId, credited);
+        if (step.isRoot) creditRoot.accept(step.productTypeId, credited); else Warehouse.add(state, colonyId, step.productTypeId, credited);
       }
       // XP unabhängig von der (abgerundeten) Stückzahl – zeitbasiert, damit auch ein
       // abgebrochener Auftrag mit z. B. nur einer Einheit (credited rundet auf 0) die investierte Zeit nicht verliert.
@@ -163,14 +194,18 @@ public final class ProductionCommands {
   }
 
   private static void startProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
-    ChainPlan plan = ChainPlanner.planChain(state, entry.colonyId, entry.productTypeId, entry.quantity, "b_industry");
+    ChainPlan plan = entry.bundledProducts != null
+        ? ChainPlanner.planChain(state, entry.colonyId, entry.bundledProducts, "b_industry")
+        : ChainPlanner.planChain(state, entry.colonyId, entry.productTypeId, entry.quantity, "b_industry");
     if (!plan.feasible && !entry.autoProduceMissing) {
       entry.plan = plan;
       entry.status = ProductionQueueStatus.stopped;
       entry.stoppedReasonCode = Notifications.CODE_QUEUE_STOPPED;
+      String label = entry.bundledProducts != null
+          ? entry.bundledProducts.keySet().stream().map(id -> ProductCatalog.find(id).name).collect(java.util.stream.Collectors.joining(", "))
+          : ProductCatalog.find(entry.productTypeId).name;
       Notifications.notify(state, ids, de.nebula.model.NotificationType.Problem, Notifications.CODE_QUEUE_STOPPED,
-          "Produktionswarteschlange angehalten: nicht genug Vorprodukte für \""
-              + ProductCatalog.find(entry.productTypeId).name + "\" vorhanden.", entry.colonyId, null);
+          "Produktionswarteschlange angehalten: nicht genug Vorprodukte für \"" + label + "\" vorhanden.", entry.colonyId, null);
       return;
     }
     for (ChainPlanStep step : plan.steps) {
@@ -185,7 +220,11 @@ public final class ProductionCommands {
   }
 
   public static void completeProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
-    Warehouse.add(state, entry.colonyId, entry.productTypeId, entry.quantity);
+    if (entry.bundledProducts != null) {
+      for (Map.Entry<String, Double> e : entry.bundledProducts.entrySet()) Warehouse.add(state, entry.colonyId, e.getKey(), e.getValue());
+    } else {
+      Warehouse.add(state, entry.colonyId, entry.productTypeId, entry.quantity);
+    }
     Specializations.registerProducedChain(state, entry.colonyId, entry.plan);
     state.productionQueue.remove(entry);
     if (entry.requeueOnComplete) {
@@ -194,6 +233,7 @@ public final class ProductionCommands {
       fresh.colonyId = entry.colonyId;
       fresh.productTypeId = entry.productTypeId;
       fresh.quantity = entry.quantity;
+      fresh.bundledProducts = entry.bundledProducts;
       fresh.autoProduceMissing = entry.autoProduceMissing;
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;

@@ -199,6 +199,14 @@ public class GameSocket {
             payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false));
         yield null;
       }
+      // body: { colonyId, products: { productTypeId: quantity, ... }, autoProduceMissing, requeueOnComplete } –
+      // mehrere direkt benötigte Baustoffe als EIN Auftrag, siehe ProductionCommands.queueProductionBundle.
+      case "queueProductionBundle" -> {
+        ProductionCommands.queueProductionBundle(state, ids, requirePlayerId(), text(payload, "colonyId"),
+            productMap(payload.path("products")),
+            payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false));
+        yield null;
+      }
       case "resumeProduction" -> {
         ProductionCommands.resumeProduction(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "entryId"));
         yield null;
@@ -473,6 +481,13 @@ public class GameSocket {
 
   private static String text(JsonNode payload, String field) {
     return payload.path(field).asText(null);
+  }
+
+  /** Parst {@code { productTypeId: quantity, ... }} für {@code queueProductionBundle}. */
+  private static java.util.Map<String, Double> productMap(JsonNode node) {
+    java.util.LinkedHashMap<String, Double> result = new java.util.LinkedHashMap<>();
+    node.fields().forEachRemaining(e -> result.put(e.getKey(), e.getValue().asDouble()));
+    return result;
   }
 
   /** Parst {@code { kind: 'System' | 'PlanetOrbit' | 'ColonyOrbit', planetId?, colonyId? }} (siehe TS {@code FleetSystemTarget}). */

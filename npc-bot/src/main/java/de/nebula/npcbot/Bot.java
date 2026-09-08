@@ -345,26 +345,33 @@ public class Bot {
   }
 
   /**
-   * Parst "Fehlende Baustoffe: p_stahl (10 benötigt, 3 vorhanden), ..." und
-   * reiht die fehlenden Produkte mit automatischer Vorkette ein (einmalig je
-   * Produkt, solange der Auftrag in der Warteschlange steht).
+   * Parst "Fehlende Baustoffe: p_stahl (10 benötigt, 3 vorhanden), ..." und reiht ALLE
+   * fehlenden Produkte als EINEN gebündelten Auftrag ein (statt je Produkt einen eigenen):
+   * einer der Baustoffe kann Vorprodukt eines anderen sein (z. B. `p_leiterbuendel` enthält
+   * `p_leitermetall`), separate Aufträge würden sich dann gegenseitig den gerade erst
+   * eingelagerten Bestand wieder wegnehmen und die Bedingung nie gleichzeitig erfüllen (siehe
+   * TODO.md). `ProductionCommands.queueProductionBundle` rechnet den gemeinsamen Bedarf in
+   * einem Rutsch. Nur einmalig, solange der Auftrag in der Warteschlange steht.
    */
   private boolean queueMissingMaterials(String message) {
     if (message == null || !message.startsWith("Fehlende Baustoffe")) return false;
     java.util.regex.Matcher m = java.util.regex.Pattern.compile("(p_[a-z_]+) \\((\\d+) benötigt, (\\d+) vorhanden\\)").matcher(message);
+    LinkedHashMap<String, Double> products = new LinkedHashMap<>();
     while (m.find()) {
       String productTypeId = m.group(1);
       double missing = Double.parseDouble(m.group(2)) - Double.parseDouble(m.group(3));
       if (materialOrdersQueued.contains(productTypeId)) continue;
-      try {
-        connection.call("queueProduction", Map.of(
-            "colonyId", homeColonyId, "productTypeId", productTypeId,
-            "quantity", Math.max(1, Math.ceil(missing)), "autoProduceMissing", true, "requeueOnComplete", false));
-        materialOrdersQueued.add(productTypeId);
-        log("Baustoff-Produktion eingereiht: " + productTypeId + " x" + (long) Math.ceil(missing));
-      } catch (CommandException e) {
-        log("Baustoff-Produktion abgelehnt: " + e.getMessage());
-      }
+      products.put(productTypeId, (double) Math.max(1, Math.ceil(missing)));
+    }
+    if (products.isEmpty()) return true;
+    try {
+      connection.call("queueProductionBundle", Map.of(
+          "colonyId", homeColonyId, "products", products, "autoProduceMissing", true, "requeueOnComplete", false));
+      materialOrdersQueued.addAll(products.keySet());
+      log("Baustoff-Produktion gebündelt eingereiht: " + products.entrySet().stream()
+          .map(e -> e.getKey() + " x" + e.getValue().longValue()).collect(java.util.stream.Collectors.joining(", ")));
+    } catch (CommandException e) {
+      log("Baustoff-Produktion abgelehnt: " + e.getMessage());
     }
     return true;
   }

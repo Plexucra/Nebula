@@ -143,20 +143,36 @@ public final class ChainPlanner {
    * mindestens ein Nicht-Wurzel-Schritt einen ungedeckten Fehlbetrag hat.
    */
   public static ChainPlan planChain(GameState state, String colonyId, String productTypeId, double quantity, String facilityTypeId) {
+    return planChain(state, colonyId, Map.of(productTypeId, quantity), facilityTypeId);
+  }
+
+  /**
+   * Wie {@link #planChain(GameState, String, String, double, String)}, aber für MEHRERE
+   * Wurzelprodukte in EINEM Auftrag (Umsetzungskonzept/28_...md-Folgefehler: eine
+   * Bau-Bestellung kann mehrere Baustoffe direkt zugleich benötigen, von denen einer das
+   * Vorprodukt eines anderen ist, z. B. {@code p_leitermetall} und {@code p_leiterbuendel}).
+   * ALLE Schlüssel aus {@code demand} gelten als Wurzel: keiner von ihnen wird aus dem Lager
+   * gedeckt, jeder wird in voller angeforderter Menge NEU gebaut – genau wie beim
+   * Einzelprodukt-Fall. Braucht ein Wurzelprodukt ein anderes Wurzelprodukt als Zutat (wie
+   * oben), wird dessen Bedarf einfach aufaddiert: der gemeinsame Lagerbestand wird für keines
+   * der beiden angetastet, es kann also nicht mehr passieren, dass der zweite Schritt dem
+   * ersten die gerade erst eingelagerte Menge wieder wegnimmt.
+   */
+  public static ChainPlan planChain(GameState state, String colonyId, Map<String, Double> demand, String facilityTypeId) {
+    Set<String> rootIds = demand.keySet();
     Set<String> reachable = new LinkedHashSet<>();
-    discover(productTypeId, reachable);
+    for (String rootId : rootIds) discover(rootId, reachable);
     List<String> orderedByTierDesc = new ArrayList<>(reachable);
     orderedByTierDesc.sort((a, b) -> ProductCatalog.find(b).tier - ProductCatalog.find(a).tier);
 
-    Map<String, Double> totalDemand = new LinkedHashMap<>();
-    totalDemand.put(productTypeId, quantity);
+    Map<String, Double> totalDemand = new LinkedHashMap<>(demand);
     List<ChainPlanStep> rawSteps = new ArrayList<>();
 
     for (String pid : orderedByTierDesc) {
       double needed = totalDemand.getOrDefault(pid, 0.0);
       if (needed <= 0) continue;
       ProductType product = ProductCatalog.find(pid);
-      boolean isRoot = pid.equals(productTypeId);
+      boolean isRoot = rootIds.contains(pid);
       double fromWarehouse = isRoot ? 0 : Math.min(needed, Warehouse.qty(state, colonyId, pid));
       double toProduce = needed - fromWarehouse;
       if (toProduce > 0) {
@@ -169,6 +185,7 @@ public final class ChainPlanner {
       double unlimitedPerUnit = computeProductionHoursWithoutWorkforce(state, colonyId, product, facilityTypeId);
       ChainPlanStep step = new ChainPlanStep();
       step.productTypeId = pid;
+      step.isRoot = isRoot;
       step.quantityNeeded = needed;
       step.quantityFromWarehouse = fromWarehouse;
       step.quantityToProduce = toProduce;
@@ -178,7 +195,9 @@ public final class ChainPlanner {
       rawSteps.add(step);
     }
 
-    // Rohstoffe zuerst, Wurzel zuletzt (für die aufklappbare Detailansicht).
+    // Rohstoffe zuerst, Wurzel(n) zuletzt (für die aufklappbare Detailansicht) – bei mehreren
+    // Wurzeln landet nur die tierhöchste garantiert ganz am Ende, die übrigen tragen dafür
+    // step.isRoot.
     List<ChainPlanStep> steps = new ArrayList<>(rawSteps);
     java.util.Collections.reverse(steps);
 
@@ -191,9 +210,8 @@ public final class ChainPlanner {
     double workersBoundPerHour = totalHours > 0 ? totalWorkHours / totalHours : 0;
 
     boolean feasible = true;
-    for (int i = 0; i < steps.size(); i++) {
-      if (i == steps.size() - 1) continue;
-      if (steps.get(i).quantityToProduce != 0) {
+    for (ChainPlanStep step : steps) {
+      if (!step.isRoot && step.quantityToProduce != 0) {
         feasible = false;
         break;
       }
