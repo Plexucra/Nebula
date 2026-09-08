@@ -508,11 +508,21 @@ deutschen Erklärkommentare). Das ist die einzige Stelle im Backend, an der
 Zahlen "hart" vorkommen – jede Spielregel, die auf diesen Formeln aufbaut,
 ruft ausschließlich diese Methoden auf, nie eigene Neuberechnungen.
 
-**Offener Punkt**: ein automatisierter Parity-Test (TS-Werte vs. Java-Werte
-für dieselben Eingaben, z. B. über eine kleine Testtabelle) existiert noch
-nicht. Bis dahin gilt bei Verdacht auf Abweichung das TypeScript als Referenz.
-Sollte in einer späteren Phase Zeit dafür sein, ist das ein sinnvoller
-Absicherungsschritt, kein Blocker für die weitere Migration.
+**Erledigt (ersetzt den früheren offenen Punkt "Parity-Test TS vs. Java")**:
+ein Parity-Test kann es nicht mehr geben – die TypeScript-Simulation samt
+`engine/formulas.ts` wurde mit "eine einzige Regelquelle"
+(Umsetzungskonzept/15_...md, Auftrag 3) gelöscht, `Formulas.java` ist seither
+die alleinige Quelle. Der Absicherungszweck bleibt aber bestehen und wird
+jetzt von `backend/src/test/java/de/nebula/engine/FormulasTest.java` erfüllt:
+er prüft nicht nach, was der Code gerade tut, sondern die in dieser
+Konzeption AUSGESCHRIEBENEN Zahlenbeispiele und Zusicherungen – etwa die
+Infrastruktur-Kostentabelle aus 17_...md Teil A (T=2 → 335 Cr, T=20 →
+6 426 Cr), die Wohnkomplex-Verdopplung (Stufe 20 ≈ 10,5 Mrd.), die
+Spezialisierungs-Kalibrierung auf eine Spielwoche (Stufe 10 nach 168
+Spielstunden), das Lebensstandard-Totband 30 %/50 % und die Kampf-Faktoren
+(0,2:1 ⇒ 20 % Verluste je Tick bei neutralem Konter). Weicht eine Formel
+künftig davon ab, ist entweder die Änderung falsch oder die Konzeption muss
+mitgezogen werden – beides soll auffallen, statt still zu passieren.
 
 ## Zustandshaltung: `GameState`
 

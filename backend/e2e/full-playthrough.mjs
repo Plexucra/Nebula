@@ -60,7 +60,13 @@ const REAL_MS_PER_GAME_HOUR = 2500;
 function hoursToMs(h) { return h * REAL_MS_PER_GAME_HOUR; }
 
 function shipMilitaryValue(product) {
-  return product.baseWorkforceRequired * product.baseProductionHours;
+  // Entspricht Formulas.productionAspect(workHoursPerUnit, baseProductionHours).
+  // Harte Prüfung, weil ein fehlendes Feld sonst als NaN durch computeSideDamage
+  // laufen und dort zu leeren (statt falschen) Erwartungswerten führen würde.
+  const value = product?.workHoursPerUnit * product?.baseProductionHours;
+  assert.ok(Number.isFinite(value),
+    `shipMilitaryValue: workHoursPerUnit/baseProductionHours fehlen oder sind keine Zahl für ${product?.id} – Katalogfeld umbenannt?`);
+  return value;
 }
 
 function counterMultiplier(attackerCountersDefender, defenderCountersAttacker) {
@@ -109,14 +115,30 @@ function applyDamage(ships, damageByType, productById) {
 }
 
 // --- Minimaler WS-Client: {type,requestId,payload} -> Promise<Ack.payload> ---
+/** Frist für EINEN Befehl. Ohne sie hinge ein verlorener Ack den Lauf unbegrenzt auf. */
+const CALL_TIMEOUT_MS = 30_000;
+
 class GameClient {
   constructor(label) {
     this.label = label;
     this.counter = 0;
     this.pending = new Map();
     this.pushes = [];
+    this.deadReason = null;
     this.ws = new WebSocket(WS_URL);
     this.ws.addEventListener('message', (ev) => this.onMessage(JSON.parse(ev.data)));
+    // Ohne diese beiden Handler bliebe ein Verbindungsabbruch unbemerkt: die
+    // offenen call()-Promises würden nie erfüllt, der Lauf bliebe still stehen
+    // statt mit einer Diagnose abzubrechen.
+    this.ws.addEventListener('close', (ev) => this.die(`Verbindung geschlossen (code=${ev.code})`));
+    this.ws.addEventListener('error', () => this.die('Verbindungsfehler'));
+  }
+
+  die(reason) {
+    if (this.deadReason) return;
+    this.deadReason = reason;
+    for (const [, entry] of this.pending) entry.reject(new Error(`[${this.label}] ${reason}`));
+    this.pending.clear();
   }
 
   ready() {
@@ -139,14 +161,21 @@ class GameClient {
   }
 
   call(type, payload = {}) {
+    if (this.deadReason) return Promise.reject(new Error(`[${this.label}] ${this.deadReason}`));
     return new Promise((resolve, reject) => {
       const requestId = `${this.label}-${++this.counter}`;
-      this.pending.set(requestId, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pending.delete(requestId);
+        reject(new Error(`[${this.label}] Zeitüberschreitung nach ${CALL_TIMEOUT_MS} ms bei Befehl "${type}"`));
+      }, CALL_TIMEOUT_MS);
+      const settle = (fn) => (value) => { clearTimeout(timer); fn(value); };
+      this.pending.set(requestId, { resolve: settle(resolve), reject: settle(reject) });
       this.ws.send(JSON.stringify({ type, requestId, payload }));
     });
   }
 
   close() {
+    this.deadReason = 'Verbindung regulär geschlossen';
     this.ws.close();
   }
 }
@@ -204,14 +233,18 @@ async function main() {
   // Umsetzungskonzept/15_...md, Auftrag 1: ohne sie kann die Bevölkerung gar
   // nichts kaufen (EconomyTick.runConsumption kauft NUR aus sellOrders, nicht
   // aus dem Kolonielager) – Lebensstandard bliebe dauerhaft 0 %.
+  // Seit Umsetzungskonzept/20_...md ist Grundnahrung das EINZIGE mitgelieferte
+  // Startkonsumgut (WorldSeed.STARTER_CONSUMER_GOODS) – Grundmedizin und
+  // Unterhaltungselektronik bleiben bewusst Sache des Kommandanten, damit die
+  // sequentielle Produktionswarteschlange Freiraum für Spezialisierungsstufen hat.
   const starterOrders = await a.call('sellOrders', { systemId: playerA.homeSystemId });
   const starterFood = starterOrders.find(o => o.productTypeId === 'p_grundnahrung');
-  const starterMed = starterOrders.find(o => o.productTypeId === 'p_grundmedizin');
   assert.ok(starterFood, 'Eine frische Heimatkolonie muss eine Verkaufsorder für Grundnahrung haben');
-  assert.ok(starterMed, 'Eine frische Heimatkolonie muss eine Verkaufsorder für Grundmedizin haben');
-  assert.ok(starterFood.autoRelist && starterMed.autoRelist, 'Die Start-Verkaufsorders müssen wiederkehrend sein (autoRelist)');
-  log(`Start-Verkaufsorders vorhanden: ${starterFood.productTypeId} ${starterFood.remainingQuantity}× à ${starterFood.pricePerUnit} Cr, `
-    + `${starterMed.productTypeId} ${starterMed.remainingQuantity}× à ${starterMed.pricePerUnit} Cr (autoRelist).`);
+  assert.ok(starterFood.autoRelist, 'Die Start-Verkaufsorder muss wiederkehrend sein (autoRelist)');
+  assert.ok(!starterOrders.some(o => o.productTypeId === 'p_grundmedizin'),
+    'Grundmedizin darf laut Umsetzungskonzept/20_...md KEINE Start-Verkaufsorder mehr haben');
+  log(`Start-Verkaufsorder vorhanden: ${starterFood.productTypeId} ${starterFood.remainingQuantity}× à ${starterFood.pricePerUnit} Cr (autoRelist), `
+    + `Grundmedizin bewusst nicht (Konzept 20).`);
 
   // Der Lebensstandard muss tickgetrieben über 0 steigen – der eigentliche
   // Beweis, dass der Kreislauf greift und nicht nur Orders existieren.
@@ -238,22 +271,24 @@ async function main() {
   const colonyB = coloniesB.find(c => c.id === playerB.homeworldColonyId);
   assert.ok(colonyB, 'Heimatkolonie von B muss in colonies() auftauchen');
 
-  // --- Schritt 2a: Bebauung – Minimalstart, Bebauungsplätze, Baustoffe -----
-  // Umsetzungskonzept/17_...md: Heimatkolonie startet mit Wohnkomplex 1 +
-  // Industriekomplex 1 + Infrastruktur 2 (beide Plätze belegt). Jeder Ausbau
-  // kostet Baustoffe; das Startlager enthält keine – der erste Zug ist daher
-  // Infrastruktur 3, für die Industriekomplex 1 die Baustoffe erst produzieren muss.
+  // --- Schritt 2a: Bebauung – Startbebauung, Bebauungsplätze, Baustoffe ----
+  // WorldSeed (Nutzerentscheidung, abweichend von der ursprünglichen
+  // Minimalstart-Herleitung in Umsetzungskonzept/17_...md): Heimatkolonie
+  // startet mit Wohnkomplex 1 + Industriekomplex 5 + Infrastruktur 6, alle
+  // 6 Bebauungsplätze belegt. Jeder Ausbau kostet Baustoffe; das Startlager
+  // enthält keine – der erste Zug ist daher Infrastruktur 7, für die der
+  // Industriekomplex die Baustoffe erst produzieren muss.
   const buildingsBefore = await a.call('buildings', { colonyId: colonyA.id });
   assert.deepEqual(
     buildingsBefore.map(x => `${x.typeId}:${x.level}`).sort(),
-    ['b_habitat:1', 'b_industry:1', 'b_infrastructure:2'],
-    'Minimalstart: Wohnkomplex 1 + Industriekomplex 1 + Infrastruktur 2');
+    ['b_habitat:1', 'b_industry:5', 'b_infrastructure:6'],
+    'Startbebauung: Wohnkomplex 1 + Industriekomplex 5 + Infrastruktur 6');
   const slots0 = await a.call('buildSlots', { colonyId: colonyA.id });
-  assert.deepEqual([slots0.total, slots0.used, slots0.free], [2, 2, 0], 'Start: 2 Plätze, beide belegt');
-  log(`Minimalstart bestätigt: ${buildingsBefore.map(x => x.typeId + ' ' + x.level).join(', ')} · Plätze ${slots0.used}/${slots0.total} (${slots0.free} frei), Infrastruktur planetweit ${slots0.planetInfrastructureTotal}/${slots0.planetInfrastructureMax}`);
+  assert.deepEqual([slots0.total, slots0.used, slots0.free], [6, 6, 0], 'Start: 6 Plätze, alle belegt');
+  log(`Startbebauung bestätigt: ${buildingsBefore.map(x => x.typeId + ' ' + x.level).join(', ')} · Plätze ${slots0.used}/${slots0.total} (${slots0.free} frei), Infrastruktur planetweit ${slots0.planetInfrastructureTotal}/${slots0.planetInfrastructureMax}`);
 
   const queueAtStart = await a.call('productionQueue', { colonyId: colonyA.id });
-  assert.ok(queueAtStart.some(q => q.status === 'running'), 'Startaufträge müssen mit Industriekomplex 1 sofort laufen');
+  assert.ok(queueAtStart.some(q => q.status === 'running'), 'Startaufträge müssen sofort laufen');
   log(`Startaufträge laufen sofort an: ${queueAtStart.filter(q => q.status === 'running').length} running, ${queueAtStart.filter(q => q.status === 'queued').length} queued.`);
 
   await assert.rejects(() => a.call('queueShip', { colonyId: colonyA.id, shipProductTypeId: 'p_corvette', quantity: 1, autoProduceMissing: true, requeueOnComplete: false }),
@@ -264,29 +299,44 @@ async function main() {
 
   const breakdown0 = await a.call('colonySpeedBreakdown', { colonyId: colonyA.id });
   const infraPreview = breakdown0.buildingUpgrades.find(u => u.typeId === 'b_infrastructure');
-  assert.ok(infraPreview.materials.length >= 2, 'Infrastruktur 3 muss Baustoffe verlangen');
+  assert.ok(infraPreview.materials.length >= 2, 'Der Infrastruktur-Ausbau muss Baustoffe verlangen');
   assert.ok(infraPreview.materials.every(m => m.available === 0), 'Startlager enthält keine Baustoffe');
   assert.equal(infraPreview.affordable, false);
   assert.equal(infraPreview.needsSlot, false, 'Infrastruktur belegt selbst keinen Platz');
   await assert.rejects(() => a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_infrastructure' }),
     /Fehlende Baustoffe: p_/, 'Ohne Baustoffe muss der Infrastruktur-Ausbau mit Auflistung abgelehnt werden');
-  log(`Infrastruktur 2→3 ohne Baustoffe korrekt abgelehnt; Vorschau: ${infraPreview.upgradeCost} Cr, ${infraPreview.upgradeHours}h, Baustoffe ${infraPreview.materials.map(m => `${m.productTypeId} ${m.required} (Lager ${m.available})`).join(', ')}.`);
+  const nextInfraLevel = infraPreview.currentLevel + 1;
+  log(`Infrastruktur ${infraPreview.currentLevel}→${nextInfraLevel} ohne Baustoffe korrekt abgelehnt; Vorschau: ${infraPreview.upgradeCost} Cr, ${infraPreview.upgradeHours}h, Baustoffe ${infraPreview.materials.map(m => `${m.productTypeId} ${m.required} (Lager ${m.available})`).join(', ')}.`);
 
-  // Baustoffe für Infrastruktur 3 produzieren (echte Kettenzeiten bei Industrie 1),
+  // Baustoffe für die nächste Infrastruktur-Stufe produzieren (echte Kettenzeiten),
   // dann tatsächlich ausbauen – Baustoffe werden abgezogen, ein Platz wird frei.
-  // Die Startaufträge (Daueraufträge) werden dafür vorab abgebrochen, sonst
-  // belegen sie die EINE sequentielle Warteschlange abwechselnd mit.
-  for (const q of await a.call('productionQueue', { colonyId: colonyA.id })) {
-    await a.call('cancelProduction', { colonyId: colonyA.id, entryId: q.id });
-  }
-  for (const m of infraPreview.materials) {
+  //
+  // Die Startaufträge (Daueraufträge Grundnahrung + stabilisiertes Elerium) werden
+  // dabei BEWUSST NICHT abgebrochen, obwohl sie die EINE sequentielle Warteschlange
+  // mitbelegen und den Lauf dadurch verlängern: der Elerium-Dauerauftrag ist die
+  // Energieversorgung der Kolonie. Ohne ihn ist bei der Startbebauung
+  // (Infrastruktur 6 ⇒ 0,047 Elerium/Spielstunde) die 25er-Startreserve nach rund
+  // 530 Spielstunden aufgebraucht – kürzer als dieser Produktionslauf dauert. Danach
+  // greift der Blackout (Produktion ×0,1), der Lebensstandard fällt auf 0, die
+  // Bevölkerung schrumpft und die Fertigung kommt endgültig zum Erliegen: eine
+  // Todesspirale, aus der die Kolonie sich nicht mehr selbst befreien kann.
+  // Reihenfolge nach Tier ABSTEIGEND: Baustoffe können einander als Vorprodukt
+  // enthalten (p_leiterbuendel = p_leitermetall + p_polymergrundstoff). Würde das
+  // niedrigere Tier zuerst gefertigt, verbräuchte der spätere Auftrag des höheren
+  // Tiers die gerade erst eingelagerte Menge wieder (`autoProduceMissing` bedient
+  // sich aus dem Lager) – beide Sollmengen lägen dann nie GLEICHZEITIG im Lager
+  // und die Wartebedingung unten könnte nie eintreten.
+  const productTiers = new Map((await a.call('productTypes')).map(p => [p.id, p.tier]));
+  const materialsDeepestFirst = [...infraPreview.materials]
+    .sort((x, y) => (productTiers.get(y.productTypeId) ?? 0) - (productTiers.get(x.productTypeId) ?? 0));
+  for (const m of materialsDeepestFirst) {
     await a.call('queueProduction', { colonyId: colonyA.id, productTypeId: m.productTypeId, quantity: m.required, autoProduceMissing: true, requeueOnComplete: false });
   }
   const materialsReady = await waitUntil(async () => {
     const wh = await a.call('warehouse', { colonyId: colonyA.id });
     const ok = infraPreview.materials.every(m => (wh.find(w => w.productTypeId === m.productTypeId)?.quantity ?? 0) >= m.required);
     return ok ? wh : undefined;
-  }, { timeoutMs: 2_700_000, intervalMs: 5000, description: 'Baustoffe für Infrastruktur 3 produziert (Industrie 1, echte Kettenzeiten)' });
+  }, { timeoutMs: 2_700_000, intervalMs: 5000, description: `Baustoffe für Infrastruktur ${nextInfraLevel} produziert (echte Kettenzeiten)` });
   const materialsDoneAt = Date.now();
   log(`Baustoffe produziert: ${infraPreview.materials.map(m => `${m.productTypeId} ${materialsReady.find(w => w.productTypeId === m.productTypeId)?.quantity}`).join(', ')}.`);
   await a.call('queueBuilding', { colonyId: colonyA.id, buildingTypeId: 'b_infrastructure' });
@@ -295,14 +345,16 @@ async function main() {
     const rest = whAfter.find(w => w.productTypeId === m.productTypeId)?.quantity ?? 0;
     assert.ok(rest < m.required, `Baustoff ${m.productTypeId} muss beim Einreihen abgezogen werden`);
   }
-  const infra3 = await waitUntil(async () => {
+  const infraUpgraded = await waitUntil(async () => {
     const list = await a.call('buildings', { colonyId: colonyA.id });
     const inf = list.find(x => x.typeId === 'b_infrastructure');
-    return inf.level >= 3 ? inf : undefined;
-  }, { timeoutMs: 60_000, description: 'Infrastruktur 3 tickgetrieben fertiggestellt' });
-  const slots3 = await a.call('buildSlots', { colonyId: colonyA.id });
-  assert.deepEqual([slots3.total, slots3.used, slots3.free], [3, 2, 1], 'Infrastruktur 3 liefert einen dritten Platz');
-  log(`Infrastruktur ${infra3.level} fertig, Baustoffe abgezogen, Plätze ${slots3.used}/${slots3.total} (${slots3.free} frei).`);
+    return inf.level >= nextInfraLevel ? inf : undefined;
+  }, { timeoutMs: 60_000, description: `Infrastruktur ${nextInfraLevel} tickgetrieben fertiggestellt` });
+  const slotsAfterInfra = await a.call('buildSlots', { colonyId: colonyA.id });
+  assert.deepEqual([slotsAfterInfra.total, slotsAfterInfra.used, slotsAfterInfra.free],
+    [slots0.total + 1, slots0.used, 1],
+    `Infrastruktur ${nextInfraLevel} liefert genau einen zusätzlichen, freien Bebauungsplatz`);
+  log(`Infrastruktur ${infraUpgraded.level} fertig, Baustoffe abgezogen, Plätze ${slotsAfterInfra.used}/${slotsAfterInfra.total} (${slotsAfterInfra.free} frei).`);
   globalThis.__materialsDoneAt = materialsDoneAt;
 
   // --- Schritt 2b: Produktionskette (Rohstoff) einreihen und abwarten --------
@@ -538,12 +590,16 @@ async function main() {
   // nicht mehr client-seitig, sondern bekommt alle Faktoren fertig geliefert.
   const breakdown = await attackerClient.call('colonySpeedBreakdown', { colonyId: attackerPlayer.homeworldColonyId });
   assert.ok(breakdown.population > 0, 'Aufschlüsselung muss die Bevölkerung enthalten');
-  assert.ok(breakdown.workforceFactor > 0, 'Aufschlüsselung muss den Workforce-Faktor enthalten');
+  // Kein workforceFactor mehr: der frühere Tempo-Multiplikator (bis ×5) wurde mit
+  // Umsetzungskonzept/19_...md abgeschafft – Bevölkerung kann die Produktion seither
+  // nur noch BREMSEN (Formulas.productionHoursWithWorkforce). Übrig bleibt die
+  // verfügbare Arbeitskraft als Kennzahl.
+  assert.ok(breakdown.availableWorkers > 0, 'Aufschlüsselung muss die verfügbare Arbeitskraft enthalten');
   assert.ok(breakdown.buildingSpeedFactor > 0, 'Aufschlüsselung muss den Gebäude-Tempofaktor enthalten');
   assert.ok(breakdown.buildingUpgrades.length > 0, 'Aufschlüsselung muss Ausbau-Vorschauen enthalten');
   assert.ok(Object.keys(breakdown.concentrationFactorByProduct).length > 0, 'Aufschlüsselung muss Fördergüte-Faktoren enthalten');
   log(`Tempo-Aufschlüsselung vom Backend: Bevölkerung ${breakdown.population.toFixed(0)}, `
-    + `Workforce ×${breakdown.workforceFactor.toFixed(2)}, Industrie Stufe ${breakdown.industryLevel} `
+    + `verfügbare Arbeitskraft ${breakdown.availableWorkers.toFixed(0)}, Industrie Stufe ${breakdown.industryLevel} `
     + `(×${breakdown.buildingSpeedFactor}), Blackout=${breakdown.blackout}, `
     + `${breakdown.buildingUpgrades.length} Ausbau-Vorschauen, `
     + `${Object.keys(breakdown.concentrationFactorByProduct).length} Fördergüte-Faktoren.`);

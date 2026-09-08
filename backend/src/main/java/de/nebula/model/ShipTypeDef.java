@@ -16,7 +16,7 @@ public class ShipTypeDef {
    * Mechanik/03_..., §2 und Mechanik/04_..., §4. Keine eigenen
    * Angriffs-/Hüllenwerte: Schaden und Haltbarkeit leiten sich
    * ausschließlich aus dem Produktionsaufwand
-   * (baseWorkforceRequired × baseProductionHours) ab.
+   * (workHoursPerUnit × baseProductionHours) ab.
    */
   public ShipClass countersClass;
 }

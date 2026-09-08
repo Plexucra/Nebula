@@ -1,17 +1,21 @@
 package de.nebula.engine;
 
 /**
- * 1:1-Portierung von {@code frontend/src/app/core/sim/engine/formulas.ts}.
- * Platzhalter-Formeln für Werte, die in der Konzeption bewusst als "offene
- * Zahlenfrage" markiert sind (z. B. Mechanik/01_..., Mechanik/11_...).
- * Linear/einfach gehalten und an dieser einzigen Stelle austauschbar.
+ * Die EINZIGE Stelle im Backend, an der Spielzahlen hart vorkommen – jede
+ * Spielregel ruft ausschließlich diese Methoden auf, nie eigene
+ * Neuberechnungen. Platzhalter-Formeln für Werte, die in der Konzeption
+ * bewusst als "offene Zahlenfrage" markiert sind (z. B. Mechanik/01_...,
+ * Mechanik/11_...), linear/einfach gehalten und an dieser einzigen Stelle
+ * austauschbar.
  *
- * <p><b>WICHTIG für die Migration (siehe Umsetzungskonzept/13_...md):</b>
- * diese Klasse MUSS bitweise dieselben Ergebnisse liefern wie das
- * TS-Original – jede künftige Änderung an einer der beiden Seiten ohne die
- * jeweils andere ist ein Bug. Bis zu einem automatisierten Parity-Test
- * (offener Punkt im Migrationsplan) gilt: bei Unstimmigkeiten ist die
- * TS-Version die Referenz (dort seit Session-Beginn live erprobt).</p>
+ * <p>Ursprünglich eine 1:1-Portierung von {@code frontend/src/app/core/sim/
+ * engine/formulas.ts}. Diese TS-Simulation wurde mit "eine einzige
+ * Regelquelle" (Umsetzungskonzept/15_...md, Auftrag 3) gelöscht; damit ist
+ * auch der im Migrationsplan (Umsetzungskonzept/13_...md) vermerkte
+ * TS↔Java-Parity-Test gegenstandslos. An seiner Stelle sichert
+ * {@code FormulasTest} die in der Konzeption ausgeschriebenen Zahlenbeispiele
+ * und Zusicherungen ab – wer hier eine Formel ändert, muss dort die
+ * Konzeptionsaussage mitziehen.</p>
  */
 public final class Formulas {
   private Formulas() {

@@ -251,10 +251,16 @@ public final class BattleCommands {
       return;
     }
 
-    Map<String, Double> damageToDefender = "attacker".equals(retreatingSide) ? Map.of() : computeSideDamage(attackerFleet.ships, defenderFleet.ships);
-    Map<String, Double> damageToAttacker = "defender".equals(retreatingSide) ? Map.of() : computeSideDamage(defenderFleet.ships, attackerFleet.ships);
-    DamageResult defApplied = applyDamage(defenderFleet.ships, damageToDefender, battle.defenderResidualDamage);
-    DamageResult atkApplied = applyDamage(attackerFleet.ships, damageToAttacker, battle.attackerResidualDamage);
+    // Bestand VOR dem Schaden festhalten, bevor die Flotten überschrieben werden –
+    // der Kampfbericht meldet die zu Tickbeginn kampffähigen, also an diesem Tick
+    // teilnehmenden Schiffe (siehe BattleTickResult, Mechanik/04_..., §1).
+    List<FleetShipGroup> attackerShipsBefore = attackerFleet.ships;
+    List<FleetShipGroup> defenderShipsBefore = defenderFleet.ships;
+
+    Map<String, Double> damageToDefender = "attacker".equals(retreatingSide) ? Map.of() : computeSideDamage(attackerShipsBefore, defenderShipsBefore);
+    Map<String, Double> damageToAttacker = "defender".equals(retreatingSide) ? Map.of() : computeSideDamage(defenderShipsBefore, attackerShipsBefore);
+    DamageResult defApplied = applyDamage(defenderShipsBefore, damageToDefender, battle.defenderResidualDamage);
+    DamageResult atkApplied = applyDamage(attackerShipsBefore, damageToAttacker, battle.attackerResidualDamage);
 
     attackerFleet.ships = atkApplied.ships();
     defenderFleet.ships = defApplied.ships();
@@ -263,8 +269,8 @@ public final class BattleCommands {
     BattleTickResult tickResult = new BattleTickResult();
     tickResult.tick = battle.ticksResolved + 1;
     tickResult.atTime = t;
-    tickResult.attackerShipsBefore = attackerFleet.ships;
-    tickResult.defenderShipsBefore = defenderFleet.ships;
+    tickResult.attackerShipsBefore = attackerShipsBefore;
+    tickResult.defenderShipsBefore = defenderShipsBefore;
     tickResult.attackerLosses = atkApplied.losses();
     tickResult.defenderLosses = defApplied.losses();
 
