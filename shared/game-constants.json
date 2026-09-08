@@ -1,6 +1,8 @@
 {
   "_comment": "Gemeinsame Ausgangswerte für Backend UND Frontend (Umsetzungskonzept/15_...md, Auftrag 3). Das Backend liest die Datei zur Laufzeit aus dem Klassenpfad (siehe SharedConstants.java, Maven-Resource-Mapping in backend/pom.xml), das Frontend importiert sie beim Build (resolveJsonModule). Genau EINE Quelle - Werte hier ändern wirkt auf beiden Seiten.",
-  "realMsPerGameHour": 2500,
+  "baseRealMsPerGameHour": 2500,
+  "_gameSpeedMultiplier": "DER Tempo-Regler des Prototyps und der EINZIGE Wert, an dem für schnellere Testläufe gedreht werden muss: wirksame Zeitkompression = baseRealMsPerGameHour / gameSpeedMultiplier. 1 = Ausgangstempo (2500 ms je Spielstunde, 1 Spieltag = 60 s Realzeit), 4 = viermal so schnell (625 ms je Spielstunde, 1 Spieltag = 15 s). Alles Zeitabhängige im Spiel haengt ausschliesslich an Clock.REAL_MS_PER_GAME_HOUR bzw. GameConstants.TICK_GAME_HOURS und skaliert damit automatisch mit - siehe Clock.java und core/shared-constants.ts. Der Realzeit-Tick selbst (1 s) bleibt unberuehrt, ein Tick deckt nur entsprechend mehr Spielstunden ab.",
+  "gameSpeedMultiplier": 4,
   "notificationRetentionGameHours": 48,
   "messageRetentionGameHours": 168,
   "peaceTreatyTerminationNoticeGameHours": 168,

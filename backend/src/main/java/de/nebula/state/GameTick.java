@@ -31,6 +31,14 @@ public class GameTick {
     this.ids = ids;
   }
 
+  /**
+   * Realzeit-Takt, BEWUSST unabhängig vom Tempo-Regler
+   * ({@code Clock.GAME_SPEED_MULTIPLIER}): schnelleres Spiel heißt nicht mehr
+   * Ticks je Sekunde, sondern mehr Spielstunden je Tick
+   * ({@code GameConstants.TICK_GAME_HOURS}). Der Wert muss zu
+   * {@code GameConstants.TICK_MS} passen – hier ein Textliteral, weil
+   * Annotationswerte Konstanten sein müssen.
+   */
   @Scheduled(every = "1s")
   void tick() {
     if (state.players.isEmpty()) return;
@@ -45,6 +53,7 @@ public class GameTick {
       processDefenseActivations(t);
       FleetCommands.processFleetArrivals(state, t);
       BattleCommands.processBattles(state, ids, t);
+      GroundBattleCommands.processGroundBattles(state, ids, t);
       ProductionCommands.processProductionQueue(state, ids, t);
       ShipyardCommands.processShipyardCompletions(state, ids, t);
       ColonyCommands.processColonizations(state, ids, t);

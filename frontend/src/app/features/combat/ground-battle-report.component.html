@@ -1,0 +1,115 @@
+@if (battle(); as b) {
+  <div class="page-head">
+    <span class="eyebrow">Bodenkampfbericht</span>
+    <h1>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</h1>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-body report-meta">
+      <span>Kolonie <strong>{{ colonyName(b.colonyId) }}</strong> auf <strong>{{ planetName(b.planetId) }}</strong></span>
+      <span class="tag" [class.warn]="b.status === 'Active'" [class.good]="b.status === 'Ended'">
+        {{ b.status === 'Active' ? (b.phase === 'Siege' ? 'Belagerung' : 'Gefecht') : 'Beendet' }}
+      </span>
+      @if (b.status === 'Active') {
+        <span class="hint">Nächster Tick in {{ countdown(b.nextTickAt - clock.now()) }}</span>
+        @if (b.phase === 'Siege') {
+          <span class="hint">
+            Die militärische Gegenwehr ist gebrochen – jetzt entscheidet allein die Loyalität.
+            Die Kolonie geht über, sobald sie unter 2 % fällt.
+          </span>
+        }
+      } @else {
+        <span class="tag" [class.good]="b.outcome === 'AttackerVictory'" [class.warn]="b.outcome === 'DefenderVictory'">
+          @switch (b.outcome) {
+            @case ('AttackerVictory') { Kolonie erobert }
+            @case ('DefenderVictory') { Angriff abgewehrt }
+            @case ('Retreat') { Angriff abgebrochen }
+          }
+        </span>
+      }
+      <span class="hint">
+        Zivilverlustquote {{ b.civilianLossRatio * 100 | number:'1.0-1' }}%
+        (von {{ b.populationAtStart | number:'1.0-0' }} Einwohnern bei Kampfbeginn)
+      </span>
+    </div>
+  </div>
+
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Kampfverlauf</h2></div>
+    <div class="panel-body tick-list">
+      @for (t of b.ticks; track t.tick) {
+        <div class="tick-row">
+          <span class="eyebrow">Tick {{ t.tick }} · {{ t.phase === 'Siege' ? 'Belagerung' : 'Gefecht' }}</span>
+          @if (t.phase === 'Siege') {
+            <div class="side-row">
+              <span class="side-label">{{ playerName(b.attackerId) }}</span>
+              <span>{{ t.attackerSoldiers | number:'1.0-0' }} Soldaten</span>
+              <span class="hint">Verluste: {{ lossesLabel(t.attackerLosses) }}</span>
+            </div>
+            <div class="side-row">
+              <span class="side-label">Aufstand</span>
+              <span>{{ t.rebels | number:'1.0-0' }} Rebellen (10 % der Bevölkerung, 30 % Kampfkraft)</span>
+              <span class="hint">Gefallen: {{ t.civiliansLost | number:'1.0-0' }}</span>
+            </div>
+            <div class="side-row">
+              <span class="side-label">Loyalität</span>
+              <span>{{ t.loyaltyPctBefore | number:'1.0-1' }}% → {{ t.loyaltyPctAfter | number:'1.0-1' }}%</span>
+            </div>
+          } @else {
+            <div class="side-row">
+              <span class="side-label">{{ playerName(b.attackerId) }}</span>
+              <span>Im Gefecht: {{ activeLabel(t.attackerUnitsBefore) }}</span>
+              <span class="hint">Reserve: {{ reserveLabel(t.attackerUnitsBefore) }}</span>
+              <span class="hint">Verluste: {{ lossesLabel(t.attackerLosses) }}</span>
+            </div>
+            <div class="side-row">
+              <span class="side-label">{{ playerName(b.defenderId) }}</span>
+              <span>Im Gefecht: {{ activeLabel(t.defenderUnitsBefore) }}</span>
+              <span class="hint">Reserve: {{ reserveLabel(t.defenderUnitsBefore) }}</span>
+              <span class="hint">Verluste: {{ lossesLabel(t.defenderLosses) }}</span>
+            </div>
+            @if (t.civiliansLost > 0) {
+              <div class="side-row">
+                <span class="side-label">Zivilbevölkerung</span>
+                <span class="hint">{{ t.civiliansLost | number:'1.0-0' }} Tote</span>
+              </div>
+            }
+          }
+        </div>
+      } @empty {
+        <p class="empty-hint">Noch kein Kampf-Tick abgeschlossen.</p>
+      }
+    </div>
+  </div>
+
+  @if (b.status === 'Ended') {
+    <div class="panel corner-frame">
+      <div class="panel-header"><h2>Bilanz</h2></div>
+      <div class="panel-body">
+        <div class="side-row"><span class="side-label">{{ playerName(b.attackerId) }}</span><span>{{ lossesLabel(totalLosses(b.ticks, 'attacker')) }}</span></div>
+        <div class="side-row"><span class="side-label">{{ playerName(b.defenderId) }}</span><span>{{ lossesLabel(totalLosses(b.ticks, 'defender')) }}</span></div>
+        <div class="side-row">
+          <span class="side-label">Zivilbevölkerung</span>
+          <span>{{ totalCiviliansLost(b.ticks) | number:'1.0-0' }} Tote</span>
+        </div>
+        @if (b.outcome === 'AttackerVictory') {
+          <p class="hint">
+            Aus der Zivilverlustquote folgen die Sachschäden an Infrastruktur, Produktionsanlagen,
+            Beständen und – stärker – an der Verteidigungsanlage. Was überlebt hat, ist an den
+            Eroberer übergegangen.
+          </p>
+        }
+      </div>
+    </div>
+  }
+} @else {
+  <div class="page-head">
+    <span class="eyebrow">Bodenkampfbericht</span>
+    <h1>Nicht gefunden</h1>
+  </div>
+  <div class="panel corner-frame">
+    <div class="panel-body empty-state">
+      <p class="empty-hint">Unter diesem Link wurde kein Bodenkampfbericht gefunden.</p>
+    </div>
+  </div>
+}

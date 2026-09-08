@@ -280,10 +280,6 @@ public final class ColonyCommands {
     double population = 0;
     for (Population p : state.populations) if (p.colonyId.equals(colonyId)) population = p.currentCount;
     int infrastructureLevel = GameQueries.getBuildingLevel(state, colonyId, GameConstants.INFRASTRUCTURE_BUILDING_ID);
-    // Der Pro-Kopf-Bedarf ist je TICK definiert; für die Anzeige rechnen wir ihn
-    // auf die Spielstunde hoch, weil Spieler in Spielstunden denken.
-    double ticksPerGameHour = 1 / GameConstants.TICK_GAME_HOURS;
-
     List<SupplyInventoryEntry> result = new ArrayList<>();
     for (WarehouseEntry w : state.warehouse) {
       if (!w.colonyId.equals(colonyId)) continue;
@@ -294,9 +290,9 @@ public final class ColonyCommands {
       entry.category = product.category;
       entry.quantity = w.quantity;
 
-      Double perCapita = GameConstants.CONSUMER_NEED_PER_CAPITA.get(w.productTypeId);
+      Double perCapita = GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(w.productTypeId);
       if (perCapita != null) {
-        entry.consumptionPerGameHour = population * perCapita * ticksPerGameHour;
+        entry.consumptionPerGameHour = population * perCapita;
         entry.pendingFraction = FractionPot.pending(state, FractionPot.key("consume", colonyId, w.productTypeId));
       } else if (GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID.equals(w.productTypeId)) {
         entry.consumptionPerGameHour = Formulas.infrastructureEleriumPerHour(infrastructureLevel);

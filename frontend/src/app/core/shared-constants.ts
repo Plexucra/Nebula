@@ -10,7 +10,15 @@ import sharedConstants from '@shared/game-constants.json';
  * Alles andere – Formeln, Kataloge, Regeln – lebt ausschließlich im Backend
  * und erreicht das Frontend über die WebSocket-Befehle.
  */
-export const REAL_MS_PER_GAME_HOUR: number = sharedConstants.realMsPerGameHour;
+/**
+ * Separat einstellbarer Spielzeit-Multiplikator (1 = Ausgangstempo, 4 =
+ * viermal so schnell). Der einzige Regler für das Spieltempo; Backend und
+ * Frontend lesen ihn aus derselben Datei und rechnen ihn identisch um
+ * (siehe `Clock.java`).
+ */
+export const GAME_SPEED_MULTIPLIER: number = sharedConstants.gameSpeedMultiplier;
+/** Wirksame Zeitkompression = Ausgangswert / Tempo-Regler, exakt wie `Clock.REAL_MS_PER_GAME_HOUR`. */
+export const REAL_MS_PER_GAME_HOUR: number = sharedConstants.baseRealMsPerGameHour / GAME_SPEED_MULTIPLIER;
 export const NOTIFICATION_RETENTION_GAME_HOURS: number = sharedConstants.notificationRetentionGameHours;
 export const MESSAGE_RETENTION_GAME_HOURS: number = sharedConstants.messageRetentionGameHours;
 /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) – für Hinweistexte. */

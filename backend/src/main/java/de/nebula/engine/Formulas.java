@@ -25,6 +25,32 @@ public final class Formulas {
     return Math.max(min, Math.min(max, value));
   }
 
+  /**
+   * Gewicht des NEUEN Messwerts in einer tick-weisen Glättung
+   * ({@code neu = (1-alpha)·alt + alpha·messwert}), abgeleitet aus einer
+   * Zeitkonstante in SPIELSTUNDEN: {@code alpha = 1 - e^(-TICK_GAME_HOURS/tau)}.
+   *
+   * <p>Der Grund für die Umrechnung ist der Tempo-Regler
+   * ({@link Clock#GAME_SPEED_MULTIPLIER}): feste Alpha-Werte je Tick hätten
+   * eine Reaktionszeit in REALSEKUNDEN festgeschrieben. Bei vierfachem Tempo
+   * hätte eine Kolonie dann viermal so viele SPIELstunden gebraucht, um sich
+   * von einem Versorgungsloch zu erholen, während alles andere (Produktion,
+   * Verbrauch, Wachstum) mitskaliert – die Glättung wäre die einzige Größe
+   * gewesen, die dem Regler entkommt. Über die Zeitkonstante bleibt die
+   * Reaktion in Spielstunden konstant; bei Tempo 1 ergeben sich exakt die
+   * bisherigen Alpha-Werte 0,2 / 0,1 / 0,3.</p>
+   */
+  public static double smoothingAlpha(double tauGameHours) {
+    return clamp(1 - Math.exp(-GameConstants.TICK_GAME_HOURS / tauGameHours), 0, 1);
+  }
+
+  /** Energiedeckung: {@code alpha = 0,2} bei Tempo 1, also {@code tau = -0,4/ln(0,8)}. */
+  public static final double POWER_COVERAGE_SMOOTHING_TAU_HOURS = 1.7925;
+  /** Konsumbudget der Bevölkerung: {@code alpha = 0,1} bei Tempo 1. */
+  public static final double CONSUMPTION_BUDGET_SMOOTHING_TAU_HOURS = 3.7961;
+  /** Lebensstandard: {@code alpha = 0,3} bei Tempo 1. */
+  public static final double LIVING_STANDARD_SMOOTHING_TAU_HOURS = 1.1216;
+
   /** Bebauungspunkte, die ein Gebäude auf Ziel-Level {@code level} belegt. */
   /** Kosten für den Ausbau von {@code fromLevel} auf {@code fromLevel + 1}. */
   public static double buildingUpgradeCost(double baseCostPerLevel, int fromLevel) {
@@ -284,6 +310,103 @@ public final class Formulas {
    * {@code tatsächliche Kapazität = capacity × random(0.5, 1.0)}).
    */
   public static final double LANDING_DEFENSE_CAPACITY_PER_LEVEL = 2;
+
+  // --- Bodenkampf (Mechanik/05_..., §2, §4, §10) ---------------------------
+
+  /**
+   * Soldaten, die mit zerstörten Drohnen mit verloren gehen (Mechanik/05_...,
+   * §4: "Wird ein aktiver Waffenträger zerstört, gehen die ihm proportional
+   * zugeordneten Soldaten automatisch mit verloren"). Abgerundet, damit nie
+   * mehr Soldaten sterben als der Anteil hergibt; sterben ALLE aktiven
+   * Drohnen, sterben genau alle aktiven Soldaten.
+   */
+  public static int soldiersLostWithDrones(int activeSoldiers, int activeDronesBefore, int dronesLost) {
+    if (activeDronesBefore <= 0 || dronesLost <= 0) return 0;
+    return (int) Math.min(activeSoldiers, Math.floor((double) activeSoldiers * dronesLost / activeDronesBefore));
+  }
+
+  /**
+   * Anteil der Zivilbevölkerung, der in EINEM Bodenkampf-Tick stirbt
+   * (Mechanik/05_..., §2: "Zivile Verluste entstehen vor allem in Relation zu
+   * den tatsächlichen militärischen Verlusten der Verteidiger"). Bezugsgröße
+   * ist die Ausgangsstärke der Verteidigung: {@code CIVILIAN_LOSS_AT_TOTAL_DEFEAT}
+   * der Zivilbevölkerung stirbt, wenn die Verteidigung vollständig aufgerieben
+   * wird.
+   *
+   * <p>Der Faktor 0,5 ist kein Balancingergebnis, sondern genau der
+   * Referenzpunkt aus §2: eine restlos zerschlagene Verteidigung entspricht
+   * dort 50 % Zivilverlust – und damit ~80 % Materialschaden bzw. ~90 %
+   * Schaden an der Verteidigungsanlage (siehe
+   * {@link #conquestMaterialLossFraction}).</p>
+   */
+  public static final double CIVILIAN_LOSS_AT_TOTAL_DEFEAT = 0.5;
+
+  public static double civilianLossFraction(double defenderValueLostThisTick, double defenderValueAtStart) {
+    if (defenderValueAtStart <= 0) return 0;
+    return clamp(CIVILIAN_LOSS_AT_TOTAL_DEFEAT * defenderValueLostThisTick / defenderValueAtStart, 0, 1);
+  }
+
+  /**
+   * Konfliktschäden bei Eroberung (Mechanik/05_..., §2): Materialschaden
+   * steigt ÜBERPROPORTIONAL zur Zivilverlustquote, deterministisch, kein
+   * Zufall. Kurvenform {@code Quote^k} mit k aus dem dort genannten
+   * Referenzpunkt: {@code 0,5^k = 0,8} → {@code k = ln 0,8 / ln 0,5 ≈ 0,3219}.
+   * Trifft damit exakt "50 % Zivilverlust → ~80 % Verlust bei Infrastruktur,
+   * Produktionsanlagen, Ressourcenbeständen" und die Randpunkte 0→0, 1→1. Die
+   * exakte Kurve ZWISCHEN den Referenzpunkten ist in §2 als offen markiert –
+   * das hier ist die einfachste Kurve, die alle genannten Punkte trifft.
+   */
+  public static double conquestMaterialLossFraction(double civilianLossRatio) {
+    return Math.pow(clamp(civilianLossRatio, 0, 1), Math.log(0.8) / Math.log(0.5));
+  }
+
+  /** Wie {@link #conquestMaterialLossFraction}, aber für Verteidigungsanlagen: {@code 0,5^k = 0,9}. */
+  public static double conquestDefenseLossFraction(double civilianLossRatio) {
+    return Math.pow(clamp(civilianLossRatio, 0, 1), Math.log(0.9) / Math.log(0.5));
+  }
+
+  // --- Belagerung (Nutzervorgabe, Konkretisierung zu Mechanik/05_..., §10) --
+  //
+  // Nach dem Bruch der militärischen Gegenwehr entscheidet nicht mehr Material,
+  // sondern die Loyalität der Bevölkerung. Die Belagerung ist deshalb bewusst
+  // eine REINE RECHENOPERATION ohne Angriffs-/Haltbarkeitswerte: Soldaten
+  // besitzen keine Kampfwerte (§3), und es sollen auch keine erfunden werden.
+
+  /** Anteil der Bevölkerung, der je Belagerungstick als Aufständische ("Rebellen") kämpft. */
+  public static final double SIEGE_REBEL_POPULATION_SHARE = 0.10;
+  /** Kampfkraft eines Rebellen, gemessen an einem Soldaten. */
+  public static final double SIEGE_REBEL_COMBAT_STRENGTH = 0.30;
+  /** Wie viele Kämpfer voller Stärke es rechnerisch braucht, um je Tick EINEN Gegner zu töten. */
+  public static final double SIEGE_FIGHTERS_PER_KILL_PER_TICK = 12;
+  /**
+   * Loyalitätsschwelle, unterhalb derer die Kolonie tatsächlich an den
+   * Angreifer übergeht. Erst hier – nicht schon mit dem Fall der Garnison.
+   */
+  public static final double SIEGE_SURRENDER_LOYALTY_PCT = 2;
+
+  /**
+   * Verluste, die eine Seite je Belagerungstick zufügt:
+   * {@code floor(Kämpfer × Stärke / 12)}. Soldaten kämpfen mit voller Stärke
+   * (1,0), Rebellen mit {@link #SIEGE_REBEL_COMBAT_STRENGTH} – es sterben
+   * also entsprechend mehr Rebellen als Soldaten.
+   */
+  public static int siegeKills(int fighters, double strengthFactor) {
+    if (fighters <= 0) return 0;
+    return (int) Math.floor(fighters * strengthFactor / SIEGE_FIGHTERS_PER_KILL_PER_TICK);
+  }
+
+  /**
+   * ABSOLUTE Senkung der Loyalität je Belagerungstick in Prozentpunkten:
+   * genau das Verhältnis der eingesetzten Soldaten zur Zivilbevölkerung.
+   * 1000 Soldaten gegen 10 000 Einwohner = 10 % → Loyalität 19 % wird zu 9 %.
+   *
+   * <p>Ohne Bevölkerung gibt es niemanden mehr, der illoyal sein könnte – dann
+   * fällt die Kolonie in einem Zug.</p>
+   */
+  public static double siegeLoyaltyDropPct(int attackerSoldiers, double population) {
+    if (population <= 0) return 100;
+    return 100.0 * attackerSoldiers / population;
+  }
 
   /**
    * Konter-Multiplikator (Mechanik/03_..., §2 und 04_..., §4): ×2 im Vorteil,

@@ -64,13 +64,14 @@ public final class Specializations {
     for (ChainPlanStep step : plan.steps) registerProduced(state, colonyId, step.productTypeId, step.hours);
   }
 
-  /** Ohne neue Produktion sinkt eine Spezialisierung nach {@code SPECIALIZATION_DECAY_GRACE_MS} um eine Stufe. */
+  /** Ohne neue Produktion sinkt eine Spezialisierung nach {@code SPECIALIZATION_DECAY_GRACE_GAME_HOURS} um eine Stufe. */
   public static void decaySpecializations(GameState state, long t) {
+    long graceMs = (long) de.nebula.engine.Clock.hoursToMs(GameConstants.SPECIALIZATION_DECAY_GRACE_GAME_HOURS);
     for (Specialization s : state.specializations) {
       if (s.currentLevel <= 0) continue;
       String key = s.colonyId + ":" + s.productTypeId;
       long last = state.lastProducedAt.getOrDefault(key, 0L);
-      if (t - last > GameConstants.SPECIALIZATION_DECAY_GRACE_MS) {
+      if (t - last > graceMs) {
         state.lastProducedAt.put(key, t);
         s.currentLevel -= 1;
       }

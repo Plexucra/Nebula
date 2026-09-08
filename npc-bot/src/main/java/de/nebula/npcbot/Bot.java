@@ -32,22 +32,28 @@ import java.util.Set;
  */
 public class Bot {
 
-  private static final long TICK_INTERVAL_MS = 8000;
   /**
-   * Mindestlaufzeit vor dem ersten möglichen Angriff (siehe {@link #tryLaunchAttack}).
-   * Ein einzelnes Kampfschiff braucht in diesem Prototyp – trotz Zeitkompression
-   * ({@code Clock.REAL_MS_PER_GAME_HOUR}) – wegen seiner tiefen, mehrstufigen
-   * Fertigungskette (rohstoffnahe Vorprodukte -> Baugruppen -> Schiffsrumpf)
-   * je nach Ausgangslager real eher zehn(e) Minuten als Sekunden bis zur ersten
-   * fertigen Einheit. Ein Angriff wartet deshalb NICHT auf tatsächlichen
-   * Flottenzuwachs (das würde die Verifikation unpraktikabel in die Länge
-   * ziehen), sondern nur auf diese Mindest-Aufbauzeit – die eigentliche
-   * Stärkeschätzung in {@link #tryLaunchAttack} vergleicht dann die (durch
-   * die zufällige Startausstattung ohnehin unterschiedlich starken) aktuellen
-   * Flotten beider Seiten ganz reell über den Server. Bewusst dokumentierte
-   * Vereinfachung, siehe Umsetzungskonzept/14_...md, Teil 2.
+   * Entscheidungstakt des Bots, in SPIELSTUNDEN (8 Spielstunden = 8 s Realzeit
+   * bei Tempo 1, unveränderter Ausgangswert). Bewusst an der Spieluhr und
+   * nicht an der Realzeit: bei erhöhtem Tempo-Regler wächst der Bot-Kolonie
+   * je Realsekunde entsprechend mehr zu, und ein starrer Realzeit-Takt würde
+   * den Bot gegenüber der beschleunigten Welt träge machen.
    */
-  private static final long ATTACK_READY_DELAY_MS = 90_000;
+  private static final long TICK_INTERVAL_MS = GameSpeed.hoursToMs(8);
+  /**
+   * Mindestlaufzeit vor dem ersten möglichen Angriff (siehe {@link #tryLaunchAttack}),
+   * in SPIELSTUNDEN. Ein einzelnes Kampfschiff braucht in diesem Prototyp wegen
+   * seiner tiefen, mehrstufigen Fertigungskette (rohstoffnahe Vorprodukte ->
+   * Baugruppen -> Schiffsrumpf) je nach Ausgangslager rund 36 Spielstunden bis
+   * zur ersten fertigen Einheit. Ein Angriff wartet deshalb NICHT auf
+   * tatsächlichen Flottenzuwachs (das würde die Verifikation unpraktikabel in
+   * die Länge ziehen), sondern nur auf diese Mindest-Aufbauzeit – die
+   * eigentliche Stärkeschätzung in {@link #tryLaunchAttack} vergleicht dann die
+   * (durch die zufällige Startausstattung ohnehin unterschiedlich starken)
+   * aktuellen Flotten beider Seiten ganz reell über den Server. Bewusst
+   * dokumentierte Vereinfachung, siehe Umsetzungskonzept/14_...md, Teil 2.
+   */
+  private static final long ATTACK_READY_DELAY_MS = GameSpeed.hoursToMs(36);
   private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
   private enum AttackState {IDLE, TRAVELING, ENGAGING}

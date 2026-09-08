@@ -48,6 +48,8 @@
 // Prüfung mit einer möglichst präzisen Fehlermeldung.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const WS_URL = process.argv[2] ?? 'ws://localhost:8080/game';
 
@@ -55,7 +57,14 @@ const WS_URL = process.argv[2] ?? 'ws://localhost:8080/game';
 const COMBAT_DAMAGE_FACTOR = 0.2;
 const COMBAT_DURABILITY_FACTOR = 1;
 const HOURS_PER_GATEWAY_HOP = 4;
-const REAL_MS_PER_GAME_HOUR = 2500;
+
+// Die Zeitkompression NICHT duplizieren, sondern aus derselben Datei lesen,
+// die Backend (SharedConstants.java) und Frontend (core/shared-constants.ts)
+// verwenden: sonst laufen alle Wartezeiten dieses Skripts aus dem Ruder,
+// sobald am Tempo-Regler (gameSpeedMultiplier) gedreht wird.
+const SHARED_CONSTANTS = JSON.parse(readFileSync(
+  fileURLToPath(new URL('../../shared/game-constants.json', import.meta.url)), 'utf8'));
+const REAL_MS_PER_GAME_HOUR = SHARED_CONSTANTS.baseRealMsPerGameHour / SHARED_CONSTANTS.gameSpeedMultiplier;
 
 function hoursToMs(h) { return h * REAL_MS_PER_GAME_HOUR; }
 

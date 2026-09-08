@@ -30,11 +30,11 @@ import java.util.List;
  * kommen auf die Planetenoberfläche – von dort per {@link #moveGroundForces}
  * weiter in eine eigene Kolonie auf demselben Planeten.
  *
- * <p>Bewusst NICHT Teil dieser Klasse: Angriff auf fremde Bodentruppen/
- * Kolonien, Rückzug, Niederlage, Eroberung (Mechanik/05_...md §10-12). Die
- * dafür nötigen Zahlen sind dort selbst als offen markiert – das bleibt ein
- * eigener, späterer Durchgang. Landungsabwehr (§8) gehört dagegen hierher: sie
- * feuert schon beim bloßen Landeversuch, unabhängig vom Bodengefecht.</p>
+ * <p>Bewusst NICHT Teil dieser Klasse: das Bodengefecht selbst – Angriff auf
+ * fremde Kolonien, Rückzug, Niederlage, Eroberung (Mechanik/05_...md §2,
+ * §10-12). Das steht in {@link GroundBattleCommands} und {@link ColonyConquest}.
+ * Landungsabwehr (§8) gehört dagegen hierher: sie feuert schon beim bloßen
+ * Landeversuch, unabhängig vom Bodengefecht.</p>
  */
 public final class LandingCommands {
   private LandingCommands() {
@@ -96,6 +96,11 @@ public final class LandingCommands {
       TroopTransportCommands.add(surface, c.productTypeId, c.quantity);
       FleetCargo.add(fleet, c.productTypeId, -c.quantity);
     }
+    // Soldaten und Drohnen kommen beide als Reserve an Land (an Bord gab es
+    // nichts zu kommandieren). Erst hier finden sie zueinander – ohne diesen
+    // Aufruf stünde ein frisch gelandeter Verband mit null aktiven Drohnen da
+    // und wäre nach Mechanik/05_..., §10 sofort kampfunfähig.
+    RecruitmentCommands.recalcCrewing(surface);
     return surface;
   }
 
@@ -209,6 +214,9 @@ public final class LandingCommands {
     if (group == null || !playerId.equals(group.ownerId)) throw new CommandException("Unbekannter Bodentruppenverband.");
     if (group.planetId == null) throw new CommandException("Der Verband muss auf einer Planetenoberfläche stehen.");
     if (group.pendingMoveColonyId != null) throw new CommandException("Der Verband ist bereits auf dem Weg.");
+    if (GroundBattleCommands.activeBattleForGroup(state, groupId) != null) {
+      throw new CommandException("Der Verband steht im Gefecht – erst zurückziehen, dann verlegen.");
+    }
 
     Colony target = ColonyCommands.colony(state, targetColonyId);
     if (target == null || !playerId.equals(target.ownerId) || !group.planetId.equals(target.planetId)) {

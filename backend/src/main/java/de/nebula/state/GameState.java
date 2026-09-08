@@ -81,6 +81,8 @@ public class GameState {
   public final List<Treaty> treaties = new CopyOnWriteArrayList<>();
   public final List<TreatyOffer> treatyOffers = new CopyOnWriteArrayList<>();
   public final List<Battle> battles = new CopyOnWriteArrayList<>();
+  /** Bodengefechte um einzelne Kolonien (Mechanik/05_...md §10-12), siehe {@code GroundBattleCommands}. */
+  public final List<GroundBattle> groundBattles = new CopyOnWriteArrayList<>();
   public final List<Blockade> blockades = new CopyOnWriteArrayList<>();
   /** Ingame-Nachrichtensystem (Umsetzungskonzept/14_...md) – ausschließlich Spieler-zu-Spieler. */
   public final List<Message> messages = new CopyOnWriteArrayList<>();

@@ -18,17 +18,17 @@ import java.util.Map;
  * welcher Wachstumsphase eine Kolonie steckt (Umsetzungskonzept/18_...md).
  *
  * <p>Aufgezeichnet wird im Takt der Universums-Statistik
- * ({@code STATS_SNAPSHOT_INTERVAL_MS}, 10 s Realzeit = 4 Spielstunden) mit
- * {@link #MAX_SAMPLES} Einträgen – das ergibt ein Fenster von 20 Realminuten
- * bzw. rund 480 Spielstunden (20 Spieltagen). Ältere Messpunkte fallen hinten
- * heraus: der Verlauf soll die aktuelle Phase zeigen, nicht die
- * Kolonialgeschichte.</p>
+ * ({@code STATS_SNAPSHOT_INTERVAL_GAME_HOURS} = 4 Spielstunden) mit
+ * {@link #MAX_SAMPLES} Einträgen – das ergibt ein Fenster von 480
+ * Spielstunden (20 Spieltagen), bei Tempo 1 also 20 Realminuten. Ältere
+ * Messpunkte fallen hinten heraus: der Verlauf soll die aktuelle Phase
+ * zeigen, nicht die Kolonialgeschichte.</p>
  */
 public final class PopulationHistory {
   private PopulationHistory() {
   }
 
-  /** 120 Messpunkte × 10 s = 20 Realminuten Fenster – genug für eine Phasenaussage, klein genug für den Speicher. */
+  /** 120 Messpunkte × 4 Spielstunden = 20 Spieltage Fenster – genug für eine Phasenaussage, klein genug für den Speicher. */
   public static final int MAX_SAMPLES = 120;
 
   /** Ab dieser Belegung gilt der Wohnraum als der begrenzende Faktor. */

@@ -57,6 +57,13 @@ public final class MarketCommands {
   public static void createSellOrder(GameState state, IdGenerator ids, String playerId, String colonyId,
                                       String productTypeId, double quantity, double pricePerUnit, boolean autoRelist) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
+    // Mechanik/05_...md §12: keine NEUEN Handelsaktionen des Spielers an einer
+    // Kolonie im Bodengefecht. Bestehende Orders laufen bewusst weiter (Ware
+    // und Geld sind bereits gebunden), und die Bevölkerung darf weiter kaufen –
+    // deshalb steht die Sperre hier und nicht in createSellOrderCore.
+    if (GroundBattleCommands.isUnderGroundAttack(state, colonyId)) {
+      throw new CommandException("Während eines laufenden Bodengefechts nimmt diese Kolonie keine neuen Handelsaufträge an.");
+    }
     createSellOrderCore(state, ids, colonyId, productTypeId, quantity, pricePerUnit, autoRelist);
   }
 

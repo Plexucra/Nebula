@@ -13,8 +13,21 @@ public final class GameConstants {
   private GameConstants() {
   }
 
-  /** = {@code TICK_MS / REAL_MS_PER_GAME_HOUR}: Spielstunden, die EIN Tick (1s Realzeit) abdeckt. */
-  public static final double TICK_GAME_HOURS = 1000.0 / Clock.REAL_MS_PER_GAME_HOUR;
+  /**
+   * Realzeit-Abstand zweier Ticks. Muss zum {@code @Scheduled(every = ...)}
+   * in {@code GameTick} passen – dort steht derselbe Wert als Textliteral,
+   * weil Annotationswerte Konstanten sein müssen.
+   */
+  public static final double TICK_MS = 1000;
+
+  /**
+   * Spielstunden, die EIN Tick abdeckt = {@code TICK_MS / REAL_MS_PER_GAME_HOUR}.
+   * Wächst mit dem Tempo-Regler ({@link Clock#GAME_SPEED_MULTIPLIER}): der Tick
+   * bleibt eine Realsekunde lang, deckt aber mehr Spielzeit ab. JEDE
+   * tick-weise verbuchte Größe ist deshalb als RATE JE SPIELSTUNDE definiert
+   * und wird hiermit multipliziert – nie als fester Betrag je Tick.
+   */
+  public static final double TICK_GAME_HOURS = TICK_MS / Clock.REAL_MS_PER_GAME_HOUR;
 
   public static final double GAME_DAY_MS = Clock.hoursToMs(24);
 
@@ -63,17 +76,33 @@ public final class GameConstants {
 
   /**
    * Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut
-   * UND TICK. Mit Umsetzungskonzept/17_...md, Teil C gesenkt (Grundnahrung
-   * 0,0004 → 0,00008, Grundmedizin 0,00015 → 0,00004, Elektronik 0,0001 →
-   * 0,00004), damit die Startkolonie (120 Einwohner, Industriekomplex 1) ihre
-   * Bevölkerung mit ≈ 50 % Warteschlangen-Auslastung aus eigener Kraft
-   * versorgen kann – Herleitung aus echten ChainPlan-Stunden dort.
+   * UND SPIELSTUNDE. Mit Umsetzungskonzept/17_...md, Teil C gesenkt
+   * (Grundnahrung 0,001 → 0,0002, Grundmedizin 0,000375 → 0,0001, Elektronik
+   * 0,00025 → 0,0001), damit die Startkolonie (120 Einwohner,
+   * Industriekomplex 1) ihre Bevölkerung mit ≈ 50 % Warteschlangen-Auslastung
+   * aus eigener Kraft versorgen kann – Herleitung aus echten ChainPlan-Stunden
+   * dort.
+   *
+   * <p>Ausdrücklich JE SPIELSTUNDE, nicht je Tick: der Bedarf war vorher ein
+   * fester Betrag je Tick und hätte sich als einzige laufende Größe dem
+   * Tempo-Regler entzogen (bei doppeltem Tempo hätte die Bevölkerung je
+   * Spieltag nur noch halb so viel gegessen, während die Produktion mitzieht).
+   * Die Zahlen sind gegenüber der Tick-Fassung um den Faktor
+   * {@code 1 / TICK_GAME_HOURS} bei Tempo 1 (2,5) angehoben, das Verhalten bei
+   * Tempo 1 ist damit unverändert.</p>
    */
   public static final List<String> CONSUMER_GOODS_ORDER = List.of("p_grundnahrung", "p_grundmedizin", "p_unterhaltungselektronik");
-  public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA = Map.of(
-      "p_grundnahrung", 0.00008, "p_grundmedizin", 0.00004, "p_unterhaltungselektronik", 0.00004);
+  public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA_PER_HOUR = Map.of(
+      "p_grundnahrung", 0.0002, "p_grundmedizin", 0.0001, "p_unterhaltungselektronik", 0.0001);
 
-  public static final long STATS_SNAPSHOT_INTERVAL_MS = 10000;
+  /**
+   * Takt der Universums-Statistik und des Bevölkerungsverlaufs in
+   * SPIELSTUNDEN (4 Spielstunden = 10 s Realzeit bei Tempo 1). Bewusst
+   * spielzeit- und nicht realzeitgebunden: der Verlauf ist eine Aussage über
+   * die Kolonie­geschichte, seine Auflösung muss deshalb an der Spieluhr
+   * hängen wie jede andere Frist auch.
+   */
+  public static final double STATS_SNAPSHOT_INTERVAL_GAME_HOURS = 4;
   public static final int STATS_HISTORY_LIMIT = 400;
 
   /**
@@ -84,9 +113,10 @@ public final class GameConstants {
    * (siehe {@link SharedConstants}), damit auch das Frontend sie für seine
    * Hinweistexte kennt, ohne sie zu duplizieren.
    *
-   * <p>Umrechnung in Realzeit bei {@code Clock.REAL_MS_PER_GAME_HOUR = 2500}:
-   * 48 Spielstunden (2 Spieltage) ≈ 2 Realminuten, 168 Spielstunden
-   * (7 Spieltage) ≈ 7 Realminuten.</p>
+   * <p>Umrechnung in Realzeit bei Tempo 1 ({@code Clock.REAL_MS_PER_GAME_HOUR
+   * = 2500}): 48 Spielstunden (2 Spieltage) ≈ 2 Realminuten, 168 Spielstunden
+   * (7 Spieltage) ≈ 7 Realminuten – bei höherem
+   * {@link Clock#GAME_SPEED_MULTIPLIER} entsprechend weniger.</p>
    */
   public static final double NOTIFICATION_RETENTION_GAME_HOURS = SharedConstants.notificationRetentionGameHours();
   public static final double MESSAGE_RETENTION_GAME_HOURS = SharedConstants.messageRetentionGameHours();
@@ -101,8 +131,13 @@ public final class GameConstants {
   public static final double PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS = SharedConstants.peaceTreatyTerminationNoticeGameHours();
   public static final double TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS = SharedConstants.tradeAgreementTerminationNoticeGameHours();
 
-  /** Ohne neue Produktion sinkt eine Spezialisierung nach dieser Gnadenfrist um eine Stufe pro erneut überschrittener Frist. */
-  public static final long SPECIALIZATION_DECAY_GRACE_MS = 16000;
+  /**
+   * Ohne neue Produktion sinkt eine Spezialisierung nach dieser Gnadenfrist um
+   * eine Stufe pro erneut überschrittener Frist. In SPIELSTUNDEN (6,4 h = 16 s
+   * Realzeit bei Tempo 1, unveränderter Ausgangswert): eine Frist, nach der
+   * Können verlernt wird, gehört an die Spieluhr, nicht an die Realzeit.
+   */
+  public static final double SPECIALIZATION_DECAY_GRACE_GAME_HOURS = 6.4;
 
   /** Reisezeit je einzelnem Gateway-Sprung (Spielstunden), siehe {@code Fleet.pendingHops}. */
   public static final double HOURS_PER_GATEWAY_HOP = 4;

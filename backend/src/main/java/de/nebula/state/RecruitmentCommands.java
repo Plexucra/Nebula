@@ -213,13 +213,24 @@ public final class RecruitmentCommands {
     recalcCrewing(state, colonyId);
   }
 
+  /** Wie {@link #recalcCrewing(GroundForceGroup)}, für den Verband IN einer Kolonie. */
+  static void recalcCrewing(GameState state, String colonyId) {
+    recalcCrewing(groundForces(state, colonyId));
+  }
+
   /**
    * Verteilt Soldaten proportional auf die drei Drohnenklassen und
    * bestimmt daraus, wie viele Drohnen je Klasse aktiv (kommandiert,
    * kampffähig) bzw. Reserve (unkommandiert) sind – Mechanik/05_..., §3-4.
+   *
+   * <p>Bewusst auf dem VERBAND statt auf der Kolonie definiert: dieselbe
+   * Aktivierung gilt für einen gelandeten Verband auf der Planetenoberfläche
+   * ({@code LandingCommands.land}) und für die Nachaktivierung mitten im
+   * Bodengefecht ({@code GroundBattleCommands}, §4: "treffen zusätzliche
+   * Soldaten ein, können sie Reserve-Waffenträger aktivieren") – eine
+   * Garnison ist nur der häufigste Fall davon, nicht der einzige.</p>
    */
-  static void recalcCrewing(GameState state, String colonyId) {
-    GroundForceGroup group = groundForces(state, colonyId);
+  static void recalcCrewing(GroundForceGroup group) {
     if (group == null) return;
     java.util.function.Function<String, Integer> totalOf = id -> {
       for (GroundForceUnitStack u : group.units) if (u.unitProductTypeId.equals(id)) return u.activeCount + u.reserveCount;

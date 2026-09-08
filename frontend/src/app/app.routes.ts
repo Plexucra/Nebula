@@ -54,5 +54,9 @@ export const routes: Routes = [
     path: 'kampfbericht/:token',
     loadComponent: () => import('./features/combat/battle-report.component').then(m => m.BattleReportComponent),
   },
+  {
+    path: 'bodenkampfbericht/:token',
+    loadComponent: () => import('./features/combat/ground-battle-report.component').then(m => m.GroundBattleReportComponent),
+  },
   { path: '**', redirectTo: 'planeten' },
 ];

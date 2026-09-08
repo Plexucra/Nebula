@@ -2,6 +2,7 @@ package de.nebula.state;
 
 import de.nebula.data.BuildingCatalog;
 import de.nebula.data.ProductCatalog;
+import de.nebula.engine.Clock;
 import de.nebula.engine.Formulas;
 import de.nebula.engine.GameConstants;
 import de.nebula.model.Building;
@@ -115,9 +116,10 @@ public final class EconomyTick {
       for (PlanetStats s : state.planetStats) if (s.colonyId.equals(colony.id)) stats = s;
       if (popWallet == null || population == null || stats == null) continue;
 
+      double budgetAlpha = Formulas.smoothingAlpha(Formulas.CONSUMPTION_BUDGET_SMOOTHING_TAU_HOURS);
       double prevN = state.consumptionBudget.getOrDefault(colony.id, popWallet.balance * 0.1);
       double income = Math.max(popWallet.balance - prevN, 0);
-      double n = 0.9 * prevN + 0.1 * income;
+      double n = (1 - budgetAlpha) * prevN + budgetAlpha * income;
       double budget = Math.min(popWallet.balance, Math.max(n, popWallet.balance / 10));
       state.consumptionBudget.put(colony.id, n);
 
@@ -126,7 +128,10 @@ public final class EconomyTick {
       double weightSum = 0;
       Map<String, Double> coverageByGood = new HashMap<>();
       for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
-        double need = population.currentCount * GameConstants.CONSUMER_NEED_PER_CAPITA.get(goodId);
+        // Pro-Kopf-Bedarf ist eine RATE JE SPIELSTUNDE – erst hier auf den Tick
+        // heruntergerechnet, damit der Verbrauch mit dem Tempo-Regler skaliert.
+        double need = population.currentCount * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(goodId)
+            * GameConstants.TICK_GAME_HOURS;
         if (need <= 0) continue;
         double goodBudget = remaining * (1.0 / GameConstants.CONSUMER_GOODS_ORDER.size());
         List<SellOrder> orders = new ArrayList<>();
@@ -171,7 +176,8 @@ public final class EconomyTick {
       state.consumptionCoverage.put(colony.id, coverageByGood);
       double prevRaw = state.rawStandardOfLiving.getOrDefault(colony.id, stats.standardOfLivingPct);
       double newStandard = weightSum > 0 ? (coverageSum / weightSum) * 100 : prevRaw;
-      double smoothedRaw = prevRaw * 0.7 + newStandard * 0.3;
+      double standardAlpha = Formulas.smoothingAlpha(Formulas.LIVING_STANDARD_SMOOTHING_TAU_HOURS);
+      double smoothedRaw = prevRaw * (1 - standardAlpha) + newStandard * standardAlpha;
       state.rawStandardOfLiving.put(colony.id, smoothedRaw);
       double effective = PowerGrid.isBlackout(state, colony.id) ? smoothedRaw * Formulas.BLACKOUT_STAT_FACTOR : smoothedRaw;
       stats.standardOfLivingPct = Formulas.clamp(effective, 0, 200);
@@ -285,7 +291,8 @@ public final class EconomyTick {
       // eine einzige Zelle im Lager gilt als unversorgt, auch wenn in diesem Tick
       // nichts abgebucht wurde.
       double instantRatio = due > 0 ? covered / due : (stock >= 1 ? 1 : 0);
-      ps.coverageRatio = prevRatio * 0.8 + instantRatio * 0.2;
+      double alpha = Formulas.smoothingAlpha(Formulas.POWER_COVERAGE_SMOOTHING_TAU_HOURS);
+      ps.coverageRatio = prevRatio * (1 - alpha) + instantRatio * alpha;
       next.add(ps);
     }
     state.powerStates.clear();
@@ -335,7 +342,7 @@ public final class EconomyTick {
   }
 
   public static void recordStatsSnapshotIfDue(GameState state, long t) {
-    if (t - state.lastStatsSnapshotAt < GameConstants.STATS_SNAPSHOT_INTERVAL_MS) return;
+    if (t - state.lastStatsSnapshotAt < Clock.hoursToMs(GameConstants.STATS_SNAPSHOT_INTERVAL_GAME_HOURS)) return;
     state.lastStatsSnapshotAt = t;
     // Bevölkerungsverlauf je Kolonie im selben Takt mitschreiben (Umsetzungskonzept/18_...md).
     PopulationHistory.record(state, t);

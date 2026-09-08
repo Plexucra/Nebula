@@ -126,6 +126,18 @@ public final class BuildingCommands {
     return new UpgradePreview(fromLevel, targetLevel, credits, hours, materials, !isInfrastructure(type));
   }
 
+  /**
+   * Mechanik/05_...md §1, letzter Absatz: "Während eines aktiven Bodengefechts
+   * an einer Kolonie: kein Bau/Ausbau/Abriss möglich." Gilt für JEDEN
+   * Bauvorgang an dieser Kolonie, auch für den bereits laufenden Abbruch – wer
+   * unter Beschuss steht, baut nicht.
+   */
+  static void requireNoGroundBattle(GameState state, String colonyId) {
+    if (GroundBattleCommands.isUnderGroundAttack(state, colonyId)) {
+      throw new CommandException("Während eines laufenden Bodengefechts kann an dieser Kolonie nicht gebaut werden.");
+    }
+  }
+
   public static void queueBuilding(GameState state, IdGenerator ids, String playerId, String colonyId, String buildingTypeId) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     queueBuildingCore(state, ids, colonyId, buildingTypeId);
@@ -133,6 +145,7 @@ public final class BuildingCommands {
 
   /** Ungeprüfter Kern von {@link #queueBuilding} (ohne Besitzprüfung), für Aufrufer, die die Kolonie bereits verifiziert haben. */
   public static void queueBuildingCore(GameState state, IdGenerator ids, String colonyId, String buildingTypeId) {
+    requireNoGroundBattle(state, colonyId);
     String colonyOwnerId = GameQueries.requireColonyOwner(state, colonyId);
     Colony colony = ColonyCommands.colony(state, colonyId);
     BuildingType type = BuildingCatalog.find(buildingTypeId);
@@ -215,6 +228,7 @@ public final class BuildingCommands {
    */
   public static void demolishBuilding(GameState state, IdGenerator ids, String playerId, String colonyId, String buildingId) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
+    requireNoGroundBattle(state, colonyId);
     Building building = state.buildings.stream()
         .filter(b -> b.id.equals(buildingId) && b.colonyId.equals(colonyId)).findFirst().orElse(null);
     if (building == null || building.level <= 0) throw new CommandException("Kein rückbaubares Gebäude.");

@@ -7,8 +7,8 @@ import java.util.Map;
  * Raumgefecht zwischen genau zwei Flotten zweier miteinander im Krieg
  * stehender Kommandanten (bewusste Vereinfachung ggü. der vollen
  * Blockade-/Mobilmachungs-/Expositions-Mechanik aus Mechanik/06_...md).
- * Kein Bodenkampf: {@link GroundForceGroup} nimmt an einem Battle NICHT
- * teil.
+ * Kein Bodenkampf: {@link GroundForceGroup} nimmt an einem Battle NICHT teil –
+ * dafür gibt es {@link GroundBattle}.
  */
 public class Battle {
   public String id;

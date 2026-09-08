@@ -3,7 +3,7 @@ import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
-  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
+  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
@@ -570,6 +570,35 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   retreatFromBattle(battleId: Id): Promise<void> {
     return this.send('retreatFromBattle', { battleId });
+  }
+
+  // ==========================================================================
+  // Bodengefechte (Mechanik/05_..., §2, §10-12)
+  // ==========================================================================
+
+  activeGroundBattles(): Signal<GroundBattle[]> {
+    return this.poll('activeGroundBattles', () => ({}), []);
+  }
+  groundBattle(id: Id): Signal<GroundBattle | undefined> {
+    return this.poll('groundBattle', () => ({ id }), undefined);
+  }
+  groundBattleHistory(): Signal<GroundBattle[]> {
+    return this.poll('groundBattleHistory', () => ({}), []);
+  }
+  groundBattleByReportToken(token: string): Signal<GroundBattle | undefined> {
+    return this.poll('groundBattleByReportToken', () => ({ token }), undefined);
+  }
+  attackableColoniesForGroup(groupId: Id): Signal<Colony[]> {
+    return this.poll('attackableColoniesForGroup', () => ({ groupId }), []);
+  }
+  isColonyUnderGroundAttack(colonyId: Id): Signal<boolean> {
+    return this.poll('isColonyUnderGroundAttack', () => ({ colonyId }), false);
+  }
+  engageGroundBattle(groupId: Id, targetColonyId: Id): Promise<GroundBattle> {
+    return this.send('engageGroundBattle', { groupId, targetColonyId });
+  }
+  retreatFromGroundBattle(battleId: Id): Promise<void> {
+    return this.send('retreatFromGroundBattle', { battleId });
   }
 
   // ==========================================================================

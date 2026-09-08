@@ -101,6 +101,7 @@ public final class TroopTransportCommands {
       throw new CommandException("Nicht genug Platz: " + (long) free + " von " + (long) capacity + " Plätzen frei.");
     }
 
+    requireNoGroundBattle(state, fleet.locationColonyId);
     GroundForceGroup garrison = RecruitmentCommands.groundForces(state, fleet.locationColonyId);
     double available = garrison == null ? 0 : count(garrison, GameConstants.SOLDIER_PRODUCT_ID);
     if (available < quantity) throw new CommandException("Die Kolonie hat nur " + (long) available + " Soldaten.");
@@ -149,6 +150,7 @@ public final class TroopTransportCommands {
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     GameQueries.requireOwnColony(state, playerId, colonyId);
     requireDrone(droneProductTypeId);
+    requireNoGroundBattle(state, colonyId);
 
     GroundForceGroup garrison = RecruitmentCommands.groundForces(state, colonyId);
     double available = garrison == null ? 0 : count(garrison, droneProductTypeId);
@@ -191,6 +193,21 @@ public final class TroopTransportCommands {
     }
     GameQueries.requireOwnColony(state, playerId, fleet.locationColonyId);
     return fleet;
+  }
+
+  /**
+   * Mechanik/05_...md §11: "Der Eigentümer der angegriffenen Kolonie kann sich
+   * aus der Verteidigung seiner eigenen Kolonie NICHT zurückziehen." Das gilt
+   * für den Rückzugsbefehl ebenso wie für den stillen Weg drumherum – Soldaten
+   * einschiffen oder Drohnen einlagern, während der Angreifer vor der Tür
+   * steht, wäre genau derselbe Rückzug. Die Gegenrichtung bleibt erlaubt:
+   * frische Truppen dürfen jederzeit in eine belagerte Kolonie nachrücken
+   * (§4, §12).
+   */
+  private static void requireNoGroundBattle(GameState state, String colonyId) {
+    if (GroundBattleCommands.isUnderGroundAttack(state, colonyId)) {
+      throw new CommandException("Diese Kolonie steht im Bodengefecht – ihre Verteidiger können sie jetzt nicht verlassen.");
+    }
   }
 
   private static void requireDrone(String productTypeId) {

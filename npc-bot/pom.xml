@@ -34,6 +34,24 @@
 
   <build>
     <finalName>npc-bot</finalName>
+    <!--
+      Der Tempo-Regler des Spiels darf auch für die Bots nur EINE Quelle
+      haben (Umsetzungskonzept/15_...md, Auftrag 3): /shared/game-constants.json
+      wandert unter "shared/" in den Klassenpfad, von wo GameSpeed.java sie
+      liest – dieselbe Datei, die Backend (SharedConstants.java) und Frontend
+      (core/shared-constants.ts) verwenden. Das ist eine Datei-, keine
+      Modulabhängigkeit; die bewusste Unabhängigkeit vom Quarkus-Backend
+      (siehe Kommentar oben) bleibt unberührt.
+    -->
+    <resources>
+      <resource>
+        <directory>${project.basedir}/../shared</directory>
+        <targetPath>shared</targetPath>
+        <includes>
+          <include>game-constants.json</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

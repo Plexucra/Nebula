@@ -1,5 +1,6 @@
 import { Id } from './common.model';
 import { FleetShipGroup } from './fleet.model';
+import { GroundForceUnitStack } from './ground-forces.model';
 
 export type BattleStatus = 'Active' | 'Ended';
 export type BattleOutcome = 'AttackerVictory' | 'DefenderVictory' | 'Retreat';
@@ -63,6 +64,85 @@ export interface Battle {
   defenderResidualDamage: Record<Id, number>;
   /** Verlustverlauf, neuester Eintrag zuletzt – rein zur Anzeige im Kampfprotokoll der UI. */
   ticks: BattleTickResult[];
+  endedAt: number | null;
+  outcome: BattleOutcome | null;
+}
+
+/**
+ * Ein einzelner Bodenkampf-Tick für den Bodenkampfbericht. Anders als im Raum
+ * zählt hier ausschließlich der AKTIVE Bestand: Reserve-Drohnen und
+ * Reserve-Soldaten nehmen nicht am Gefecht teil und können in einem normalen
+ * Kampftick auch keinen Schaden nehmen (Mechanik/05_..., §3).
+ */
+/**
+ * Ein Bodengefecht läuft in ZWEI Phasen, und der Fall der Garnison ist NICHT
+ * sein Ende (Nutzervorgabe, Konkretisierung zu Mechanik/05_..., §10):
+ * `Combat` = reguläre Kampfticks (Drohne gegen Drohne, Soldaten nur Bediener),
+ * `Siege` = Belagerung (nur noch Soldaten gegen aufständische Zivilisten, es
+ * entscheidet allein die Loyalität). Der Wechsel geht in beide Richtungen.
+ */
+export type GroundBattlePhase = 'Combat' | 'Siege';
+
+export interface GroundBattleTickResult {
+  tick: number;
+  atTime: number;
+  /** In welcher Phase dieser Tick gerechnet wurde – die Zahlen darunter bedeuten je nach Phase Verschiedenes. */
+  phase: GroundBattlePhase;
+  attackerUnitsBefore: GroundForceUnitStack[];
+  defenderUnitsBefore: GroundForceUnitStack[];
+  /** Verluste GENAU dieses Ticks je Einheiten-ProductType, inklusive der mit den Drohnen gefallenen Soldaten (§4). */
+  attackerLosses: Record<Id, number>;
+  defenderLosses: Record<Id, number>;
+  /**
+   * Zivilbevölkerung der angegriffenen Kolonie, die in diesem Tick umgekommen
+   * ist: im Kampftick als Kollateralschaden (§2), im Belagerungstick die
+   * gefallenen Aufständischen.
+   */
+  civiliansLost: number;
+
+  // --- nur in der Belagerungsphase belegt ---------------------------------
+  /** Soldaten des Angreifers, die diesen Belagerungstick bestritten haben. */
+  attackerSoldiers: number;
+  /** Aufständische Zivilisten dieses Belagerungsticks (10 % der Bevölkerung). */
+  rebels: number;
+  /** Loyalität vor und nach diesem Tick – die einzige Größe, die über den Ausgang entscheidet. */
+  loyaltyPctBefore: number;
+  loyaltyPctAfter: number;
+}
+
+/**
+ * Bodengefecht um GENAU EINE Kolonie: ein gelandeter Verband des Angreifers
+ * gegen die Garnison dieser Kolonie (Mechanik/05_..., §2, §10-12). Bewusste
+ * Vereinfachung wie im Raum: strikt ein Angreifer gegen einen Verteidiger,
+ * keine unterstützenden Verteidiger, keine Mehrparteien-Gefechte — mehrere
+ * Angreifer führen mehrere getrennte Gefechte gegen dieselbe Kolonie
+ * (siehe `GroundBattleCommands` im Backend).
+ */
+export interface GroundBattle {
+  id: Id;
+  /** Unerratbares Token für den teilbaren Bericht (`/bodenkampfbericht/:token`) – wie `Battle.reportToken`. */
+  reportToken: string;
+  planetId: Id;
+  /** Die angegriffene Kolonie – bleibt auch nach einer Eroberung gesetzt, damit der Bericht lesbar bleibt. */
+  colonyId: Id;
+  attackerId: Id;
+  /** Eigentümer der Kolonie BEI KAMPFBEGINN – nach einer Eroberung nicht mehr ihr aktueller Eigentümer. */
+  defenderId: Id;
+  attackerGroupId: Id;
+  status: BattleStatus;
+  /** Kampfticks oder Belagerung – das Gefecht endet NICHT mit dem Fall der Garnison. */
+  phase: GroundBattlePhase;
+  startedAt: number;
+  nextTickAt: number;
+  ticksResolved: number;
+  attackerResidualDamage: Record<Id, number>;
+  defenderResidualDamage: Record<Id, number>;
+  ticks: GroundBattleTickResult[];
+  /** Bezugsgrößen der Zivilverlustquote, EINMAL bei Kampfbeginn festgehalten (§2). */
+  populationAtStart: number;
+  defenderStrengthAtStart: number;
+  /** Kumulierte Zivilverlustquote (0..1) – Eingangsgröße der Konfliktschäden bei der Eroberung. */
+  civilianLossRatio: number;
   endedAt: number | null;
   outcome: BattleOutcome | null;
 }

@@ -23,6 +23,7 @@ import de.nebula.state.DiplomacyCommands;
 import de.nebula.state.EconomyTick;
 import de.nebula.state.FleetCommands;
 import de.nebula.state.GatewayCommands;
+import de.nebula.state.GroundBattleCommands;
 import de.nebula.state.HubMarketCommands;
 import de.nebula.state.LandingCommands;
 import de.nebula.state.MarketCommands;
@@ -494,6 +495,21 @@ public class GameSocket {
         yield null;
       }
 
+      // --- Bodengefechte (Mechanik/05_...md §2, §10-12) ------------------------
+      case "activeGroundBattles" -> GroundBattleCommands.activeGroundBattles(state, requirePlayerId());
+      case "groundBattle" -> GroundBattleCommands.groundBattle(state, text(payload, "id"));
+      case "groundBattleHistory" -> GroundBattleCommands.groundBattleHistory(state, requirePlayerId());
+      case "groundBattleByReportToken" -> GroundBattleCommands.groundBattleByReportToken(state, text(payload, "token"));
+      case "attackableColoniesForGroup" ->
+          GroundBattleCommands.attackableColoniesForGroup(state, requirePlayerId(), text(payload, "groupId"));
+      case "isColonyUnderGroundAttack" -> GroundBattleCommands.isUnderGroundAttack(state, text(payload, "colonyId"));
+      case "engageGroundBattle" -> GroundBattleCommands.engageGroundBattle(state, ids, requirePlayerId(),
+          text(payload, "groupId"), text(payload, "targetColonyId"));
+      case "retreatFromGroundBattle" -> {
+        GroundBattleCommands.retreatFromGroundBattle(state, ids, requirePlayerId(), text(payload, "battleId"));
+        yield null;
+      }
+
       default -> throw new CommandException("Unbekannter oder noch nicht portierter Befehl: " + type);
     };
   }
@@ -649,6 +665,7 @@ public class GameSocket {
       state.diplomaticRelations.clear();
       state.peaceOffers.clear();
       state.battles.clear();
+      state.groundBattles.clear();
       state.blockades.clear();
       state.messages.clear();
       state.populationHistory.clear();

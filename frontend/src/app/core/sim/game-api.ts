@@ -1,7 +1,7 @@
 import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
-  GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
+  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
@@ -253,9 +253,9 @@ export interface GameApi {
   /** ALLE eigenen gelandeten Verbände, planetenübergreifend – für die Bodentruppen-Übersicht. */
   landedGroundForces(): Signal<GroundForceGroup[]>;
   /**
-   * Verlegt einen gelandeten Verband in eine eigene Kolonie auf demselben Planeten – genau
-   * ein Kampftick Dauer, unabhängig von der Distanz (Mechanik/05_...md §7). Angriff auf fremde
-   * Kolonien/Bodentruppen ist (noch) nicht Teil davon, siehe `land`.
+   * Verlegt einen gelandeten Verband in eine EIGENE Kolonie auf demselben Planeten – genau
+   * ein Kampftick Dauer, unabhängig von der Distanz (Mechanik/05_...md §7). Der Angriff auf
+   * eine fremde Kolonie läuft stattdessen über `engageGroundBattle`.
    */
   moveGroundForces(groupId: Id, targetColonyId: Id): Promise<void>;
   recruitmentQueue(colonyId: Id): Signal<RecruitmentQueueEntry[]>;
@@ -395,6 +395,39 @@ export interface GameApi {
   engageBattle(attackerFleetId: Id, defenderFleetId: Id): Promise<void>;
   /** Zieht die eigene Flotte aus einem laufenden Gefecht zurück – die Gegenseite feuert dabei noch einen letzten Schlag. */
   retreatFromBattle(battleId: Id): Promise<void>;
+
+  // --- Bodengefechte (Mechanik/05_..., §2, §10-12) ---------------------------
+  /** Alle laufenden Bodengefechte des angemeldeten Kommandanten (Angreifer oder Verteidiger). */
+  activeGroundBattles(): Signal<GroundBattle[]>;
+  groundBattle(id: Id): Signal<GroundBattle | undefined>;
+  /** Beendete Bodengefechte, neueste zuerst. */
+  groundBattleHistory(): Signal<GroundBattle[]>;
+  /** Öffentlich abrufbarer Bodenkampfbericht über den unerratbaren `reportToken` – `/bodenkampfbericht/:token`. */
+  groundBattleByReportToken(token: string): Signal<GroundBattle | undefined>;
+  /**
+   * Kolonien auf demselben Planeten, die dieser gelandete Verband angreifen darf
+   * (fremd, im Krieg, Verband nicht schon im Gefecht) – die Regel steht im Backend,
+   * der Client baut sie nicht nach.
+   */
+  attackableColoniesForGroup(groupId: Id): Signal<Colony[]>;
+  /**
+   * Läuft an dieser Kolonie gerade ein Bodengefecht? Dann ist dort weder Bau/Rückbau
+   * (§1) noch ein neuer Handelsauftrag (§12) möglich, und ihre Verteidiger können
+   * sie nicht verlassen (§11).
+   */
+  isColonyUnderGroundAttack(colonyId: Id): Signal<boolean>;
+  /**
+   * Greift mit einem gelandeten Verband eine fremde Kolonie auf demselben Planeten an –
+   * nur im Krieg und nur mit aktiven Drohnen (Soldaten allein haben keine Kampfwirkung).
+   * Hat die Kolonie keine aktivierbaren Drohnen, ist sie damit sofort gefallen (§10).
+   */
+  engageGroundBattle(groupId: Id, targetColonyId: Id): Promise<GroundBattle>;
+  /**
+   * Bricht den eigenen Bodenangriff ab; die Verteidigung schlägt dabei noch einmal
+   * einseitig zu, danach steht der Verband wieder auf der Planetenoberfläche (§11).
+   * Dem Eigentümer der angegriffenen Kolonie steht dieser Weg NICHT offen.
+   */
+  retreatFromGroundBattle(battleId: Id): Promise<void>;
 
   // --- Blockaden (Mechanik/06_..., stark vereinfacht, siehe `Blockade`) ------
   blockadesInSystem(systemId: Id): Signal<Blockade[]>;

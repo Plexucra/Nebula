@@ -3,6 +3,39 @@
   <h1>Bodentruppen</h1>
 </div>
 
+@if (error(); as msg) { <div class="error">{{ msg }}</div> }
+
+@if (defendingBattles().length > 0) {
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Angriff auf Ihre Kolonien</h2></div>
+    <div class="panel-body tick-list">
+      @for (b of defendingBattles(); track b.id) {
+        <div class="battle-row">
+          <div>
+            <strong>{{ colonyName(b.colonyId) }}</strong>
+            wird von <strong>{{ playerName(b.attackerId) }}</strong>
+            {{ b.phase === 'Siege' ? 'belagert' : 'angegriffen' }}.
+          </div>
+          <span class="hint">Nächster Tick in {{ countdown(b.nextTickAt - clock.now()) }}</span>
+          @if (b.phase === 'Siege') {
+            <span class="hint">
+              Ihre Bodenverteidigung ist gebrochen – jetzt zählt nur noch die Loyalität, und
+              die Kolonie fällt, sobald sie unter 2 % sinkt. Nur neue kampffähige Drohnen holen
+              das Gefecht aus der Belagerung zurück.
+            </span>
+          }
+          <span class="hint">
+            Solange das Gefecht läuft, wird hier nicht gebaut und nicht neu gehandelt, und Ihre
+            Verteidiger können die Kolonie nicht verlassen. Nachschub darf dagegen jederzeit
+            nachrücken – neu aufgestellte Drohnen greifen ab dem nächsten Tick mit ein.
+          </span>
+          <a class="hint" [routerLink]="['/bodenkampfbericht', b.reportToken]">Bericht öffnen →</a>
+        </div>
+      }
+    </div>
+  </div>
+}
+
 <div class="panel corner-frame">
   <div class="panel-header"><h2>Garnisonen</h2></div>
   <div class="panel-body garrison-grid">
@@ -31,7 +64,6 @@
 
 <div class="panel corner-frame">
   <div class="panel-header"><h2>Gelandete Verbände</h2></div>
-  @if (error(); as msg) { <div class="error">{{ msg }}</div> }
   <div class="panel-body garrison-grid">
     @for (group of landedGroups(); track group.id) {
       <div class="garrison-card">
@@ -44,20 +76,60 @@
             <span class="unit-chip">{{ productName(u.unitProductTypeId) }} × {{ u.activeCount + u.reserveCount }}</span>
           }
         </div>
-        @if (group.pendingMoveColonyId) {
-          <p class="hint">Unterwegs …</p>
-        } @else if (ownColoniesOnPlanet(group.planetId!).length > 0) {
+        <span class="hint">
+          {{ activeUnits(group) | number:'1.0-0' }} davon kampffähig – nur von Soldaten kommandierte
+          Drohnen kämpfen, ein Soldat führt bis zu fünf.
+        </span>
+
+        @if (battleForGroup(group.id); as battle) {
+          <p class="hint">
+            {{ battle.phase === 'Siege' ? 'Belagert' : 'Im Gefecht um' }}
+            <strong>{{ colonyName(battle.colonyId) }}</strong> –
+            nächster Tick in {{ countdown(battle.nextTickAt - clock.now()) }}.
+          </p>
+          @if (battle.phase === 'Siege') {
+            <span class="hint">
+              Loyalität {{ siegeLoyalty(battle) | number:'1.0-1' }}% – sie sinkt je Tick um den
+              Anteil Ihrer Soldaten an der Bevölkerung, und unter 2 % geht die Kolonie an Sie
+              über. Mehr Soldaten heißt schnellere Kapitulation; ein Zehntel der Bevölkerung
+              wehrt sich in jedem Tick.
+            </span>
+          }
           <div class="form-row">
-            <select [(ngModel)]="moveTarget[group.id]">
-              <option value="">Verlegen nach…</option>
-              @for (c of ownColoniesOnPlanet(group.planetId!); track c.id) {
-                <option [value]="c.id">{{ c.name }}</option>
-              }
-            </select>
-            <button class="primary small" (click)="submitMove(group)" [disabled]="busy() === group.id">Verlegen</button>
+            <a class="hint" [routerLink]="['/bodenkampfbericht', battle.reportToken]">Bericht →</a>
+            <button class="small" (click)="submitRetreat(battle)" [disabled]="busy() === group.id">Angriff abbrechen</button>
           </div>
+        } @else if (group.pendingMoveColonyId) {
+          <p class="hint">Unterwegs …</p>
         } @else {
-          <p class="empty-hint">Keine eigene Kolonie auf diesem Planeten.</p>
+          @if (ownColoniesOnPlanet(group.planetId!).length > 0) {
+            <div class="form-row">
+              <select [(ngModel)]="moveTarget[group.id]">
+                <option value="">Verlegen nach…</option>
+                @for (c of ownColoniesOnPlanet(group.planetId!); track c.id) {
+                  <option [value]="c.id">{{ c.name }}</option>
+                }
+              </select>
+              <button class="primary small" (click)="submitMove(group)" [disabled]="busy() === group.id">Verlegen</button>
+            </div>
+          } @else {
+            <p class="empty-hint">Keine eigene Kolonie auf diesem Planeten.</p>
+          }
+
+          @if (attackTargets(group.id).length > 0) {
+            <div class="form-row">
+              <select [(ngModel)]="attackTarget[group.id]">
+                <option value="">Angreifen…</option>
+                @for (c of attackTargets(group.id); track c.id) {
+                  <option [value]="c.id">{{ c.name }} ({{ playerName(c.ownerId) }})</option>
+                }
+              </select>
+              <button class="small danger" (click)="submitAttack(group)"
+                      [disabled]="busy() === group.id || activeUnits(group) === 0">Angriff</button>
+            </div>
+          } @else {
+            <p class="empty-hint">Keine angreifbare fremde Kolonie auf diesem Planeten – ein Angriff setzt Krieg voraus.</p>
+          }
         }
       </div>
     } @empty {

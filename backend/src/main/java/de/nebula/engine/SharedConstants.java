@@ -34,8 +34,20 @@ public final class SharedConstants {
     }
   }
 
-  public static double realMsPerGameHour() {
-    return ROOT.path("realMsPerGameHour").asDouble();
+  /** Ausgangs-Zeitkompression OHNE Tempo-Regler – für die wirksame Kompression siehe {@link Clock#REAL_MS_PER_GAME_HOUR}. */
+  public static double baseRealMsPerGameHour() {
+    return ROOT.path("baseRealMsPerGameHour").asDouble();
+  }
+
+  /**
+   * Separat einstellbarer Spielzeit-Multiplikator (1 = Ausgangstempo). Der
+   * EINZIGE Regler für schnellere Testläufe; alles Zeitabhängige leitet sich
+   * über {@link Clock#REAL_MS_PER_GAME_HOUR} daraus ab.
+   */
+  public static double gameSpeedMultiplier() {
+    double value = ROOT.path("gameSpeedMultiplier").asDouble();
+    if (value <= 0) throw new IllegalStateException("gameSpeedMultiplier muss größer als 0 sein, ist aber " + value);
+    return value;
   }
 
   public static double notificationRetentionGameHours() {
