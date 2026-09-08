@@ -229,6 +229,32 @@ export class FleetsOverviewComponent {
     await this.run('refuel:' + fleet.id, () => this.api.refuelFleet(fleet.id, qty));
   }
 
+  protected async submitDrain(fleet: Fleet): Promise<void> {
+    const qty = this.refuelQty[fleet.id] ?? 0;
+    if (qty <= 0) return;
+    await this.run('drain:' + fleet.id, () => this.api.drainFleetFuel(fleet.id, qty));
+  }
+
+  /** Nur GANZE Kapseln verlassen den Tank – der Bruchteil ist die angebrochene Kapsel. */
+  protected drainableFuel(fleet: Fleet): number {
+    return Math.floor(fleet.fuelCapsules);
+  }
+
+  protected readonly fuelTargetFleetId: Partial<Record<Id, Id>> = {};
+  protected readonly fuelTransferQty: Partial<Record<Id, number>> = {};
+
+  /** Andere eigene, stationierte Flotten im selben System – mögliche Treibstoffempfänger. */
+  protected otherFleetsInSystem(fleet: Fleet): Fleet[] {
+    return this.fleets().filter(f => f.id !== fleet.id && f.systemId === fleet.systemId && f.status === 'Stationed');
+  }
+
+  protected async submitFuelTransfer(fleet: Fleet): Promise<void> {
+    const target = this.fuelTargetFleetId[fleet.id];
+    const qty = this.fuelTransferQty[fleet.id] ?? 0;
+    if (!target || qty <= 0) return;
+    await this.run('fueltransfer:' + fleet.id, () => this.api.transferFuelBetweenFleets(fleet.id, target, qty));
+  }
+
   protected readonly unloadQty: Partial<Record<Id, number>> = {};
 
   protected async submitUnload(fleet: Fleet, productTypeId: Id): Promise<void> {

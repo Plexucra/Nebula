@@ -21,8 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifiziert den Eleriumkapsel-Sprungtreibstoff: 0,01 Kapseln je Schiff und
  * Gateway-Sprung, entnommen aus dem eigenen TANK der Flotte
  * (Umsetzungskonzept/26_...md). Betankt wird ausschließlich über den eigenen
- * Befehl {@code refuelFleet} bei einer eigenen Kolonie – und Treibstoff kann
- * NICHT wieder ausgeladen werden, damit der Tank kein zweiter Frachtraum wird.
+ * Befehl {@code refuelFleet} – abgetankt wird mit {@code drainFleetFuel} bzw.
+ * zwischen Flotten mit {@code transferFuelBetweenFleets}. Nur GANZE Kapseln
+ * verlassen den Tank; die angebrochene bleibt an Bord.
  */
 class FleetCommandsJumpFuelTest {
 
@@ -106,7 +107,7 @@ class FleetCommandsJumpFuelTest {
 
     CommandException tooMuch = assertThrows(CommandException.class,
         () -> FleetCommands.refuelFleet(b.state(), b.playerId(), freighter.id, 999));
-    assertTrue(tooMuch.getMessage().contains("Kolonielager"), tooMuch.getMessage());
+    assertTrue(tooMuch.getMessage().contains("Standort"), tooMuch.getMessage());
 
     // Genug Vorrat, aber über die Tankgröße hinaus.
     Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, 5000);
@@ -124,16 +125,15 @@ class FleetCommandsJumpFuelTest {
 
     CommandException ex = assertThrows(CommandException.class,
         () -> FleetCommands.refuelFleet(b.state(), b.playerId(), freighter.id, 1));
-    assertTrue(ex.getMessage().contains("gelandet"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("umschlagen"), ex.getMessage());
   }
 
   /**
-   * Ein einzelner Sprung kostet weniger als eine ganze Kapsel: der Tank bleibt
-   * unangetastet, der Bruchteil wandert ins Übertragskonto DIESER Flotte
-   * (Umsetzungskonzept/25_...md).
+   * Ein einzelner Sprung kostet weniger als eine ganze Kapsel: der Tank sinkt um
+   * genau diesen Bruchteil, der Rest der Kapsel bleibt als angebrochene an Bord.
    */
   @Test
-  void singleShipSingleHopTakesNothingFromTankButBooksIntoThePot() {
+  void singleShipSingleHopBroachesExactlyOneCapsule() {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     assertEquals(1.0, totalShips(freighter), 0.0001, "Startfrachter sollte genau 1 Schiff sein");
@@ -142,9 +142,8 @@ class FleetCommandsJumpFuelTest {
 
     FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
 
-    assertEquals(tankBefore, freighter.fuelCapsules, 1e-9);
-    assertEquals(GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP,
-        FractionPot.pending(b.state(), FractionPot.key("jumpfuel", freighter.id)), 1e-9);
+    assertEquals(tankBefore - GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, freighter.fuelCapsules, 1e-9,
+        "Der Tank führt den Bruchteil selbst – er IST die angebrochene Kapsel");
     assertEquals(FleetStatus.InTransit, freighter.status);
     assertEquals(destination, freighter.destinationSystemId);
   }
@@ -180,10 +179,11 @@ class FleetCommandsJumpFuelTest {
     assertTrue(ships >= 4 && ships <= 16, "Startkampfflotte: Korvette(2-8)+Zerstörer(1-5)+Kreuzer(1-3)");
 
     String twoHopsAway = systemAtHopDistance(b.state(), combat.systemId, 2);
+    double tankBefore = combat.fuelCapsules;
     FleetCommands.moveFleet(b.state(), b.playerId(), combat.id, twoHopsAway);
 
     double expected = ships * 2 * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
-    assertEquals(expected, FractionPot.pending(b.state(), FractionPot.key("jumpfuel", combat.id)), 1e-9);
+    assertEquals(tankBefore - expected, combat.fuelCapsules, 1e-9);
     assertEquals(2, combat.pendingHops.size() + 1, "Route sollte genau 2 Sprünge (1 laufend + 1 pending) umfassen");
   }
 
@@ -195,7 +195,6 @@ class FleetCommandsJumpFuelTest {
     String destination = neighborOf(b.state(), freighter.systemId);
     String originSystem = freighter.systemId;
     freighter.fuelCapsules = 0;
-    b.state().fractionPots.put(FractionPot.key("jumpfuel", freighter.id), 0.995);
     double stockBefore = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
     assertTrue(stockBefore > 0, "Die Kolonie hat durchaus Kapseln – sie helfen nur nicht mehr");
 
@@ -213,5 +212,69 @@ class FleetCommandsJumpFuelTest {
     assertEquals("p_elerium_kapsel", GameConstants.JUMP_FUEL_PRODUCT_ID);
     assertEquals(0.01, GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, 0.0001);
     assertEquals(1000, GameConstants.JUMP_FUEL_TANK_PER_SHIP, 0.0001);
+  }
+
+  /**
+   * Der Kern der Nutzervorgabe: der Tank darf auch als Lager dienen, Treibstoff
+   * fließt in BEIDE Richtungen – aber nur in ganzen Kapseln.
+   */
+  @Test
+  void fuelFlowsBothWaysBetweenTankAndColonyStock() {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    double stockBefore = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
+    double tankBefore = freighter.fuelCapsules;
+
+    FleetCommands.refuelFleet(b.state(), b.playerId(), freighter.id, 4);
+    FleetCommands.drainFleetFuel(b.state(), b.playerId(), freighter.id, 4);
+
+    assertEquals(stockBefore, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID), 1e-9);
+    assertEquals(tankBefore, freighter.fuelCapsules, 1e-9);
+  }
+
+  /** Eine angebrochene Kapsel bleibt an Bord und lässt sich nicht abtanken. */
+  @Test
+  void aBroachedCapsuleCannotBeDrained() {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    freighter.fuelCapsules = 3.4;   // 3 ganze + eine zu 60 % verflogene
+
+    assertEquals(3, FleetCommands.drainableFuel(freighter), 1e-9);
+    FleetCommands.drainFleetFuel(b.state(), b.playerId(), freighter.id, 3);
+    assertEquals(0.4, freighter.fuelCapsules, 1e-9, "Die angebrochene Kapsel bleibt im Tank");
+
+    CommandException ex = assertThrows(CommandException.class,
+        () -> FleetCommands.drainFleetFuel(b.state(), b.playerId(), freighter.id, 1));
+    assertTrue(ex.getMessage().contains("angebrochene"), ex.getMessage());
+  }
+
+  /** Rettungsweg: eine gestrandete Flotte wird von einer anderen im selben System betankt. */
+  @Test
+  void aStrandedFleetCanBeRefuelledByAnotherFleetInTheSameSystem() {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    Fleet combat = fleetNamed(b.state(), b.playerId(), "Kampfflotte Testheim");
+    freighter.fuelCapsules = 0;                    // gestrandet
+    combat.fuelCapsules = 10;
+    combat.locationColonyId = null;                // beide nur "im System", keine Kolonie noetig
+    freighter.locationColonyId = null;
+
+    FleetCommands.transferFuelBetweenFleets(b.state(), b.playerId(), combat.id, freighter.id, 6);
+
+    assertEquals(4, combat.fuelCapsules, 1e-9);
+    assertEquals(6, freighter.fuelCapsules, 1e-9);
+  }
+
+  @Test
+  void fuelTransferRequiresBothFleetsInTheSameSystem() {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    Fleet combat = fleetNamed(b.state(), b.playerId(), "Kampfflotte Testheim");
+    combat.fuelCapsules = 10;
+    freighter.systemId = "sys_woanders";
+
+    CommandException ex = assertThrows(CommandException.class,
+        () -> FleetCommands.transferFuelBetweenFleets(b.state(), b.playerId(), combat.id, freighter.id, 1));
+    assertTrue(ex.getMessage().contains("selben System"), ex.getMessage());
   }
 }

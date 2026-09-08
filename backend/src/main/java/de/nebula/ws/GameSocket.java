@@ -326,6 +326,8 @@ public class GameSocket {
         yield null;
       }
       case "refuelFleet" -> { FleetCommands.refuelFleet(state, requirePlayerId(), text(payload, "fleetId"), payload.path("quantity").asDouble()); yield null; }
+      case "drainFleetFuel" -> { FleetCommands.drainFleetFuel(state, requirePlayerId(), text(payload, "fleetId"), payload.path("quantity").asDouble()); yield null; }
+      case "transferFuelBetweenFleets" -> { FleetCommands.transferFuelBetweenFleets(state, requirePlayerId(), text(payload, "fromFleetId"), text(payload, "toFleetId"), payload.path("quantity").asDouble()); yield null; }
       case "loadCargo" -> {
         FleetCommands.loadCargo(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "productTypeId"), payload.path("quantity").asDouble());
         yield null;

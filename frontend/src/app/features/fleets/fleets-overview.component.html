@@ -142,14 +142,28 @@
             <span class="eyebrow">Treibstofftank</span>
             <div class="cargo-row">
               <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fuelTankCapacity(fleet) | number:'1.0-0' }} Kapseln</span>
-              @if (fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) {
+              @if ((fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) || isAtTradeHub(fleet)) {
                 <input type="number" min="1" [(ngModel)]="refuelQty[fleet.id]" placeholder="Menge" />
                 <button class="ghost small" (click)="submitRefuel(fleet)" [disabled]="busy() === ('refuel:' + fleet.id)">Betanken</button>
+                <button class="ghost small" (click)="submitDrain(fleet)" [disabled]="busy() === ('drain:' + fleet.id)">Abtanken</button>
               }
             </div>
+            @if (otherFleetsInSystem(fleet).length > 0) {
+              <div class="cargo-row">
+                <select [(ngModel)]="fuelTargetFleetId[fleet.id]">
+                  <option value="">Flotte wählen…</option>
+                  @for (other of otherFleetsInSystem(fleet); track other.id) {
+                    <option [value]="other.id">{{ other.name }}</option>
+                  }
+                </select>
+                <input type="number" min="1" [(ngModel)]="fuelTransferQty[fleet.id]" placeholder="Menge" />
+                <button class="ghost small" (click)="submitFuelTransfer(fleet)" [disabled]="busy() === ('fueltransfer:' + fleet.id)">Treibstoff abgeben</button>
+              </div>
+            }
             <p class="hint">
-              Der Tank ist von der Fracht getrennt und belegt keine Ladekapazität. Treibstoff kann
-              nicht wieder ausgeladen werden – er verlässt den Tank nur durch Fliegen.
+              Der Tank ist von der Fracht getrennt und belegt keine Ladekapazität. Umgeschlagen wird
+              in beide Richtungen, aber nur in ganzen Kapseln – eine bereits angebrochene bleibt an
+              Bord. Entnehmbar sind derzeit {{ drainableFuel(fleet) | number:'1.0-0' }} Kapseln.
             </p>
 
             <span class="eyebrow">Fracht</span>

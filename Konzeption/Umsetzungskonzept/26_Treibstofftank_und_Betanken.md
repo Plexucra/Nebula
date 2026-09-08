@@ -23,44 +23,53 @@ Der Tank ist **keine Fracht**:
 - Er taucht nicht in `fleet.cargo` auf und lässt sich nicht per `unloadCargo`
   anrühren.
 
-## B. Betanken ist ein eigener Befehl
+Er darf aber ausdrücklich **auch als Lager dienen** (Nutzervorgabe): Treibstoff
+fließt in beide Richtungen. Die 1.000 je Schiff sind bewusst großzügig bemessen,
+weil die Sprungkosten künftig nicht mehr je Schiff, sondern **je Masse**
+berechnet werden sollen – dann geht auch die geladene Fracht in den
+Treibstoffbedarf ein (siehe §F).
 
-`refuelFleet(fleetId, quantity)` verschiebt ganze Kapseln aus dem Lager der
-Kolonie, bei der die Flotte **gelandet** ist, in ihren Tank. Voraussetzungen:
-Flotte stationiert, an einer eigenen Kolonie angedockt, genug Kapseln im Lager,
-genug Platz im Tank.
+## B. Umschlag in beide Richtungen
 
-Bewusst ein eigener Befehl und kein Nebeneffekt des Reisens: nur so ist
-eindeutig, welche Kapseln tatsächlich an Bord und damit für den Verbrauch
-freigegeben sind. Vorher konnte man einer Flotte nicht ansehen, ob sie fliegen
-kann.
+Drei eigene Befehle, alle nur mit ganzen Kapseln:
 
-## C. Warum es kein Ausladen gibt
+| Befehl | Von → nach | Voraussetzung |
+|---|---|---|
+| `refuelFleet` | Lager/Depot → Tank | Flotte stationiert an eigener Kolonie ODER an einer Handelsgilde-Station (eigenes Stationsdepot) |
+| `drainFleetFuel` | Tank → Lager/Depot | dieselbe |
+| `transferFuelBetweenFleets` | Tank → Tank | beide Flotten eigen, stationiert, im SELBEN System |
 
-Es gibt **kein Gegenstück** zum Betanken – das ist die zentrale Designregel
-dieses Konzepts, nicht eine vergessene Funktion.
+Bewusst eigene Befehle und kein Nebeneffekt des Reisens: nur so ist eindeutig,
+welche Kapseln tatsächlich an Bord und damit für den Verbrauch freigegeben sind.
+Vorher konnte man einer Flotte nicht ansehen, ob sie fliegen kann.
 
-Der Tank fasst 1.000 Kapseln je Schiff und belegt keine Frachtkapazität. Könnte
-man ihn am Ziel wieder leeren, wäre er ein zweiter, weit größerer Frachtraum an
-jedem Schiff: ein einzelner Frachter würde 1.000 Kapseln kostenlos und ohne
-Anrechnung auf Masse oder Volumen transportieren, und der eigentliche Frachtraum
-wäre bedeutungslos. Treibstoff verlässt den Tank deshalb ausschließlich durch
-Fliegen.
+Der Flotte-zu-Flotte-Transfer ist der **Rettungsweg für gestrandete Flotten**:
+wer ohne Treibstoff irgendwo im Nirgendwo steht, erreicht weder Kolonie noch
+Station – eine andere eigene Flotte im selben System kann aber aushelfen.
 
-Wer Kapseln als Handelsware bewegen will, lädt sie ganz normal als Fracht – dann
-zählen sie wie jede andere Ware gegen Masse und Volumen, sind aber nicht als
-Treibstoff nutzbar, bis sie ausgeladen und getankt werden.
+## C. Die angebrochene Kapsel
+
+Aus dem Tank lassen sich **nur ganze Kapseln** entnehmen. Der Bruchteil im Tank
+IST die bereits angebrochene Kapsel: sie ist teilweise verflogen und geht nicht
+mehr ins Lager zurück (`drainableFuel` = `floor(fuelCapsules)`).
+
+Das vereinfacht die Buchführung erheblich. Vorher lief der Bruchteil des
+Treibstoffverbrauchs über ein Übertragskonto (Umsetzungskonzept/25_...md), weil
+ein Sprung weniger als eine ganze Kapsel kostet. Dieses Konto entfällt: der Tank
+führt den Bruchteil selbst, und er hat dort sogar eine anschauliche Bedeutung.
+Das Lager bleibt trotzdem ganzzahlig, weil Betanken und Abtanken nur ganze
+Kapseln bewegen.
+
+Beispiel: 3,4 Kapseln im Tank ⇒ 3 entnehmbar, 0,4 bleiben als angebrochene
+Kapsel an Bord.
 
 ## D. Verbrauch
 
 `consumeJumpFuel` zieht die Kosten (Schiffe × Sprünge × 0,01 Kapseln) jetzt
-ausschließlich aus dem Tank der fliegenden Flotte. Reicht er nicht, wird der
-Sprung abgelehnt, bevor die Flotte losfliegt – mit dem Hinweis, dass betankt
-werden muss. Entfernte Kolonielager helfen nicht mehr aus.
-
-Das Übertragskonto für Bruchteile (Umsetzungskonzept/25_...md) hängt seitdem an
-der **Flotte** statt am Kommandanten (`jumpfuel:<fleetId>`), weil der Treibstoff
-jetzt einer bestimmten Flotte gehört.
+ausschließlich aus dem Tank der fliegenden Flotte, und zwar als exakten
+Bruchteil. Reicht der Tank nicht, wird der Sprung abgelehnt, bevor die Flotte
+losfliegt – mit dem Hinweis, dass betankt werden muss. Entfernte Kolonielager
+helfen nicht mehr aus.
 
 Verliert eine Flotte im Gefecht Schiffe, sinkt ihr Fassungsvermögen. Überzähliger
 Treibstoff verfällt beim nächsten Flug – ein bewusst simpler Umgang mit einem
@@ -79,12 +88,15 @@ die Hin- und Rückreise muss also aus einer Tankfüllung bestritten werden.
 Fehler beim Betanken werden geschluckt: ein voller Tank oder ein leeres Lager
 sind normale Zustände.
 
-## F. Offener Balancing-Punkt
+## F. Als Nächstes: Sprungkosten nach Masse
 
-Bei 0,01 Kapseln je Schiff und Sprung reicht **eine** volle Tankfüllung für
-100.000 Sprünge je Schiff. Die Tankgröße von 1.000 wird damit praktisch nie
-binden – die eigentliche Grenze bleibt, wie viele Kapseln ein Kommandant
-überhaupt besitzt (Startvorrat: 10). Wer will, dass der Tank als Reichweiten-
-Begrenzung spürbar wird, müsste entweder den Verbrauch je Sprung deutlich
-anheben oder die Tankgröße drastisch senken. Bewusst nicht selbständig
-geändert – die Nutzervorgabe nennt 1.000 ausdrücklich.
+Die Tankgröße von 1.000 je Schiff ist auf einen noch ausstehenden Schritt hin
+gewählt: die Sprungkosten sollen künftig **nicht mehr je Schiff, sondern je
+Masse** berechnet werden – dann zählt auch die geladene Fracht mit, und ein
+voll beladener Frachter kostet deutlich mehr Treibstoff als ein leerer.
+
+Bis dahin gilt weiter `Schiffe × Sprünge × 0,01`. Bei dieser Rate reicht eine
+volle Tankfüllung für 100.000 Sprünge je Schiff, die Tankgröße bindet also
+praktisch nie – die eigentliche Grenze ist, wie viele Kapseln ein Kommandant
+überhaupt besitzt (Startvorrat: 10). Mit der Massenformel bekommt der Tank seine
+eigentliche Bedeutung.

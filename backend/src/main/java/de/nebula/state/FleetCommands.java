@@ -290,38 +290,124 @@ public final class FleetCommands {
   }
 
   /**
-   * Betankt eine Flotte aus dem Lager der Kolonie, bei der sie gelandet ist
-   * (Umsetzungskonzept/26_...md). Bewusst ein EIGENER Befehl und kein Nebeneffekt
-   * des Reisens: nur so ist eindeutig, welche Kapseln tatsächlich an Bord und
-   * damit für den Verbrauch freigegeben sind.
-   *
-   * <p>Es gibt absichtlich KEIN Gegenstück zum Ausladen. Der Tank fasst 1.000
-   * Kapseln je Schiff und belegt keine Frachtkapazität – könnte man ihn am Ziel
-   * wieder leeren, wäre er ein zweiter, weit größerer Frachtraum an jedem Schiff
-   * und würde den eigentlichen Frachtraum bedeutungslos machen. Treibstoff im
-   * Tank verlässt ihn deshalb ausschließlich durch Fliegen.</p>
+   * Kapseln, die sich aus einem Tank ENTNEHMEN lassen: nur ganze. Der Bruchteil
+   * ist die bereits angebrochene Kapsel – sie ist teilweise verflogen und kann
+   * nicht wieder ins Lager (Umsetzungskonzept/26_...md).
+   */
+  public static double drainableFuel(Fleet fleet) {
+    return Math.floor(fleet.fuelCapsules);
+  }
+
+  /** Beschreibt, wo eine Flotte gerade Treibstoff aufnehmen/abgeben kann. */
+  private record FuelPort(String colonyId, String hubSystemId) {
+  }
+
+  /**
+   * Gegenstelle für Betanken/Abtanken am aktuellen Standort: das Lager der eigenen
+   * Kolonie, bei der die Flotte gelandet ist, ODER das eigene Stationsdepot an
+   * einer Handelsgilde-Station. Sonst gibt es hier nichts, wohin der Treibstoff
+   * könnte.
+   */
+  private static FuelPort requireFuelPort(GameState state, String playerId, Fleet fleet) {
+    if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte ist unterwegs.");
+    if (fleet.locationColonyId != null) {
+      GameQueries.requireOwnColony(state, playerId, fleet.locationColonyId);
+      return new FuelPort(fleet.locationColonyId, null);
+    }
+    StarSystem sys = findSystem(state, fleet.systemId);
+    if (sys != null && sys.isTradeHub) return new FuelPort(null, fleet.systemId);
+    throw new CommandException("Treibstoff lässt sich nur bei einer eigenen Kolonie oder an einer "
+        + "Handelsgilde-Station umschlagen – für gestrandete Flotten hilft eine andere eigene Flotte im selben System.");
+  }
+
+  private static double portStock(GameState state, String playerId, FuelPort port) {
+    return port.colonyId() != null
+        ? Warehouse.qty(state, port.colonyId(), GameConstants.JUMP_FUEL_PRODUCT_ID)
+        : HubDepot.qty(state, port.hubSystemId(), playerId, GameConstants.JUMP_FUEL_PRODUCT_ID);
+  }
+
+  private static void portAdd(GameState state, String playerId, FuelPort port, double delta) {
+    if (port.colonyId() != null) Warehouse.add(state, port.colonyId(), GameConstants.JUMP_FUEL_PRODUCT_ID, delta);
+    else HubDepot.add(state, port.hubSystemId(), playerId, GameConstants.JUMP_FUEL_PRODUCT_ID, delta);
+  }
+
+  private static void addToTank(Fleet fleet, double quantity) {
+    double free = fuelTankCapacity(fleet) - fleet.fuelCapsules;
+    if (free + 1e-9 < quantity) {
+      throw new CommandException("Der Tank fasst nur noch " + round2(Math.max(free, 0))
+          + " Kapseln (" + round2(fuelTankCapacity(fleet)) + " je Flotte, davon "
+          + round2(fleet.fuelCapsules) + " belegt).");
+    }
+    fleet.fuelCapsules += quantity;
+  }
+
+  /**
+   * Betankt eine Flotte aus dem Lager der eigenen Kolonie bzw. dem eigenen
+   * Stationsdepot, an dem sie gerade liegt (Umsetzungskonzept/26_...md).
+   * Bewusst ein EIGENER Befehl und kein Nebeneffekt des Reisens: nur so ist
+   * eindeutig, welche Kapseln tatsächlich an Bord und damit für den Verbrauch
+   * freigegeben sind.
    */
   public static void refuelFleet(GameState state, String playerId, String fleetId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity);
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
-    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
-      throw new CommandException("Zum Betanken muss die Flotte bei einer Kolonie gelandet sein.");
-    }
-    GameQueries.requireOwnColony(state, playerId, fleet.locationColonyId);
-    double stock = Math.floor(Warehouse.qty(state, fleet.locationColonyId, GameConstants.JUMP_FUEL_PRODUCT_ID));
+    FuelPort port = requireFuelPort(state, playerId, fleet);
+    double stock = Math.floor(portStock(state, playerId, port));
     if (stock < quantity) {
-      throw new CommandException("Nicht genug Eleriumkapseln im Kolonielager (benötigt "
+      throw new CommandException("Nicht genug Eleriumkapseln am Standort (benötigt "
           + round2(quantity) + ", vorhanden " + round2(stock) + ").");
     }
-    double free = fuelTankCapacity(fleet) - fleet.fuelCapsules;
-    if (free < quantity) {
-      throw new CommandException("Der Tank fasst nur noch " + round2(Math.max(free, 0))
-          + " Kapseln (" + round2(fuelTankCapacity(fleet)) + " je Flotte, davon "
-          + round2(fleet.fuelCapsules) + " belegt).");
+    addToTank(fleet, quantity);
+    portAdd(state, playerId, port, -quantity);
+  }
+
+  /**
+   * Abtanken: gibt GANZE Kapseln aus dem Tank zurück ins Kolonielager bzw. ins
+   * Stationsdepot. Der Tank darf damit ausdrücklich auch als Lager dienen
+   * (Nutzervorgabe) – die angebrochene Kapsel bleibt aber an Bord, weil sie
+   * bereits teilweise verflogen ist (siehe {@link #drainableFuel}).
+   */
+  public static void drainFleetFuel(GameState state, String playerId, String fleetId, double quantity) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    FuelPort port = requireFuelPort(state, playerId, fleet);
+    double drainable = drainableFuel(fleet);
+    if (drainable < quantity) {
+      throw new CommandException("Nur " + round2(drainable) + " ganze Kapseln entnehmbar (im Tank "
+          + round2(fleet.fuelCapsules) + " – eine angebrochene Kapsel bleibt an Bord).");
     }
-    Warehouse.add(state, fleet.locationColonyId, GameConstants.JUMP_FUEL_PRODUCT_ID, -quantity);
-    fleet.fuelCapsules += quantity;
+    fleet.fuelCapsules -= quantity;
+    portAdd(state, playerId, port, quantity);
+  }
+
+  /**
+   * Treibstoff von einer eigenen Flotte zu einer anderen im SELBEN System – der
+   * Rettungsweg für gestrandete Flotten, die keine Kolonie und keine Station
+   * erreichen. Auch hier wandern nur ganze Kapseln, die angebrochene bleibt beim
+   * Geber.
+   */
+  public static void transferFuelBetweenFleets(GameState state, String playerId, String fromFleetId,
+                                                String toFleetId, double quantity) {
+    Fleet from = requireOwnFleet(state, playerId, fromFleetId);
+    Fleet to = requireOwnFleet(state, playerId, toFleetId);
+    quantity = Math.floor(quantity);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    if (from.id.equals(to.id)) throw new CommandException("Quelle und Ziel sind dieselbe Flotte.");
+    if (from.status != FleetStatus.Stationed || to.status != FleetStatus.Stationed) {
+      throw new CommandException("Beide Flotten müssen stationiert sein.");
+    }
+    if (!from.systemId.equals(to.systemId)) {
+      throw new CommandException("Beide Flotten müssen sich im selben System befinden.");
+    }
+    double drainable = drainableFuel(from);
+    if (drainable < quantity) {
+      throw new CommandException("Nur " + round2(drainable) + " ganze Kapseln entnehmbar (im Tank "
+          + round2(from.fuelCapsules) + " – eine angebrochene Kapsel bleibt an Bord).");
+    }
+    addToTank(to, quantity);
+    from.fuelCapsules -= quantity;
   }
 
   /**
@@ -333,25 +419,20 @@ public final class FleetCommands {
    */
   private static void consumeJumpFuel(GameState state, Fleet fleet, int hops) {
     double totalShips = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
-    double rate = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
-    if (rate <= 0) return;
-    // Ein Sprung kostet je Schiff nur 0,01 Kapseln – fast immer weniger als eine
-    // ganze. Der Bruchteil sammelt sich im Übertragskonto DIESER FLOTTE, bis eine
-    // ganze Kapsel fällig ist (Umsetzungskonzept/25_...md). Erst PRÜFEN, dann
-    // buchen: sonst wäre der Anspruch schon abgebucht, wenn die Reise mangels
-    // Treibstoff abgelehnt wird.
-    String potKey = FractionPot.key("jumpfuel", fleet.id);
-    double due = Math.floor(FractionPot.pending(state, potKey) + rate);
+    double needed = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    if (needed <= 0) return;
     // Verlorene Schiffe können den Tank über sein Fassungsvermögen heben – überzähliger
     // Treibstoff verfällt beim nächsten Flug.
     fleet.fuelCapsules = Math.min(fleet.fuelCapsules, fuelTankCapacity(fleet));
-    if (fleet.fuelCapsules < due) {
+    if (fleet.fuelCapsules + 1e-9 < needed) {
       throw new CommandException("Nicht genug Treibstoff im Tank (benötigt "
-          + round2(due) + ", im Tank " + round2(fleet.fuelCapsules) + ") – die Flotte muss betankt werden.");
+          + round2(needed) + ", im Tank " + round2(fleet.fuelCapsules) + ") – die Flotte muss betankt werden.");
     }
-    FractionPot.due(state, potKey, rate);
-    if (due <= 0) return;
-    fleet.fuelCapsules -= due;
+    // Kein Übertragskonto mehr für Treibstoff: der Tank selbst führt den Bruchteil,
+    // und dieser Bruchteil IST die angebrochene Kapsel (Umsetzungskonzept/26_...md).
+    // Sie bleibt an Bord und lässt sich nicht mehr abtanken – nur ganze Kapseln
+    // verlassen den Tank wieder ({@link #drainableFuel}).
+    fleet.fuelCapsules = Math.max(0, fleet.fuelCapsules - needed);
   }
 
   private static double round2(double v) {

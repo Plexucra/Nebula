@@ -175,6 +175,10 @@ export interface GameApi {
    * Ein Gegenstück zum Ausladen gibt es absichtlich nicht.
    */
   refuelFleet(fleetId: Id, quantity: number): Promise<void>;
+  /** Abtanken: gibt GANZE Kapseln zurück ins Kolonielager bzw. Stationsdepot – die angebrochene bleibt an Bord. */
+  drainFleetFuel(fleetId: Id, quantity: number): Promise<void>;
+  /** Treibstoff zwischen zwei eigenen Flotten im selben System – der Rettungsweg für gestrandete Flotten. */
+  transferFuelBetweenFleets(fromFleetId: Id, toFleetId: Id, quantity: number): Promise<void>;
   loadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
   /** Entlädt Fracht zurück ins Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist. */
   unloadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;

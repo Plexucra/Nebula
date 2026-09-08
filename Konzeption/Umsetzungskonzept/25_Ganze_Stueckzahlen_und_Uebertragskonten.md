@@ -46,17 +46,19 @@ exakt erhalten bleibt – **nichts geht verloren, es wird nur aufgeschoben**. Di
 Bruchteile sind auf `GameState.fractionPots` isoliert und tauchen in Lager,
 Orders und Fracht nicht mehr auf.
 
-Vier Flüsse nutzen ein Konto:
+Drei Flüsse nutzen ein Konto:
 
 | Zweck | Schlüssel | Rate |
 |---|---|---|
 | Bevölkerungskonsum | `consume:<kolonie>:<produkt>` | Einwohner × Pro-Kopf-Bedarf je Tick |
 | Energieversorgung | `power:<kolonie>` | `infrastructureEleriumPerHour(Stufe)` × Tickdauer |
 | Bevölkerungswachstum | `population:<kolonie>` | `populationGrowthDelta` × Tickdauer |
-| Sprungtreibstoff | `jumpfuel:<kommandant>` | Schiffe × Sprünge × 0,01 Kapseln |
 
-Beim Sprungtreibstoff wird bewusst erst GEPRÜFT und dann gebucht – sonst wäre
-der Anspruch bereits abgebucht, wenn die Reise mangels Vorrat abgelehnt wird.
+Sprungtreibstoff hatte anfangs ebenfalls ein Konto. Es entfiel mit
+Umsetzungskonzept/26_...md: seit jede Flotte einen eigenen Tank hat, führt der
+Tank den Bruchteil selbst – und dort hat er als „angebrochene Kapsel" sogar eine
+anschauliche Bedeutung. Das Lager bleibt trotzdem ganzzahlig, weil Betanken und
+Abtanken nur ganze Kapseln bewegen.
 
 ## C. Lebensstandard bleibt feinfühlig
 
@@ -85,8 +87,8 @@ Abgesichert ist das durch `IntegerQuantitiesTest`: er lässt 400 Wirtschafts-
 Ticks laufen und prüft, dass Lagerbestände, Bevölkerung und Order-Restmengen
 ganzzahlig bleiben, dass kein Topf je ein ganzes Stück hält, und – als
 Gegenprobe – dass der Kreislauf trotzdem anläuft und der Lebensstandard steigt.
-Zwei weitere Tests belegen, dass der langfristige Verbrauch von Elerium und
-Sprungtreibstoff der Rate entspricht.
+Ein weiterer Test belegt, dass der langfristige Elerium-Verbrauch der Rate
+entspricht.
 
 ## E. Versorgungsinventar
 
