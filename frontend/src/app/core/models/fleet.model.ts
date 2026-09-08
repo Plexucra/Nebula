@@ -75,6 +75,13 @@ export interface Fleet {
   ships: FleetShipGroup[];
   /** Geladene Fracht – siehe `loadCargo`/`unloadCargo`/`createSellOrderFromFleet`. Begrenzt durch die Summe aus `ShipTypeDef.cargoMassKg`/`cargoVolumeM3` aller Schiffe der Flotte. */
   cargo: FleetCargoEntry[];
+  /**
+   * Eleriumkapseln im separaten TANK (Umsetzungskonzept/26_...md). Keine Fracht:
+   * belegt keine Lade­kapazität, kann aber auch nicht ausgeladen werden – sonst
+   * wäre der Tank ein zweiter, weit größerer Frachtraum. Fassungsvermögen:
+   * `JUMP_FUEL_TANK_PER_SHIP` je Schiff der Flotte.
+   */
+  fuelCapsules: number;
   /** Ziel des GERADE LAUFENDEN, einzelnen Gateway-Sprungs – nur während `status === 'InTransit'` gesetzt. Bei einer mehrsprungigen Reise NICHT das Endziel, siehe `pendingHops`. */
   destinationSystemId: Id | null;
   departedAt: number | null;

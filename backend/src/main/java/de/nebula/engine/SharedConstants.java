@@ -130,4 +130,9 @@ public final class SharedConstants {
   public static double colonizationGameHours() {
     return ROOT.path("colonizationGameHours").asDouble();
   }
+
+  /** Fassungsvermögen des Treibstofftanks je Schiff in Eleriumkapseln (Umsetzungskonzept/26_...md). */
+  public static double jumpFuelTankPerShip() {
+    return ROOT.path("jumpFuelTankPerShip").asDouble();
+  }
 }

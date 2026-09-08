@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { JUMP_FUEL_TANK_PER_SHIP } from '../../core/shared-constants';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Fleet, Id } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
@@ -213,6 +214,19 @@ export class FleetsOverviewComponent {
       ? () => this.api.loadCargo(fleet.id, productTypeId, qty)
       : () => this.api.loadCargoFromHubDepot(fleet.id, productTypeId, qty);
     await this.run('load:' + fleet.id, action);
+  }
+
+  protected readonly refuelQty: Partial<Record<Id, number>> = {};
+
+  /** Fassungsvermögen des Tanks: JUMP_FUEL_TANK_PER_SHIP je Schiff der Flotte. */
+  protected fuelTankCapacity(fleet: Fleet): number {
+    return fleet.ships.reduce((sum, g) => sum + g.quantity, 0) * JUMP_FUEL_TANK_PER_SHIP;
+  }
+
+  protected async submitRefuel(fleet: Fleet): Promise<void> {
+    const qty = this.refuelQty[fleet.id] ?? 0;
+    if (qty <= 0) return;
+    await this.run('refuel:' + fleet.id, () => this.api.refuelFleet(fleet.id, qty));
   }
 
   protected readonly unloadQty: Partial<Record<Id, number>> = {};

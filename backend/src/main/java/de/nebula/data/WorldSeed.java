@@ -108,6 +108,13 @@ public final class WorldSeed {
    * (0,0198/h ≈ 2,7 je Umlauf) mit Puffer.
    */
   private static final double STARTER_ELERIUM_QUANTITY = 3;
+  /**
+   * Treibstoff, mit dem jede Startflotte betankt AUSLÄUFT (Umsetzungskonzept/26_...md).
+   * Ohne ihn stünde ein frischer Kommandant vor einer Flotte, die sich erst nach
+   * einem Betankungsbefehl bewegen kann – ein unnötiger Stolperstein. 5 Kapseln
+   * reichen dem Startfrachter (1 Schiff) für 500 Sprünge, der Kampfflotte für gut 70.
+   */
+  private static final double STARTER_FLEET_FUEL = 5;
 
   /** Gesamter Startbestand je Grundkonsumgut, aufgeteilt in Lager + sofort eingestellte Verkaufsorder. */
   private static final double STARTER_CONSUMER_GOODS_STOCK =
@@ -358,6 +365,7 @@ public final class WorldSeed {
     f.status = FleetStatus.Stationed;
     f.ships = List.of(new FleetShipGroup("p_freighter", 1));
     f.cargo = List.of();
+    f.fuelCapsules = STARTER_FLEET_FUEL;
     f.destinationSystemId = null;
     f.pendingHops = List.of();
     f.departedAt = null;
@@ -392,6 +400,7 @@ public final class WorldSeed {
         new FleetShipGroup("p_destroyer", randInt(rnd, 1, 5)),
         new FleetShipGroup("p_cruiser", randInt(rnd, 1, 3)));
     f.cargo = List.of();
+    f.fuelCapsules = STARTER_FLEET_FUEL;
     f.destinationSystemId = null;
     f.pendingHops = List.of();
     f.departedAt = null;

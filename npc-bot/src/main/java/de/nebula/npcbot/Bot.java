@@ -400,6 +400,21 @@ public class Bot {
     }
   }
 
+  /**
+   * Füllt den Treibstofftank einer bei der Heimatkolonie gelandeten Flotte auf
+   * (Umsetzungskonzept/26_...md). Seit der Tank eingeführt wurde, zieht ein
+   * Sprung KEINEN Treibstoff mehr aus dem Kolonielager – ohne Betanken bliebe
+   * jede Flotte irgendwann stehen. Fehler werden bewusst geschluckt: ein voller
+   * Tank oder ein leeres Lager sind normale Zustände, kein Grund abzubrechen.
+   */
+  private void topUpFuel(String fleetId) {
+    try {
+      connection.call("refuelFleet", Map.of("fleetId", fleetId, "quantity", Catalog.FUEL_TOP_UP_QTY));
+    } catch (CommandException e) {
+      // Tank voll oder keine Kapseln im Lager - beides unkritisch.
+    }
+  }
+
   private void findFreighterFleet() {
     JsonNode fleets = connection.call("fleets");
     for (JsonNode f : fleets) {
@@ -428,6 +443,8 @@ public class Bot {
     if (loadQty < Catalog.TRADE_MIN_EXPORT_BATCH) return;
     try {
       connection.call("loadCargo", Map.of("fleetId", freighterFleetId, "productTypeId", mySpecialtyProduct, "quantity", loadQty));
+      // Fuer Hin- UND Rueckreise betanken: an der Station gibt es keine eigene Kolonie.
+      topUpFuel(freighterFleetId);
       connection.call("moveFleet", Map.of("fleetId", freighterFleetId, "destinationSystemId", hubSystemId));
       tradeState = TradeState.TRAVELING_TO_HUB;
       log("Handelsfahrt gestartet: " + (long) loadQty + "x " + mySpecialtyProduct + " -> Station " + hubSystemId);
@@ -741,6 +758,7 @@ public class Bot {
     double targetStrength = weighedStrength(targetFleet.path("ships"));
     if (myStrength < targetStrength * 1.1) return;
 
+    topUpFuel(combatFleetId);
     connection.call("moveFleet", Map.of("fleetId", combatFleetId, "destinationSystemId", targetSystemId));
     attackTargetSystemId = targetSystemId;
     startAttackShipCount = currentCombatShipCount();

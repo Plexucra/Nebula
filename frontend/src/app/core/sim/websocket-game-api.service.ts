@@ -345,6 +345,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   transferShipsToFleet(colonyId: Id, shipProductTypeId: Id, quantity: number, targetFleetId: Id | null): Promise<void> {
     return this.send('transferShipsToFleet', { colonyId, shipProductTypeId, quantity, targetFleetId });
   }
+  refuelFleet(fleetId: Id, quantity: number): Promise<void> {
+    return this.send('refuelFleet', { fleetId, quantity });
+  }
   loadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void> {
     return this.send('loadCargo', { fleetId, productTypeId, quantity });
   }

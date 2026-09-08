@@ -55,6 +55,8 @@ final class Catalog {
   static final double TRADE_MIN_EXPORT_BATCH = 5;
   /** Unterhalb dieses Lagerbestands wird ein Grundbedarf/Baustoff am Handelsposten nachgekauft. */
   static final double TRADE_IMPORT_LOW_WATERMARK = 10;
+  /** Treibstoff, den ein Bot vor jeder Abreise nachzutanken versucht (Umsetzungskonzept/26_...md). */
+  static final double FUEL_TOP_UP_QTY = 5;
   /** Feste Einkaufslosgröße je Grundbedarf/Baustoff und Stationsbesuch. */
   static final double TRADE_IMPORT_BATCH = 10;
 

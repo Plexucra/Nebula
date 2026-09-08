@@ -24,5 +24,6 @@
   "startPopulation": 2000,
   "colonyShipBuildGameHours": 168,
   "colonyShipMinLoyaltyPct": 90,
-  "colonizationGameHours": 24
+  "colonizationGameHours": 24,
+  "jumpFuelTankPerShip": 1000
 }

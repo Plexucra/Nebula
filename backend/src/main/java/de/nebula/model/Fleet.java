@@ -17,6 +17,14 @@ public class Fleet {
   public List<FleetShipGroup> ships;
   /** Geladene Fracht – begrenzt durch Summe aus ShipTypeDef.cargoMassKg/cargoVolumeM3 aller Schiffe der Flotte. */
   public List<FleetCargoEntry> cargo;
+  /**
+   * Eleriumkapseln im separaten TANK der Flotte (Umsetzungskonzept/26_...md).
+   * Bewusst KEINE Fracht: Kapseln im Tank belegen weder Masse- noch
+   * Volumenkapazität, können aber auch nicht wieder ausgeladen werden – sonst
+   * wäre der Tank ein zweiter, viel größerer Frachtraum an jedem Schiff.
+   * Fassungsvermögen: {@code GameConstants.JUMP_FUEL_TANK_PER_SHIP} je Schiff.
+   */
+  public double fuelCapsules;
   /** Ziel des GERADE LAUFENDEN, einzelnen Gateway-Sprungs – nur während InTransit gesetzt. */
   public String destinationSystemId;
   public Long departedAt;

@@ -168,6 +168,13 @@ export interface GameApi {
    */
   transferShipsToFleet(colonyId: Id, shipProductTypeId: Id, quantity: number, targetFleetId: Id | null): Promise<void>;
   /** Lädt Ware aus dem Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist, in ihre Fracht – begrenzt durch Lagerbestand UND verbleibende Massen-/Volumenkapazität der Flotte. */
+  /**
+   * Betankt eine bei einer eigenen Kolonie gelandete Flotte aus deren Lager
+   * (Umsetzungskonzept/26_...md). Bewusst ein eigener Befehl, damit eindeutig
+   * ist, welche Kapseln an Bord und damit für den Verbrauch freigegeben sind.
+   * Ein Gegenstück zum Ausladen gibt es absichtlich nicht.
+   */
+  refuelFleet(fleetId: Id, quantity: number): Promise<void>;
   loadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
   /** Entlädt Fracht zurück ins Lager der (eigenen) Kolonie, bei der die Flotte gerade gelandet ist. */
   unloadCargo(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;

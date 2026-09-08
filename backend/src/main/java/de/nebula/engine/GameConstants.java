@@ -115,6 +115,13 @@ public final class GameConstants {
    */
   public static final String JUMP_FUEL_PRODUCT_ID = "p_elerium_kapsel";
   public static final double JUMP_FUEL_PER_SHIP_PER_HOP = 0.01;
+  /**
+   * Fassungsvermögen des Treibstofftanks JE SCHIFF in Eleriumkapseln
+   * (Umsetzungskonzept/26_...md). Der Tank ist von der Fracht getrennt: er
+   * belegt keine Lade­kapazität, dafür kann Treibstoff auch nicht wieder
+   * ausgeladen werden – sonst wäre er ein Frachtraum durch die Hintertür.
+   */
+  public static final double JUMP_FUEL_TANK_PER_SHIP = SharedConstants.jumpFuelTankPerShip();
 
   /** Bodentruppen-Crewing (Mechanik/05_..., §3-4). */
   public static final List<String> DRONE_PRODUCT_IDS = List.of("p_drone_light", "p_drone_medium", "p_drone_heavy");

@@ -113,6 +113,7 @@ public final class FleetCommands {
       fleet.pendingHops = List.of();
       fleet.departedAt = null;
       fleet.arrivesAt = null;
+      fleet.fuelCapsules = 0;
       state.fleets.add(fleet);
     }
 
@@ -266,7 +267,7 @@ public final class FleetCommands {
     if (state.systems.stream().noneMatch(s -> s.id.equals(destinationSystemId))) throw new CommandException("Unbekanntes Zielsystem.");
     List<String> path = Graph.bfsPath(GatewayCommands.gatewayRoutes(state), fleet.systemId, destinationSystemId);
     if (path == null || path.isEmpty()) throw new CommandException("Kein Gateway-Pfad zu diesem System bekannt.");
-    consumeJumpFuel(state, playerId, fleet, path.size());
+    consumeJumpFuel(state, fleet, path.size());
     String firstHop = path.get(0);
     List<String> pendingHops = path.subList(1, path.size());
     long departedAt = Clock.now();
@@ -282,47 +283,75 @@ public final class FleetCommands {
     fleet.locationPlanetId = null;
   }
 
+  /** Fassungsvermögen des Treibstofftanks einer Flotte: {@code JUMP_FUEL_TANK_PER_SHIP} je Schiff. */
+  public static double fuelTankCapacity(Fleet fleet) {
+    double ships = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
+    return ships * GameConstants.JUMP_FUEL_TANK_PER_SHIP;
+  }
+
+  /**
+   * Betankt eine Flotte aus dem Lager der Kolonie, bei der sie gelandet ist
+   * (Umsetzungskonzept/26_...md). Bewusst ein EIGENER Befehl und kein Nebeneffekt
+   * des Reisens: nur so ist eindeutig, welche Kapseln tatsächlich an Bord und
+   * damit für den Verbrauch freigegeben sind.
+   *
+   * <p>Es gibt absichtlich KEIN Gegenstück zum Ausladen. Der Tank fasst 1.000
+   * Kapseln je Schiff und belegt keine Frachtkapazität – könnte man ihn am Ziel
+   * wieder leeren, wäre er ein zweiter, weit größerer Frachtraum an jedem Schiff
+   * und würde den eigentlichen Frachtraum bedeutungslos machen. Treibstoff im
+   * Tank verlässt ihn deshalb ausschließlich durch Fliegen.</p>
+   */
+  public static void refuelFleet(GameState state, String playerId, String fleetId, double quantity) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
+      throw new CommandException("Zum Betanken muss die Flotte bei einer Kolonie gelandet sein.");
+    }
+    GameQueries.requireOwnColony(state, playerId, fleet.locationColonyId);
+    double stock = Math.floor(Warehouse.qty(state, fleet.locationColonyId, GameConstants.JUMP_FUEL_PRODUCT_ID));
+    if (stock < quantity) {
+      throw new CommandException("Nicht genug Eleriumkapseln im Kolonielager (benötigt "
+          + round2(quantity) + ", vorhanden " + round2(stock) + ").");
+    }
+    double free = fuelTankCapacity(fleet) - fleet.fuelCapsules;
+    if (free < quantity) {
+      throw new CommandException("Der Tank fasst nur noch " + round2(Math.max(free, 0))
+          + " Kapseln (" + round2(fuelTankCapacity(fleet)) + " je Flotte, davon "
+          + round2(fleet.fuelCapsules) + " belegt).");
+    }
+    Warehouse.add(state, fleet.locationColonyId, GameConstants.JUMP_FUEL_PRODUCT_ID, -quantity);
+    fleet.fuelCapsules += quantity;
+  }
+
   /**
    * Verbraucht Eleriumkapseln für einen kompletten (ggf. mehrsprungigen) Flug, siehe
    * {@code GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP}: Kosten = Schiffe der Flotte × Sprünge.
-   * Die Kapseln kommen aus den Kolonielagern des Flottenbesitzers – zuerst aus dem
-   * Heimatkolonielager, dann aus den übrigen Kolonien – unabhängig davon, wo sich die Flotte
-   * gerade befindet (dieselbe Vereinfachung wie beim Elerium-Unterhalt der Infrastruktur).
-   * Reicht der Gesamtvorrat nicht, wird der Sprung abgelehnt, BEVOR die Flotte losfliegt.
+   * Seit Umsetzungskonzept/26_...md kommen sie AUSSCHLIESSLICH aus dem eigenen Tank
+   * der Flotte – nicht mehr aus entfernten Kolonielagern. Wer fliegen will, muss
+   * vorher betankt haben ({@link #refuelFleet}).
    */
-  private static void consumeJumpFuel(GameState state, String playerId, Fleet fleet, int hops) {
+  private static void consumeJumpFuel(GameState state, Fleet fleet, int hops) {
     double totalShips = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
     double rate = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
     if (rate <= 0) return;
     // Ein Sprung kostet je Schiff nur 0,01 Kapseln – fast immer weniger als eine
-    // ganze. Der Bruchteil sammelt sich im Übertragskonto des Kommandanten, bis
-    // eine ganze Kapsel fällig ist (Umsetzungskonzept/25_...md). Erst PRÜFEN,
-    // dann buchen: sonst wäre der Anspruch schon abgebucht, wenn die Reise
-    // mangels Vorrat abgelehnt wird.
-    String potKey = FractionPot.key("jumpfuel", playerId);
+    // ganze. Der Bruchteil sammelt sich im Übertragskonto DIESER FLOTTE, bis eine
+    // ganze Kapsel fällig ist (Umsetzungskonzept/25_...md). Erst PRÜFEN, dann
+    // buchen: sonst wäre der Anspruch schon abgebucht, wenn die Reise mangels
+    // Treibstoff abgelehnt wird.
+    String potKey = FractionPot.key("jumpfuel", fleet.id);
     double due = Math.floor(FractionPot.pending(state, potKey) + rate);
-    List<Colony> colonies = ColonyCommands.coloniesOf(state, playerId).stream()
-        .sorted(Comparator.comparing((Colony c) -> !c.isHomeworld))
-        .toList();
-    double available = colonies.stream()
-        .mapToDouble(c -> Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID))
-        .sum();
-    if (available < due) {
-      throw new CommandException("Nicht genug Eleriumkapseln für diesen Sprung (benötigt "
-          + round2(due) + ", vorhanden " + round2(available) + ").");
+    // Verlorene Schiffe können den Tank über sein Fassungsvermögen heben – überzähliger
+    // Treibstoff verfällt beim nächsten Flug.
+    fleet.fuelCapsules = Math.min(fleet.fuelCapsules, fuelTankCapacity(fleet));
+    if (fleet.fuelCapsules < due) {
+      throw new CommandException("Nicht genug Treibstoff im Tank (benötigt "
+          + round2(due) + ", im Tank " + round2(fleet.fuelCapsules) + ") – die Flotte muss betankt werden.");
     }
     FractionPot.due(state, potKey, rate);
     if (due <= 0) return;
-    double remaining = due;
-    for (Colony c : colonies) {
-      if (remaining <= 0) break;
-      double have = Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID);
-      double take = Math.min(have, remaining);
-      if (take > 0) {
-        Warehouse.add(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID, -take);
-        remaining -= take;
-      }
-    }
+    fleet.fuelCapsules -= due;
   }
 
   private static double round2(double v) {

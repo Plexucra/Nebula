@@ -25,6 +25,8 @@ export const START_POPULATION: number = sharedConstants.startPopulation;
 export const COLONY_SHIP_BUILD_GAME_HOURS: number = sharedConstants.colonyShipBuildGameHours;
 export const COLONY_SHIP_MIN_LOYALTY_PCT: number = sharedConstants.colonyShipMinLoyaltyPct;
 export const COLONIZATION_GAME_HOURS: number = sharedConstants.colonizationGameHours;
+/** Fassungsvermögen des Treibstofftanks je Schiff (Umsetzungskonzept/26_...md). */
+export const JUMP_FUEL_TANK_PER_SHIP: number = sharedConstants.jumpFuelTankPerShip;
 
 /** Spielstunden → Spieltage, für Hinweistexte („wird nach N Spieltagen gelöscht"). */
 export function gameHoursToGameDays(gameHours: number): number {

@@ -139,6 +139,19 @@
 
         @if (fleet.status === 'Stationed') {
           <div class="cargo-manifest">
+            <span class="eyebrow">Treibstofftank</span>
+            <div class="cargo-row">
+              <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fuelTankCapacity(fleet) | number:'1.0-0' }} Kapseln</span>
+              @if (fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) {
+                <input type="number" min="1" [(ngModel)]="refuelQty[fleet.id]" placeholder="Menge" />
+                <button class="ghost small" (click)="submitRefuel(fleet)" [disabled]="busy() === ('refuel:' + fleet.id)">Betanken</button>
+              }
+            </div>
+            <p class="hint">
+              Der Tank ist von der Fracht getrennt und belegt keine Ladekapazität. Treibstoff kann
+              nicht wieder ausgeladen werden – er verlässt den Tank nur durch Fliegen.
+            </p>
+
             <span class="eyebrow">Fracht</span>
             @for (c of fleet.cargo; track c.productTypeId) {
               <div class="cargo-row">
