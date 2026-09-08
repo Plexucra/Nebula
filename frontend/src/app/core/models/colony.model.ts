@@ -27,6 +27,23 @@ export interface Colonization {
   endsAt: number;
 }
 
+/**
+ * Eine Zeile des Versorgungsinventars (Umsetzungskonzept/25_...md): was liegt im
+ * Lager, wie schnell wird es verbraucht, wie lange reicht es noch.
+ * `quantity` ist immer eine ganze Stückzahl – Bruchteile leben ausschließlich in
+ * den Übertragskonten und stehen hier als `pendingFraction`.
+ */
+export interface SupplyInventoryEntry {
+  productTypeId: Id;
+  name: string;
+  category: string;
+  quantity: number;
+  consumptionPerGameHour: number;
+  /** null, wenn die Kolonie dieses Produkt nicht laufend verbraucht. */
+  coverageGameHours: number | null;
+  pendingFraction: number;
+}
+
 /** Die vier zentralen Planetenwerte, siehe Konzeption/07_..., §5. */
 export interface PlanetStats {
   colonyId: Id;

@@ -36,6 +36,7 @@ export class ColonyDetailComponent {
   protected readonly moneyState = this.api.moneySupplyState(this.colony()?.planetId ?? '');
   protected readonly buildings = this.api.buildings(this.colonyId);
   protected readonly warehouse = this.api.warehouse(this.colonyId);
+  protected readonly supplyInventory = this.api.supplyInventory(this.colonyId);
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
   protected readonly groundForces = this.api.groundForces(this.colonyId);

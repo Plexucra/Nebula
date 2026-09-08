@@ -23,11 +23,14 @@ import de.nebula.model.PopulationGrowthState;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.ProductType;
 import de.nebula.model.Specialization;
+import de.nebula.model.SupplyInventoryEntry;
+import de.nebula.model.WarehouseEntry;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -263,6 +266,46 @@ public final class ColonyCommands {
     colonization.endsAt = t + (long) Clock.hoursToMs(GameConstants.COLONIZATION_HOURS);
     state.colonizations.add(colonization);
     return colonization;
+  }
+
+  /**
+   * Versorgungsinventar der Kolonie (Umsetzungskonzept/25_...md): alles, was im
+   * Lager liegt, angereichert um Verbrauch je Spielstunde und Reichweite. Nach
+   * Produktkategorie und Name sortiert, damit die Liste stabil bleibt und nicht
+   * bei jedem Poll umspringt.
+   */
+  public static List<SupplyInventoryEntry> supplyInventory(GameState state, String colonyId) {
+    double population = 0;
+    for (Population p : state.populations) if (p.colonyId.equals(colonyId)) population = p.currentCount;
+    int infrastructureLevel = GameQueries.getBuildingLevel(state, colonyId, GameConstants.INFRASTRUCTURE_BUILDING_ID);
+    // Der Pro-Kopf-Bedarf ist je TICK definiert; für die Anzeige rechnen wir ihn
+    // auf die Spielstunde hoch, weil Spieler in Spielstunden denken.
+    double ticksPerGameHour = 1 / GameConstants.TICK_GAME_HOURS;
+
+    List<SupplyInventoryEntry> result = new ArrayList<>();
+    for (WarehouseEntry w : state.warehouse) {
+      if (!w.colonyId.equals(colonyId)) continue;
+      ProductType product = ProductCatalog.find(w.productTypeId);
+      SupplyInventoryEntry entry = new SupplyInventoryEntry();
+      entry.productTypeId = w.productTypeId;
+      entry.name = product.name;
+      entry.category = product.category;
+      entry.quantity = w.quantity;
+
+      Double perCapita = GameConstants.CONSUMER_NEED_PER_CAPITA.get(w.productTypeId);
+      if (perCapita != null) {
+        entry.consumptionPerGameHour = population * perCapita * ticksPerGameHour;
+        entry.pendingFraction = FractionPot.pending(state, FractionPot.key("consume", colonyId, w.productTypeId));
+      } else if (GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID.equals(w.productTypeId)) {
+        entry.consumptionPerGameHour = Formulas.infrastructureEleriumPerHour(infrastructureLevel);
+        entry.pendingFraction = FractionPot.pending(state, FractionPot.key("power", colonyId));
+      }
+      entry.coverageGameHours = entry.consumptionPerGameHour > 0
+          ? entry.quantity / entry.consumptionPerGameHour : null;
+      result.add(entry);
+    }
+    result.sort(Comparator.comparing((SupplyInventoryEntry e) -> e.category.name()).thenComparing(e -> e.name));
+    return result;
   }
 
   /** Laufende Koloniegründungen des Kommandanten – Fortschrittsanzeige im Client. */

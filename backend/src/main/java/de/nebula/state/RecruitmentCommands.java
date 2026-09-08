@@ -40,6 +40,7 @@ public final class RecruitmentCommands {
 
   public static void queueRecruitment(GameState state, IdGenerator ids, String playerId, String colonyId,
                                        String unitProductTypeId, double quantity, boolean autoProduceMissing, boolean requeueOnComplete) {
+    quantity = Math.floor(quantity); // nur ganze Einheiten (Umsetzungskonzept/25_...md)
     GameQueries.requireOwnColony(state, playerId, colonyId);
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     ProductType product = ProductCatalog.find(unitProductTypeId);

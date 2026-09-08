@@ -67,8 +67,14 @@ class FleetCommandsJumpFuelTest {
     assertEquals(10.0, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID));
   }
 
+  /**
+   * Seit Umsetzungskonzept/25_...md wird Treibstoff nur in GANZEN Kapseln
+   * abgebucht: ein Schiff auf einem Sprung kostet 0,01 Kapseln, das sammelt sich
+   * im Übertragskonto und wird erst beim hundertsten Sprung fällig. Ein einzelner
+   * Flug darf das Lager deshalb nicht anrühren.
+   */
   @Test
-  void singleShipSingleHopConsumesExactlyPerShipPerHopFuel() {
+  void singleShipSingleHopTakesNothingFromStockButBooksIntoThePot() {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     assertEquals(1.0, totalShips(freighter), 0.0001, "Startfrachter sollte genau 1 Schiff sein");
@@ -78,9 +84,38 @@ class FleetCommandsJumpFuelTest {
     FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
     double after = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
 
-    assertEquals(GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, before - after, 0.0001);
+    assertEquals(before, after, 1e-9, "Ein einzelner Sprung kostet weniger als eine ganze Kapsel");
+    assertEquals(GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP,
+        FractionPot.pending(b.state(), FractionPot.key("jumpfuel", b.playerId())), 1e-9,
+        "…er muss aber im Übertragskonto stehen, damit die Rate langfristig stimmt");
     assertEquals(FleetStatus.InTransit, freighter.status);
     assertEquals(destination, freighter.destinationSystemId);
+  }
+
+  /**
+   * Der eigentliche Nachweis: über viele Sprünge hinweg wird EXAKT so viel
+   * verbraucht wie die Rate vorgibt – die Ganzzahligkeit verschiebt den
+   * Verbrauch nur, sie verändert ihn nicht.
+   */
+  @Test
+  void overManyJumpsTheAverageConsumptionMatchesTheRateExactly() {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    String destination = neighborOf(b.state(), freighter.systemId);
+    Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, 100);
+    double before = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
+
+    int jumps = 500;
+    for (int i = 0; i < jumps; i++) {
+      freighter.status = FleetStatus.Stationed;      // Flotte für den nächsten Sprung zurücksetzen
+      freighter.destinationSystemId = null;
+      FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
+    }
+    double verbraucht = before - Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
+    double erwartet = jumps * totalShips(freighter) * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+
+    assertEquals(erwartet, verbraucht, 1.0, "Langfristiger Verbrauch muss der Rate entsprechen (± eine offene Kapsel)");
+    assertEquals(verbraucht, Math.floor(verbraucht), 1e-9, "Abgebucht wurden ausschließlich ganze Kapseln");
   }
 
   @Test
@@ -91,12 +126,11 @@ class FleetCommandsJumpFuelTest {
     assertTrue(ships >= 4 && ships <= 16, "Startkampfflotte: Korvette(2-8)+Zerstörer(1-5)+Kreuzer(1-3)");
 
     String twoHopsAway = systemAtHopDistance(b.state(), combat.systemId, 2);
-    double before = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
     FleetCommands.moveFleet(b.state(), b.playerId(), combat.id, twoHopsAway);
-    double after = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
 
+    // Auch hier bleibt der Betrag unter einer ganzen Kapsel und landet im Topf.
     double expected = ships * 2 * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
-    assertEquals(expected, before - after, 0.0001);
+    assertEquals(expected, FractionPot.pending(b.state(), FractionPot.key("jumpfuel", b.playerId())), 1e-9);
     assertEquals(2, combat.pendingHops.size() + 1, "Route sollte genau 2 Sprünge (1 laufend + 1 pending) umfassen");
   }
 
@@ -107,10 +141,13 @@ class FleetCommandsJumpFuelTest {
     String destination = neighborOf(b.state(), freighter.systemId);
     String originSystem = freighter.systemId;
 
-    // Lager auf 0 leeren (deutlich unter die 0,01 Kapseln, die ein einzelner Sprung braucht).
+    // Lager leeren UND das Übertragskonto so weit füllen, dass dieser Sprung eine
+    // ganze Kapsel fällig macht – erst dann kann überhaupt etwas fehlen
+    // (Umsetzungskonzept/25_...md).
     double current = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
     Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, -current);
     assertEquals(0.0, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID));
+    b.state().fractionPots.put(FractionPot.key("jumpfuel", b.playerId()), 0.995);
 
     CommandException ex = assertThrows(CommandException.class,
         () -> FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination));
@@ -127,24 +164,27 @@ class FleetCommandsJumpFuelTest {
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     String destination = neighborOf(b.state(), freighter.systemId);
 
-    // Heimatlager auf einen Rest setzen, der für einen 1-Schiff-1-Sprung-Flug (0,01 nötig) NICHT reicht.
+    // Heimatlager auf GENAU eine Kapsel setzen und das Übertragskonto so füllen,
+    // dass dieser Sprung zwei ganze Kapseln fällig macht – eine kann die Heimat
+    // decken, für die zweite muss die andere Kolonie einspringen.
     double current = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
-    Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, 0.005 - current);
-    assertEquals(0.005, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID), 0.0001);
+    Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, 1 - current);
+    assertEquals(1.0, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID), 0.0001);
+    b.state().fractionPots.put(FractionPot.key("jumpfuel", b.playerId()), 1.995);
 
     // Zweite eigene Kolonie auf einem der übrigen (immer besiedelbaren) Heimatplaneten gründen
     // und dort zusätzliche Kapseln einlagern.
     Planet secondPlanet = b.state().planets.stream()
         .filter(p -> p.systemId.equals(freighter.systemId) && p.orbitIndex == 1).findFirst().orElseThrow();
     Colony secondColony = foundColonyDirectly(b, secondPlanet);
-    Warehouse.add(b.state(), secondColony.id, GameConstants.JUMP_FUEL_PRODUCT_ID, 1.0);
+    Warehouse.add(b.state(), secondColony.id, GameConstants.JUMP_FUEL_PRODUCT_ID, 3.0);
 
     FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
 
     assertEquals(0.0, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID), 0.0001,
         "Heimatlager sollte zuerst komplett aufgebraucht werden");
-    assertEquals(0.995, Warehouse.qty(b.state(), secondColony.id, GameConstants.JUMP_FUEL_PRODUCT_ID), 0.0001,
-        "der fehlende Rest (0,01 - 0,005 = 0,005) sollte aus der zweiten Kolonie kommen");
+    assertEquals(2.0, Warehouse.qty(b.state(), secondColony.id, GameConstants.JUMP_FUEL_PRODUCT_ID), 0.0001,
+        "die zweite fällige Kapsel muss aus der anderen Kolonie kommen");
     assertEquals(FleetStatus.InTransit, freighter.status);
   }
 

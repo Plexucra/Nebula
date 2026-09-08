@@ -49,6 +49,9 @@ public final class ProductionCommands {
   /** Ungeprüfter Kern von {@link #queueProduction} – für eine künftige NPC-KI gedacht (siehe TS-Original). */
   public static void queueProductionCore(GameState state, IdGenerator ids, String colonyId, String productTypeId,
                                           double quantity, boolean autoProduceMissing, boolean requeueOnComplete) {
+    // Nur ganze Stücke (Umsetzungskonzept/25_...md) – der Kettenplaner rechnet mit
+    // ganzzahligen Rezeptmengen weiter, damit im Lager nie ein Bruchteil landet.
+    quantity = Math.floor(quantity);
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     ProductType product = ProductCatalog.find(productTypeId);
     if (product.category == ProductCategory.Ship || product.category == ProductCategory.GroundUnit) {

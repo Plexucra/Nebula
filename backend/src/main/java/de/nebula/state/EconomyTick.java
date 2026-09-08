@@ -72,6 +72,26 @@ public final class EconomyTick {
     }
   }
 
+  /**
+   * Wie viel des (bruchteiligen) Bedarfs die Bevölkerung mit dem Budget aus den
+   * vorliegenden Orders decken KÖNNTE – reine Bewertung der Versorgungslage,
+   * ohne etwas zu kaufen. Bewusst bruchteilig: sie misst die Marktlage, nicht
+   * die Stückelung der tatsächlichen Warenbewegung.
+   */
+  private static double purchasableQuantity(List<SellOrder> orders, double budget, double need) {
+    double spend = 0;
+    double qty = 0;
+    for (SellOrder order : orders) {
+      if (spend >= budget || qty >= need - 1e-9) break;
+      double affordable = (budget - spend) / order.pricePerUnit;
+      double take = Math.min(Math.min(affordable, order.remainingQuantity), need - qty);
+      if (take <= 1e-9) continue;
+      spend += take * order.pricePerUnit;
+      qty += take;
+    }
+    return qty;
+  }
+
   private static void payFromOwnerWallet(GameState state, IdGenerator ids, Colony colony, Wallet ownerWallet,
                                           Wallet popWallet, double amount, TransactionReason reason, String note) {
     double available = Math.max(GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId) != null
@@ -114,17 +134,27 @@ public final class EconomyTick {
           if (o.systemId.equals(colony.systemId) && o.productTypeId.equals(goodId) && o.remainingQuantity > 0) orders.add(o);
         }
         orders.sort((a, b) -> Double.compare(a.pricePerUnit, b.pricePerUnit));
+
+        // Die Versorgungslage wird JEDEN Tick am (bruchteiligen) Bedarf gemessen,
+        // damit der Lebensstandard weiter fein reagiert – auch in den vielen Ticks,
+        // in denen noch kein ganzes Stück fällig ist. Sie sagt: hätte die
+        // Bevölkerung kaufen können, was sie gerade braucht?
+        double coverage = Formulas.clamp(purchasableQuantity(orders, goodBudget, need) / need, 0, 1.5);
+
+        // Gekauft wird dagegen ausschließlich in GANZEN Stücken: der Bruchteilbedarf
+        // wandert ins Übertragskonto und löst erst dort eine echte Warenbewegung aus
+        // (Umsetzungskonzept/25_...md). Früheres Aufrunden je Tick machte aus 0,05
+        // Stück Bedarf eine ganze Einheit je Sekunde – ein Vielfaches dessen, was
+        // die Startproduktion je decken konnte; Abschneiden hätte den Kauf nie
+        // stattfinden lassen.
+        double due = FractionPot.due(state, FractionPot.key("consume", colony.id, goodId), need);
         double spend = 0;
         double bought = 0;
-        // Bedarf in Bruchteilen kaufen (Umsetzungskonzept/17_...md, Teil C): das
-        // frühere Aufrunden auf ganze Stück je Tick (ceil) machte aus 0,05
-        // Stück Bedarf eine ganze Einheit je Sekunde – ein Sechsfaches der
-        // Bevölkerungsgröße, das keine Startproduktion je decken konnte.
         for (SellOrder order : orders) {
-          if (spend >= goodBudget || bought >= need - 1e-9) break;
-          double affordableQty = (goodBudget - spend) / order.pricePerUnit;
-          double qty = Math.min(Math.min(affordableQty, order.remainingQuantity), need - bought);
-          if (qty <= 1e-9) continue;
+          if (spend >= goodBudget || bought >= due - 1e-9) break;
+          double affordableQty = Math.floor((goodBudget - spend) / order.pricePerUnit);
+          double qty = Math.min(Math.min(affordableQty, Math.floor(order.remainingQuantity)), due - bought);
+          if (qty < 1) continue;
           double cost = qty * order.pricePerUnit;
           Wallet sellerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, order.sellerId);
           MarketCommands.settleSellOrderPurchase(state, ids, order, qty);
@@ -133,7 +163,6 @@ public final class EconomyTick {
           bought += qty;
         }
         remaining -= spend;
-        double coverage = Formulas.clamp(bought / need, 0, 1.5);
         coverageByGood.put(goodId, coverage);
         double weight = goodId.equals("p_grundnahrung") ? 2 : 1;
         coverageSum += coverage * weight;
@@ -199,7 +228,12 @@ public final class EconomyTick {
           * GameConstants.TICK_GAME_HOURS;
       // Blackout unterbindet nur Wachstum – Schrumpfung durch Überbevölkerung (negatives Delta) läuft unabhängig davon normal weiter.
       if (delta > 0 && PowerGrid.isBlackout(state, colony.id)) delta = 0;
-      double newCount = Math.max(0, population.currentCount + delta);
+      // Einwohner sind ganze Menschen: der Bruchteil je Tick (bei 120 Einwohnern
+      // rund 0,5) sammelt sich im Übertragskonto, bis eine ganze Person daraus
+      // wird (Umsetzungskonzept/25_...md). Die RATE bleibt bruchteilig, sie ist
+      // eine Geschwindigkeit und keine Stückzahl.
+      double wholeDelta = FractionPot.due(state, FractionPot.key("population", colony.id), delta);
+      double newCount = Math.max(0, population.currentCount + wholeDelta);
       population.currentCount = newCount;
       population.growthRatePerInterval = delta;
 
@@ -238,10 +272,17 @@ public final class EconomyTick {
         continue;
       }
       double need = Formulas.infrastructureEleriumPerHour(level) * GameConstants.TICK_GAME_HOURS;
-      double stock = Warehouse.qty(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
-      double covered = Math.min(need, stock);
+      double stock = Math.floor(Warehouse.qty(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID));
+      // Verbrauch in GANZEN Zellen über das Übertragskonto: bei Infrastruktur 6
+      // sind je Tick nur 0,0188 Zellen fällig, eine ganze also erst alle 53 Ticks
+      // (Umsetzungskonzept/25_...md).
+      double due = FractionPot.due(state, FractionPot.key("power", colony.id), need);
+      double covered = Math.min(due, stock);
       if (covered > 0) Warehouse.add(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, -covered);
-      double instantRatio = need > 0 ? covered / need : 1;
+      // Ist gerade nichts fällig, entscheidet der blanke Vorrat: eine Kolonie ohne
+      // eine einzige Zelle im Lager gilt als unversorgt, auch wenn in diesem Tick
+      // nichts abgebucht wurde.
+      double instantRatio = due > 0 ? covered / due : (stock >= 1 ? 1 : 0);
       ps.coverageRatio = prevRatio * 0.8 + instantRatio * 0.2;
       next.add(ps);
     }

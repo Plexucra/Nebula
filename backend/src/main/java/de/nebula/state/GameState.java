@@ -88,6 +88,12 @@ public class GameState {
   public final Map<String, List<PopulationSample>> populationHistory = new ConcurrentHashMap<>();
 
   /** Analog zu {@code consumptionBudget}/{@code lastProducedAt}/{@code rawStandardOfLiving} in der TS-Simulation – rein interne Buchführung, kein Snapshot-Feld. */
+  /**
+   * Übertragskonten für Raten unter einem Stück je Tick (siehe {@link FractionPot}).
+   * Die EINZIGE Stelle im Spielzustand, an der noch Bruchteile von Stückzahlen
+   * liegen – Lager, Orders und Fracht bewegen sich ausschließlich in ganzen Stücken.
+   */
+  public final Map<String, Double> fractionPots = new ConcurrentHashMap<>();
   public final Map<String, Double> consumptionBudget = new ConcurrentHashMap<>();
   public final Map<String, Long> lastProducedAt = new ConcurrentHashMap<>();
   public final Map<String, Double> rawStandardOfLiving = new ConcurrentHashMap<>();

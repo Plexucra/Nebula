@@ -360,6 +360,32 @@
       />
 
       <div class="panel corner-frame">
+        <div class="panel-header"><h2>Versorgungsinventar</h2></div>
+        <div class="panel-body">
+          <p class="hint panel-hint">
+            Bestände sind ganze Stücke. Was die Kolonie laufend verbraucht, zeigt zusätzlich
+            Verbrauch und Reichweite – der Rest unter einem Stück wartet im Übertragskonto.
+          </p>
+          <div class="wh-list">
+            @for (s of supplyInventory(); track s.productTypeId) {
+              <div class="wh-row" [class.bad]="s.coverageGameHours !== null && s.coverageGameHours < 24">
+                <span>{{ s.name }}</span>
+                <span class="mono">{{ s.quantity | number:'1.0-1' }}</span>
+                @if (s.coverageGameHours !== null) {
+                  <span class="hint mono">
+                    −{{ s.consumptionPerGameHour | number:'1.0-1' }}/h · reicht {{ s.coverageGameHours | number:'1.0-1' }} h
+                    @if (s.pendingFraction > 0) { · offen {{ s.pendingFraction | number:'1.0-1' }} }
+                  </span>
+                } @else {
+                  <span class="hint">kein laufender Verbrauch</span>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Leer.</p> }
+          </div>
+        </div>
+      </div>
+
+      <div class="panel corner-frame">
         <div class="panel-header"><h2>Lagerbestand</h2></div>
         <div class="panel-body">
           <div class="wh-list">

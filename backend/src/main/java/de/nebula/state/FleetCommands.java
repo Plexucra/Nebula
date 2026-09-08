@@ -175,6 +175,7 @@ public final class FleetCommands {
 
   public static void loadCargo(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
       throw new CommandException("Die Flotte muss bei einer Kolonie gelandet sein.");
@@ -193,6 +194,7 @@ public final class FleetCommands {
 
   public static void unloadCargo(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
       throw new CommandException("Die Flotte muss bei einer Kolonie gelandet sein.");
@@ -215,6 +217,7 @@ public final class FleetCommands {
    */
   public static void loadCargoFromHubDepot(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
       throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
@@ -235,6 +238,7 @@ public final class FleetCommands {
   /** Entlädt Fracht der Flotte in das Stations-Depot des Kommandanten – Gegenstück zu {@link #unloadCargo}. */
   public static void unloadCargoToHubDepot(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
       throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
@@ -288,19 +292,28 @@ public final class FleetCommands {
    */
   private static void consumeJumpFuel(GameState state, String playerId, Fleet fleet, int hops) {
     double totalShips = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
-    double needed = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
-    if (needed <= 0) return;
+    double rate = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    if (rate <= 0) return;
+    // Ein Sprung kostet je Schiff nur 0,01 Kapseln – fast immer weniger als eine
+    // ganze. Der Bruchteil sammelt sich im Übertragskonto des Kommandanten, bis
+    // eine ganze Kapsel fällig ist (Umsetzungskonzept/25_...md). Erst PRÜFEN,
+    // dann buchen: sonst wäre der Anspruch schon abgebucht, wenn die Reise
+    // mangels Vorrat abgelehnt wird.
+    String potKey = FractionPot.key("jumpfuel", playerId);
+    double due = Math.floor(FractionPot.pending(state, potKey) + rate);
     List<Colony> colonies = ColonyCommands.coloniesOf(state, playerId).stream()
         .sorted(Comparator.comparing((Colony c) -> !c.isHomeworld))
         .toList();
     double available = colonies.stream()
         .mapToDouble(c -> Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID))
         .sum();
-    if (available < needed) {
+    if (available < due) {
       throw new CommandException("Nicht genug Eleriumkapseln für diesen Sprung (benötigt "
-          + round2(needed) + ", vorhanden " + round2(available) + ").");
+          + round2(due) + ", vorhanden " + round2(available) + ").");
     }
-    double remaining = needed;
+    FractionPot.due(state, potKey, rate);
+    if (due <= 0) return;
+    double remaining = due;
     for (Colony c : colonies) {
       if (remaining <= 0) break;
       double have = Warehouse.qty(state, c.id, GameConstants.JUMP_FUEL_PRODUCT_ID);

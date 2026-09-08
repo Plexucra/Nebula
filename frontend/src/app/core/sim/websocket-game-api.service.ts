@@ -5,7 +5,7 @@ import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
 
@@ -226,6 +226,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   colonizations(): Signal<Colonization[]> {
     return this.poll('colonizations', () => ({}), []);
+  }
+  supplyInventory(colonyId: Id): Signal<SupplyInventoryEntry[]> {
+    return this.poll('supplyInventory', () => ({ colonyId }), []);
   }
 
   // ==========================================================================

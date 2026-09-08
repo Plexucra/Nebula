@@ -3,7 +3,7 @@ import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
 
@@ -83,6 +83,11 @@ export interface GameApi {
   colonizePlanet(planetId: Id): Promise<Colonization>;
   /** Eigene laufende Koloniegründungen – Fortschrittsanzeige. */
   colonizations(): Signal<Colonization[]>;
+  /**
+   * Versorgungsinventar der Kolonie: Lagerbestand samt Verbrauch je Spielstunde
+   * und Reichweite (Umsetzungskonzept/25_...md). Bestände sind ganze Stückzahlen.
+   */
+  supplyInventory(colonyId: Id): Signal<SupplyInventoryEntry[]>;
 
   // --- Bebauung -------------------------------------------------------------
   buildings(colonyId: Id): Signal<Building[]>;
