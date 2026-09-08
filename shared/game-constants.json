@@ -3,6 +3,8 @@
   "baseRealMsPerGameHour": 2500,
   "_gameSpeedMultiplier": "DER Tempo-Regler des Prototyps und der EINZIGE Wert, an dem für schnellere Testläufe gedreht werden muss: wirksame Zeitkompression = baseRealMsPerGameHour / gameSpeedMultiplier. 1 = Ausgangstempo (2500 ms je Spielstunde, 1 Spieltag = 60 s Realzeit), 4 = viermal so schnell (625 ms je Spielstunde, 1 Spieltag = 15 s). Alles Zeitabhängige im Spiel haengt ausschliesslich an Clock.REAL_MS_PER_GAME_HOUR bzw. GameConstants.TICK_GAME_HOURS und skaliert damit automatisch mit - siehe Clock.java und core/shared-constants.ts. Der Realzeit-Tick selbst (1 s) bleibt unberuehrt, ein Tick deckt nur entsprechend mehr Spielstunden ab.",
   "gameSpeedMultiplier": 4,
+  "_productionSpeedMultiplier": "ZWEITER Test-Regler (Umsetzungskonzept/31_...md): teilt JEDE Fertigungsdauer in Industrie, Werft und Ausbildungszentrum (ChainPlanner.computeProductionHours, inklusive Arbeitskraft-Bremse) durch diesen Wert. 1 = unveraenderte Balance. Er aendert - anders als gameSpeedMultiplier - das Verhaeltnis von Fertigungszeit zu allem anderen (Reisen, Kampfticks, Bevoelkerung) und ist deshalb NUR fuer Testlaeufe gedacht, in denen Mannschaftstransporter/Kolonisationsschiffe (bei Tempo 1 rund 208.000 bzw. 674.000 Spielstunden auf Industriestufe 5) ueberhaupt erreichbar sein sollen. Die feste Bauwoche des Kolonisationsschiffs bleibt unberuehrt.",
+  "productionSpeedMultiplier": 1,
   "notificationRetentionGameHours": 48,
   "messageRetentionGameHours": 168,
   "peaceTreatyTerminationNoticeGameHours": 168,

@@ -19,6 +19,12 @@ import sharedConstants from '@shared/game-constants.json';
 export const GAME_SPEED_MULTIPLIER: number = sharedConstants.gameSpeedMultiplier;
 /** Wirksame Zeitkompression = Ausgangswert / Tempo-Regler, exakt wie `Clock.REAL_MS_PER_GAME_HOUR`. */
 export const REAL_MS_PER_GAME_HOUR: number = sharedConstants.baseRealMsPerGameHour / GAME_SPEED_MULTIPLIER;
+/**
+ * Zweiter Test-Regler: Teiler für jede Fertigungsdauer (Umsetzungskonzept/31_...md).
+ * Rechnet ausschließlich der Server (`ChainPlanner`); hier nur exportiert, damit die
+ * Oberfläche einen laufenden Testlauf als solchen ausweisen kann (Wert ≠ 1).
+ */
+export const PRODUCTION_SPEED_MULTIPLIER: number = (sharedConstants as { productionSpeedMultiplier?: number }).productionSpeedMultiplier ?? 1;
 export const NOTIFICATION_RETENTION_GAME_HOURS: number = sharedConstants.notificationRetentionGameHours;
 export const MESSAGE_RETENTION_GAME_HOURS: number = sharedConstants.messageRetentionGameHours;
 /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) – für Hinweistexte. */

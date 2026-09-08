@@ -73,6 +73,12 @@ public final class GameConstants {
   public static final double COLONY_SHIP_MIN_LOYALTY_PCT = SharedConstants.colonyShipMinLoyaltyPct();
   /** Dauer der Landung/Koloniegründung in Spielstunden, nachdem "kolonisieren" ausgelöst wurde. */
   public static final double COLONIZATION_HOURS = SharedConstants.colonizationGameHours();
+  /**
+   * Test-Regler für das Fertigungstempo (1 = unveränderte Balance), siehe
+   * {@link SharedConstants#productionSpeedMultiplier()} und
+   * {@code ChainPlanner.computeProductionHours}.
+   */
+  public static final double PRODUCTION_SPEED_MULTIPLIER = SharedConstants.productionSpeedMultiplier();
 
   /**
    * Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut

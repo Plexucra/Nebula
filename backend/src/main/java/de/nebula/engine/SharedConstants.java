@@ -50,6 +50,20 @@ public final class SharedConstants {
     return value;
   }
 
+  /**
+   * Zweiter, davon unabhängiger Test-Regler: Teiler für JEDE Fertigungsdauer
+   * (Industrie, Werft, Ausbildungszentrum), siehe {@code ChainPlanner}. 1 =
+   * unveränderte Balance; nur für Testläufe gedacht, in denen die sehr langen
+   * Schiffsketten (Mannschaftstransporter, Kolonisationsschiff) erreichbar
+   * sein sollen (Umsetzungskonzept/31_...md).
+   */
+  public static double productionSpeedMultiplier() {
+    JsonNode node = ROOT.path("productionSpeedMultiplier");
+    double value = node.isMissingNode() ? 1 : node.asDouble();
+    if (value <= 0) throw new IllegalStateException("productionSpeedMultiplier muss größer als 0 sein, ist aber " + value);
+    return value;
+  }
+
   public static double notificationRetentionGameHours() {
     return ROOT.path("notificationRetentionGameHours").asDouble();
   }

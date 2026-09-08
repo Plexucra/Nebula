@@ -4,7 +4,7 @@
 // Umsetzungskonzept/14_...md, Teil 2 geforderten Nachweise:
 //   1. 20 registrierte Spieler mit den erwarteten NPC-Namen
 //   2. Kriegszustände zwischen den beiden Lagern
-//   3. mindestens eine plausible Koordinationsnachricht (Spezialisierung)
+//   3. mindestens eine plausible Koordinationsnachricht (Zuteilung "NPC:ASSIGN" des Lager-Koordinators, Umsetzungskonzept/31)
 //   4. mindestens ein reales Gefecht (aktiv oder bereits beendet)
 // Da Kriege/Postfächer/Gefechte serverseitig strikt auf den EINGELOGGTEN
 // Kommandanten gefiltert sind (kein Admin-/Observer-Zugriff im Protokoll),
@@ -61,11 +61,11 @@ const warAgainstSued = activeWars.every(r => {
 assert.ok(warAgainstSued, 'Alle Kriege sollten gegen das SUED-Lager geführt werden');
 console.log('[verify] BESTANDEN: Kriegszustände zwischen den Lagern bestehen (' + nordBots[4].name + ' vs. SUED).');
 
-// --- 3. Koordinationsnachricht (Spezialisierung) ---------------------------
+// --- 3. Koordinationsnachricht (Zuteilung des Koordinators) ------------------
 await call(ws, 'login', { playerId: nordBots[4].id }); // Empfänger einer Zuteilung (Index 05, nicht Koordinator)
 const inbox = await call(ws, 'inbox');
-const specMsg = inbox.find(m => m.subject === 'Spezialisierung' && m.fromPlayerId === nordBots[0].id);
-assert.ok(specMsg, 'Erwartet eine Spezialisierungs-Nachricht vom Koordinator (NPC-Nord-01) im Posteingang von NPC-Nord-05');
+const specMsg = inbox.find(m => (m.subject === 'NPC:ASSIGN' || m.subject === 'Spezialisierung') && m.fromPlayerId === nordBots[0].id);
+assert.ok(specMsg, 'Erwartet eine Zuteilungs-Nachricht (NPC:ASSIGN) vom Koordinator (NPC-Nord-01) im Posteingang von NPC-Nord-05');
 console.log(`[verify] BESTANDEN: Koordinationsnachricht gefunden – "${specMsg.subject}": "${specMsg.body}" (von ${nordBots[0].name} an ${nordBots[4].name}, gelesen=${specMsg.read}).`);
 
 // --- 4. Mindestens ein reales Gefecht (aktiv oder beendet) -----------------

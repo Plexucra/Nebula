@@ -90,7 +90,11 @@ public final class ChainPlanner {
     double speed = Formulas.buildingLevelSpeedFactor(level)
         * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
     double hoursWithBonuses = product.baseProductionHours / Math.max(speed, 0.05);
-    return Formulas.productionHoursWithWorkforce(hoursWithBonuses, product.workHoursPerUnit, population);
+    // Der Test-Regler teilt die GESAMTE Dauer – auch die Arbeitskraft-Bremse –,
+    // sonst bliebe bei kleiner Bevölkerung genau die Bremse als Untergrenze
+    // stehen und der Regler wäre für die langen Schiffsketten wirkungslos.
+    return Formulas.productionHoursWithWorkforce(hoursWithBonuses, product.workHoursPerUnit, population)
+        / GameConstants.PRODUCTION_SPEED_MULTIPLIER;
   }
 
   /** Dauer OHNE Arbeitskraft-Bremse – Bezugsgröße für die Transparenz-Anzeige. */
@@ -128,7 +132,7 @@ public final class ChainPlanner {
     double blackoutFactor = PowerGrid.isBlackout(state, colonyId) ? Formulas.BLACKOUT_PRODUCTION_FACTOR : 1;
     double speed = Formulas.buildingLevelSpeedFactor(level)
         * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
-    return product.baseProductionHours / Math.max(speed, 0.05);
+    return product.baseProductionHours / Math.max(speed, 0.05) / GameConstants.PRODUCTION_SPEED_MULTIPLIER;
   }
 
   /**
