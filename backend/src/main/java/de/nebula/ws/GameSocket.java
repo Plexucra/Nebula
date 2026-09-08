@@ -155,6 +155,7 @@ public class GameSocket {
       case "planet" -> ColonyCommands.planetForPlayer(state, text(payload, "id"), currentPlayerId());
       case "planetsInSystem" -> ColonyCommands.planetsInSystemForPlayer(state, text(payload, "systemId"), currentPlayerId());
       case "colonizePlanet" -> ColonyCommands.colonizePlanet(state, ids, requirePlayerId(), text(payload, "planetId"));
+      case "colonizations" -> ColonyCommands.colonizationsOf(state, requirePlayerId());
 
       // --- Bebauung --------------------------------------------------------------
       case "buildings" -> BuildingCommands.buildingsForColony(state, text(payload, "colonyId"));

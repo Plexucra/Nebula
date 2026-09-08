@@ -2,12 +2,19 @@ package de.nebula.state;
 
 import de.nebula.data.ProductCatalog;
 import de.nebula.engine.Clock;
+import de.nebula.engine.Formulas;
+import de.nebula.engine.GameConstants;
 import de.nebula.model.ChainPlan;
 import de.nebula.model.ChainPlanStep;
+import de.nebula.model.PlanetStats;
+import de.nebula.model.Population;
 import de.nebula.model.ProductCategory;
 import de.nebula.model.ProductType;
 import de.nebula.model.ShipyardQueueEntry;
 import de.nebula.model.ProductionQueueStatus;
+import de.nebula.model.TransactionReason;
+import de.nebula.model.Wallet;
+import de.nebula.model.WalletOwnerType;
 
 import java.util.List;
 
@@ -33,6 +40,9 @@ public final class ShipyardCommands {
     ProductType product = ProductCatalog.find(shipProductTypeId);
     if (product.category != ProductCategory.Ship) throw new CommandException("Kein Schiffstyp.");
     if (GameQueries.getBuildingLevel(state, colonyId, "b_shipyard") < 1) throw new CommandException("Ohne Werft können keine Schiffe gebaut werden.");
+    if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(shipProductTypeId)) {
+      reserveColonists(state, ids, playerId, colonyId, quantity);
+    }
 
     ShipyardQueueEntry entry = new ShipyardQueueEntry();
     entry.id = ids.next("sy");
@@ -64,8 +74,76 @@ public final class ShipyardCommands {
     ShipyardQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null) return;
     creditPartialChainProgress(state, colonyId, entry, qty -> Warehouse.add(state, colonyId, entry.shipProductTypeId, qty));
+    if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(entry.shipProductTypeId)) {
+      releaseColonists(state, ids, playerId, colonyId, entry.quantity);
+    }
     state.shipyardQueue.remove(entry);
     tryStartNextShipyardEntry(state, ids, colonyId);
+  }
+
+  /** Kolonisten je Kolonisationsschiff – zugleich die Bevölkerung, mit der die neue Kolonie startet. */
+  public static double colonistsPerShip() {
+    return GameConstants.START_POPULATION;
+  }
+
+  /** Prämie, die der Kommandant den Kolonisten je Schiff auszahlt. */
+  public static double colonistPremiumPerShip() {
+    return GameConstants.START_POPULATION * Formulas.CREDITS_PER_NEW_INHABITANT;
+  }
+
+  /**
+   * Bindet Kolonisten und Prämie beim EINREIHEN eines Kolonisationsschiffs
+   * (Umsetzungskonzept/24_...md): die Kolonisten sind ab diesem Moment
+   * abgemustert und zählen nicht mehr zur Bevölkerung der Kolonie, die Prämie
+   * ist ausgezahlt. Ein Abbruch macht beides rückgängig ({@link #releaseColonists}).
+   *
+   * <p>Bewusst schon beim Einreihen und nicht erst bei Fertigstellung: sonst
+   * könnte ein fertiges Schiff ohne Besatzung dastehen, weil die Bevölkerung
+   * während der Bauwoche gesunken ist.</p>
+   */
+  private static void reserveColonists(GameState state, IdGenerator ids, String playerId, String colonyId, double quantity) {
+    PlanetStats stats = null;
+    for (PlanetStats s : state.planetStats) if (s.colonyId.equals(colonyId)) stats = s;
+    if (stats == null || stats.loyaltyPct < GameConstants.COLONY_SHIP_MIN_LOYALTY_PCT) {
+      throw new CommandException("Kolonisationsschiffe verlangen mindestens "
+          + (long) GameConstants.COLONY_SHIP_MIN_LOYALTY_PCT + " % Loyalität – bei "
+          + (stats == null ? 0 : Math.round(stats.loyaltyPct)) + " % findet sich niemand, der auswandern will.");
+    }
+    Population population = null;
+    for (Population p : state.populations) if (p.colonyId.equals(colonyId)) population = p;
+    double colonists = quantity * colonistsPerShip();
+    // Die Kolonie muss nach dem Auszug noch eine volle Startbevölkerung behalten –
+    // für EIN Schiff also die geforderten 2 × Startbevölkerung.
+    double required = colonists + GameConstants.START_POPULATION;
+    if (population == null || population.currentCount < required) {
+      throw new CommandException("Zu wenig Bevölkerung: " + (long) required + " Einwohner nötig ("
+          + (long) colonists + " wandern aus, " + (long) GameConstants.START_POPULATION
+          + " müssen bleiben), vorhanden sind " + (population == null ? 0 : (long) population.currentCount) + ".");
+    }
+    double premium = quantity * colonistPremiumPerShip();
+    Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, playerId);
+    if (wallet == null || wallet.balance < premium) {
+      throw new CommandException("Nicht genug Credits für die Kolonistenprämie: " + (long) premium + " Cr nötig.");
+    }
+    population.currentCount -= colonists;
+    // Die Prämie geht an die Bevölkerung der BAU-Kolonie, wo die Kolonisten bis zum
+    // Auslaufen leben – bewusste Vereinfachung gegenüber einer Prämie, die als
+    // Startkapital der neuen Kolonie mitreist (Geld bleibt so im Kreislauf).
+    Ledger.recordTx(state, ids, wallet.id, GameQueries.popWalletIdForColony(state, colonyId), premium,
+        TransactionReason.Subsidy, "Kolonistenprämie für " + (long) quantity + " Kolonisationsschiff(e)");
+  }
+
+  /** Gegenstück zu {@link #reserveColonists} beim Abbruch eines Werftauftrags. */
+  private static void releaseColonists(GameState state, IdGenerator ids, String playerId, String colonyId, double quantity) {
+    for (Population p : state.populations) {
+      if (p.colonyId.equals(colonyId)) p.currentCount += quantity * colonistsPerShip();
+    }
+    Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, playerId);
+    if (wallet != null) {
+      Ledger.recordTx(state, ids, GameQueries.popWalletIdForColony(state, colonyId), wallet.id,
+          quantity * colonistPremiumPerShip(), TransactionReason.Subsidy,
+          "Kolonistenprämie zurück (Werftauftrag abgebrochen)");
+    }
   }
 
   private static ShipyardQueueEntry find(GameState state, String colonyId, String entryId) {

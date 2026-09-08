@@ -20,6 +20,11 @@ export const TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS: number = sharedConst
 export const LIVING_STANDARD_SHRINK_BELOW_PCT: number = sharedConstants.livingStandardShrinkBelowPct;
 export const LIVING_STANDARD_GROWTH_FROM_PCT: number = sharedConstants.livingStandardGrowthFromPct;
 export const SLOTS_PER_INFRASTRUCTURE_LEVEL: number = sharedConstants.slotsPerInfrastructureLevel;
+/** Kolonisation (Umsetzungskonzept/24_...md) – für Hinweistexte und Bau-Vorschauen. */
+export const START_POPULATION: number = sharedConstants.startPopulation;
+export const COLONY_SHIP_BUILD_GAME_HOURS: number = sharedConstants.colonyShipBuildGameHours;
+export const COLONY_SHIP_MIN_LOYALTY_PCT: number = sharedConstants.colonyShipMinLoyaltyPct;
+export const COLONIZATION_GAME_HOURS: number = sharedConstants.colonizationGameHours;
 
 /** Spielstunden → Spieltage, für Hinweistexte („wird nach N Spieltagen gelöscht"). */
 export function gameHoursToGameDays(gameHours: number): number {

@@ -47,6 +47,7 @@ public class GameTick {
       BattleCommands.processBattles(state, ids, t);
       ProductionCommands.processProductionQueue(state, ids, t);
       ShipyardCommands.processShipyardCompletions(state, ids, t);
+      ColonyCommands.processColonizations(state, ids, t);
       RecruitmentCommands.processRecruitmentCompletions(state, ids, t);
       Specializations.decaySpecializations(state, t);
       EconomyTick.payUpkeepAndWages(state, ids);

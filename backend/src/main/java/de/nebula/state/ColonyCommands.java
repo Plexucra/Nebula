@@ -8,8 +8,13 @@ import de.nebula.engine.GameConstants;
 import de.nebula.model.BuildSlots;
 import de.nebula.model.Building;
 import de.nebula.model.BuildingType;
+import de.nebula.model.Colonization;
 import de.nebula.model.Colony;
 import de.nebula.model.ColonySpeedBreakdown;
+import de.nebula.model.Fleet;
+import de.nebula.model.FleetShipGroup;
+import de.nebula.model.FleetStatus;
+import de.nebula.model.NotificationType;
 import de.nebula.model.Planet;
 import de.nebula.model.PlanetResourceConcentration;
 import de.nebula.model.PlanetStats;
@@ -213,26 +218,93 @@ public final class ColonyCommands {
         .toList();
   }
 
-  private static final double COLONIZE_COST = 800;
-
-  public static Colony colonizePlanet(GameState state, IdGenerator ids, String playerId, String planetId) {
+  /**
+   * Löst die Landung aus (Umsetzungskonzept/24_...md): verbraucht EIN
+   * Kolonisationsschiff aus einer eigenen, im Orbit dieses Planeten liegenden
+   * Flotte und startet die {@link Colonization}. Die Kolonie selbst entsteht
+   * erst einen Spieltag später in {@link #processColonizations} – der Aufruf
+   * liefert daher keine Kolonie mehr, sondern den laufenden Vorgang.
+   *
+   * <p>Die frühere reine Credit-Gründung (800 Cr, sofort) ist damit abgelöst:
+   * bezahlt wird jetzt über das Schiff (Bau in der Werft, 2000 Kolonisten,
+   * Kolonistenprämie, siehe {@code ShipyardCommands}).</p>
+   */
+  public static Colonization colonizePlanet(GameState state, IdGenerator ids, String playerId, String planetId) {
     var player = GameQueries.requirePlayer(state, playerId);
     Planet planet = planet(state, planetId);
     if (planet == null) throw new CommandException("Unbekannter Planet.");
     if (!planet.usable) throw new CommandException("Dieser Himmelskörper ist nicht besiedelbar.");
     boolean alreadyOwned = state.colonies.stream().anyMatch(c -> c.planetId.equals(planetId) && c.ownerId.equals(player.id));
     if (alreadyOwned) throw new CommandException("Auf diesem Planeten besteht bereits eine eigene Kolonie.");
+    boolean alreadyRunning = state.colonizations.stream().anyMatch(c -> c.planetId.equals(planetId) && c.ownerId.equals(player.id));
+    if (alreadyRunning) throw new CommandException("Auf diesem Planeten läuft bereits eine eigene Koloniegründung.");
 
-    Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, player.id);
-    if (wallet == null || wallet.balance < COLONIZE_COST) throw new CommandException("Nicht genug Credits für eine Kolonialgründung.");
+    Fleet fleet = fleetWithColonyShipAt(state, player.id, planet);
+    if (fleet == null) {
+      throw new CommandException("Dafür muss eine eigene Flotte mit einem Kolonisationsschiff im Orbit dieses Planeten liegen.");
+    }
+    // Das Schiff wird bei der Landung verbraucht – es IST die neue Kolonie.
+    for (FleetShipGroup g : fleet.ships) {
+      if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(g.shipProductTypeId)) {
+        g.quantity -= 1;
+        break;
+      }
+    }
 
     long t = Clock.now();
+    Colonization colonization = new Colonization();
+    colonization.id = ids.next("cln");
+    colonization.planetId = planetId;
+    colonization.systemId = planet.systemId;
+    colonization.ownerId = player.id;
+    colonization.fleetId = fleet.id;
+    colonization.colonyName = planet.name + "-Kolonie";
+    colonization.startedAt = t;
+    colonization.endsAt = t + (long) Clock.hoursToMs(GameConstants.COLONIZATION_HOURS);
+    state.colonizations.add(colonization);
+    return colonization;
+  }
+
+  /** Laufende Koloniegründungen des Kommandanten – Fortschrittsanzeige im Client. */
+  public static List<Colonization> colonizationsOf(GameState state, String playerId) {
+    return state.colonizations.stream().filter(c -> c.ownerId.equals(playerId)).toList();
+  }
+
+  /** Eigene, im Orbit DIESES Planeten stationierte Flotte mit mindestens einem Kolonisationsschiff. */
+  private static Fleet fleetWithColonyShipAt(GameState state, String playerId, Planet planet) {
+    for (Fleet f : state.fleets) {
+      if (!f.ownerId.equals(playerId) || f.status != FleetStatus.Stationed) continue;
+      if (!planet.id.equals(f.locationPlanetId)) continue;
+      for (FleetShipGroup g : f.ships) {
+        if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(g.shipProductTypeId) && g.quantity >= 1) return f;
+      }
+    }
+    return null;
+  }
+
+  /** Schließt fällige Koloniegründungen ab – aufgerufen aus {@code GameTick}. */
+  public static void processColonizations(GameState state, IdGenerator ids, long t) {
+    for (Colonization c : state.colonizations.stream().filter(x -> x.endsAt <= t).toList()) {
+      state.colonizations.remove(c);
+      Planet planet = planet(state, c.planetId);
+      if (planet == null) continue;
+      Colony colony = foundColony(state, ids, c, t);
+      Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_COLONY_FOUNDED,
+          "Kolonie \"" + colony.name + "\" gegründet – " + (long) GameConstants.START_POPULATION
+              + " Kolonisten sind gelandet.", colony.id, null);
+    }
+  }
+
+  private static final int NOTIFICATION_CODE_COLONY_FOUNDED = 120;
+
+  private static Colony foundColony(GameState state, IdGenerator ids, Colonization request, long t) {
+    Planet planet = planet(state, request.planetId);
     Colony colony = new Colony();
     colony.id = ids.next("col");
-    colony.planetId = planetId;
-    colony.systemId = planet.systemId;
-    colony.ownerId = player.id;
-    colony.name = planet.name + "-Kolonie";
+    colony.planetId = request.planetId;
+    colony.systemId = request.systemId;
+    colony.ownerId = request.ownerId;
+    colony.name = request.colonyName;
     colony.foundedAt = t;
     colony.isHomeworld = false;
     state.colonies.add(colony);
@@ -246,18 +318,21 @@ public final class ColonyCommands {
     stats.lastRecalculatedAt = t;
     state.planetStats.add(stats);
 
+    // Die Kolonisten des Schiffs SIND die Startbevölkerung – dieselbe Zahl, mit der
+    // auch eine Heimatwelt beginnt (Umsetzungskonzept/24_...md).
+    double startPopulation = GameConstants.START_POPULATION;
     Population population = new Population();
     population.colonyId = colony.id;
-    population.currentCount = 25;
+    population.currentCount = startPopulation;
     population.growthRatePerInterval = 0;
     state.populations.add(population);
 
-    boolean moneySupplyExists = state.moneySupplyStates.stream().anyMatch(m -> m.planetId.equals(planetId));
+    boolean moneySupplyExists = state.moneySupplyStates.stream().anyMatch(m -> m.planetId.equals(request.planetId));
     if (!moneySupplyExists) {
       PopulationMoneySupplyState money = new PopulationMoneySupplyState();
-      money.planetId = planetId;
-      money.historicalPeakPopulation = 25;
-      money.lastPopulation = 25;
+      money.planetId = request.planetId;
+      money.historicalPeakPopulation = startPopulation;
+      money.lastPopulation = startPopulation;
       state.moneySupplyStates.add(money);
     }
 
@@ -265,11 +340,11 @@ public final class ColonyCommands {
     popWallet.id = ids.next("wal");
     popWallet.ownerType = WalletOwnerType.Population;
     popWallet.ownerId = colony.id;
-    popWallet.balance = 30;
+    popWallet.balance = startPopulation * Formulas.CREDITS_PER_NEW_INHABITANT;
     state.wallets.add(popWallet);
 
-    // Minimalstart wie bei der Heimatwelt (Umsetzungskonzept/17_...md): Wohnkomplex 1
-    // + Industriekomplex 1 + Infrastruktur 2 – beide Plätze belegt.
+    // Startbebauung wie die Heimatwelt: Wohnkomplex 1 + Industriekomplex 1 +
+    // Infrastruktur 2 – genau die Stufen, deren Baustoffe das Schiff mitbringt.
     for (String[] start : new String[][]{{"b_habitat", "1"}, {"b_industry", "1"}, {GameConstants.INFRASTRUCTURE_BUILDING_ID, "2"}}) {
       Building b = new Building();
       b.id = ids.next("bld");
@@ -278,9 +353,7 @@ public final class ColonyCommands {
       b.level = Integer.parseInt(start[1]);
       state.buildings.add(b);
     }
-
-    Ledger.recordTx(state, ids, wallet.id, GameQueries.homeworldPopulationWalletId(state, player.id), COLONIZE_COST,
-        TransactionReason.Construction, "Kolonialgründung " + colony.name);
+    if (planet != null && colony.name == null) colony.name = planet.name + "-Kolonie";
     return colony;
   }
 }

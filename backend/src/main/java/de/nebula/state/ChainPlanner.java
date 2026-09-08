@@ -2,6 +2,7 @@ package de.nebula.state;
 
 import de.nebula.data.ProductCatalog;
 import de.nebula.engine.Formulas;
+import de.nebula.engine.GameConstants;
 import de.nebula.model.ChainPlan;
 import de.nebula.model.ChainPlanStep;
 import de.nebula.model.Colony;
@@ -32,8 +33,19 @@ public final class ChainPlanner {
   private ChainPlanner() {
   }
 
+  /**
+   * Das Kolonisationsschiff braucht IMMER exakt {@link GameConstants#COLONY_SHIP_BUILD_HOURS}
+   * (eine Spielwoche) – weder Werftstufe noch Spezialisierung, Fördergüte, Blackout
+   * oder verfügbare Arbeitskraft verändern das (Umsetzungskonzept/24_...md). Deshalb
+   * die Abkürzung vor jeder Bonusrechnung, in beiden Zeitfunktionen identisch.
+   */
+  private static boolean hasFixedBuildTime(ProductType product) {
+    return GameConstants.COLONY_SHIP_PRODUCT_ID.equals(product.id);
+  }
+
   /** Produktionszeit EINER Einheit in Spielstunden, zu den aktuellen Geschwindigkeitsfaktoren der Kolonie. */
   public static double computeProductionHours(GameState state, String colonyId, ProductType product, String facilityTypeId) {
+    if (hasFixedBuildTime(product)) return GameConstants.COLONY_SHIP_BUILD_HOURS;
     double population = 100;
     for (Population p : state.populations) {
       if (p.colonyId.equals(colonyId)) {
@@ -83,6 +95,7 @@ public final class ChainPlanner {
 
   /** Dauer OHNE Arbeitskraft-Bremse – Bezugsgröße für die Transparenz-Anzeige. */
   public static double computeProductionHoursWithoutWorkforce(GameState state, String colonyId, ProductType product, String facilityTypeId) {
+    if (hasFixedBuildTime(product)) return GameConstants.COLONY_SHIP_BUILD_HOURS;
     int level = GameQueries.getBuildingLevel(state, colonyId, facilityTypeId);
     boolean isSoldier = product.id.equals("p_soldier");
     double spec = 0;

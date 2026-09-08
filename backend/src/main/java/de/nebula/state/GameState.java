@@ -49,6 +49,8 @@ public class GameState {
   public final Map<String, java.util.Set<String>> exploredSystemIdsByPlayer = new ConcurrentHashMap<>();
   public final List<Planet> planets = new CopyOnWriteArrayList<>();
   public final List<Colony> colonies = new CopyOnWriteArrayList<>();
+  /** Laufende Koloniegründungen – noch keine Kolonie (Umsetzungskonzept/24_...md). */
+  public final List<de.nebula.model.Colonization> colonizations = new CopyOnWriteArrayList<>();
   public final List<PlanetStats> planetStats = new CopyOnWriteArrayList<>();
   public final List<ColonyPowerState> powerStates = new CopyOnWriteArrayList<>();
   public final List<Population> populations = new CopyOnWriteArrayList<>();

@@ -68,7 +68,23 @@ public final class WorldSeed {
    * genau das soll die Startphase jetzt ermöglichen.</p>
    */
   private static final List<String> STARTER_CONSUMER_GOODS = List.of("p_grundnahrung");
-  private static final double STARTER_CONSUMER_GOODS_QUANTITY = 5;
+  /**
+   * Die gesamte Startausstattung an Grundnahrung ist PRO KOPF bemessen
+   * (Umsetzungskonzept/24_...md). Vorher standen hier feste Stückzahlen, die
+   * auf die damalige Startbevölkerung von 120 zugeschnitten waren; seit die
+   * Startbevölkerung eine gemeinsame Konstante ist
+   * ({@link GameConstants#START_POPULATION}, aktuell 2000), leiten sich
+   * Dauerauftragsmenge, Lagerbestand und Verkaufsorder daraus ab. So bleibt
+   * das Verhältnis von Produktion, Vorrat und Verbrauch exakt erhalten, egal
+   * wie groß eine Kolonie startet – die alten Werte (5 / 50 / 20 bei 120
+   * Einwohnern) sind genau die Pro-Kopf-Faktoren unten.
+   */
+  private static final double STARTER_GOODS_PER_CAPITA_PRODUCTION = 5 / 120.0;
+  private static final double STARTER_GOODS_PER_CAPITA_STOCK = 50 / 120.0;
+  private static final double STARTER_GOODS_PER_CAPITA_SELL_ORDER = 20 / 120.0;
+
+  private static final double STARTER_CONSUMER_GOODS_QUANTITY =
+      Math.ceil(GameConstants.START_POPULATION * STARTER_GOODS_PER_CAPITA_PRODUCTION);
   /**
    * Anzahl Startaufträge, auf die {@link #STARTER_CONSUMER_GOODS_QUANTITY}
    * je Startkonsumgut aufgeteilt wird (Umsetzungskonzept/20_...md): zwei
@@ -94,16 +110,17 @@ public final class WorldSeed {
   private static final double STARTER_ELERIUM_QUANTITY = 3;
 
   /** Gesamter Startbestand je Grundkonsumgut, aufgeteilt in Lager + sofort eingestellte Verkaufsorder. */
-  private static final double STARTER_CONSUMER_GOODS_STOCK = 50;
+  private static final double STARTER_CONSUMER_GOODS_STOCK =
+      Math.ceil(GameConstants.START_POPULATION * STARTER_GOODS_PER_CAPITA_STOCK);
   /**
    * Menge je Start-Verkaufsorder (aus {@link #STARTER_CONSUMER_GOODS_STOCK}
    * reserviert, Rest bleibt im Lager als Puffer für das erste Auto-Relist).
-   * {@code EconomyTick.runConsumption} kauft je Tick höchstens
-   * {@code ceil(Bedarf)} = 1 Stück je Gut (Startbevölkerung 420 ⇒ Bedarf
-   * 0,168 bzw. 0,063 Stück/Tick), 20 Stück puffern also rund 20 Ticks, bevor
-   * die Order schlafend wird und aus dem Lager nachgefüllt werden muss.
+   * {@code EconomyTick.runConsumption} kauft je Tick den Bruchteil
+   * {@code Bevölkerung × 0,00008}; die Order deckt damit unabhängig von der
+   * Koloniegröße immer gleich viele Ticks ab, weil sie mitskaliert.
    */
-  private static final double STARTER_SELL_ORDER_QUANTITY = 20;
+  private static final double STARTER_SELL_ORDER_QUANTITY =
+      Math.ceil(GameConstants.START_POPULATION * STARTER_GOODS_PER_CAPITA_SELL_ORDER);
   /**
    * Preis je Stück – mit Umsetzungskonzept/17_...md, Teil C strukturell
    * hergeleitet. Geld wird im Spiel nicht vernichtet, sondern kreist:
@@ -628,14 +645,19 @@ public final class WorldSeed {
     player.homeworldColonyId = colony.id;
 
     // Start (Nutzerentscheidung, abweichend von der ursprünglichen
-    // Minimalstart-Herleitung in Umsetzungskonzept/17_...md): 120 Einwohner in
-    // einem Wohnkomplex Stufe 1 (Kapazität 20.000 – der Wohnraum ist im
-    // Frühspiel bewusst NICHT die Grenze; begrenzend ist die
-    // Nahrungsversorgung, die Bevölkerung plateauiert rechnerisch bei ≈ 390),
-    // Industriekomplex Stufe 5 und Infrastruktur Stufe 6 (beide
-    // Bebauungsplätze belegt, keiner frei: total = 6 × SLOTS_PER_INFRASTRUCTURE_LEVEL
-    // = 6, used = Habitat 1 + Industrie 5 = 6).
-    double homePopulationCount = 120;
+    // Minimalstart-Herleitung in Umsetzungskonzept/17_...md): GameConstants
+    // .START_POPULATION Einwohner in einem Wohnkomplex Stufe 1 (Kapazität
+    // 20.000 – der Wohnraum ist im Frühspiel bewusst NICHT die Grenze;
+    // begrenzend ist die Nahrungsversorgung), Industriekomplex Stufe 5 und
+    // Infrastruktur Stufe 6 (beide Bebauungsplätze belegt, keiner frei:
+    // total = 6 × SLOTS_PER_INFRASTRUCTURE_LEVEL = 6, used = Habitat 1 +
+    // Industrie 5 = 6).
+    //
+    // Dieselbe Konstante gilt für JEDE Kolonie: ein Kolonisationsschiff nimmt
+    // genau so viele Kolonisten mit und gründet damit eine gleich große
+    // Kolonie (Umsetzungskonzept/24_...md). Die Startausstattung an
+    // Grundnahrung skaliert pro Kopf mit (siehe STARTER_GOODS_PER_CAPITA_*).
+    double homePopulationCount = GameConstants.START_POPULATION;
     int homeHabitatLevel = 1;
     int homeIndustryLevel = 5;
     int homeInfrastructureLevel = 6;

@@ -136,7 +136,7 @@ class FleetCommandsJumpFuelTest {
     // und dort zusätzliche Kapseln einlagern.
     Planet secondPlanet = b.state().planets.stream()
         .filter(p -> p.systemId.equals(freighter.systemId) && p.orbitIndex == 1).findFirst().orElseThrow();
-    Colony secondColony = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), secondPlanet.id);
+    Colony secondColony = foundColonyDirectly(b, secondPlanet);
     Warehouse.add(b.state(), secondColony.id, GameConstants.JUMP_FUEL_PRODUCT_ID, 1.0);
 
     FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
@@ -152,5 +152,25 @@ class FleetCommandsJumpFuelTest {
   void jumpFuelProductIsTheExistingEleriumkapselProduct() {
     assertEquals("p_elerium_kapsel", GameConstants.JUMP_FUEL_PRODUCT_ID);
     assertEquals(0.01, GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, 0.0001);
+  }
+
+  /**
+   * Gründet eine zweite Kolonie ohne den Umweg über Werft und Kolonisationsschiff
+   * (Umsetzungskonzept/24_...md): dieser Test braucht nur ein zweites eigenes
+   * Lager, nicht den Kolonisationsablauf. Nutzt bewusst denselben öffentlichen
+   * Abschlussweg wie der Tick, damit die Kolonie identisch aufgebaut ist.
+   */
+  private static Colony foundColonyDirectly(Bootstrapped b, Planet planet) {
+    de.nebula.model.Colonization request = new de.nebula.model.Colonization();
+    request.id = b.ids().next("cln");
+    request.planetId = planet.id;
+    request.systemId = planet.systemId;
+    request.ownerId = b.playerId();
+    request.colonyName = planet.name + "-Kolonie";
+    request.startedAt = 0;
+    request.endsAt = 0;
+    b.state().colonizations.add(request);
+    ColonyCommands.processColonizations(b.state(), b.ids(), 1);
+    return b.state().colonies.stream().filter(c -> c.planetId.equals(planet.id)).findFirst().orElseThrow();
   }
 }

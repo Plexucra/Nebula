@@ -20,5 +20,9 @@
   "livingStandardGrowthFromPct": 50,
   "populationShrinkRatePerHour": 0.01,
   "populationBaseGrowthRatePerHour": 0.01,
-  "housingCapacityGrowthFactor": 2
+  "housingCapacityGrowthFactor": 2,
+  "startPopulation": 2000,
+  "colonyShipBuildGameHours": 168,
+  "colonyShipMinLoyaltyPct": 90,
+  "colonizationGameHours": 24
 }

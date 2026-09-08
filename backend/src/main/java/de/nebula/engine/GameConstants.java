@@ -39,6 +39,26 @@ public final class GameConstants {
   /** Faktor je Wohnkomplex-Stufe für Kapazität, Credits und Baustoffe (Umsetzungskonzept/17_...md, Teil C). */
   public static final double HOUSING_GROWTH_FACTOR = SharedConstants.housingCapacityGrowthFactor();
 
+  // --- Kolonisation (Umsetzungskonzept/24_...md) ---------------------------
+  /**
+   * Startbevölkerung einer Kolonie – Heimatwelt bei der Registrierung UND
+   * jede per Kolonisationsschiff gegründete Kolonie. Zugleich die Zahl
+   * Kolonisten, die ein Kolonisationsschiff seiner Bau-Kolonie entzieht.
+   */
+  public static final double START_POPULATION = SharedConstants.startPopulation();
+  /** Produkt-Id des Kolonisationsschiffs (Werftbau, siehe {@code ShipyardCommands.queueShip}). */
+  public static final String COLONY_SHIP_PRODUCT_ID = "p_colonyship";
+  /**
+   * Feste Bauzeit des Kolonisationsschiffs in Spielstunden. Bewusst KEIN
+   * Bonus-Ziel: weder Werftstufe noch Spezialisierung, Fördergüte, Blackout
+   * oder Arbeitskraft verändern sie (siehe {@code ChainPlanner.computeProductionHours}).
+   */
+  public static final double COLONY_SHIP_BUILD_HOURS = SharedConstants.colonyShipBuildGameHours();
+  /** Ohne diese Loyalität in der Bau-Kolonie finden sich keine Kolonisten. */
+  public static final double COLONY_SHIP_MIN_LOYALTY_PCT = SharedConstants.colonyShipMinLoyaltyPct();
+  /** Dauer der Landung/Koloniegründung in Spielstunden, nachdem "kolonisieren" ausgelöst wurde. */
+  public static final double COLONIZATION_HOURS = SharedConstants.colonizationGameHours();
+
   /**
    * Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut
    * UND TICK. Mit Umsetzungskonzept/17_...md, Teil C gesenkt (Grundnahrung

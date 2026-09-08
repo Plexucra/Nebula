@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
@@ -221,8 +221,11 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   planetsInSystem(systemId: Id): Signal<Planet[]> {
     return this.poll('planetsInSystem', () => ({ systemId }), []);
   }
-  colonizePlanet(planetId: Id): Promise<Colony> {
+  colonizePlanet(planetId: Id): Promise<Colonization> {
     return this.send('colonizePlanet', { planetId });
+  }
+  colonizations(): Signal<Colonization[]> {
+    return this.poll('colonizations', () => ({}), []);
   }
 
   // ==========================================================================

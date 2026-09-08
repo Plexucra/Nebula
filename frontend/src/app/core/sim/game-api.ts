@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
@@ -74,7 +74,15 @@ export interface GameApi {
   colonySpeedBreakdown(colonyId: Id): Signal<ColonySpeedBreakdown | null>;
   planet(id: Id): Signal<Planet | undefined>;
   planetsInSystem(systemId: Id): Signal<Planet[]>;
-  colonizePlanet(planetId: Id): Promise<Colony>;
+  /**
+   * Löst die Landung aus: verbraucht ein Kolonisationsschiff aus einer eigenen
+   * Flotte im Orbit dieses Planeten und startet die Gründung. Die Kolonie
+   * entsteht erst einen Spieltag später (Umsetzungskonzept/24_...md), deshalb
+   * liefert der Aufruf den laufenden Vorgang statt einer fertigen Kolonie.
+   */
+  colonizePlanet(planetId: Id): Promise<Colonization>;
+  /** Eigene laufende Koloniegründungen – Fortschrittsanzeige. */
+  colonizations(): Signal<Colonization[]>;
 
   // --- Bebauung -------------------------------------------------------------
   buildings(colonyId: Id): Signal<Building[]>;

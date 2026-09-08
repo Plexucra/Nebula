@@ -6909,5 +6909,109 @@
     "eleriumG": 0.0048,
     "description": "Ausgerüsteter Infanterist aus der Kolonie-Bevölkerung. Besitzt keine eigene Kampfwirkung, sondern kommandiert Kampfdrohnen aus der Ferne.",
     "workHoursPerUnit": 19.0
+  },
+  {
+    "id": "p_colonyship",
+    "name": "Kolonisationsschiff",
+    "category": "Ship",
+    "tier": 7,
+    "recipe": [
+      {
+        "inputProductTypeId": "p_kohlenstoff",
+        "quantity": 2912.0
+      },
+      {
+        "inputProductTypeId": "p_silikat",
+        "quantity": 2333.0
+      },
+      {
+        "inputProductTypeId": "p_salz",
+        "quantity": 2184.0
+      },
+      {
+        "inputProductTypeId": "p_ferrometall",
+        "quantity": 1836.0
+      },
+      {
+        "inputProductTypeId": "p_leitmetall",
+        "quantity": 1497.0
+      },
+      {
+        "inputProductTypeId": "p_edelmetall",
+        "quantity": 1497.0
+      },
+      {
+        "inputProductTypeId": "p_atmosphaere",
+        "quantity": 1337.0
+      },
+      {
+        "inputProductTypeId": "p_eis",
+        "quantity": 1291.0
+      },
+      {
+        "inputProductTypeId": "p_kohlenwasserstoff",
+        "quantity": 1239.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerden",
+        "quantity": 1126.0
+      },
+      {
+        "inputProductTypeId": "p_leichtmetall",
+        "quantity": 934.0
+      },
+      {
+        "inputProductTypeId": "p_edelgas",
+        "quantity": 871.0
+      },
+      {
+        "inputProductTypeId": "p_technometall",
+        "quantity": 710.0
+      },
+      {
+        "inputProductTypeId": "p_refraktaer",
+        "quantity": 469.0
+      },
+      {
+        "inputProductTypeId": "p_elerium",
+        "quantity": 41.0
+      },
+      {
+        "inputProductTypeId": "p_isotopentraeger",
+        "quantity": 21.0
+      },
+      {
+        "inputProductTypeId": "p_stahl",
+        "quantity": 4.0
+      },
+      {
+        "inputProductTypeId": "p_leitermetall",
+        "quantity": 1.0
+      },
+      {
+        "inputProductTypeId": "p_glaswerkstoff",
+        "quantity": 1.0
+      }
+    ],
+    "resourceProfile": [
+      {
+        "resourceTypeId": "res_ferrometall",
+        "weight": 0.34
+      },
+      {
+        "resourceTypeId": "res_kohlenstoff",
+        "weight": 0.33
+      },
+      {
+        "resourceTypeId": "res_leichtmetall",
+        "weight": 0.33
+      }
+    ],
+    "baseProductionHours": 168.0,
+    "massKg": 13573800.0,
+    "volumeM3": 86437.85,
+    "eleriumG": 540.6,
+    "description": "Traegt 2000 Kolonisten samt Startausruestung zu einer neuen Welt. Baut sich in genau einer Spielwoche, unabhaengig von jedem Tempobonus, und wird bei der Koloniegruendung verbraucht.",
+    "workHoursPerUnit": 6000.0
   }
 ]

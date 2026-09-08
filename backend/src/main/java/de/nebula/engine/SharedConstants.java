@@ -104,4 +104,30 @@ public final class SharedConstants {
   public static double housingCapacityGrowthFactor() {
     return ROOT.path("housingCapacityGrowthFactor").asDouble();
   }
+
+  // --- Kolonisation (Umsetzungskonzept/24_...md) ---------------------------
+  /**
+   * Bevölkerung, mit der eine Kolonie startet – sowohl die Heimatwelt bei der
+   * Registrierung als auch jede per Kolonisationsschiff gegründete Kolonie.
+   * Zugleich die Zahl Kolonisten, die ein Kolonisationsschiff der Startkolonie
+   * entzieht.
+   */
+  public static double startPopulation() {
+    return ROOT.path("startPopulation").asDouble();
+  }
+
+  /** Feste Bauzeit eines Kolonisationsschiffs in Spielstunden (eine Spielwoche), ohne jeden Bonus. */
+  public static double colonyShipBuildGameHours() {
+    return ROOT.path("colonyShipBuildGameHours").asDouble();
+  }
+
+  /** Mindestloyalität der Bau-Kolonie, damit sich überhaupt Kolonisten finden. */
+  public static double colonyShipMinLoyaltyPct() {
+    return ROOT.path("colonyShipMinLoyaltyPct").asDouble();
+  }
+
+  /** Dauer der eigentlichen Landung/Koloniegründung in Spielstunden (ein Spieltag). */
+  public static double colonizationGameHours() {
+    return ROOT.path("colonizationGameHours").asDouble();
+  }
 }

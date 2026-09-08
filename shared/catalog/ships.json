@@ -40,4 +40,11 @@
   "carrierSlotUsage" : 2.0,
   "countersClass" : null,
   "class" : "TroopTransport"
+}, {
+  "productTypeId" : "p_colonyship",
+  "cargoMassKg" : 0.0,
+  "cargoVolumeM3" : 0.0,
+  "carrierSlotUsage" : 4.0,
+  "countersClass" : null,
+  "class" : "ColonyShip"
 } ]

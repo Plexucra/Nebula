@@ -51,6 +51,11 @@
     @if (uncolonizedPlanets().length === 0) {
       <p class="empty-hint">Alle Planeten dieses Systems sind bereits kolonisiert.</p>
     } @else {
+      <p class="empty-hint">
+        Kolonisieren verlangt ein Kolonisationsschiff im Orbit des Planeten. Es wird dabei
+        verbraucht; die Kolonie entsteht {{ colonizationHours }} Spielstunden später mit
+        {{ startPopulation }} Kolonisten.
+      </p>
       <div class="planet-list">
         @for (planet of uncolonizedPlanets(); track planet.id) {
           <div class="planet-row">
@@ -58,12 +63,16 @@
               <strong>{{ planet.name }}</strong>
               <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }}</span>
             </div>
-            <button
-              class="primary small"
-              type="button"
-              [disabled]="busyPlanetId() === planet.id"
-              (click)="colonize(planet.id)"
-            >{{ busyPlanetId() === planet.id ? 'Gründe…' : 'Kolonisieren (800 Cr)' }}</button>
+            @if (colonizationOf(planet.id); as running) {
+              <span class="eyebrow">Gründung läuft · noch {{ remainingMinutes(running) }} min</span>
+            } @else {
+              <button
+                class="primary small"
+                type="button"
+                [disabled]="busyPlanetId() === planet.id"
+                (click)="colonize(planet.id)"
+              >{{ busyPlanetId() === planet.id ? 'Landet…' : 'Kolonisieren' }}</button>
+            }
           </div>
         }
       </div>
