@@ -134,6 +134,33 @@ public final class FleetCommands {
   }
 
   /**
+   * Nimmt {@code quantity} Schiffe eines Typs endgültig aus der Flotte heraus –
+   * aktuell das bei der Koloniegründung verbrauchte Kolonisationsschiff
+   * ({@code ColonyCommands.colonizePlanet}). Leergelaufene Schiffsgruppen
+   * verschwinden, und mit dem letzten Schiff verschwindet die Flotte selbst.
+   *
+   * <p>Eine schiffslose Flotte stehen zu lassen wäre kein harmloser Rest: sie
+   * bliebe in jeder Flottenübersicht sichtbar, ihr Tank fasst rechnerisch
+   * nichts mehr ({@link #fuelTankCapacity} = 0) und sie dürfte beliebig weit
+   * springen, weil {@link #consumeJumpFuel} bei 0 Schiffen ohne Verbrauch
+   * zurückkehrt. Restlicher Treibstoff im Tank ist damit verloren – er hängt an
+   * den Schiffen, nicht an der Flotte.</p>
+   */
+  public static void consumeShips(GameState state, Fleet fleet, String shipProductTypeId, double quantity) {
+    List<FleetShipGroup> remaining = new ArrayList<>();
+    for (FleetShipGroup g : fleet.ships) {
+      double left = g.shipProductTypeId.equals(shipProductTypeId) ? g.quantity - quantity : g.quantity;
+      if (left > 0) remaining.add(new FleetShipGroup(g.shipProductTypeId, left));
+    }
+    fleet.ships = remaining;
+    if (remaining.isEmpty()) {
+      state.fleets.remove(fleet);
+      // Ohne Flotte keine Blockade – dieselbe Regel wie beim Ortswechsel in moveFleetWithinSystem.
+      state.blockades.removeIf(b -> b.fleetId.equals(fleet.id));
+    }
+  }
+
+  /**
    * Frachtkapazität und aktuelle Auslastung EINER Flotte, plus – falls ein
    * Produkt angegeben ist – die maximal ladbare Stückzahl unter Berücksichtigung
    * von Lagerbestand UND Massen-/Volumengrenze.
@@ -178,6 +205,7 @@ public final class FleetCommands {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    TroopTransportCommands.requireNotASoldier(productTypeId);
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
       throw new CommandException("Die Flotte muss bei einer Kolonie gelandet sein.");
     }
@@ -197,6 +225,7 @@ public final class FleetCommands {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    TroopTransportCommands.requireNotASoldier(productTypeId);
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId == null) {
       throw new CommandException("Die Flotte muss bei einer Kolonie gelandet sein.");
     }
@@ -220,6 +249,7 @@ public final class FleetCommands {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    TroopTransportCommands.requireNotASoldier(productTypeId);
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
       throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
     }
@@ -241,6 +271,7 @@ public final class FleetCommands {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    TroopTransportCommands.requireNotASoldier(productTypeId);
     if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
       throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
     }

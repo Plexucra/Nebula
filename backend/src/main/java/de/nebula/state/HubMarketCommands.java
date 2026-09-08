@@ -42,6 +42,9 @@ public final class HubMarketCommands {
   private static final double MM_LOT = 5;
   /** Start-Kaufpreis des Market-Makers = Produktionskosten × diesen Faktor – Anreiz für Neulinge, für den Handel zu produzieren. */
   private static final double MM_BUY_MARKUP = 1.2;
+  /** Start-Verkaufspreis des Market-Makers = Kaufpreis × diesen Faktor – sonst wäre der Verkaufspreis
+   * niedriger als der Kaufpreis und jeder Kommandant könnte risikofrei zwischen beiden Seiten arbitrieren. */
+  private static final double MM_SELL_MARKUP = 1.1;
   /** Verschiebung nach jeder Ausführung einer Market-Maker-Order: Verkauf +10 %, Kauf −10 %. */
   private static final double MM_STEP = 0.10;
 
@@ -301,8 +304,9 @@ public final class HubMarketCommands {
       if (o.side == HubOrderSide.Sell) hasSell = true; else hasBuy = true;
     }
     double cost = ProductCosts.of(productTypeId);
-    if (!hasSell) postMarketMaker(state, ids, systemId, productTypeId, HubOrderSide.Sell, cost);
-    if (!hasBuy) postMarketMaker(state, ids, systemId, productTypeId, HubOrderSide.Buy, cost * MM_BUY_MARKUP);
+    double buyPrice = cost * MM_BUY_MARKUP;
+    if (!hasSell) postMarketMaker(state, ids, systemId, productTypeId, HubOrderSide.Sell, buyPrice * MM_SELL_MARKUP);
+    if (!hasBuy) postMarketMaker(state, ids, systemId, productTypeId, HubOrderSide.Buy, buyPrice);
   }
 
   private static boolean isMarketMakerEligible(String productTypeId) {

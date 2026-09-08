@@ -1,6 +1,6 @@
 import { Signal } from '@angular/core';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
@@ -186,6 +186,20 @@ export interface GameApi {
   loadCargoFromHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
   /** Entlädt Fracht der Flotte in das Stations-Depot des Kommandanten – Gegenstück zu `unloadCargo`. */
   unloadCargoToHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void>;
+
+  // --- Bodentruppen verladen (Umsetzungskonzept/28_...md) --------------------
+  // Soldaten fahren im Mannschaftstransporter, Drohnen als gewöhnliche Fracht
+  // im Frachter. `loadCargo` weist `p_soldier` deshalb ausdrücklich ab.
+  /** Verlädt Soldaten aus der Garnison der Kolonie, bei der die Flotte liegt, an Bord – begrenzt durch `ShipTypeDef.troopCapacity`. */
+  embarkSoldiers(fleetId: Id, quantity: number): Promise<void>;
+  /** Schifft Soldaten in die Garnison der Kolonie aus, bei der die Flotte liegt – Gegenstück zu `embarkSoldiers`. */
+  disembarkSoldiers(fleetId: Id, quantity: number): Promise<void>;
+  /** Plätze, Belegung und einschiffbare Menge – vom Backend berechnet, wie `fleetCargoCapacity`. */
+  fleetTroopCapacity(fleetId: Id): Signal<FleetTroopCapacity | undefined>;
+  /** Verlegt Drohnen aus der Garnison ins Warenlager – erst von dort lassen sie sich als Fracht verladen. */
+  storeDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void>;
+  /** Stellt eingelagerte Drohnen wieder in die Garnison – Gegenstück zu `storeDrones`. */
+  deployDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void>;
   /**
    * Schickt eine stationierte, eigene Flotte über das (uneingeschränkt
    * offene, siehe `Gateway`) Netz los – Reisezeit richtet sich nach der

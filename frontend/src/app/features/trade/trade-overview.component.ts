@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { HubOrder, HubOrderSide, Id } from '../../core/models';
+import { HubOrder, HubOrderSide, Id, System } from '../../core/models';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import { nearestByHops } from '../../core/util/graph';
 
@@ -78,6 +78,35 @@ export class TradeOverviewComponent {
     this.allHubOrders().filter(o => o.productTypeId === this.selectedProductId() && o.side === 'Sell')
       .sort((a, b) => a.limitPrice - b.limitPrice));
 
+  /**
+   * Bestes (günstigstes) Verkaufs-Gebot je Handelsgilde-Station für die aktuell gewählte Ware, über
+   * ALLE bekannten Stationen hinweg (nicht nur die gerade ausgewählte) – Grundlage für den
+   * Stations-Preisvergleich unten. `api.hubOrders(id)` ist pro Station memoisiert (siehe
+   * WebsocketGameApiService.poll), das Aufrufen für bis zu 8 Stationen erzeugt also keine
+   * zusätzlichen Polling-Intervalle über die Lebensdauer der Seite hinaus.
+   */
+  private readonly bestAskByHub = computed<{ system: System; bestPrice: number }[]>(() => {
+    const productId = this.selectedProductId();
+    const rows: { system: System; bestPrice: number }[] = [];
+    for (const sys of this.hubSystems()) {
+      const asks = this.api.hubOrders(sys.id)().filter(o => o.productTypeId === productId && o.side === 'Sell');
+      if (asks.length === 0) continue;
+      rows.push({ system: sys, bestPrice: Math.min(...asks.map(o => o.limitPrice)) });
+    }
+    return rows;
+  });
+
+  protected readonly cheapestHub = computed(() =>
+    this.bestAskByHub().reduce<{ system: System; bestPrice: number } | null>(
+      (best, r) => best === null || r.bestPrice < best.bestPrice ? r : best, null));
+  protected readonly mostExpensiveHub = computed(() =>
+    this.bestAskByHub().reduce<{ system: System; bestPrice: number } | null>(
+      (worst, r) => worst === null || r.bestPrice > worst.bestPrice ? r : worst, null));
+
+  protected jumpToHub(systemId: Id): void {
+    this.selectHub(systemId);
+  }
+
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
@@ -97,6 +126,23 @@ export class TradeOverviewComponent {
   protected newOrderSide: HubOrderSide = 'Buy';
   protected newOrderQty = 1;
   protected newOrderPrice = 0;
+
+  /** Gesamtpreis der aktuell im Formular eingetragenen Menge × Preis, live in der Maske angezeigt. */
+  protected get newOrderTotal(): number {
+    return Math.max(0, this.newOrderQty) * Math.max(0, this.newOrderPrice);
+  }
+
+  /**
+   * Übernimmt Menge und Preis einer angeklickten Order aus dem Orderbuch ins Formular – zum
+   * GEGENSTÜCK-Formular (Nutzervorgabe): ein Klick auf eine Verkaufs-Order füllt das Formular als
+   * "Kaufen" (man würde genau dieser Order entgegenkommen), ein Klick auf eine Kauf-Order als
+   * "Verkaufen".
+   */
+  protected pickOrder(o: HubOrder): void {
+    this.newOrderSide = o.side === 'Sell' ? 'Buy' : 'Sell';
+    this.newOrderQty = o.remainingQuantity;
+    this.newOrderPrice = o.limitPrice;
+  }
 
   protected submitNewOrder(): void {
     const systemId = this.selectedHubId();

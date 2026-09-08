@@ -3,27 +3,31 @@
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
   "carrierSlotUsage" : 1.0,
+  "troopCapacity" : 0.0,
   "countersClass" : "Cruiser",
   "class" : "Corvette"
 }, {
   "productTypeId" : "p_destroyer",
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
-  "carrierSlotUsage" : 2.0,
+  "carrierSlotUsage" : 10.0,
+  "troopCapacity" : 0.0,
   "countersClass" : "Corvette",
   "class" : "Destroyer"
 }, {
   "productTypeId" : "p_cruiser",
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
-  "carrierSlotUsage" : 4.0,
+  "carrierSlotUsage" : 100.0,
+  "troopCapacity" : 0.0,
   "countersClass" : "Destroyer",
   "class" : "Cruiser"
 }, {
   "productTypeId" : "p_freighter",
-  "cargoMassKg" : 2000000.0,
-  "cargoVolumeM3" : 3000.0,
-  "carrierSlotUsage" : 3.0,
+  "cargoMassKg" : 120000000.0,
+  "cargoVolumeM3" : 250000.0,
+  "carrierSlotUsage" : 6.0,
+  "troopCapacity" : 0.0,
   "countersClass" : null,
   "class" : "Freighter"
 }, {
@@ -31,20 +35,23 @@
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
   "carrierSlotUsage" : 0.0,
+  "troopCapacity" : 0.0,
   "countersClass" : null,
   "class" : "Carrier"
 }, {
   "productTypeId" : "p_trooptransport",
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
-  "carrierSlotUsage" : 2.0,
+  "carrierSlotUsage" : 9.0,
+  "troopCapacity" : 1000.0,
   "countersClass" : null,
   "class" : "TroopTransport"
 }, {
   "productTypeId" : "p_colonyship",
   "cargoMassKg" : 0.0,
   "cargoVolumeM3" : 0.0,
-  "carrierSlotUsage" : 4.0,
+  "carrierSlotUsage" : 177.0,
+  "troopCapacity" : 0.0,
   "countersClass" : null,
   "class" : "ColonyShip"
 } ]

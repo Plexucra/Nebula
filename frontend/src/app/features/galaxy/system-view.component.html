@@ -74,6 +74,7 @@
   <div class="planet-grid">
     @for (planet of planets(); track planet.id) {
       @let colony = colonyForPlanet(planet.id);
+      @let colonyFleet = colonyShipFleetAt(planet.id);
       <div class="panel corner-frame planet-card">
         <div class="panel-header"><h3>{{ planet.name }}</h3></div>
         <div class="panel-body">
@@ -84,6 +85,22 @@
             <p class="hint"><a [routerLink]="['/planeten', colony.id]">{{ colony.name }}</a> — {{ ownerDisplay(colony.ownerId) }}</p>
           } @else {
             <p class="hint">Unbesiedelt.</p>
+            @if (colonizationOf(planet.id); as running) {
+              <p class="hint">Koloniegründung läuft — noch {{ countdown(running.endsAt - clock.now()) }}</p>
+            } @else if (colonyFleet) {
+              <button
+                class="primary small"
+                type="button"
+                [disabled]="busy() === ('colonize:' + planet.id)"
+                (click)="colonize(planet.id)"
+              >{{ busy() === ('colonize:' + planet.id) ? 'Landet…' : 'Kolonisieren' }}</button>
+              <p class="empty-hint">
+                „{{ colonyFleet.name }}" setzt ihr Kolonisationsschiff ab; die Kolonie entsteht
+                {{ colonizationHours }} Spielstunden später mit {{ startPopulation }} Kolonisten.
+              </p>
+            } @else {
+              <p class="empty-hint">Kolonisieren verlangt eine eigene Flotte mit Kolonisationsschiff im Orbit dieses Planeten.</p>
+            }
           }
           @if (planetBlockade(planet.id); as pb) {
             <p class="hint">🛡 Orbit blockiert von <strong>{{ ownerDisplay(pb.ownerId) }}</strong></p>

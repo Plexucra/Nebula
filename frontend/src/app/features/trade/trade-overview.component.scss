@@ -74,6 +74,25 @@
   margin-bottom: 16px;
 }
 .order-book-side .order-row { grid-template-columns: auto auto 1fr auto; }
+.order-book-side .order-row.pickable {
+  cursor: pointer;
+  &:hover { border-color: var(--line-accent); background: var(--bg-inset); }
+}
+
+.price-compare {
+  margin: 0 0 12px;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text-hi);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.order-total { font-size: 12.5px; white-space: nowrap; }
 @media (max-width: 720px) {
   .order-book { grid-template-columns: 1fr; }
 }

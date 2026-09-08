@@ -188,7 +188,9 @@ public final class EconomyTick {
 
       double builtCapacity = PowerGrid.effectiveHousingCapacity(state, colony.id);
       GroundForceGroup garrison = null;
-      for (GroundForceGroup g : state.groundForceGroups) if (g.colonyId.equals(colony.id)) garrison = g;
+      // colonyId ist null, solange ein Verband an Bord einer Flotte ist (Umsetzungskonzept/28_...md) –
+      // eingeschiffte Truppen zählen naturgemäß nicht zur Sicherheit einer Kolonie.
+      for (GroundForceGroup g : state.groundForceGroups) if (colony.id.equals(g.colonyId)) garrison = g;
 
       // Nur aktive (kommandierte) Drohnen tragen zur Sicherheit bei – Soldaten besitzen
       // keine eigene Kampfwirkung, Reserven kämpfen nicht (Mechanik/05_..., §3).

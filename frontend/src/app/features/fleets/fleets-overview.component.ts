@@ -216,6 +216,37 @@ export class FleetsOverviewComponent {
     await this.run('load:' + fleet.id, action);
   }
 
+  // --- Truppen (Umsetzungskonzept/28_...md) ---------------------------------
+  // Plätze, Belegung und einschiffbare Menge kommen wie die Frachtkapazität
+  // FERTIG vom Backend – `troopCapacity` ist eine Spielregel, die
+  // `TroopTransportCommands.embarkSoldiers` durchsetzt.
+  private troops(fleet: Fleet) {
+    return this.api.fleetTroopCapacity(fleet.id)();
+  }
+  protected troopCapacity(fleet: Fleet): number {
+    return this.troops(fleet)?.capacitySoldiers ?? 0;
+  }
+  protected soldiersAboard(fleet: Fleet): number {
+    return this.troops(fleet)?.soldiersAboard ?? 0;
+  }
+  protected maxEmbarkable(fleet: Fleet): number {
+    return this.troops(fleet)?.maxEmbarkableQuantity ?? 0;
+  }
+
+  protected readonly troopQty: Partial<Record<Id, number>> = {};
+
+  protected async submitEmbark(fleet: Fleet): Promise<void> {
+    const qty = this.troopQty[fleet.id] ?? 0;
+    if (qty <= 0) return;
+    await this.run('troops:' + fleet.id, () => this.api.embarkSoldiers(fleet.id, qty));
+  }
+
+  protected async submitDisembark(fleet: Fleet): Promise<void> {
+    const qty = this.troopQty[fleet.id] ?? 0;
+    if (qty <= 0) return;
+    await this.run('troops:' + fleet.id, () => this.api.disembarkSoldiers(fleet.id, qty));
+  }
+
   protected readonly refuelQty: Partial<Record<Id, number>> = {};
 
   /** Fassungsvermögen des Tanks: JUMP_FUEL_TANK_PER_SHIP je Schiff der Flotte. */

@@ -75,32 +75,48 @@
             {{ productName(selectedProductId()) }} <span class="hint">— ändern</span>
           </button>
         </div>
+        <p class="hint price-compare">
+          @if (cheapestHub(); as c) {
+            Am günstigsten bei
+            <button type="button" class="link-btn" (click)="jumpToHub(c.system.id)">{{ c.system.name }}</button>
+            ({{ c.bestPrice | number:'1.0-2' }} Cr)
+            @if (mostExpensiveHub(); as m) {
+              @if (m.system.id !== c.system.id) {
+                · am teuersten bei
+                <button type="button" class="link-btn" (click)="jumpToHub(m.system.id)">{{ m.system.name }}</button>
+                ({{ m.bestPrice | number:'1.0-2' }} Cr)
+              }
+            }
+          } @else {
+            Keine Verkaufs-Orders für diese Ware an einer bekannten Station.
+          }
+        </p>
         <div class="order-book">
           <div class="order-book-side">
-            <span class="hint">Kauf-Orders (Gebote)</span>
+            <span class="hint">Kauf-Orders (Gebote) — anklicken übernimmt Menge/Preis als Verkaufen</span>
             <div class="order-list">
               @for (o of bids(); track o.id) {
-                <div class="order-row">
+                <div class="order-row pickable" (click)="pickOrder(o)">
                   <span class="mono">{{ o.limitPrice | number:'1.0-2' }} Cr</span>
                   <span class="mono">{{ o.remainingQuantity }} Einh.</span>
                   <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }}</span>
                   @if (o.ownerId === playerId()) {
-                    <button class="ghost small danger" (click)="cancelHubOrder(o)" [disabled]="busy() === o.id">Zurückziehen</button>
+                    <button class="ghost small danger" (click)="cancelHubOrder(o); $event.stopPropagation()" [disabled]="busy() === o.id">Zurückziehen</button>
                   }
                 </div>
               } @empty { <p class="empty-hint">Keine Kauf-Orders.</p> }
             </div>
           </div>
           <div class="order-book-side">
-            <span class="hint">Verkaufs-Orders (Briefe)</span>
+            <span class="hint">Verkaufs-Orders (Briefe) — anklicken übernimmt Menge/Preis als Kaufen</span>
             <div class="order-list">
               @for (o of asks(); track o.id) {
-                <div class="order-row">
+                <div class="order-row pickable" (click)="pickOrder(o)">
                   <span class="mono">{{ o.limitPrice | number:'1.0-2' }} Cr</span>
                   <span class="mono">{{ o.remainingQuantity }} Einh.</span>
                   <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }}</span>
                   @if (o.ownerId === playerId()) {
-                    <button class="ghost small danger" (click)="cancelHubOrder(o)" [disabled]="busy() === o.id">Zurückziehen</button>
+                    <button class="ghost small danger" (click)="cancelHubOrder(o); $event.stopPropagation()" [disabled]="busy() === o.id">Zurückziehen</button>
                   }
                 </div>
               } @empty { <p class="empty-hint">Keine Verkaufs-Orders.</p> }
@@ -116,6 +132,7 @@
           </select>
           <input type="number" min="1" [(ngModel)]="newOrderQty" title="Menge" />
           <input type="number" min="0" step="0.01" [(ngModel)]="newOrderPrice" title="Preis je Einheit" />
+          <span class="mono order-total">Gesamt: {{ newOrderTotal | number:'1.0-2' }} Cr</span>
           <button class="primary small" (click)="submitNewOrder()" [disabled]="busy() === 'new-order'">Order aufgeben</button>
         </div>
 

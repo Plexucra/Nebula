@@ -480,9 +480,26 @@
                   <span class="mono">{{ u.activeCount }} aktiv
                     @if (u.reserveCount > 0) { · {{ u.reserveCount }} unkommandiert (Reserve) }</span>
                 }
+                @if (u.unitProductTypeId !== 'p_soldier') {
+                  <input type="number" min="1" [(ngModel)]="droneQty[u.unitProductTypeId]" placeholder="Menge" />
+                  <button class="ghost small" (click)="submitStoreDrones(u.unitProductTypeId)"
+                          [disabled]="busy() === 'drones'">Einlagern</button>
+                }
               </div>
             } @empty { <p class="empty-hint">Keine Bodentruppen stationiert.</p> }
+            @for (d of storedDrones(); track d.productTypeId) {
+              <div class="wh-row">
+                <span>{{ productName(d.productTypeId) }} <em>(eingelagert)</em></span>
+                <span class="mono">{{ d.quantity }} verladbar</span>
+                <input type="number" min="1" [(ngModel)]="droneQty[d.productTypeId]" placeholder="Menge" />
+                <button class="ghost small" (click)="submitDeployDrones(d.productTypeId)"
+                        [disabled]="busy() === 'drones'">In Garnison</button>
+              </div>
+            }
           </div>
+          <p class="hint">Eingelagerte Drohnen zählen nicht zur Sicherheit, lassen sich dafür als
+            gewöhnliche Fracht in einen Frachter laden – Soldaten reisen getrennt davon im
+            Mannschaftstransporter. Eine Landung braucht deshalb beide Schiffstypen.</p>
           <p class="hint">Soldaten besitzen keine eigene Kampfwirkung – sie stecken nicht in den Drohnen,
             sondern kommandieren automatisch verfügbare autonome Drohnen aus der Ferne und machen diese
             dadurch kampffähig. Nur aktive (kommandierte) Drohnen zählen zur Sicherheit der Kolonie – dazu

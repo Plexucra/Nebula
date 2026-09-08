@@ -180,6 +180,26 @@
               </div>
             } @empty { <p class="empty-hint">Kein Frachtgut geladen.</p> }
             <span class="mono hint">{{ fleetCargoMassKg(fleet) | number:'1.0-0' }} / {{ fleetCapacityMassKg(fleet) | number:'1.0-0' }} kg · {{ fleetCargoVolumeM3(fleet) | number:'1.0-0' }} / {{ fleetCapacityVolumeM3(fleet) | number:'1.0-0' }} m³</span>
+
+            @if (troopCapacity(fleet) > 0) {
+              <span class="eyebrow">Truppen</span>
+              <div class="cargo-row">
+                <span>Soldaten</span>
+                <span class="mono">{{ soldiersAboard(fleet) | number:'1.0-0' }} / {{ troopCapacity(fleet) | number:'1.0-0' }}</span>
+                @if (fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) {
+                  <input type="number" min="1" [(ngModel)]="troopQty[fleet.id]" placeholder="Menge" />
+                  <button class="ghost small" (click)="submitEmbark(fleet)"
+                          [disabled]="busy() === ('troops:' + fleet.id) || maxEmbarkable(fleet) <= 0">Einschiffen</button>
+                  <button class="ghost small" (click)="submitDisembark(fleet)"
+                          [disabled]="busy() === ('troops:' + fleet.id) || soldiersAboard(fleet) <= 0">Ausschiffen</button>
+                }
+              </div>
+              <p class="hint">
+                Der Mannschaftstransporter nimmt ausschließlich Soldaten auf – Drohnen sind Maschinen
+                und reisen als gewöhnliche Fracht im Frachter. Eine Landung braucht deshalb beides.
+                Einschiffbar sind hier gerade {{ maxEmbarkable(fleet) | number:'1.0-0' }} Soldaten.
+              </p>
+            }
           </div>
 
           <div class="fleet-actions">

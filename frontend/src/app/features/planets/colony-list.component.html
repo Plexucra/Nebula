@@ -44,7 +44,7 @@
 
 <div class="panel corner-frame system-panel">
   <div class="panel-header">
-    <h2>Aurelia-System · unbesiedelte Himmelskörper</h2>
+    <h2>{{ homeSystemName() }} · unbesiedelte Himmelskörper</h2>
   </div>
   <div class="panel-body">
     @if (error()) { <div class="error">{{ error() }}</div> }
@@ -54,7 +54,9 @@
       <p class="empty-hint">
         Kolonisieren verlangt ein Kolonisationsschiff im Orbit des Planeten. Es wird dabei
         verbraucht; die Kolonie entsteht {{ colonizationHours }} Spielstunden später mit
-        {{ startPopulation }} Kolonisten.
+        {{ startPopulation }} Kolonisten. Planeten ANDERER Systeme werden genauso kolonisiert –
+        dort in der Systemansicht, erreichbar über die
+        <a [routerLink]="['/galaxie']">Galaxiekarte</a>.
       </p>
       <div class="planet-list">
         @for (planet of uncolonizedPlanets(); track planet.id) {

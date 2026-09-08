@@ -241,7 +241,7 @@
     ],
     "baseProductionHours": 1.0,
     "massKg": 5000000.0,
-    "volumeM3": 166666.67,
+    "volumeM3": 6250.0,
     "eleriumG": 0.001,
     "description": "Stickstoff, Sauerstoff, Kohlendioxid, Wasserstoff und Prozessgase für Atemluft und Chemie.",
     "workHoursPerUnit": 100.0
@@ -629,7 +629,7 @@
     ],
     "baseProductionHours": 3.0,
     "massKg": 2000000.0,
-    "volumeM3": 25000.0,
+    "volumeM3": 2500.0,
     "eleriumG": 0.0018,
     "description": "Fraktioniertes Atmosphärenfluid.",
     "workHoursPerUnit": 60.0
@@ -4198,15 +4198,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_panzerbaugruppe",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 25.0
       }
     ],
     "resourceProfile": [
@@ -4224,11 +4224,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 108000.0,
-    "volumeM3": 337.5,
-    "eleriumG": 0.504,
+    "massKg": 2700000.0,
+    "volumeM3": 8437.5,
+    "eleriumG": 12.6,
     "description": "Rumpfmodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17500.0
   },
   {
     "id": "p_korvette_antrieb",
@@ -4238,19 +4238,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 2.0
+        "quantity": 52.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 25.0
       }
     ],
     "resourceProfile": [
@@ -4268,11 +4268,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 59500.0,
-    "volumeM3": 123.96,
-    "eleriumG": 1.1,
+    "massKg": 1495800.0,
+    "volumeM3": 3116.25,
+    "eleriumG": 27.7,
     "description": "Antriebsmodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17627.0
   },
   {
     "id": "p_korvette_energie",
@@ -4282,15 +4282,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_elerium_energiezelle",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_energiespeicherzelle",
-        "quantity": 1.0
+        "quantity": 26.0
       }
     ],
     "resourceProfile": [
@@ -4308,11 +4308,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 14100.0,
-    "volumeM3": 29.38,
-    "eleriumG": 1.1,
+    "massKg": 353160.0,
+    "volumeM3": 735.75,
+    "eleriumG": 27.67,
     "description": "Energiemodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17608.0
   },
   {
     "id": "p_korvette_elektronik",
@@ -4322,15 +4322,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_sensorfeld",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 1.0
+        "quantity": 25.0
       }
     ],
     "resourceProfile": [
@@ -4348,11 +4348,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 7030.0,
-    "volumeM3": 27.04,
-    "eleriumG": 0.504,
+    "massKg": 175500.0,
+    "volumeM3": 675.0,
+    "eleriumG": 12.6,
     "description": "Elektronikmodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17500.0
   },
   {
     "id": "p_korvette_waffen",
@@ -4362,15 +4362,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strahlenwaffe",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_lenkwaffe",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_gefechtsleitsystem",
-        "quantity": 1.0
+        "quantity": 26.0
       }
     ],
     "resourceProfile": [
@@ -4388,11 +4388,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 22200.0,
-    "volumeM3": 46.25,
-    "eleriumG": 0.504,
+    "massKg": 556200.0,
+    "volumeM3": 1158.75,
+    "eleriumG": 12.66,
     "description": "Waffenmodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17585.0
   },
   {
     "id": "p_korvette_versorgung",
@@ -4402,15 +4402,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 26.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 25.0
       },
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 1.0
+        "quantity": 25.0
       }
     ],
     "resourceProfile": [
@@ -4428,11 +4428,11 @@
       }
     ],
     "baseProductionHours": 72.0,
-    "massKg": 59500.0,
-    "volumeM3": 330.56,
-    "eleriumG": 0.504,
+    "massKg": 1495800.0,
+    "volumeM3": 8310.0,
+    "eleriumG": 12.69,
     "description": "Versorgungsmodul der Korvette.",
-    "workHoursPerUnit": 700.0
+    "workHoursPerUnit": 17627.0
   },
   {
     "id": "p_zerstoerer_rumpf",
@@ -4442,15 +4442,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 2.0
+        "quantity": 308.0
       },
       {
         "inputProductTypeId": "p_panzerbaugruppe",
-        "quantity": 2.0
+        "quantity": 308.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 152.0
       }
     ],
     "resourceProfile": [
@@ -4468,11 +4468,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 194400.0,
-    "volumeM3": 607.5,
-    "eleriumG": 1.44,
+    "massKg": 29894400.0,
+    "volumeM3": 93420.0,
+    "eleriumG": 221.44,
     "description": "Rumpfmodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184533.0
   },
   {
     "id": "p_zerstoerer_antrieb",
@@ -4482,19 +4482,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 2.0
+        "quantity": 308.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 1.0
+        "quantity": 151.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 154.0
       }
     ],
     "resourceProfile": [
@@ -4512,11 +4512,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 81000.0,
-    "volumeM3": 168.75,
-    "eleriumG": 2.04,
+    "massKg": 12457800.0,
+    "volumeM3": 25953.75,
+    "eleriumG": 313.75,
     "description": "Antriebsmodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184560.0
   },
   {
     "id": "p_zerstoerer_energie",
@@ -4526,15 +4526,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_fusionsreaktorkern",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_elerium_energiezelle",
-        "quantity": 1.0
+        "quantity": 151.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 1.0
+        "quantity": 154.0
       }
     ],
     "resourceProfile": [
@@ -4552,11 +4552,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 49700.0,
-    "volumeM3": 103.54,
-    "eleriumG": 2.04,
+    "massKg": 7641000.0,
+    "volumeM3": 15918.75,
+    "eleriumG": 313.76,
     "description": "Energiemodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184565.0
   },
   {
     "id": "p_zerstoerer_elektronik",
@@ -4566,15 +4566,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_gefechtsleitsystem",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 1.0
+        "quantity": 154.0
       }
     ],
     "resourceProfile": [
@@ -4592,11 +4592,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 7570.0,
-    "volumeM3": 29.12,
-    "eleriumG": 1.44,
+    "massKg": 1164240.0,
+    "volumeM3": 4477.85,
+    "eleriumG": 221.76,
     "description": "Elektronikmodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184800.0
   },
   {
     "id": "p_zerstoerer_waffen",
@@ -4606,15 +4606,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_projektilwaffe",
-        "quantity": 2.0
+        "quantity": 308.0
       },
       {
         "inputProductTypeId": "p_lenkwaffe",
-        "quantity": 2.0
+        "quantity": 308.0
       },
       {
         "inputProductTypeId": "p_schwerer_gefechtskopf",
-        "quantity": 1.0
+        "quantity": 150.0
       }
     ],
     "resourceProfile": [
@@ -4632,11 +4632,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 49700.0,
-    "volumeM3": 103.54,
-    "eleriumG": 1.44,
+    "massKg": 7642080.0,
+    "volumeM3": 15921.0,
+    "eleriumG": 221.51,
     "description": "Waffenmodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184591.0
   },
   {
     "id": "p_zerstoerer_versorgung",
@@ -4646,15 +4646,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 154.0
       },
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 1.0
+        "quantity": 154.0
       }
     ],
     "resourceProfile": [
@@ -4672,11 +4672,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 59500.0,
-    "volumeM3": 330.56,
-    "eleriumG": 1.44,
+    "massKg": 9147600.0,
+    "volumeM3": 50820.0,
+    "eleriumG": 221.76,
     "description": "Versorgungsmodul des Zerstörers.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 184800.0
   },
   {
     "id": "p_kreuzer_rumpf",
@@ -4686,15 +4686,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 3.0
+        "quantity": 3242.0
       },
       {
         "inputProductTypeId": "p_panzerbaugruppe",
-        "quantity": 3.0
+        "quantity": 3242.0
       },
       {
         "inputProductTypeId": "p_strahlenschutzsegment",
-        "quantity": 1.0
+        "quantity": 1083.0
       }
     ],
     "resourceProfile": [
@@ -4712,11 +4712,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 275400.0,
-    "volumeM3": 860.62,
-    "eleriumG": 3.6,
+    "massKg": 297653400.0,
+    "volumeM3": 930166.88,
+    "eleriumG": 3890.89,
     "description": "Rumpfmodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2161608.0
   },
   {
     "id": "p_kreuzer_antrieb",
@@ -4726,19 +4726,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 3.0
+        "quantity": 3245.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 2.0
+        "quantity": 2163.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 2.0
+        "quantity": 2163.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 1082.0
       }
     ],
     "resourceProfile": [
@@ -4756,11 +4756,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 129700.0,
-    "volumeM3": 270.21,
-    "eleriumG": 4.2,
+    "massKg": 140178600.0,
+    "volumeM3": 292038.75,
+    "eleriumG": 4542.82,
     "description": "Antriebsmodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2163250.0
   },
   {
     "id": "p_kreuzer_energie",
@@ -4770,15 +4770,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_elerium_energiezelle",
-        "quantity": 2.0
+        "quantity": 2157.0
       },
       {
         "inputProductTypeId": "p_fusionsreaktorkern",
-        "quantity": 1.0
+        "quantity": 1082.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 2.0
+        "quantity": 2163.0
       }
     ],
     "resourceProfile": [
@@ -4796,11 +4796,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 61600.0,
-    "volumeM3": 128.33,
-    "eleriumG": 4.8,
+    "massKg": 66576600.0,
+    "volumeM3": 138701.25,
+    "eleriumG": 5191.16,
     "description": "Energiemodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2162982.0
   },
   {
     "id": "p_kreuzer_elektronik",
@@ -4810,19 +4810,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 1083.0
       },
       {
         "inputProductTypeId": "p_sensorfeld",
-        "quantity": 2.0
+        "quantity": 2165.0
       },
       {
         "inputProductTypeId": "p_gefechtsleitsystem",
-        "quantity": 1.0
+        "quantity": 1083.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 1.0
+        "quantity": 1081.0
       }
     ],
     "resourceProfile": [
@@ -4840,11 +4840,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 11900.0,
-    "volumeM3": 45.77,
-    "eleriumG": 3.6,
+    "massKg": 12860640.0,
+    "volumeM3": 49464.0,
+    "eleriumG": 3897.16,
     "description": "Elektronikmodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2165091.0
   },
   {
     "id": "p_kreuzer_waffen",
@@ -4854,19 +4854,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strahlenwaffe",
-        "quantity": 2.0
+        "quantity": 2164.0
       },
       {
         "inputProductTypeId": "p_projektilwaffe",
-        "quantity": 1.0
+        "quantity": 1082.0
       },
       {
         "inputProductTypeId": "p_lenkwaffe",
-        "quantity": 1.0
+        "quantity": 1082.0
       },
       {
         "inputProductTypeId": "p_schildemitter",
-        "quantity": 2.0
+        "quantity": 2165.0
       }
     ],
     "resourceProfile": [
@@ -4884,11 +4884,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 58400.0,
-    "volumeM3": 121.67,
-    "eleriumG": 3.6,
+    "massKg": 63110880.0,
+    "volumeM3": 131481.0,
+    "eleriumG": 3895.73,
     "description": "Waffenmodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2164296.0
   },
   {
     "id": "p_kreuzer_versorgung",
@@ -4898,15 +4898,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 2.0
+        "quantity": 2160.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 2.0
+        "quantity": 2162.0
       },
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 1.0
+        "quantity": 1081.0
       }
     ],
     "resourceProfile": [
@@ -4924,11 +4924,11 @@
       }
     ],
     "baseProductionHours": 180.0,
-    "massKg": 91800.0,
-    "volumeM3": 510.0,
-    "eleriumG": 3.6,
+    "massKg": 99214200.0,
+    "volumeM3": 551190.0,
+    "eleriumG": 3890.75,
     "description": "Versorgungsmodul des Kreuzers.",
-    "workHoursPerUnit": 2000.0
+    "workHoursPerUnit": 2161529.0
   },
   {
     "id": "p_frachter_rumpf",
@@ -4938,15 +4938,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 3.0
+        "quantity": 213.0
       },
       {
         "inputProductTypeId": "p_leichtrahmen",
-        "quantity": 1.0
+        "quantity": 70.0
       },
       {
         "inputProductTypeId": "p_druckhabitatsegment",
-        "quantity": 1.0
+        "quantity": 71.0
       }
     ],
     "resourceProfile": [
@@ -4964,11 +4964,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 175000.0,
-    "volumeM3": 546.88,
-    "eleriumG": 1.44,
+    "massKg": 12409200.0,
+    "volumeM3": 38778.75,
+    "eleriumG": 102.13,
     "description": "Rumpfmodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85111.0
   },
   {
     "id": "p_frachter_antrieb",
@@ -4978,19 +4978,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 1.0
+        "quantity": 70.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 2.0
+        "quantity": 142.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 71.0
       }
     ],
     "resourceProfile": [
@@ -5008,11 +5008,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 70200.0,
-    "volumeM3": 146.25,
-    "eleriumG": 2.04,
+    "massKg": 4978800.0,
+    "volumeM3": 10372.5,
+    "eleriumG": 144.68,
     "description": "Antriebsmodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85108.0
   },
   {
     "id": "p_frachter_energie",
@@ -5022,15 +5022,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_fusionsreaktorkern",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_energiespeicherzelle",
-        "quantity": 1.0
+        "quantity": 69.0
       }
     ],
     "resourceProfile": [
@@ -5048,11 +5048,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 48600.0,
-    "volumeM3": 101.25,
-    "eleriumG": 1.44,
+    "massKg": 3446280.0,
+    "volumeM3": 7179.75,
+    "eleriumG": 102.11,
     "description": "Energiemodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85093.0
   },
   {
     "id": "p_frachter_elektronik",
@@ -5062,15 +5062,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_logistikchip",
-        "quantity": 1.0
+        "quantity": 72.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 1.0
+        "quantity": 71.0
       }
     ],
     "resourceProfile": [
@@ -5088,11 +5088,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 4940.0,
-    "volumeM3": 19.0,
-    "eleriumG": 1.44,
+    "massKg": 350503.2,
+    "volumeM3": 1348.09,
+    "eleriumG": 102.26,
     "description": "Elektronikmodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85218.0
   },
   {
     "id": "p_frachter_ladung",
@@ -5102,15 +5102,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 3.0
+        "quantity": 213.0
       },
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_logistikchip",
-        "quantity": 1.0
+        "quantity": 11.0
       }
     ],
     "resourceProfile": [
@@ -5128,11 +5128,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 129700.0,
-    "volumeM3": 720.56,
-    "eleriumG": 1.44,
+    "massKg": 9202431.6,
+    "volumeM3": 51124.62,
+    "eleriumG": 102.19,
     "description": "Ladungsmodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85158.0
   },
   {
     "id": "p_frachter_versorgung",
@@ -5142,15 +5142,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 1.0
+        "quantity": 71.0
       },
       {
         "inputProductTypeId": "p_fertigungsmaschinenbaugruppe",
-        "quantity": 1.0
+        "quantity": 71.0
       }
     ],
     "resourceProfile": [
@@ -5168,11 +5168,11 @@
       }
     ],
     "baseProductionHours": 120.0,
-    "massKg": 118900.0,
-    "volumeM3": 660.56,
-    "eleriumG": 1.44,
+    "massKg": 8434800.0,
+    "volumeM3": 46860.0,
+    "eleriumG": 102.24,
     "description": "Versorgungsmodul des Frachters.",
-    "workHoursPerUnit": 1200.0
+    "workHoursPerUnit": 85200.0
   },
   {
     "id": "p_traeger_rumpf",
@@ -5182,15 +5182,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 4.0
+        "quantity": 954.0
       },
       {
         "inputProductTypeId": "p_panzerbaugruppe",
-        "quantity": 3.0
+        "quantity": 715.0
       },
       {
         "inputProductTypeId": "p_druckhabitatsegment",
-        "quantity": 2.0
+        "quantity": 476.0
       }
     ],
     "resourceProfile": [
@@ -5208,11 +5208,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 340200.0,
-    "volumeM3": 1063.12,
-    "eleriumG": 7.2,
+    "massKg": 81102600.0,
+    "volumeM3": 253445.62,
+    "eleriumG": 1716.46,
     "description": "Rumpfmodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 715190.0
   },
   {
     "id": "p_traeger_antrieb",
@@ -5222,19 +5222,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 3.0
+        "quantity": 715.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 2.0
+        "quantity": 478.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 3.0
+        "quantity": 715.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 238.0
       }
     ],
     "resourceProfile": [
@@ -5252,11 +5252,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 145800.0,
-    "volumeM3": 303.75,
-    "eleriumG": 7.8,
+    "massKg": 34754400.0,
+    "volumeM3": 72405.0,
+    "eleriumG": 1859.29,
     "description": "Antriebsmodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 715111.0
   },
   {
     "id": "p_traeger_energie",
@@ -5266,15 +5266,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_elerium_energiezelle",
-        "quantity": 3.0
+        "quantity": 712.0
       },
       {
         "inputProductTypeId": "p_fusionsreaktorkern",
-        "quantity": 1.0
+        "quantity": 239.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 2.0
+        "quantity": 478.0
       }
     ],
     "resourceProfile": [
@@ -5292,11 +5292,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 64900.0,
-    "volumeM3": 135.21,
-    "eleriumG": 9.0,
+    "massKg": 15471000.0,
+    "volumeM3": 32231.25,
+    "eleriumG": 2148.75,
     "description": "Energiemodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 716250.0
   },
   {
     "id": "p_traeger_elektronik",
@@ -5306,19 +5306,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 238.0
       },
       {
         "inputProductTypeId": "p_sensorfeld",
-        "quantity": 2.0
+        "quantity": 477.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 2.0
+        "quantity": 478.0
       },
       {
         "inputProductTypeId": "p_gefechtsleitsystem",
-        "quantity": 1.0
+        "quantity": 238.0
       }
     ],
     "resourceProfile": [
@@ -5336,11 +5336,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 13500.0,
-    "volumeM3": 51.92,
-    "eleriumG": 7.2,
+    "massKg": 3218400.0,
+    "volumeM3": 12378.46,
+    "eleriumG": 1716.48,
     "description": "Elektronikmodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 715200.0
   },
   {
     "id": "p_traeger_hangar",
@@ -5350,11 +5350,11 @@
     "recipe": [
       {
         "inputProductTypeId": "p_hangarbaugruppe",
-        "quantity": 4.0
+        "quantity": 954.0
       },
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 2.0
+        "quantity": 477.0
       },
       {
         "inputProductTypeId": "p_logistikchip",
@@ -5376,11 +5376,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 270100.0,
-    "volumeM3": 1500.56,
-    "eleriumG": 7.2,
+    "massKg": 64395075.6,
+    "volumeM3": 357750.42,
+    "eleriumG": 1716.72,
     "description": "Hangarmodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 715301.0
   },
   {
     "id": "p_traeger_versorgung",
@@ -5390,15 +5390,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 3.0
+        "quantity": 718.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 3.0
+        "quantity": 715.0
       },
       {
         "inputProductTypeId": "p_fertigungsmaschinenbaugruppe",
-        "quantity": 1.0
+        "quantity": 238.0
       }
     ],
     "resourceProfile": [
@@ -5416,11 +5416,11 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 183600.0,
-    "volumeM3": 1020.0,
-    "eleriumG": 7.2,
+    "massKg": 43761600.0,
+    "volumeM3": 243120.0,
+    "eleriumG": 1716.14,
     "description": "Versorgungsmodul des Trägerschiffs.",
-    "workHoursPerUnit": 3000.0
+    "workHoursPerUnit": 715059.0
   },
   {
     "id": "p_transport_rumpf",
@@ -5430,15 +5430,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_strukturzelle",
-        "quantity": 3.0
+        "quantity": 277.0
       },
       {
         "inputProductTypeId": "p_panzerbaugruppe",
-        "quantity": 2.0
+        "quantity": 185.0
       },
       {
         "inputProductTypeId": "p_druckhabitatsegment",
-        "quantity": 2.0
+        "quantity": 182.0
       }
     ],
     "resourceProfile": [
@@ -5456,11 +5456,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 253900.0,
-    "volumeM3": 793.44,
-    "eleriumG": 2.59,
+    "massKg": 23403600.0,
+    "volumeM3": 73136.25,
+    "eleriumG": 238.83,
     "description": "Rumpfmodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 165983.0
   },
   {
     "id": "p_transport_antrieb",
@@ -5470,19 +5470,19 @@
     "recipe": [
       {
         "inputProductTypeId": "p_triebwerkskern",
-        "quantity": 2.0
+        "quantity": 184.0
       },
       {
         "inputProductTypeId": "p_manoevertriebwerk",
-        "quantity": 2.0
+        "quantity": 188.0
       },
       {
         "inputProductTypeId": "p_reaktionsmassensystem",
-        "quantity": 2.0
+        "quantity": 184.0
       },
       {
         "inputProductTypeId": "p_elerium_treibstoffkern",
-        "quantity": 1.0
+        "quantity": 92.0
       }
     ],
     "resourceProfile": [
@@ -5500,11 +5500,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 102600.0,
-    "volumeM3": 213.75,
-    "eleriumG": 3.19,
+    "massKg": 9460800.0,
+    "volumeM3": 19710.0,
+    "eleriumG": 294.15,
     "description": "Antriebsmodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 165979.0
   },
   {
     "id": "p_transport_energie",
@@ -5514,15 +5514,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_elerium_energiezelle",
-        "quantity": 1.0
+        "quantity": 96.0
       },
       {
         "inputProductTypeId": "p_fusionsreaktorkern",
-        "quantity": 1.0
+        "quantity": 92.0
       },
       {
         "inputProductTypeId": "p_energieverteiler",
-        "quantity": 1.0
+        "quantity": 92.0
       }
     ],
     "resourceProfile": [
@@ -5540,11 +5540,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 49700.0,
-    "volumeM3": 103.54,
-    "eleriumG": 3.19,
+    "massKg": 4583520.0,
+    "volumeM3": 9549.0,
+    "eleriumG": 294.31,
     "description": "Energiemodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 166070.0
   },
   {
     "id": "p_transport_elektronik",
@@ -5554,15 +5554,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_navsystem",
-        "quantity": 1.0
+        "quantity": 92.0
       },
       {
         "inputProductTypeId": "p_kommfeld",
-        "quantity": 1.0
+        "quantity": 93.0
       },
       {
         "inputProductTypeId": "p_sensorfeld",
-        "quantity": 1.0
+        "quantity": 92.0
       }
     ],
     "resourceProfile": [
@@ -5580,11 +5580,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 7030.0,
-    "volumeM3": 27.04,
-    "eleriumG": 2.59,
+    "massKg": 647460.0,
+    "volumeM3": 2490.23,
+    "eleriumG": 238.88,
     "description": "Elektronikmodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 166015.0
   },
   {
     "id": "p_transport_truppen",
@@ -5594,15 +5594,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_truppenunterbringung",
-        "quantity": 3.0
+        "quantity": 277.0
       },
       {
         "inputProductTypeId": "p_frachtumschlag",
-        "quantity": 1.0
+        "quantity": 92.0
       },
       {
         "inputProductTypeId": "p_medizinchip",
-        "quantity": 1.0
+        "quantity": 68.0
       }
     ],
     "resourceProfile": [
@@ -5620,11 +5620,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 140500.0,
-    "volumeM3": 780.56,
-    "eleriumG": 2.59,
+    "massKg": 12959740.8,
+    "volumeM3": 71998.56,
+    "eleriumG": 238.94,
     "description": "Truppenmodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 166061.0
   },
   {
     "id": "p_transport_versorgung",
@@ -5634,15 +5634,15 @@
     "recipe": [
       {
         "inputProductTypeId": "p_lebenserhaltungsbaugruppe",
-        "quantity": 3.0
+        "quantity": 277.0
       },
       {
         "inputProductTypeId": "p_besatzungsbaugruppe",
-        "quantity": 2.0
+        "quantity": 185.0
       },
       {
         "inputProductTypeId": "p_pharmabasis",
-        "quantity": 1.0
+        "quantity": 87.0
       }
     ],
     "resourceProfile": [
@@ -5660,11 +5660,11 @@
       }
     ],
     "baseProductionHours": 144.0,
-    "massKg": 77800.0,
-    "volumeM3": 432.22,
-    "eleriumG": 2.59,
+    "massKg": 7175520.0,
+    "volumeM3": 39864.0,
+    "eleriumG": 239.0,
     "description": "Versorgungsmodul des Mannschaftstransporters.",
-    "workHoursPerUnit": 1800.0
+    "workHoursPerUnit": 166100.0
   },
   {
     "id": "p_trinkwasserration",
@@ -6292,9 +6292,9 @@
       }
     ],
     "baseProductionHours": 240.0,
-    "massKg": 278500.0,
-    "volumeM3": 1265.91,
-    "eleriumG": 7.2,
+    "massKg": 7000000.0,
+    "volumeM3": 31818.18,
+    "eleriumG": 181.0,
     "description": "Schnelles, leichtes Kampfschiff. Kontert Zerstörer, unterliegt Kreuzern.",
     "workHoursPerUnit": 2500.0
   },
@@ -6343,12 +6343,12 @@
         "weight": 0.34
       }
     ],
-    "baseProductionHours": 360.0,
-    "massKg": 455200.0,
-    "volumeM3": 1750.77,
-    "eleriumG": 17.4,
+    "baseProductionHours": 480.0,
+    "massKg": 70000000.0,
+    "volumeM3": 269230.77,
+    "eleriumG": 2675.7,
     "description": "Vielseitiger Zerstörer. Kontert Kreuzer, unterliegt Korvetten.",
-    "workHoursPerUnit": 4500.0
+    "workHoursPerUnit": 12500.0
   },
   {
     "id": "p_cruiser",
@@ -6395,12 +6395,12 @@
         "weight": 0.34
       }
     ],
-    "baseProductionHours": 600.0,
-    "massKg": 647700.0,
-    "volumeM3": 2024.06,
-    "eleriumG": 49.8,
+    "baseProductionHours": 1200.0,
+    "massKg": 700000000.0,
+    "volumeM3": 2187500.0,
+    "eleriumG": 53821.2,
     "description": "Schwerer Kreuzer. Kontert Korvetten, unterliegt Zerstörern.",
-    "workHoursPerUnit": 8000.0
+    "workHoursPerUnit": 50000.0
   },
   {
     "id": "p_freighter",
@@ -6447,10 +6447,10 @@
         "weight": 0.34
       }
     ],
-    "baseProductionHours": 300.0,
-    "massKg": 563800.0,
-    "volumeM3": 5125.45,
-    "eleriumG": 12.6,
+    "baseProductionHours": 400.0,
+    "massKg": 40000000.0,
+    "volumeM3": 363636.36,
+    "eleriumG": 893.9,
     "description": "Reiner Warentransporter, keine Kampfkraft.",
     "workHoursPerUnit": 4000.0
   },
@@ -6499,12 +6499,12 @@
         "weight": 0.34
       }
     ],
-    "baseProductionHours": 720.0,
-    "massKg": 1048700.0,
-    "volumeM3": 7490.71,
-    "eleriumG": 88.8,
+    "baseProductionHours": 900.0,
+    "massKg": 250000000.0,
+    "volumeM3": 1785714.29,
+    "eleriumG": 21169.1,
     "description": "Einziges Schiff mit Sprungantrieb – langsame, gatewayunabhängige Reise.",
-    "workHoursPerUnit": 12000.0
+    "workHoursPerUnit": 24000.0
   },
   {
     "id": "p_trooptransport",
@@ -6551,12 +6551,12 @@
         "weight": 0.34
       }
     ],
-    "baseProductionHours": 420.0,
-    "massKg": 650500.0,
-    "volumeM3": 4065.62,
-    "eleriumG": 26.4,
+    "baseProductionHours": 480.0,
+    "massKg": 60000000.0,
+    "volumeM3": 375000.0,
+    "eleriumG": 2435.0,
     "description": "Transport für Bodentruppen.",
-    "workHoursPerUnit": 6000.0
+    "workHoursPerUnit": 7500.0
   },
   {
     "id": "p_grundversorgungspaket",
@@ -6918,67 +6918,67 @@
     "recipe": [
       {
         "inputProductTypeId": "p_kohlenstoff",
-        "quantity": 2912.0
+        "quantity": 189427.0
       },
       {
         "inputProductTypeId": "p_silikat",
-        "quantity": 2333.0
+        "quantity": 141309.0
       },
       {
         "inputProductTypeId": "p_salz",
-        "quantity": 2184.0
+        "quantity": 131233.0
       },
       {
         "inputProductTypeId": "p_ferrometall",
-        "quantity": 1836.0
-      },
-      {
-        "inputProductTypeId": "p_leitmetall",
-        "quantity": 1497.0
+        "quantity": 127031.0
       },
       {
         "inputProductTypeId": "p_edelmetall",
-        "quantity": 1497.0
+        "quantity": 88011.0
+      },
+      {
+        "inputProductTypeId": "p_leitmetall",
+        "quantity": 88011.0
       },
       {
         "inputProductTypeId": "p_atmosphaere",
-        "quantity": 1337.0
-      },
-      {
-        "inputProductTypeId": "p_eis",
-        "quantity": 1291.0
+        "quantity": 85540.0
       },
       {
         "inputProductTypeId": "p_kohlenwasserstoff",
-        "quantity": 1239.0
+        "quantity": 84124.0
       },
       {
-        "inputProductTypeId": "p_seltenerden",
-        "quantity": 1126.0
+        "inputProductTypeId": "p_eis",
+        "quantity": 83206.0
       },
       {
         "inputProductTypeId": "p_leichtmetall",
-        "quantity": 934.0
+        "quantity": 69982.0
+      },
+      {
+        "inputProductTypeId": "p_seltenerden",
+        "quantity": 63485.0
       },
       {
         "inputProductTypeId": "p_edelgas",
-        "quantity": 871.0
+        "quantity": 50537.0
       },
       {
         "inputProductTypeId": "p_technometall",
-        "quantity": 710.0
+        "quantity": 35393.0
       },
       {
         "inputProductTypeId": "p_refraktaer",
-        "quantity": 469.0
+        "quantity": 32039.0
       },
       {
         "inputProductTypeId": "p_elerium",
-        "quantity": 41.0
+        "quantity": 3831.0
       },
       {
         "inputProductTypeId": "p_isotopentraeger",
-        "quantity": 21.0
+        "quantity": 1911.0
       },
       {
         "inputProductTypeId": "p_stahl",
@@ -7008,10 +7008,10 @@
       }
     ],
     "baseProductionHours": 168.0,
-    "massKg": 13573800.0,
-    "volumeM3": 86437.85,
-    "eleriumG": 540.6,
+    "massKg": 1240000000.0,
+    "volumeM3": 7863636.36,
+    "eleriumG": 49593.9,
     "description": "Traegt 2000 Kolonisten samt Startausruestung zu einer neuen Welt. Baut sich in genau einer Spielwoche, unabhaengig von jedem Tempobonus, und wird bei der Koloniegruendung verbraucht.",
-    "workHoursPerUnit": 6000.0
+    "workHoursPerUnit": 9500.0
   }
 ]

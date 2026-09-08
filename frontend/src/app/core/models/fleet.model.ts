@@ -1,7 +1,7 @@
 import { Id } from './common.model';
 import { ChainPlan, ProductionQueueStatus } from './production.model';
 
-export type ShipClass = 'Corvette' | 'Destroyer' | 'Cruiser' | 'Freighter' | 'Carrier' | 'TroopTransport';
+export type ShipClass = 'Corvette' | 'Destroyer' | 'Cruiser' | 'Freighter' | 'Carrier' | 'TroopTransport' | 'ColonyShip';
 
 export interface ShipTypeDef {
   /** entspricht einem ProductType.id mit category=Ship */
@@ -12,6 +12,14 @@ export interface ShipTypeDef {
   /** Frachtkapazität in m³ – siehe `cargoMassKg`. */
   cargoVolumeM3: number;
   carrierSlotUsage: number;
+  /**
+   * Soldaten, die dieses Schiff aufnimmt (Umsetzungskonzept/28_...md). Nur der
+   * Mannschaftstransporter hat einen Wert > 0 und nimmt AUSSCHLIESSLICH
+   * Soldaten auf. Drohnen sind Maschinen und reisen als gewöhnliche Fracht im
+   * Frachter (`cargoMassKg`/`cargoVolumeM3`) – eine Landung braucht deshalb
+   * beide Schiffstypen.
+   */
+  troopCapacity: number;
   /**
    * Klasse, die von dieser Klasse gekontert wird (×2 Schaden), siehe
    * Mechanik/03_..., §2 und Mechanik/04_..., §4. Es gibt bewusst KEINE
@@ -130,4 +138,18 @@ export interface FleetCargoCapacity {
   usedVolumeM3: number;
   /** Maximal ladbare Stückzahl des angefragten Produkts. */
   maxLoadableQuantity: number;
+}
+
+/**
+ * Truppenkapazität einer Flotte – Gegenstück zu `FleetCargoCapacity` für
+ * Soldaten (Umsetzungskonzept/28_...md). Kommt ebenfalls fertig vom Backend
+ * (`fleetTroopCapacity`), damit die Regel aus
+ * `TroopTransportCommands.embarkSoldiers` nicht im Client nachgebaut wird.
+ */
+export interface FleetTroopCapacity {
+  /** Plätze insgesamt – nur der Mannschaftstransporter steuert welche bei. */
+  capacitySoldiers: number;
+  soldiersAboard: number;
+  /** Was jetzt zusteigen kann: freier Platz UND Soldaten in der Garnison vor Ort. */
+  maxEmbarkableQuantity: number;
 }

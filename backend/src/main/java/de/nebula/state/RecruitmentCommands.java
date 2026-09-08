@@ -30,8 +30,10 @@ public final class RecruitmentCommands {
 
   private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
 
+  /** Der Verband IN einer Kolonie – Verbände an Bord einer Flotte haben {@code colonyId == null} (siehe {@link GroundForceGroup}). */
   public static GroundForceGroup groundForces(GameState state, String colonyId) {
-    return state.groundForceGroups.stream().filter(g -> g.colonyId.equals(colonyId)).findFirst().orElse(null);
+    return state.groundForceGroups.stream()
+        .filter(g -> colonyId.equals(g.colonyId)).findFirst().orElse(null);
   }
 
   public static List<RecruitmentQueueEntry> recruitmentQueueFor(GameState state, String colonyId) {
@@ -170,6 +172,16 @@ public final class RecruitmentCommands {
     for (RecruitmentQueueEntry entry : due) completeRecruitmentEntry(state, ids, entry);
   }
 
+  /** Soldaten aus einem Mannschaftstransporter in die Garnison übernehmen ({@code TroopTransportCommands.disembarkSoldiers}). */
+  static void addSoldiersToGarrison(GameState state, IdGenerator ids, String colonyId, int count) {
+    addUnitToGarrison(state, ids, colonyId, GameConstants.SOLDIER_PRODUCT_ID, count);
+  }
+
+  /** Eingelagerte Drohnen zurück in die Garnison stellen ({@code TroopTransportCommands.deployDrones}). */
+  static void addDronesToGarrison(GameState state, IdGenerator ids, String colonyId, String droneProductTypeId, int count) {
+    addUnitToGarrison(state, ids, colonyId, droneProductTypeId, count);
+  }
+
   private static void addUnitToGarrison(GameState state, IdGenerator ids, String colonyId, String unitProductTypeId, int count) {
     Colony colony = ColonyCommands.colony(state, colonyId);
     if (colony == null) return;
@@ -206,7 +218,7 @@ public final class RecruitmentCommands {
    * bestimmt daraus, wie viele Drohnen je Klasse aktiv (kommandiert,
    * kampffähig) bzw. Reserve (unkommandiert) sind – Mechanik/05_..., §3-4.
    */
-  private static void recalcCrewing(GameState state, String colonyId) {
+  static void recalcCrewing(GameState state, String colonyId) {
     GroundForceGroup group = groundForces(state, colonyId);
     if (group == null) return;
     java.util.function.Function<String, Integer> totalOf = id -> {

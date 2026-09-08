@@ -20,6 +20,10 @@ export class ColonyListComponent {
   /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
   protected readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
   protected readonly planetsInSystem = computed(() => this.api.planetsInSystem(this.homeSystemId())());
+  private readonly systems = this.api.visibleSystems();
+  /** Name statt hartkodiertem „Aurelia" – das Heimatsystem heißt bei jedem Kommandanten anders. */
+  protected readonly homeSystemName = computed(() =>
+    this.systems().find(s => s.id === this.homeSystemId())?.name ?? 'Heimatsystem');
 
   protected readonly colonizations = this.api.colonizations();
   protected readonly colonizationHours = COLONIZATION_GAME_HOURS;

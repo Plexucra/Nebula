@@ -126,4 +126,11 @@ public final class GameConstants {
   /** Bodentruppen-Crewing (Mechanik/05_..., §3-4). */
   public static final List<String> DRONE_PRODUCT_IDS = List.of("p_drone_light", "p_drone_medium", "p_drone_heavy");
   public static final int DRONES_PER_SOLDIER = 5;
+  /**
+   * Die einzige Bodeneinheit, die keine Maschine ist – und deshalb die
+   * einzige, die NICHT als Fracht reisen darf (Umsetzungskonzept/28_...md,
+   * siehe {@code TroopTransportCommands.requireNotASoldier}). Soldaten
+   * fahren ausschließlich im Mannschaftstransporter.
+   */
+  public static final String SOLDIER_PRODUCT_ID = "p_soldier";
 }

@@ -12,8 +12,10 @@ GroundUnitType
   // kommandierte Einheiten (siehe Mechanik/05_..., §3 "autonome
   // Waffenträger") – Soldaten stecken nicht in den Drohnen drin.
   productionAspect (Basiszeit × Arbeitskräfte, für Konter-/
-  Haltbarkeitsberechnung, siehe Mechanik/04_...),
-  transportSlotUsage (0,05 / 1 / 1 / 20, siehe Mechanik/05_... §6)
+  Haltbarkeitsberechnung, siehe Mechanik/04_...)
+  // KEIN transportSlotUsage mehr: Soldaten reisen über
+  // ShipTypeDef.troopCapacity des Mannschaftstransporters, Drohnen als
+  // gewöhnliche Fracht im Frachter (Umsetzungskonzept/28_...md).
 
 GroundForceGroup
   id, ownerId, locationType (PlanetSurface|Colony),
@@ -23,9 +25,11 @@ GroundForceGroup
   // Waffenträger, je nach unitTypeId (siehe Mechanik/05_... §3)
 
 GroundTransportFleet (Spezialisierung von Fleet)
-  fleetId, transporterCount, cargo: [{unitTypeId, count}]
-  // Ladung proportional über alle Transporter verteilt, siehe
-  // Mechanik/05_... §6
+  fleetId, transporterCount, soldiers
+  // NUR Soldaten, proportional über alle Transporter verteilt
+  // (Mechanik/05_... §6). Die zugehörigen Drohnen liegen als normale
+  // Fracht in Fleet.cargo, begrenzt durch cargoMassKg/cargoVolumeM3
+  // der Frachter derselben oder einer zweiten Flotte.
 
 RecruitmentQueue
   id, colonyId, unitTypeId, count, startedAt, completesAt

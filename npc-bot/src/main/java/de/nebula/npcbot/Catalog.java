@@ -82,14 +82,18 @@ final class Catalog {
 
   /**
    * Grobe militärische Gewichtung je Schiffstyp – 1:1 aus {@code ShipTypeDef
-   * .carrierSlotUsage} übernommen (Korvette 1, Zerstörer 2, Kreuzer 4) als
+   * .carrierSlotUsage} übernommen (Korvette 1, Zerstörer 10, Kreuzer 100) als
    * einfacher, dokumentierter Stärkevergleich zwischen zwei Flotten. Bewusst
    * KEINE Nachbildung der vollen Kontermultiplikator-/Schadensformel aus
    * {@code BattleCommands} – für die Angriffsentscheidung reicht eine grobe
    * Schätzung, das eigentliche Gefecht rechnet der Server exakt.
+   *
+   * <p>Das Verhältnis 1:10:100 ist seit Umsetzungskonzept/27_...md zugleich das
+   * Verhältnis von Masse UND Arbeitsaufwand der drei Klassen – die Schätzung
+   * trifft den echten Kampfwert damit deutlich besser als die frühere 1:2:4.</p>
    */
   static final Map<String, Double> SHIP_MILITARY_WEIGHT = Map.of(
-      "p_corvette", 1.0, "p_destroyer", 2.0, "p_cruiser", 4.0);
+      "p_corvette", 1.0, "p_destroyer", 10.0, "p_cruiser", 100.0);
 
   /**
    * Ausbaupriorität und Obergrenzen je Gebäudetyp (Umsetzungskonzept/17_...md):

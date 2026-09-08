@@ -29,6 +29,7 @@ import de.nebula.state.MessageCommands;
 import de.nebula.state.NotificationCommands;
 import de.nebula.state.ProductionCommands;
 import de.nebula.state.RecruitmentCommands;
+import de.nebula.state.TroopTransportCommands;
 import de.nebula.state.ShipyardCommands;
 import de.nebula.state.TreatyCommands;
 import de.nebula.model.FleetSystemTarget;
@@ -336,6 +337,27 @@ public class GameSocket {
         FleetCommands.unloadCargo(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "productTypeId"), payload.path("quantity").asDouble());
         yield null;
       }
+      // Bodentruppen-Verladung (Umsetzungskonzept/28_...md): Soldaten in den
+      // Mannschaftstransporter, Drohnen über das Warenlager in den Frachter.
+      case "embarkSoldiers" -> {
+        TroopTransportCommands.embarkSoldiers(state, ids, requirePlayerId(), text(payload, "fleetId"), payload.path("quantity").asDouble());
+        yield null;
+      }
+      case "disembarkSoldiers" -> {
+        TroopTransportCommands.disembarkSoldiers(state, ids, requirePlayerId(), text(payload, "fleetId"), payload.path("quantity").asDouble());
+        yield null;
+      }
+      case "storeDrones" -> {
+        TroopTransportCommands.storeDrones(state, requirePlayerId(), text(payload, "colonyId"),
+            text(payload, "unitProductTypeId"), payload.path("quantity").asDouble());
+        yield null;
+      }
+      case "deployDrones" -> {
+        TroopTransportCommands.deployDrones(state, ids, requirePlayerId(), text(payload, "colonyId"),
+            text(payload, "unitProductTypeId"), payload.path("quantity").asDouble());
+        yield null;
+      }
+      case "fleetTroopCapacity" -> TroopTransportCommands.fleetTroopCapacity(state, text(payload, "fleetId"));
       case "moveFleet" -> {
         FleetCommands.moveFleet(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "destinationSystemId"));
         yield null;

@@ -2,7 +2,7 @@ import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
@@ -365,6 +365,21 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   unloadCargoToHubDepot(fleetId: Id, productTypeId: Id, quantity: number): Promise<void> {
     return this.send('unloadCargoToHubDepot', { fleetId, productTypeId, quantity });
+  }
+  embarkSoldiers(fleetId: Id, quantity: number): Promise<void> {
+    return this.send('embarkSoldiers', { fleetId, quantity });
+  }
+  disembarkSoldiers(fleetId: Id, quantity: number): Promise<void> {
+    return this.send('disembarkSoldiers', { fleetId, quantity });
+  }
+  fleetTroopCapacity(fleetId: Id): Signal<FleetTroopCapacity | undefined> {
+    return this.poll('fleetTroopCapacity', () => ({ fleetId }), undefined);
+  }
+  storeDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void> {
+    return this.send('storeDrones', { colonyId, unitProductTypeId, quantity });
+  }
+  deployDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void> {
+    return this.send('deployDrones', { colonyId, unitProductTypeId, quantity });
   }
   moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void> {
     return this.send('moveFleet', { fleetId, destinationSystemId });

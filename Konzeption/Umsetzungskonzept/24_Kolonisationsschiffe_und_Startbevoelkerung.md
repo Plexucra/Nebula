@@ -53,23 +53,39 @@ nur 16,7-mal größer, nicht wirtschaftlich anders.
 **Material (Nutzerentscheidung: wertgleich in Rohstoffen, keine fertigen
 Schiffe als Vorprodukte).** Die Rezepte von 1× `p_freighter` und 20×
 `p_trooptransport` wurden vollständig bis auf Tier-0-Rohstoffe expandiert und
-summiert – 16 Rohstoffe, zusammen 20 298 Einheiten, angeführt von 2 912
-`p_kohlenstoff`, 2 333 `p_silikat` und 2 184 `p_salz`. Dazu kommen die
+summiert – 16 Rohstoffe, angeführt von `p_kohlenstoff`, `p_silikat` und
+`p_salz` (aktuelle Stückzahlen in der Tabelle unten). Dazu kommen die
 namentlich genannten Baustoffe der beiden Startgebäude: Infrastruktur Stufe 1
 verlangt 2 `p_stahl` + 1 `p_leitermetall`, Wohnkomplex Stufe 1 verlangt 2
 `p_stahl` + 1 `p_glaswerkstoff` – zusammen **4 Stahl, 1 Leitermetall, 1
 Glaswerkstoff**. Der Vorteil dieser Form: niemand muss erst 21 Schiffe bauen,
 `autoProduceMissing` löst die Kette wie bei jedem anderen Auftrag selbst auf.
 
-**`workHoursPerUnit` = 6000, nicht 124 000.** Das Feld ist der Montageaufwand
-DIESES Schrittes, nicht die Kettensumme – die Arbeitsstunden der Vorprodukte
-stecken bereits in den Rohstoffen. Entscheidend ist das aus einem zweiten
-Grund: `workHoursPerUnit × baseProductionHours` ist zugleich der
-Produktionsaufwand, aus dem `BattleCommands` Schaden UND Haltbarkeit ableitet
-(Mechanik/04_..., §2). Mit der Kettensumme wäre das zivile Kolonisationsschiff
-mit Abstand das stärkste Kampfschiff des Spiels geworden (20,8 Mio. gegen 4,8
-Mio. eines Kreuzers). Mit 6000 liegt es bei 1,008 Mio. – zwischen Korvette und
-Zerstörer, in der Größenordnung eines Frachters, und damit unauffällig.
+**`workHoursPerUnit` ist der Montageaufwand, nicht die Kettensumme.** Das Feld
+beschreibt DIESEN Schritt – die Arbeitsstunden der Vorprodukte stecken bereits
+in den Rohstoffen. Entscheidend ist das aus einem zweiten Grund:
+`workHoursPerUnit × baseProductionHours` ist zugleich der Produktionsaufwand,
+aus dem `BattleCommands` Schaden UND Haltbarkeit ableitet (Mechanik/04_...,
+§2). Mit der Kettensumme wäre das zivile Kolonisationsschiff mit Abstand das
+stärkste Kampfschiff des Spiels geworden. Der Wert wird deshalb bewusst so
+gewählt, dass der Kampfwert **in der Größenordnung eines Frachters** liegt und
+damit unauffällig bleibt.
+
+**Nachgezogen mit der Massenskala (Umsetzungskonzept/27_...md).** Die Regel
+oben ist unverändert, ihre Eingänge sind es nicht: ein Frachter wiegt jetzt
+40 000 t, ein Mannschaftstransporter 60 000 t. Daraus folgt unmittelbar
+
+| | vorher | jetzt |
+|---|---:|---:|
+| Masse (= 1 Frachter + 20 Transporter) | 13 573,8 t | **1 240 000 t** |
+| Volumen (dieselbe Summe) | 86 438 m³ | **7 863 636 m³** |
+| Rohstoffrezept | 20 298 Einheiten | **1 275 076 Einheiten** |
+| `workHoursPerUnit` | 6 000 | **9 500** |
+| Kampfwert | 1,008 Mio. | 1,596 Mio. (Frachter: 1,6 Mio.) |
+
+Die feste Bauzeit von 168 Spielstunden bleibt unberührt. Das Rohstoffrezept ist
+damit der teuerste Einzelposten des Katalogs; ob die Expansionsschwelle in
+dieser Höhe bleiben soll, ist in 27_...md, §F als offener Punkt vermerkt.
 
 ## C. Bauen (`ShipyardCommands`)
 
@@ -135,3 +151,29 @@ vollständig über das Schiff.
 - **Kein eigener Modul-Produktbaum.** Die „speziellen Module" der Vorgabe sind
   in den Materialkosten aus §B abgebildet, statt als eigene Zwischenprodukte
   modelliert zu werden (ausdrücklich „für dich vereinfacht").
+
+## G. Nachtrag: Kolonisieren in jedem System, keine Geisterflotte
+
+Zwei Lücken, die beim Durchspielen der gesamten Kette auffielen (der Nachweis
+über die echten Befehle liegt jetzt als `ColonizationJourneyTest` vor: Werft →
+Lager → Flotte → Betanken → Gateway-Sprung → Orbit → Gründung).
+
+**Die Aktion gab es nur im Heimatsystem.** `colonizePlanet` war serverseitig
+von Anfang an ortsunabhängig – gefordert ist einzig eine eigene Flotte mit
+Kolonisationsschiff im Orbit des Zielplaneten. Der einzige Knopf saß aber in
+der Kolonienliste, die ausschließlich Planeten des eigenen Startsystems
+auflistet. Genau der Zweck des Schiffs, ein ANDERES System zu besiedeln, war
+damit über die Oberfläche unerreichbar. Der Knopf sitzt jetzt zusätzlich an
+jedem unbesiedelten Planeten der Systemansicht, wo ohnehin schon die eigenen
+Flotten und ihre Orte im System stehen. Ob ein Kolonisationsschiff im Orbit
+liegt, entscheidet der Client anhand von `ShipTypeDef.class === 'ColonyShip'`
+aus dem Schiffskatalog – keine zweite Produktliste im Frontend.
+
+**Das verbrauchte Schiff ließ eine leere Flotte zurück.** Die Schiffsgruppe
+wurde auf 0 gesetzt, die Flotte blieb bestehen: sichtbar in jeder Übersicht,
+mit einem Tank, der rechnerisch nichts mehr fasst, und – weil `consumeJumpFuel`
+bei 0 Schiffen ohne Verbrauch zurückkehrt – beliebig weit springfähig. Der
+Verbrauch läuft jetzt über `FleetCommands.consumeShips`: leere Gruppen
+verschwinden, und mit dem letzten Schiff verschwindet auch die Flotte (samt
+ihrer Blockade, wie beim Ortswechsel). Eine gemischte Flotte verliert dagegen
+nur das Kolonisationsschiff.

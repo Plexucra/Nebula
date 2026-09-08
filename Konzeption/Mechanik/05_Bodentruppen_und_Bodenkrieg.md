@@ -144,24 +144,34 @@ erzeugt).
 - Auflösung nur, wenn der Verband gelandet bei einer eigenen Kolonie
   ist. Waffenträger/Drohnen zurück in den Lagerbestand, Soldaten zurück
   in die Zivilbevölkerung der Kolonie.
-- Transport nur mit **Bodentruppentransportern**, gemeinsame Kapazität
-  für Soldaten und alle Waffenträgerklassen:
+- Transport **getrennt nach Art der Ladung** (Nutzerentscheidung, siehe
+  `Umsetzungskonzept/28_...md`): der Mannschaftstransporter nimmt
+  ausschließlich **Soldaten** auf, Drohnen reisen als gewöhnliche
+  **Fracht im Frachter**.
 
 ```text
-Relativer Platzbedarf:
-Leichte Drohne   = 0,05
-Soldat           = 1
-Mittlere Drohne  = 1
-Schwere Drohne   = 20
-
-Verhältnis (bezogen auf leichte Drohne):
-leicht : Soldat : mittel : schwer = 1 : 20 : 20 : 400
+Soldaten  → Mannschaftstransporter, ShipTypeDef.troopCapacity = 1000 je Schiff
+Drohnen   → Frachter, begrenzt durch Masse und Volumen des Produkts
+            wie jede andere Ware
 ```
 
-- Nach Dokument 11: **nur eine Transportergröße**; Ladung wird
-  proportional über alle Transporter einer Flotte verteilt (keine
-  spezialisierten Transporter nach Ladungstyp), sodass die individuelle
-  Ladung eines einzelnen Transporters nicht gespeichert werden muss.
+- Begründung: die Anforderungen sind zu verschieden, um sie in einem
+  Schiff zu mischen. Soldaten brauchen Lebenserhaltung, Unterkunft und
+  Vorräte über die gesamte Reise; Drohnen sind Maschinen und brauchen
+  nur Laderaum. Ein gemeinsames Slot-Maß für beide hat es deshalb
+  nicht gegeben, es ist ersatzlos entfallen.
+- **Eine Landung braucht damit beide Schiffstypen.** Da ein Soldat bis
+  zu fünf Drohnen kommandiert (§3-4), gehört zu einem vollen
+  Transporter rund ein Frachter (leichte Drohnen) bis vier Frachter
+  (schwere Drohnen).
+- Die frühere Fassung nannte einen gemeinsamen relativen Platzbedarf
+  (leichte Drohne 0,05, Soldat 1, mittlere 1, schwere 20). Er war nie
+  ausgewertet, und im Katalog waren Soldat und leichte Drohne
+  gegeneinander vertauscht.
+- Nach Dokument 11: **nur eine Transportergröße**; die Soldaten einer
+  Flotte werden proportional über alle Transporter verteilt, sodass die
+  individuelle Ladung eines einzelnen Transporters nicht gespeichert
+  werden muss.
 
 ## 7. Landung und planetare Bewegung
 

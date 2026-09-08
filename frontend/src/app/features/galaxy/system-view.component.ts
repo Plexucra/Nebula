@@ -2,9 +2,10 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Blockade, Colony, Fleet, FleetSystemTarget, Id, PlanetType } from '../../core/models';
+import { Blockade, Colonization, Colony, Fleet, FleetSystemTarget, Id, PlanetType } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
+import { COLONIZATION_GAME_HOURS, START_POPULATION } from '../../core/shared-constants';
 
 /** Eine Auswahlmöglichkeit im "Ziel"-Dropdown je Flotte, siehe `destinationOptions`. */
 interface SystemLocationOption {
@@ -45,6 +46,10 @@ export class SystemViewComponent {
   protected readonly allFleets = this.api.allFleets();
   protected readonly players = this.api.players();
   protected readonly blockades = this.api.blockadesInSystem(this.systemId);
+  /** Eigene laufende Koloniegründungen – galaxieweit, hier auf dieses System gefiltert. */
+  protected readonly colonizations = this.api.colonizations();
+  protected readonly colonizationHours = COLONIZATION_GAME_HOURS;
+  protected readonly startPopulation = START_POPULATION;
 
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -159,6 +164,41 @@ export class SystemViewComponent {
       await this.api.exploreSystem(fleet.id);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Erforschen fehlgeschlagen.');
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
+  // --- Kolonisieren (Umsetzungskonzept/24_...md) ---
+
+  /**
+   * Eigene, im Orbit GENAU DIESES Planeten stationierte Flotte mit mindestens
+   * einem Kolonisationsschiff – dieselbe Bedingung, die
+   * `ColonyCommands.fleetWithColonyShipAt` serverseitig durchsetzt. Welche
+   * Produkte Kolonisationsschiffe sind, kommt aus dem Schiffskatalog
+   * (`ShipTypeDef.class`), damit hier keine zweite Produktliste entsteht.
+   */
+  protected colonyShipFleetAt(planetId: Id): Fleet | undefined {
+    const myId = this.myId();
+    const colonyShipIds = new Set(
+      this.api.shipTypes().filter(s => s.class === 'ColonyShip').map(s => s.productTypeId));
+    return this.allFleets().find(f =>
+      f.ownerId === myId && f.status === 'Stationed' && f.locationPlanetId === planetId
+      && f.ships.some(g => colonyShipIds.has(g.shipProductTypeId) && g.quantity >= 1));
+  }
+
+  /** Laufende eigene Gründung auf diesem Planeten, falls es eine gibt. */
+  protected colonizationOf(planetId: Id): Colonization | undefined {
+    return this.colonizations().find(c => c.planetId === planetId);
+  }
+
+  protected async colonize(planetId: Id): Promise<void> {
+    this.error.set(null);
+    this.busy.set('colonize:' + planetId);
+    try {
+      await this.api.colonizePlanet(planetId);
+    } catch (e) {
+      this.error.set(e instanceof Error ? e.message : 'Kolonisierung fehlgeschlagen.');
     } finally {
       this.busy.set(null);
     }

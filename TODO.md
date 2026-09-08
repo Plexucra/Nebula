@@ -35,6 +35,41 @@
 
 ## Erledigt
 
+- [x] ~~Kolonisieren war in der Oberfläche auf das Heimatsystem beschränkt~~ –
+  behoben. Der „Kolonisieren"-Knopf sitzt jetzt zusätzlich an jedem
+  unbesiedelten Planeten der **Systemansicht** (`system-view.component`), also
+  in JEDEM erreichten System. Er erscheint genau dann, wenn eine eigene,
+  stationierte Flotte mit Kolonisationsschiff im Orbit dieses Planeten liegt –
+  dieselbe Bedingung wie `ColonyCommands.fleetWithColonyShipAt`; welche
+  Produkte Kolonisationsschiffe sind, kommt aus `ShipTypeDef.class`
+  (`'ColonyShip'` fehlte im TS-Typ und ist ergänzt), nicht aus einer zweiten
+  Produktliste im Client. Liegt kein Schiff im Orbit, steht dort der Grund;
+  läuft bereits eine Gründung, deren Restzeit. Die Kolonienliste behält ihre
+  Heimatsystem-Sicht, nennt das System aber jetzt beim Namen (statt hart
+  „Aurelia-System") und verweist für alles Weitere auf die Galaxiekarte.
+  Der Weg dorthin (Werft → Lager → Flotte → Betanken → Gateway-Sprung → Orbit →
+  Gründung) ist über die echten Befehle abgesichert: `ColonizationJourneyTest`.
+
+- [x] ~~Nach der Landung blieb eine leere Geisterflotte stehen~~ – behoben.
+  `colonizePlanet` verbucht das Schiff jetzt über
+  `FleetCommands.consumeShips`: leergelaufene Schiffsgruppen verschwinden, und
+  mit dem letzten Schiff verschwindet die Flotte selbst (samt ihrer Blockade,
+  wie beim Ortswechsel). Eine gemischte Flotte verliert dagegen nur das
+  Kolonisationsschiff und behält Schiffe wie Tankinhalt – beides ist in
+  `ColonizationJourneyTest` und `ColonyCommandsUsabilityTest` festgehalten.
+
+- [x] ~~Mehrere Kommandanten auf demselben Planeten~~ – **so gewollt**
+  (Nutzerentscheidung). `colonizePlanet` prüft `alreadyOwned`/`alreadyRunning`
+  bewusst nur gegen die eigenen Kolonien; zwei Kommandanten dürfen denselben
+  Planeten besiedeln. Nicht ändern.
+
+- [x] ~~Frisch gegründete Kolonie startet ohne Vorräte~~ – **kein Fehler**
+  (Nutzerentscheidung): die Rohstoffe bringt der Kommandant selbst mit. Zu
+  beachten ist dabei nur, dass das Kolonisationsschiff selbst keinen Frachtraum
+  hat (`cargoMassKg = 0`, Umsetzungskonzept/24_...md, §F) – die Erstversorgung
+  (vor allem Elerium für die Infrastruktur 2, sonst Blackout ab dem ersten
+  Tick) muss also ein Frachter mitfliegen oder unmittelbar nachliefern.
+
 - [x] ~~e2e (`backend/e2e/full-playthrough.mjs`) schlägt beim ersten Kampf-Tick fehl~~ –
   behoben. Die ursprüngliche Vermutung („Determinismus-Mismatch in
   `BattleCommands.java`") war falsch: die Datei war in Ordnung. Das Testskript

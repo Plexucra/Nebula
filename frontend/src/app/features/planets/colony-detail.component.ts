@@ -392,6 +392,29 @@ export class ColonyDetailComponent {
       this.colonyId, this.newUnitProductId, this.newUnitQty,
       this.newUnitAutoMissing, this.newUnitRequeue));
   }
+  // --- Drohnen ein-/auslagern (Umsetzungskonzept/28_...md) ------------------
+  // Drohnen sind Maschinen: im Lager sind sie Ware und damit Frachtgut, in der
+  // Garnison sind sie Einheiten und zählen zur Sicherheit. Soldaten machen
+  // diesen Weg NICHT mit – sie fahren ausschließlich im Mannschaftstransporter.
+  protected readonly droneQty: Partial<Record<Id, number>> = {};
+
+  /** Eingelagerte Drohnen dieser Kolonie – aus dem normalen Warenlager. */
+  protected storedDrones(): { productTypeId: Id; quantity: number }[] {
+    const droneIds = new Set(this.groundUnitTypes.filter(u => u.id !== 'p_soldier').map(u => u.id));
+    return this.warehouse().filter(w => droneIds.has(w.productTypeId) && w.quantity > 0);
+  }
+
+  protected submitStoreDrones(unitProductTypeId: Id): void {
+    const qty = this.droneQty[unitProductTypeId] ?? 0;
+    if (qty <= 0) return;
+    void this.run('drones', () => this.api.storeDrones(this.colonyId, unitProductTypeId, qty));
+  }
+  protected submitDeployDrones(unitProductTypeId: Id): void {
+    const qty = this.droneQty[unitProductTypeId] ?? 0;
+    if (qty <= 0) return;
+    void this.run('drones', () => this.api.deployDrones(this.colonyId, unitProductTypeId, qty));
+  }
+
   protected resumeRecruitment(entryId: Id): void {
     void this.run(`resumerecruit:${entryId}`, () => this.api.resumeRecruitment(this.colonyId, entryId));
   }

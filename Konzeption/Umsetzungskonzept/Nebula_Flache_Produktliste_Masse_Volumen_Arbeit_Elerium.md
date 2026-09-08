@@ -30,7 +30,10 @@ abschließend festgelegten Realwerte.
 - **Arbeitsaufwand** ist Arbeitskräfte mal Arbeitszeit in Arbeiterstunden.
 - **Direkte Unterprodukte** dienen der Rezeptzuordnung. Mengenwörter wie
   „zwei“ oder „drei“ bezeichnen diskrete Stückzahlen. Ohne Mengenwort gilt
-  eine Einheit beziehungsweise ein chargenabhängiger Stoffanteil.
+  eine Einheit beziehungsweise ein chargenabhängiger Stoffanteil. Bei den
+  Schiffsmodulen stehen seit der Größenskala aus `27_Schiffsgroessen_und_
+  Massenskala.md` Zahlen statt Mengenwörter (`25 × Strukturzelle`) – dort
+  liegen die Stückzahlen im drei- bis vierstelligen Bereich.
 
 ### 1.2 Rohstoffnormierung
 
@@ -56,6 +59,12 @@ Raffination, Chemie und biologischer Verarbeitung darf die Ausgabemasse
 dagegen kleiner als die Einsatzmasse sein, weil Abraum, Abgas, Abwasser und
 Nebenprodukte nicht Teil der Produktcharge sind.
 
+Die acht Prozent Integrationsstruktur gelten für jedes Schiffsmodul **exakt**.
+Der Endmontagezuschlag der Schiffe ist eine Untergrenze und liegt nach der
+Größenskala aus `27_Schiffsgroessen_und_Massenskala.md` zwischen 3,00 und
+3,30 Prozent: die Schiffsmassen sind dort auf runde Zielwerte gesetzt, die
+Modulstückzahlen als ganze Zahlen darunter gewählt.
+
 ## 2. Flache Produktliste
 
 | Nr. | Ebene | Produkt | Kategorie | Masse kg | Volumen m³ | Masse-Volumen-Verhältnis kg/m³ | Eleriumbedarf g | Arbeitskräfte | Arbeitszeit h | Arbeitsaufwand Ah | Direkte Unterprodukte |
@@ -72,7 +81,7 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 010 | 1 | Salzmineral | Grundrohstoff | 800 000 | 666,67 | 1 200 | 0,001 | 100 | 1 | 100 | — |
 | 011 | 1 | Radionukliderz | Grundrohstoff | 15 000 | 6 | 2 500 | 0,001 | 100 | 1 | 100 | — |
 | 012 | 1 | Wasser | Grundrohstoff | 2 000 000 | 2 105,26 | 950 | 0,001 | 100 | 1 | 100 | — |
-| 013 | 1 | Atmosphärenfluid | Grundrohstoff | 5 000 000 | 166 666,67 | 30 | 0,001 | 100 | 1 | 100 | — |
+| 013 | 1 | Atmosphärenfluid | Grundrohstoff | 5 000 000 | 6 250 | 800 | 0,001 | 100 | 1 | 100 | — |
 | 014 | 1 | Edelgaskonzentrat | Grundrohstoff | 80 000 | 2 000 | 40 | 0,001 | 100 | 1 | 100 | — |
 | 015 | 1 | Kohlenwasserstofflager | Grundrohstoff | 1 000 000 | 1 538,46 | 650 | 0,001 | 100 | 1 | 100 | — |
 | 016 | 1 | Isotopenträger | Grundrohstoff | 10 000 | 33,33 | 300 | 0,001 | 100 | 1 | 100 | — |
@@ -89,7 +98,7 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 027 | 2 | Industriesalze | Aufbereitung | 400 000 | 285,71 | 1 400 | 0,0032 | 80 | 4 | 320 | Salzmineral |
 | 028 | 2 | Radionuklidkonzentrat | Aufbereitung | 5 000 | 1,56 | 3 200 | 0,0072 | 120 | 6 | 720 | Radionukliderz |
 | 029 | 2 | Prozesswasser | Aufbereitung | 1 800 000 | 1 800 | 1 000 | 0,0032 | 80 | 4 | 320 | Wasser |
-| 030 | 2 | Getrennte Atmosphärengase | Aufbereitung | 2 000 000 | 25 000 | 80 | 0,0018 | 60 | 3 | 180 | Atmosphärenfluid |
+| 030 | 2 | Getrennte Atmosphärengase | Aufbereitung | 2 000 000 | 2 500 | 800 | 0,0018 | 60 | 3 | 180 | Atmosphärenfluid |
 | 031 | 2 | Edelgasfraktion | Aufbereitung | 30 000 | 250 | 120 | 0,0018 | 60 | 3 | 180 | Edelgaskonzentrat |
 | 032 | 2 | Kohlenwasserstofffraktion | Aufbereitung | 700 000 | 1 000 | 700 | 0,0032 | 80 | 4 | 320 | Kohlenwasserstofflager |
 | 033 | 2 | Isotopenkonzentrat | Aufbereitung | 2 000 | 6,67 | 300 | 0,0072 | 120 | 6 | 720 | Isotopenträger |
@@ -182,42 +191,42 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 120 | 5 | Pharmabasis | Industrie und Biologie | 2 000 | 2,5 | 800 | 0,014 | 120 | 12 | 1 440 | Pharmakultur, Industriechemikalien, Medizinchip |
 | 121 | 5 | Haushaltswarenbasis | Industrie und Biologie | 20 000 | 36,36 | 550 | 0,014 | 120 | 12 | 1 440 | Polymergrundstoff, Leichtmetalllegierung, Glaswerkstoff, Keramikwerkstoff |
 | 122 | 5 | Unterhaltungselektronikbasis | Industrie und Biologie | 1 000 | 1,82 | 550 | 0,014 | 120 | 12 | 1 440 | Steuerchip, Kommunikationschip, Leiterbündel, Polymergrundstoff |
-| 123 | 6 | Korvettenrumpfmodul | Schiffsmodul Korvette | 108 000 | 337,5 | 320 | 0,504 | 700 | 72 | 50 400 | Strukturzelle, Panzerbaugruppe, Besatzungsbaugruppe |
-| 124 | 6 | Korvettenantriebsmodul | Schiffsmodul Korvette | 59 500 | 123,96 | 480 | 1,1 | 700 | 72 | 50 400 | Triebwerkskern, zwei Manövertriebwerke, Reaktionsmassensystem, Eleriumtreibstoffkern |
-| 125 | 6 | Korvettenenergiemodul | Schiffsmodul Korvette | 14 100 | 29,38 | 480 | 1,1 | 700 | 72 | 50 400 | Eleriumenergiezelle, Energieverteiler, Energiespeicherzelle |
-| 126 | 6 | Korvettenelektronikmodul | Schiffsmodul Korvette | 7 030 | 27,04 | 260 | 0,504 | 700 | 72 | 50 400 | Navigationssystem, Sensorfeld, Kommunikationsfeld |
-| 127 | 6 | Korvettenwaffenmodul | Schiffsmodul Korvette | 22 200 | 46,25 | 480 | 0,504 | 700 | 72 | 50 400 | Strahlenwaffenbaugruppe, Lenkflugkörperbaugruppe, Gefechtsleitsystem |
-| 128 | 6 | Korvettenversorgungsmodul | Schiffsmodul Korvette | 59 500 | 330,56 | 180 | 0,504 | 700 | 72 | 50 400 | Lebenserhaltungsbaugruppe, Besatzungsbaugruppe, Frachtumschlagbaugruppe |
-| 129 | 6 | Zerstörerrumpfmodul | Schiffsmodul Zerstörer | 194 400 | 607,5 | 320 | 1,44 | 1 200 | 120 | 144 000 | zwei Strukturzellen, zwei Panzerbaugruppen, Besatzungsbaugruppe |
-| 130 | 6 | Zerstörerantriebsmodul | Schiffsmodul Zerstörer | 81 000 | 168,75 | 480 | 2,04 | 1 200 | 120 | 144 000 | zwei Triebwerkskerne, Manövertriebwerk, Reaktionsmassensystem, Eleriumtreibstoffkern |
-| 131 | 6 | Zerstörerenergiemodul | Schiffsmodul Zerstörer | 49 700 | 103,54 | 480 | 2,04 | 1 200 | 120 | 144 000 | Fusionsreaktorkern, Eleriumenergiezelle, Energieverteiler |
-| 132 | 6 | Zerstörerelektronikmodul | Schiffsmodul Zerstörer | 7 570 | 29,12 | 260 | 1,44 | 1 200 | 120 | 144 000 | Navigationssystem, Gefechtsleitsystem, Kommunikationsfeld |
-| 133 | 6 | Zerstörerwaffenmodul | Schiffsmodul Zerstörer | 49 700 | 103,54 | 480 | 1,44 | 1 200 | 120 | 144 000 | zwei Projektilwaffenbaugruppen, zwei Lenkflugkörperbaugruppen, Schwerer Gefechtskopf |
-| 134 | 6 | Zerstörerversorgungsmodul | Schiffsmodul Zerstörer | 59 500 | 330,56 | 180 | 1,44 | 1 200 | 120 | 144 000 | Lebenserhaltungsbaugruppe, Besatzungsbaugruppe, Frachtumschlagbaugruppe |
-| 135 | 6 | Kreuzerrumpfmodul | Schiffsmodul Kreuzer | 275 400 | 860,62 | 320 | 3,6 | 2 000 | 180 | 360 000 | drei Strukturzellen, drei Panzerbaugruppen, Strahlenschutzsegment |
-| 136 | 6 | Kreuzerantriebsmodul | Schiffsmodul Kreuzer | 129 700 | 270,21 | 480 | 4,2 | 2 000 | 180 | 360 000 | drei Triebwerkskerne, zwei Manövertriebwerke, zwei Reaktionsmassensysteme, Eleriumtreibstoffkern |
-| 137 | 6 | Kreuzerenergiemodul | Schiffsmodul Kreuzer | 61 600 | 128,33 | 480 | 4,8 | 2 000 | 180 | 360 000 | zwei Eleriumenergiezellen, Fusionsreaktorkern, zwei Energieverteiler |
-| 138 | 6 | Kreuzerelektronikmodul | Schiffsmodul Kreuzer | 11 900 | 45,77 | 260 | 3,6 | 2 000 | 180 | 360 000 | Navigationssystem, zwei Sensorfelder, Gefechtsleitsystem, Kommunikationsfeld |
-| 139 | 6 | Kreuzerwaffenmodul | Schiffsmodul Kreuzer | 58 400 | 121,67 | 480 | 3,6 | 2 000 | 180 | 360 000 | zwei Strahlenwaffenbaugruppen, Projektilwaffenbaugruppe, Lenkflugkörperbaugruppe, zwei Schildemitterbaugruppen |
-| 140 | 6 | Kreuzerversorgungsmodul | Schiffsmodul Kreuzer | 91 800 | 510 | 180 | 3,6 | 2 000 | 180 | 360 000 | zwei Lebenserhaltungsbaugruppen, zwei Besatzungsbaugruppen, Frachtumschlagbaugruppe |
-| 141 | 6 | Frachterrumpfmodul | Schiffsmodul Frachter | 175 000 | 546,88 | 320 | 1,44 | 1 200 | 120 | 144 000 | drei Strukturzellen, Leichtrahmen, Druckhabitatsegment |
-| 142 | 6 | Frachterantriebsmodul | Schiffsmodul Frachter | 70 200 | 146,25 | 480 | 2,04 | 1 200 | 120 | 144 000 | Triebwerkskern, Manövertriebwerk, zwei Reaktionsmassensysteme, Eleriumtreibstoffkern |
-| 143 | 6 | Frachterenergiemodul | Schiffsmodul Frachter | 48 600 | 101,25 | 480 | 1,44 | 1 200 | 120 | 144 000 | Fusionsreaktorkern, Energieverteiler, Energiespeicherzelle |
-| 144 | 6 | Frachterelektronikmodul | Schiffsmodul Frachter | 4 940 | 19 | 260 | 1,44 | 1 200 | 120 | 144 000 | Navigationssystem, Logistikchip, Kommunikationsfeld |
-| 145 | 6 | Frachterladungsmodul | Schiffsmodul Frachter | 129 700 | 720,56 | 180 | 1,44 | 1 200 | 120 | 144 000 | drei Frachtumschlagbaugruppen, Strukturzelle, Logistikchip |
-| 146 | 6 | Frachterversorgungsmodul | Schiffsmodul Frachter | 118 900 | 660,56 | 180 | 1,44 | 1 200 | 120 | 144 000 | Lebenserhaltungsbaugruppe, Besatzungsbaugruppe, Fertigungsmaschinenbaugruppe |
-| 147 | 6 | Trägerschiffrumpfmodul | Schiffsmodul Trägerschiff | 340 200 | 1 063,12 | 320 | 7,2 | 3 000 | 240 | 720 000 | vier Strukturzellen, drei Panzerbaugruppen, zwei Druckhabitatsegmente |
-| 148 | 6 | Trägerschiffantriebsmodul | Schiffsmodul Trägerschiff | 145 800 | 303,75 | 480 | 7,8 | 3 000 | 240 | 720 000 | drei Triebwerkskerne, zwei Manövertriebwerke, drei Reaktionsmassensysteme, Eleriumtreibstoffkern |
-| 149 | 6 | Trägerschiffenergiemodul | Schiffsmodul Trägerschiff | 64 900 | 135,21 | 480 | 9 | 3 000 | 240 | 720 000 | drei Eleriumenergiezellen, Fusionsreaktorkern, zwei Energieverteiler |
-| 150 | 6 | Trägerschiffelektronikmodul | Schiffsmodul Trägerschiff | 13 500 | 51,92 | 260 | 7,2 | 3 000 | 240 | 720 000 | Navigationssystem, zwei Sensorfelder, zwei Kommunikationsfelder, Gefechtsleitsystem |
-| 151 | 6 | Trägerschiffhangarmodul | Schiffsmodul Trägerschiff | 270 100 | 1 500,56 | 180 | 7,2 | 3 000 | 240 | 720 000 | vier Hangarbaugruppen, zwei Frachtumschlagbaugruppen, Logistikchip |
-| 152 | 6 | Trägerschiffversorgungsmodul | Schiffsmodul Trägerschiff | 183 600 | 1 020 | 180 | 7,2 | 3 000 | 240 | 720 000 | drei Lebenserhaltungsbaugruppen, drei Besatzungsbaugruppen, Fertigungsmaschinenbaugruppe |
-| 153 | 6 | Mannschaftstransportrumpfmodul | Schiffsmodul Mannschaftstransporter | 253 900 | 793,44 | 320 | 2,59 | 1 800 | 144 | 259 200 | drei Strukturzellen, zwei Panzerbaugruppen, zwei Druckhabitatsegmente |
-| 154 | 6 | Mannschaftstransportantriebsmodul | Schiffsmodul Mannschaftstransporter | 102 600 | 213,75 | 480 | 3,19 | 1 800 | 144 | 259 200 | zwei Triebwerkskerne, zwei Manövertriebwerke, zwei Reaktionsmassensysteme, Eleriumtreibstoffkern |
-| 155 | 6 | Mannschaftstransportenergiemodul | Schiffsmodul Mannschaftstransporter | 49 700 | 103,54 | 480 | 3,19 | 1 800 | 144 | 259 200 | Eleriumenergiezelle, Fusionsreaktorkern, Energieverteiler |
-| 156 | 6 | Mannschaftstransportelektronikmodul | Schiffsmodul Mannschaftstransporter | 7 030 | 27,04 | 260 | 2,59 | 1 800 | 144 | 259 200 | Navigationssystem, Kommunikationsfeld, Sensorfeld |
-| 157 | 6 | Mannschaftstransporttruppenmodul | Schiffsmodul Mannschaftstransporter | 140 500 | 780,56 | 180 | 2,59 | 1 800 | 144 | 259 200 | drei Truppenunterbringungsbaugruppen, Frachtumschlagbaugruppe, Medizinchip |
-| 158 | 6 | Mannschaftstransportversorgungsmodul | Schiffsmodul Mannschaftstransporter | 77 800 | 432,22 | 180 | 2,59 | 1 800 | 144 | 259 200 | drei Lebenserhaltungsbaugruppen, zwei Besatzungsbaugruppen, Pharmabasis |
+| 123 | 6 | Korvettenrumpfmodul | Schiffsmodul Korvette | 2 700 000 | 8 437,5 | 320 | 12,6 | 17 500 | 72 | 1 260 000 | 25 × Strukturzelle, 25 × Panzerbaugruppe, 25 × Besatzungsbaugruppe |
+| 124 | 6 | Korvettenantriebsmodul | Schiffsmodul Korvette | 1 495 800 | 3 116,25 | 480 | 27,7 | 17 627 | 72 | 1 269 144 | 25 × Triebwerkskern, 52 × Manövertriebwerk, 25 × Reaktionsmassensystem, 25 × Eleriumtreibstoffkern |
+| 125 | 6 | Korvettenenergiemodul | Schiffsmodul Korvette | 353 160 | 735,75 | 480 | 27,67 | 17 608 | 72 | 1 267 776 | 25 × Eleriumenergiezelle, 25 × Energieverteiler, 26 × Energiespeicherzelle |
+| 126 | 6 | Korvettenelektronikmodul | Schiffsmodul Korvette | 175 500 | 675 | 260 | 12,6 | 17 500 | 72 | 1 260 000 | 25 × Navigationssystem, 25 × Sensorfeld, 25 × Kommunikationsfeld |
+| 127 | 6 | Korvettenwaffenmodul | Schiffsmodul Korvette | 556 200 | 1 158,75 | 480 | 12,66 | 17 585 | 72 | 1 266 120 | 25 × Strahlenwaffenbaugruppe, 25 × Lenkflugkörperbaugruppe, 26 × Gefechtsleitsystem |
+| 128 | 6 | Korvettenversorgungsmodul | Schiffsmodul Korvette | 1 495 800 | 8 310 | 180 | 12,69 | 17 627 | 72 | 1 269 144 | 26 × Lebenserhaltungsbaugruppe, 25 × Besatzungsbaugruppe, 25 × Frachtumschlagbaugruppe |
+| 129 | 6 | Zerstörerrumpfmodul | Schiffsmodul Zerstörer | 29 894 400 | 93 420 | 320 | 221,44 | 184 533 | 120 | 22 143 960 | 308 × Strukturzelle, 308 × Panzerbaugruppe, 152 × Besatzungsbaugruppe |
+| 130 | 6 | Zerstörerantriebsmodul | Schiffsmodul Zerstörer | 12 457 800 | 25 953,75 | 480 | 313,75 | 184 560 | 120 | 22 147 200 | 308 × Triebwerkskern, 151 × Manövertriebwerk, 154 × Reaktionsmassensystem, 154 × Eleriumtreibstoffkern |
+| 131 | 6 | Zerstörerenergiemodul | Schiffsmodul Zerstörer | 7 641 000 | 15 918,75 | 480 | 313,76 | 184 565 | 120 | 22 147 800 | 154 × Fusionsreaktorkern, 151 × Eleriumenergiezelle, 154 × Energieverteiler |
+| 132 | 6 | Zerstörerelektronikmodul | Schiffsmodul Zerstörer | 1 164 240 | 4 477,85 | 260 | 221,76 | 184 800 | 120 | 22 176 000 | 154 × Navigationssystem, 154 × Gefechtsleitsystem, 154 × Kommunikationsfeld |
+| 133 | 6 | Zerstörerwaffenmodul | Schiffsmodul Zerstörer | 7 642 080 | 15 921 | 480 | 221,51 | 184 591 | 120 | 22 150 920 | 308 × Projektilwaffenbaugruppe, 308 × Lenkflugkörperbaugruppe, 150 × Schwerer Gefechtskopf |
+| 134 | 6 | Zerstörerversorgungsmodul | Schiffsmodul Zerstörer | 9 147 600 | 50 820 | 180 | 221,76 | 184 800 | 120 | 22 176 000 | 154 × Lebenserhaltungsbaugruppe, 154 × Besatzungsbaugruppe, 154 × Frachtumschlagbaugruppe |
+| 135 | 6 | Kreuzerrumpfmodul | Schiffsmodul Kreuzer | 297 653 400 | 930 166,88 | 320 | 3 890,89 | 2 161 608 | 180 | 389 089 440 | 3 242 × Strukturzelle, 3 242 × Panzerbaugruppe, 1 083 × Strahlenschutzsegment |
+| 136 | 6 | Kreuzerantriebsmodul | Schiffsmodul Kreuzer | 140 178 600 | 292 038,75 | 480 | 4 542,82 | 2 163 250 | 180 | 389 385 000 | 3 245 × Triebwerkskern, 2 163 × Manövertriebwerk, 2 163 × Reaktionsmassensystem, 1 082 × Eleriumtreibstoffkern |
+| 137 | 6 | Kreuzerenergiemodul | Schiffsmodul Kreuzer | 66 576 600 | 138 701,25 | 480 | 5 191,16 | 2 162 982 | 180 | 389 336 760 | 2 157 × Eleriumenergiezelle, 1 082 × Fusionsreaktorkern, 2 163 × Energieverteiler |
+| 138 | 6 | Kreuzerelektronikmodul | Schiffsmodul Kreuzer | 12 860 640 | 49 464 | 260 | 3 897,16 | 2 165 091 | 180 | 389 716 380 | 1 083 × Navigationssystem, 2 165 × Sensorfeld, 1 083 × Gefechtsleitsystem, 1 081 × Kommunikationsfeld |
+| 139 | 6 | Kreuzerwaffenmodul | Schiffsmodul Kreuzer | 63 110 880 | 131 481 | 480 | 3 895,73 | 2 164 296 | 180 | 389 573 280 | 2 164 × Strahlenwaffenbaugruppe, 1 082 × Projektilwaffenbaugruppe, 1 082 × Lenkflugkörperbaugruppe, 2 165 × Schildemitterbaugruppe |
+| 140 | 6 | Kreuzerversorgungsmodul | Schiffsmodul Kreuzer | 99 214 200 | 551 190 | 180 | 3 890,75 | 2 161 529 | 180 | 389 075 220 | 2 160 × Lebenserhaltungsbaugruppe, 2 162 × Besatzungsbaugruppe, 1 081 × Frachtumschlagbaugruppe |
+| 141 | 6 | Frachterrumpfmodul | Schiffsmodul Frachter | 12 409 200 | 38 778,75 | 320 | 102,13 | 85 111 | 120 | 10 213 320 | 213 × Strukturzelle, 70 × Leichtrahmen, 71 × Druckhabitatsegment |
+| 142 | 6 | Frachterantriebsmodul | Schiffsmodul Frachter | 4 978 800 | 10 372,5 | 480 | 144,68 | 85 108 | 120 | 10 212 960 | 71 × Triebwerkskern, 70 × Manövertriebwerk, 142 × Reaktionsmassensystem, 71 × Eleriumtreibstoffkern |
+| 143 | 6 | Frachterenergiemodul | Schiffsmodul Frachter | 3 446 280 | 7 179,75 | 480 | 102,11 | 85 093 | 120 | 10 211 160 | 71 × Fusionsreaktorkern, 71 × Energieverteiler, 69 × Energiespeicherzelle |
+| 144 | 6 | Frachterelektronikmodul | Schiffsmodul Frachter | 350 503,2 | 1 348,09 | 260 | 102,26 | 85 218 | 120 | 10 226 160 | 71 × Navigationssystem, 72 × Logistikchip, 71 × Kommunikationsfeld |
+| 145 | 6 | Frachterladungsmodul | Schiffsmodul Frachter | 9 202 431,6 | 51 124,62 | 180 | 102,19 | 85 158 | 120 | 10 218 960 | 213 × Frachtumschlagbaugruppe, 71 × Strukturzelle, 11 × Logistikchip |
+| 146 | 6 | Frachterversorgungsmodul | Schiffsmodul Frachter | 8 434 800 | 46 860 | 180 | 102,24 | 85 200 | 120 | 10 224 000 | 71 × Lebenserhaltungsbaugruppe, 71 × Besatzungsbaugruppe, 71 × Fertigungsmaschinenbaugruppe |
+| 147 | 6 | Trägerschiffrumpfmodul | Schiffsmodul Trägerschiff | 81 102 600 | 253 445,62 | 320 | 1 716,46 | 715 190 | 240 | 171 645 600 | 954 × Strukturzelle, 715 × Panzerbaugruppe, 476 × Druckhabitatsegment |
+| 148 | 6 | Trägerschiffantriebsmodul | Schiffsmodul Trägerschiff | 34 754 400 | 72 405 | 480 | 1 859,29 | 715 111 | 240 | 171 626 640 | 715 × Triebwerkskern, 478 × Manövertriebwerk, 715 × Reaktionsmassensystem, 238 × Eleriumtreibstoffkern |
+| 149 | 6 | Trägerschiffenergiemodul | Schiffsmodul Trägerschiff | 15 471 000 | 32 231,25 | 480 | 2 148,75 | 716 250 | 240 | 171 900 000 | 712 × Eleriumenergiezelle, 239 × Fusionsreaktorkern, 478 × Energieverteiler |
+| 150 | 6 | Trägerschiffelektronikmodul | Schiffsmodul Trägerschiff | 3 218 400 | 12 378,46 | 260 | 1 716,48 | 715 200 | 240 | 171 648 000 | 238 × Navigationssystem, 477 × Sensorfeld, 478 × Kommunikationsfeld, 238 × Gefechtsleitsystem |
+| 151 | 6 | Trägerschiffhangarmodul | Schiffsmodul Trägerschiff | 64 395 075,6 | 357 750,42 | 180 | 1 716,72 | 715 301 | 240 | 171 672 240 | 954 × Hangarbaugruppe, 477 × Frachtumschlagbaugruppe, 1 × Logistikchip |
+| 152 | 6 | Trägerschiffversorgungsmodul | Schiffsmodul Trägerschiff | 43 761 600 | 243 120 | 180 | 1 716,14 | 715 059 | 240 | 171 614 160 | 718 × Lebenserhaltungsbaugruppe, 715 × Besatzungsbaugruppe, 238 × Fertigungsmaschinenbaugruppe |
+| 153 | 6 | Mannschaftstransportrumpfmodul | Schiffsmodul Mannschaftstransporter | 23 403 600 | 73 136,25 | 320 | 238,83 | 165 983 | 144 | 23 901 552 | 277 × Strukturzelle, 185 × Panzerbaugruppe, 182 × Druckhabitatsegment |
+| 154 | 6 | Mannschaftstransportantriebsmodul | Schiffsmodul Mannschaftstransporter | 9 460 800 | 19 710 | 480 | 294,15 | 165 979 | 144 | 23 900 976 | 184 × Triebwerkskern, 188 × Manövertriebwerk, 184 × Reaktionsmassensystem, 92 × Eleriumtreibstoffkern |
+| 155 | 6 | Mannschaftstransportenergiemodul | Schiffsmodul Mannschaftstransporter | 4 583 520 | 9 549 | 480 | 294,31 | 166 070 | 144 | 23 914 080 | 96 × Eleriumenergiezelle, 92 × Fusionsreaktorkern, 92 × Energieverteiler |
+| 156 | 6 | Mannschaftstransportelektronikmodul | Schiffsmodul Mannschaftstransporter | 647 460 | 2 490,23 | 260 | 238,88 | 166 015 | 144 | 23 906 160 | 92 × Navigationssystem, 93 × Kommunikationsfeld, 92 × Sensorfeld |
+| 157 | 6 | Mannschaftstransporttruppenmodul | Schiffsmodul Mannschaftstransporter | 12 959 740,8 | 71 998,56 | 180 | 238,94 | 166 061 | 144 | 23 912 784 | 277 × Truppenunterbringungsbaugruppe, 92 × Frachtumschlagbaugruppe, 68 × Medizinchip |
+| 158 | 6 | Mannschaftstransportversorgungsmodul | Schiffsmodul Mannschaftstransporter | 7 175 520 | 39 864 | 180 | 239 | 166 100 | 144 | 23 918 400 | 277 × Lebenserhaltungsbaugruppe, 185 × Besatzungsbaugruppe, 87 × Pharmabasis |
 | 159 | 6 | Fördermodul | Gebäudemodul | 122 100 | 254,38 | 480 | 1,2 | 1 000 | 120 | 120 000 | Fördermaschinenbaugruppe, Energieverteiler, Strukturzelle |
 | 160 | 6 | Raffineriemodul | Gebäudemodul | 132 900 | 276,88 | 480 | 1,2 | 1 000 | 120 | 120 000 | Raffineriebaugruppe, Energieverteiler, Strukturzelle |
 | 161 | 6 | Werkstoffmodul | Gebäudemodul | 170 700 | 355,62 | 480 | 1,2 | 1 000 | 120 | 120 000 | Fertigungsmaschinenbaugruppe, Raffineriebaugruppe, Energieverteiler |
@@ -244,12 +253,12 @@ Nebenprodukte nicht Teil der Produktcharge sind.
 | 182 | 6 | Unterhaltungselektronik | Konsumware | 200 | 0,4 | 500 | 0,0048 | 60 | 8 | 480 | Unterhaltungselektronikbasis |
 | 183 | 6 | Infanterieausrüstung | Konsumware | 3 000 | 6 | 500 | 0,0048 | 60 | 8 | 480 | Schutzkleidung, Kommunikationschip, Haushaltswarenbasis |
 | 184 | 6 | Schwere Bodenausrüstung | Konsumware | 10 000 | 20 | 500 | 0,048 | 200 | 24 | 4 800 | Panzerbaugruppe, Projektilwaffenbaugruppe, Gefechtschip |
-| 185 | 7 | Korvette | Schiff | 278 500 | 1 265,91 | 220 | 7,2 | 2 500 | 240 | 600 000 | Korvettenrumpfmodul, Korvettenantriebsmodul, Korvettenenergiemodul, Korvettenelektronikmodul, Korvettenwaffenmodul, Korvettenversorgungsmodul |
-| 186 | 7 | Zerstörer | Schiff | 455 200 | 1 750,77 | 260 | 17,4 | 4 500 | 360 | 1 620 000 | Zerstörerrumpfmodul, Zerstörerantriebsmodul, Zerstörerenergiemodul, Zerstörerelektronikmodul, Zerstörerwaffenmodul, Zerstörerversorgungsmodul |
-| 187 | 7 | Kreuzer | Schiff | 647 700 | 2 024,06 | 320 | 49,8 | 8 000 | 600 | 4 800 000 | Kreuzerrumpfmodul, Kreuzerantriebsmodul, Kreuzerenergiemodul, Kreuzerelektronikmodul, Kreuzerwaffenmodul, Kreuzerversorgungsmodul |
-| 188 | 7 | Frachter | Schiff | 563 800 | 5 125,45 | 110 | 12,6 | 4 000 | 300 | 1 200 000 | Frachterrumpfmodul, Frachterantriebsmodul, Frachterenergiemodul, Frachterelektronikmodul, Frachterladungsmodul, Frachterversorgungsmodul |
-| 189 | 7 | Trägerschiff | Schiff | 1 048 700 | 7 490,71 | 140 | 88,8 | 12 000 | 720 | 8 640 000 | Trägerschiffrumpfmodul, Trägerschiffantriebsmodul, Trägerschiffenergiemodul, Trägerschiffelektronikmodul, Trägerschiffhangarmodul, Trägerschiffversorgungsmodul |
-| 190 | 7 | Mannschaftstransporter | Schiff | 650 500 | 4 065,62 | 160 | 26,4 | 6 000 | 420 | 2 520 000 | Mannschaftstransportrumpfmodul, Mannschaftstransportantriebsmodul, Mannschaftstransportenergiemodul, Mannschaftstransportelektronikmodul, Mannschaftstransporttruppenmodul, Mannschaftstransportversorgungsmodul |
+| 185 | 7 | Korvette | Schiff | 7 000 000 | 31 818,18 | 220 | 181 | 2 500 | 240 | 600 000 | Korvettenrumpfmodul, Korvettenantriebsmodul, Korvettenenergiemodul, Korvettenelektronikmodul, Korvettenwaffenmodul, Korvettenversorgungsmodul |
+| 186 | 7 | Zerstörer | Schiff | 70 000 000 | 269 230,77 | 260 | 2 675,7 | 12 500 | 480 | 6 000 000 | Zerstörerrumpfmodul, Zerstörerantriebsmodul, Zerstörerenergiemodul, Zerstörerelektronikmodul, Zerstörerwaffenmodul, Zerstörerversorgungsmodul |
+| 187 | 7 | Kreuzer | Schiff | 700 000 000 | 2 187 500 | 320 | 53 821,2 | 50 000 | 1 200 | 60 000 000 | Kreuzerrumpfmodul, Kreuzerantriebsmodul, Kreuzerenergiemodul, Kreuzerelektronikmodul, Kreuzerwaffenmodul, Kreuzerversorgungsmodul |
+| 188 | 7 | Frachter | Schiff | 40 000 000 | 363 636,36 | 110 | 893,9 | 4 000 | 400 | 1 600 000 | Frachterrumpfmodul, Frachterantriebsmodul, Frachterenergiemodul, Frachterelektronikmodul, Frachterladungsmodul, Frachterversorgungsmodul |
+| 189 | 7 | Trägerschiff | Schiff | 250 000 000 | 1 785 714,29 | 140 | 21 169,1 | 24 000 | 900 | 21 600 000 | Trägerschiffrumpfmodul, Trägerschiffantriebsmodul, Trägerschiffenergiemodul, Trägerschiffelektronikmodul, Trägerschiffhangarmodul, Trägerschiffversorgungsmodul |
+| 190 | 7 | Mannschaftstransporter | Schiff | 60 000 000 | 375 000 | 160 | 2 435 | 7 500 | 480 | 3 600 000 | Mannschaftstransportrumpfmodul, Mannschaftstransportantriebsmodul, Mannschaftstransportenergiemodul, Mannschaftstransportelektronikmodul, Mannschaftstransporttruppenmodul, Mannschaftstransportversorgungsmodul |
 | 191 | 7 | Rohstoffförderanlage | Planetare Anlage | 302 800 | 865,14 | 350 | 15 | 4 000 | 360 | 1 440 000 | zwei Fördermodule, Kraftwerksmodul |
 | 192 | 7 | Raffinerie | Planetare Anlage | 453 000 | 1 294,29 | 350 | 15 | 4 000 | 360 | 1 440 000 | zwei Raffineriemodule, Kraftwerksmodul, Lagermodul |
 | 193 | 7 | Werkstofffabrik | Planetare Anlage | 530 900 | 1 516,86 | 350 | 15 | 4 000 | 360 | 1 440 000 | zwei Werkstoffmodule, Kraftwerksmodul, Lagermodul |

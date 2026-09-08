@@ -11,7 +11,6 @@ export type GroundUnitClass = 'Soldier' | 'LightDrone' | 'MediumDrone' | 'HeavyD
 export interface GroundUnitTypeDef {
   productTypeId: Id;
   class: GroundUnitClass;
-  transportSlotUsage: number;
   /**
    * Drohnenklasse, die gekontert wird (×2 Schaden), analog zu den
    * Schiffsklassen (Mechanik/05_..., §3). Kein eigener Angriffs-/
@@ -43,10 +42,18 @@ export interface GroundForceUnitStack {
   reserveCount: number;
 }
 
+/**
+ * Ein Verband steht ENTWEDER in einer Kolonie (`colonyId` gesetzt, `fleetId`
+ * null) ODER an Bord einer Flotte (`fleetId` gesetzt, `colonyId` null) —
+ * nie beides (Umsetzungskonzept/28_...md). An Bord befinden sich
+ * ausschließlich Soldaten; Drohnen reisen als gewöhnliche Fracht im Frachter
+ * und liegen dafür im Warenlager statt im Verband.
+ */
 export interface GroundForceGroup {
   id: Id;
   ownerId: Id;
-  colonyId: Id;
+  colonyId: Id | null;
+  fleetId: Id | null;
   units: GroundForceUnitStack[];
 }
 

@@ -102,7 +102,9 @@ class ColonyCommandsUsabilityTest {
 
     Colonization running = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), usable.id);
     assertEquals(usable.id, running.planetId);
-    assertEquals(0, fleet.ships.get(0).quantity, "Das Kolonisationsschiff wird bei der Landung verbraucht");
+    assertTrue(fleet.ships.isEmpty(), "Das Kolonisationsschiff wird bei der Landung verbraucht");
+    assertTrue(b.state().fleets.stream().noneMatch(f -> f.id.equals(fleet.id)),
+        "Mit dem letzten Schiff verschwindet auch die Flotte – keine schiffslose Geisterflotte");
     assertTrue(b.state().colonies.stream().noneMatch(c -> c.planetId.equals(usable.id)),
         "Vor Ablauf des Spieltags darf es noch KEINE Kolonie geben");
     assertEquals(Clock.hoursToMs(GameConstants.COLONIZATION_HOURS), running.endsAt - running.startedAt, 1);

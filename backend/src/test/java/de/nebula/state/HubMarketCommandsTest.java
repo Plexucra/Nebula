@@ -45,8 +45,8 @@ class HubMarketCommandsTest {
 
     HubOrder sell = orders.stream().filter(o -> o.productTypeId.equals("p_ferrometall") && o.side == HubOrderSide.Sell).findFirst().orElseThrow();
     HubOrder buy = orders.stream().filter(o -> o.productTypeId.equals("p_ferrometall") && o.side == HubOrderSide.Buy).findFirst().orElseThrow();
-    assertEquals(2.0, sell.limitPrice, 0.001, "Erz: workHoursPerUnit 100 × 0,02 Cr, kein Rezept");
-    assertEquals(2.4, buy.limitPrice, 0.001, "Kauf-Startpreis = Kosten × 1,2");
+    assertEquals(2.4, buy.limitPrice, 0.001, "Kauf-Startpreis = Kosten (Erz: workHoursPerUnit 100 × 0,02 Cr) × 1,2");
+    assertEquals(2.64, sell.limitPrice, 0.001, "Verkaufs-Startpreis = Kaufpreis × 1,1 – muss über dem Kaufpreis liegen, sonst risikofreie Arbitrage");
   }
 
   @Test
@@ -70,14 +70,14 @@ class HubMarketCommandsTest {
     Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, playerId);
     double balanceBefore = wallet.balance;
 
-    // MM-Verkaufsorder für Erz liegt bei 2,0 Cr; Kauf-Limit deutlich darüber -> sofortige Vollausführung
+    // MM-Verkaufsorder für Erz liegt bei 2,64 Cr; Kauf-Limit deutlich darüber -> sofortige Vollausführung
     // zum Preis der RUHENDEN (Maker-)Order, nicht zum eigenen Limit.
     HubMarketCommands.createBuyOrder(state, ids, playerId, hub, "p_ferrometall", 3, 5.0);
 
     boolean stillResting = HubMarketCommands.ordersInSystem(state, hub).stream().anyMatch(o -> playerId.equals(o.ownerId));
     assertTrue(!stillResting, "die Kauf-Order sollte vollständig ausgeführt und daher weg sein");
     assertEquals(3, HubDepot.qty(state, hub, playerId, "p_ferrometall"));
-    assertEquals(balanceBefore - 6.0, wallet.balance, 0.001, "3 Einheiten zu 2,0 Cr (Maker-Preis), nicht zu 5,0 Cr (eigenes Limit)");
+    assertEquals(balanceBefore - 7.92, wallet.balance, 0.001, "3 Einheiten zu 2,64 Cr (Maker-Preis), nicht zu 5,0 Cr (eigenes Limit)");
   }
 
   @Test
@@ -89,25 +89,25 @@ class HubMarketCommandsTest {
     Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, playerId);
     double balanceBefore = wallet.balance;
 
-    // MM-Lot ist 5 Einheiten; die nachgestellte Order liegt bei 2,0 × 1,1 = 2,2 Cr und kreuzt das
-    // Kauf-Limit von 2,0 nicht mehr -> genau EIN Teil-Fill von 5, Rest bleibt als Order stehen.
-    HubMarketCommands.createBuyOrder(state, ids, playerId, hub, "p_ferrometall", 10, 2.0);
+    // MM-Lot ist 5 Einheiten; die nachgestellte Order liegt bei 2,64 × 1,1 = 2,9 Cr und kreuzt das
+    // Kauf-Limit von 2,64 nicht mehr -> genau EIN Teil-Fill von 5, Rest bleibt als Order stehen.
+    HubMarketCommands.createBuyOrder(state, ids, playerId, hub, "p_ferrometall", 10, 2.64);
 
     HubOrder resting = HubMarketCommands.ordersInSystem(state, hub).stream()
         .filter(o -> playerId.equals(o.ownerId)).findFirst().orElseThrow();
     assertEquals(5, resting.remainingQuantity, 0.001);
-    assertEquals(10.0, resting.escrowedCredits, 0.001, "10 verbleibende Einheiten × 2,0 Cr Limit");
+    assertEquals(13.2, resting.escrowedCredits, 0.001, "5 verbleibende Einheiten × 2,64 Cr Limit");
     assertEquals(5, HubDepot.qty(state, hub, playerId, "p_ferrometall"));
-    assertEquals(balanceBefore - 20.0, wallet.balance, 0.001, "Gesamtes Escrow (10 × 2,0) sofort abgebucht, davon 10 für den Fill verbraucht, 10 noch gebunden");
+    assertEquals(balanceBefore - 26.4, wallet.balance, 0.001, "Gesamtes Escrow (10 × 2,64) sofort abgebucht, davon 13,2 für den Fill verbraucht, 13,2 noch gebunden");
 
     boolean repostedFurtherOut = HubMarketCommands.ordersInSystem(state, hub).stream()
         .anyMatch(o -> o.ownerId == null && o.side == HubOrderSide.Sell && o.productTypeId.equals("p_ferrometall")
-            && Math.abs(o.limitPrice - 2.2) < 0.001);
+            && Math.abs(o.limitPrice - 2.9) < 0.001);
     assertTrue(repostedFurtherOut, "Handelsgilde muss nach der Ausführung ihre Verkaufsorder 10% teurer nachstellen");
 
     // --- Zurückziehen erstattet exakt den Rest -------------------------------
     HubMarketCommands.cancelOrder(state, playerId, resting.id);
-    assertEquals(balanceBefore - 10.0, wallet.balance, 0.001, "nur die tatsächlich ausgeführten 10 Cr bleiben abgebucht");
+    assertEquals(balanceBefore - 13.2, wallet.balance, 0.001, "nur die tatsächlich ausgeführten 5 × 2,64 Cr bleiben abgebucht");
     assertTrue(HubMarketCommands.ordersInSystem(state, hub).stream().noneMatch(o -> playerId.equals(o.ownerId)));
   }
 
@@ -126,13 +126,13 @@ class HubMarketCommandsTest {
     List<HubOrder> orders = HubMarketCommands.ordersInSystem(state, hub);
     boolean oldPriceStillResting = orders.stream()
         .anyMatch(o -> o.ownerId == null && o.side == HubOrderSide.Sell && o.productTypeId.equals("p_ferrometall")
-            && Math.abs(o.limitPrice - 2.0) < 0.001);
-    assertTrue(!oldPriceStillResting, "die alte 2,0-Cr-Order darf nach der Teilausführung nicht mehr im Buch stehen");
+            && Math.abs(o.limitPrice - 2.64) < 0.001);
+    assertTrue(!oldPriceStillResting, "die alte 2,64-Cr-Order darf nach der Teilausführung nicht mehr im Buch stehen");
 
     HubOrder repost = orders.stream()
         .filter(o -> o.ownerId == null && o.side == HubOrderSide.Sell && o.productTypeId.equals("p_ferrometall"))
         .findFirst().orElseThrow();
-    assertEquals(2.2, repost.limitPrice, 0.001);
+    assertEquals(2.9, repost.limitPrice, 0.001);
     assertEquals(5, repost.remainingQuantity, 0.001, "die nachgestellte Order hat wieder das volle Los, nicht den Rest der alten");
   }
 

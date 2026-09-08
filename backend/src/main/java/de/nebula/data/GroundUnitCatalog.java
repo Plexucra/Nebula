@@ -7,9 +7,14 @@ import java.util.List;
 
 /**
  * Bodeneinheiten-Katalog – die Daten liegen in
- * {@code shared/catalog/ground-units.json} (siehe {@link CatalogJson}).
- * Transport-Slot-Verbrauch nach Mechanik/05_..., §6 (vereinfacht). Keine
+ * {@code shared/catalog/ground-units.json} (siehe {@link CatalogJson}). Keine
  * attack/defense-Werte: militärischer Wert = Produktionsaufwand.
+ *
+ * <p>Kein {@code transportSlotUsage} mehr: seit Umsetzungskonzept/28_...md
+ * reisen Soldaten über {@code ShipTypeDef.troopCapacity} des
+ * Mannschaftstransporters und Drohnen als gewöhnliche Fracht im Frachter
+ * (Masse und Volumen des Produkts). Ein gemeinsames Slot-Maß für beide gibt
+ * es damit nicht mehr.</p>
  *
  * <p>Konterrichtung (analog zur Schiffs-Kontermatrix): Leichte Drohne schlägt
  * Schwere, Schwere schlägt Mittlere, Mittlere schlägt Leichte – abgebildet

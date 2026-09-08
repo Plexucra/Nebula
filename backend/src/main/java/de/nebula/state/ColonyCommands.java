@@ -246,13 +246,10 @@ public final class ColonyCommands {
     if (fleet == null) {
       throw new CommandException("Dafür muss eine eigene Flotte mit einem Kolonisationsschiff im Orbit dieses Planeten liegen.");
     }
-    // Das Schiff wird bei der Landung verbraucht – es IST die neue Kolonie.
-    for (FleetShipGroup g : fleet.ships) {
-      if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(g.shipProductTypeId)) {
-        g.quantity -= 1;
-        break;
-      }
-    }
+    // Das Schiff wird bei der Landung verbraucht – es IST die neue Kolonie. War es das
+    // letzte Schiff der Flotte, verschwindet auch die Flotte (siehe consumeShips): eine
+    // reine Kolonisationsflotte hinterlässt sonst eine schiffslose Geisterflotte.
+    FleetCommands.consumeShips(state, fleet, GameConstants.COLONY_SHIP_PRODUCT_ID, 1);
 
     long t = Clock.now();
     Colonization colonization = new Colonization();
