@@ -28,3 +28,40 @@
     }
   </div>
 </div>
+
+<div class="panel corner-frame">
+  <div class="panel-header"><h2>Gelandete Verbände</h2></div>
+  @if (error(); as msg) { <div class="error">{{ msg }}</div> }
+  <div class="panel-body garrison-grid">
+    @for (group of landedGroups(); track group.id) {
+      <div class="garrison-card">
+        <div class="card-head">
+          <strong>{{ planetName(group.planetId!) }}</strong>
+          <span class="tag">{{ totalGroupSize(group) | number:'1.0-0' }} Einheiten</span>
+        </div>
+        <div class="units">
+          @for (u of group.units; track u.unitProductTypeId) {
+            <span class="unit-chip">{{ productName(u.unitProductTypeId) }} × {{ u.activeCount + u.reserveCount }}</span>
+          }
+        </div>
+        @if (group.pendingMoveColonyId) {
+          <p class="hint">Unterwegs …</p>
+        } @else if (ownColoniesOnPlanet(group.planetId!).length > 0) {
+          <div class="form-row">
+            <select [(ngModel)]="moveTarget[group.id]">
+              <option value="">Verlegen nach…</option>
+              @for (c of ownColoniesOnPlanet(group.planetId!); track c.id) {
+                <option [value]="c.id">{{ c.name }}</option>
+              }
+            </select>
+            <button class="primary small" (click)="submitMove(group)" [disabled]="busy() === group.id">Verlegen</button>
+          </div>
+        } @else {
+          <p class="empty-hint">Keine eigene Kolonie auf diesem Planeten.</p>
+        }
+      </div>
+    } @empty {
+      <p class="empty-hint">Keine gelandeten Verbände. Landung: Flottenübersicht, Flotte im Planetenorbit.</p>
+    }
+  </div>
+</div>

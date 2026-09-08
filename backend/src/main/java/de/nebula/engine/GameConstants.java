@@ -32,6 +32,8 @@ public final class GameConstants {
   public static final double ELERIUM_UPKEEP_LEVEL_EXPONENT = SharedConstants.eleriumUpkeepLevelExponent();
   public static final String INFRASTRUCTURE_FUEL_PRODUCT_ID = "p_elerium_stabil";
   public static final String INFRASTRUCTURE_BUILDING_ID = "b_infrastructure";
+  /** Planetare Abwehr (Mechanik/05_...md §9, {@code LandingCommands}-Landungsabwehr). */
+  public static final String PLANETARY_DEFENSE_BUILDING_ID = "b_defense";
   /** Bebauungsplätze je Infrastruktur-Stufe; jede Stufe jedes anderen Gebäudes belegt genau einen. */
   public static final int SLOTS_PER_INFRASTRUCTURE_LEVEL = SharedConstants.slotsPerInfrastructureLevel();
   public static final double INFRASTRUCTURE_COST_GROWTH_PER_LEVEL = SharedConstants.infrastructureCostGrowthPerLevel();

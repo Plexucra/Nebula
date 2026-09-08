@@ -24,6 +24,7 @@ import de.nebula.state.EconomyTick;
 import de.nebula.state.FleetCommands;
 import de.nebula.state.GatewayCommands;
 import de.nebula.state.HubMarketCommands;
+import de.nebula.state.LandingCommands;
 import de.nebula.state.MarketCommands;
 import de.nebula.state.MessageCommands;
 import de.nebula.state.NotificationCommands;
@@ -366,6 +367,24 @@ public class GameSocket {
         yield null;
       }
       case "fleetTroopCapacity" -> TroopTransportCommands.fleetTroopCapacity(state, text(payload, "fleetId"));
+
+      // Landung (Umsetzungskonzept/04_...md): von Bord auf die Planetenoberfläche, von dort
+      // per moveGroundForces weiter in eine eigene Kolonie auf demselben Planeten.
+      case "land" -> LandingCommands.land(state, ids, requirePlayerId(), text(payload, "fleetId"), text(payload, "targetPlanetId"));
+      case "moveGroundForces" -> {
+        LandingCommands.moveGroundForces(state, requirePlayerId(), text(payload, "groupId"), text(payload, "targetColonyId"));
+        yield null;
+      }
+      case "groundForcesAtPlanet" -> {
+        String playerId = requirePlayerId();
+        yield state.groundForceGroups.stream()
+            .filter(g -> playerId.equals(g.ownerId) && text(payload, "planetId").equals(g.planetId))
+            .toList();
+      }
+      case "landedGroundForces" -> {
+        String playerId = requirePlayerId();
+        yield state.groundForceGroups.stream().filter(g -> playerId.equals(g.ownerId) && g.planetId != null).toList();
+      }
       case "moveFleet" -> {
         FleetCommands.moveFleet(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "destinationSystemId"));
         yield null;

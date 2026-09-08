@@ -43,18 +43,24 @@ export interface GroundForceUnitStack {
 }
 
 /**
- * Ein Verband steht ENTWEDER in einer Kolonie (`colonyId` gesetzt, `fleetId`
- * null) ODER an Bord einer Flotte (`fleetId` gesetzt, `colonyId` null) —
- * nie beides (Umsetzungskonzept/28_...md). An Bord befinden sich
- * ausschließlich Soldaten; Drohnen reisen als gewöhnliche Fracht im Frachter
- * und liegen dafür im Warenlager statt im Verband.
+ * Ein Verband steht ENTWEDER in einer Kolonie (`colonyId` gesetzt) ODER an
+ * Bord einer Flotte (`fleetId` gesetzt) ODER auf der Oberfläche eines
+ * Planeten (`planetId` gesetzt, seit Umsetzungskonzept/04_...md) — genau
+ * eines von den dreien. An Bord befinden sich ausschließlich Soldaten
+ * (Umsetzungskonzept/28_...md); Drohnen reisen als gewöhnliche Fracht im
+ * Frachter und liegen dafür im Warenlager statt im Verband.
  */
 export interface GroundForceGroup {
   id: Id;
   ownerId: Id;
   colonyId: Id | null;
   fleetId: Id | null;
+  planetId: Id | null;
   units: GroundForceUnitStack[];
+  /** Ziel einer laufenden `moveGroundForces`-Verlegung – `null` ohne laufende Verlegung. */
+  pendingMoveColonyId: Id | null;
+  /** Zeitpunkt, zu dem eine laufende Verlegung abgeschlossen ist (genau ein Kampftick). */
+  moveCompletesAt: number | null;
 }
 
 /** Sequentieller Rekrutierungs-Auftrag, siehe `ProductionQueueEntry` und Konzeption/Umsetzungskonzept/10_...md. */

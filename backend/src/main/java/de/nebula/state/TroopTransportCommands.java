@@ -201,7 +201,8 @@ public final class TroopTransportCommands {
     }
   }
 
-  private static double count(GroundForceGroup group, String unitProductTypeId) {
+  /** Package-private statt private: {@code LandingCommands} teilt sich diese Bestands-Buchhaltung. */
+  static double count(GroundForceGroup group, String unitProductTypeId) {
     double total = 0;
     for (GroundForceUnitStack u : group.units) {
       if (u.unitProductTypeId.equals(unitProductTypeId)) total += u.activeCount + u.reserveCount;
@@ -210,7 +211,7 @@ public final class TroopTransportCommands {
   }
 
   /** Nimmt zuerst aus der Reserve, erst danach aus den aktiven Einheiten – aktive Verteidigung bleibt so lange wie möglich stehen. */
-  private static void remove(GroundForceGroup group, String unitProductTypeId, double quantity) {
+  static void remove(GroundForceGroup group, String unitProductTypeId, double quantity) {
     double rest = quantity;
     for (GroundForceUnitStack u : group.units) {
       if (!u.unitProductTypeId.equals(unitProductTypeId)) continue;
@@ -224,7 +225,7 @@ public final class TroopTransportCommands {
     group.units.removeIf(u -> u.activeCount <= 0 && u.reserveCount <= 0);
   }
 
-  private static void add(GroundForceGroup group, String unitProductTypeId, double quantity) {
+  static void add(GroundForceGroup group, String unitProductTypeId, double quantity) {
     for (GroundForceUnitStack u : group.units) {
       if (u.unitProductTypeId.equals(unitProductTypeId)) {
         u.reserveCount += (int) quantity;
@@ -238,7 +239,7 @@ public final class TroopTransportCommands {
     group.units.add(stack);
   }
 
-  private static boolean isEmpty(GroundForceGroup group) {
+  static boolean isEmpty(GroundForceGroup group) {
     return group.units.stream().allMatch(u -> u.activeCount <= 0 && u.reserveCount <= 0);
   }
 }

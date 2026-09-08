@@ -23,3 +23,10 @@
   border-radius: 999px;
   color: var(--text-mid);
 }
+.form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  select { flex: 1 1 160px; }
+}

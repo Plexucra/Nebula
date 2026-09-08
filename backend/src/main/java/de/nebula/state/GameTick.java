@@ -49,6 +49,7 @@ public class GameTick {
       ShipyardCommands.processShipyardCompletions(state, ids, t);
       ColonyCommands.processColonizations(state, ids, t);
       RecruitmentCommands.processRecruitmentCompletions(state, ids, t);
+      LandingCommands.processGroundForceMovements(state, ids, t);
       Specializations.decaySpecializations(state, t);
       EconomyTick.payUpkeepAndWages(state, ids);
       EconomyTick.runConsumption(state, ids);

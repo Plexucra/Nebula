@@ -381,6 +381,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   deployDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void> {
     return this.send('deployDrones', { colonyId, unitProductTypeId, quantity });
   }
+  land(fleetId: Id, targetPlanetId: Id): Promise<GroundForceGroup> {
+    return this.send('land', { fleetId, targetPlanetId });
+  }
   moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void> {
     return this.send('moveFleet', { fleetId, destinationSystemId });
   }
@@ -404,6 +407,15 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
 
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined> {
     return this.poll('groundForces', () => ({ colonyId }), undefined);
+  }
+  groundForcesAtPlanet(planetId: Id): Signal<GroundForceGroup[]> {
+    return this.poll('groundForcesAtPlanet', () => ({ planetId }), []);
+  }
+  landedGroundForces(): Signal<GroundForceGroup[]> {
+    return this.poll('landedGroundForces', () => ({}), []);
+  }
+  moveGroundForces(groupId: Id, targetColonyId: Id): Promise<void> {
+    return this.send('moveGroundForces', { groupId, targetColonyId });
   }
   recruitmentQueue(colonyId: Id): Signal<RecruitmentQueueEntry[]> {
     return this.poll('recruitmentQueue', () => ({ colonyId }), []);

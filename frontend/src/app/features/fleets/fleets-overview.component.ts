@@ -7,7 +7,7 @@ import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Fleet, Id } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 
-type FleetPanel = 'load' | 'unload' | 'sell' | 'move' | 'land' | 'transfer' | 'attack' | null;
+type FleetPanel = 'load' | 'unload' | 'sell' | 'move' | 'land' | 'landTroops' | 'transfer' | 'attack' | null;
 
 @Component({
   selector: 'app-fleets-overview',
@@ -245,6 +245,24 @@ export class FleetsOverviewComponent {
     const qty = this.troopQty[fleet.id] ?? 0;
     if (qty <= 0) return;
     await this.run('troops:' + fleet.id, () => this.api.disembarkSoldiers(fleet.id, qty));
+  }
+
+  // --- Landung (Umsetzungskonzept/04_...md) ---------------------------------
+  // Nicht zu verwechseln mit dem "Landen"-Panel oben (Andocken der FLOTTE an
+  // einer Kolonie, moveFleetWithinSystem): hier geht es um die Bodentruppen an
+  // Bord/in der Fracht, die den Planeten unter sich verlassen.
+  private droneCargoAboard(fleet: Fleet): boolean {
+    return fleet.cargo.some(c => this.api.productTypes().find(p => p.id === c.productTypeId)?.category === 'GroundUnit');
+  }
+  protected canLandTroops(fleet: Fleet): boolean {
+    return fleet.locationType === 'PlanetOrbit' && (this.soldiersAboard(fleet) > 0 || this.droneCargoAboard(fleet));
+  }
+  protected async submitLandTroops(fleet: Fleet): Promise<void> {
+    if (!fleet.locationPlanetId) return;
+    await this.run('landTroops:' + fleet.id, async () => {
+      await this.api.land(fleet.id, fleet.locationPlanetId!);
+      this.openPanel.set(null);
+    });
   }
 
   protected readonly refuelQty: Partial<Record<Id, number>> = {};

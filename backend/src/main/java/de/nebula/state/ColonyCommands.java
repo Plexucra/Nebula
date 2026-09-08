@@ -51,6 +51,11 @@ public final class ColonyCommands {
     return state.colonies.stream().filter(c -> c.systemId.equals(systemId)).toList();
   }
 
+  /** Alle Kolonien (aller Spieler) auf diesem Planeten – {@code LandingCommands.land} prüft jede einzeln auf Landungsabwehr. */
+  public static List<Colony> coloniesOnPlanet(GameState state, String planetId) {
+    return state.colonies.stream().filter(c -> c.planetId.equals(planetId)).toList();
+  }
+
   public static Colony colony(GameState state, String id) {
     return state.colonies.stream().filter(c -> c.id.equals(id)).findFirst().orElse(null);
   }

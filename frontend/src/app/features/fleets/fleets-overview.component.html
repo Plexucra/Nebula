@@ -212,6 +212,9 @@
               <button class="ghost small" (click)="togglePanel(fleet.id, 'sell')">Verkaufen</button>
             } @else {
               <button class="ghost small" (click)="togglePanel(fleet.id, 'land')">Landen</button>
+              @if (canLandTroops(fleet)) {
+                <button class="ghost small" (click)="togglePanel(fleet.id, 'landTroops')">Truppen landen</button>
+              }
               @if (isAtTradeHub(fleet)) {
                 <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Aus Depot laden</button>
               }
@@ -240,6 +243,16 @@
               @for (c of coloniesInFleetSystem(fleet); track c.id) {
                 <button class="ghost small" (click)="submitLand(fleet, c.id)" [disabled]="busy() === ('land:' + fleet.id)">{{ c.name }} landen</button>
               } @empty { <p class="empty-hint">Keine bekannten Kolonien in diesem System.</p> }
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'landTroops')) {
+            <div class="fleet-panel form-row">
+              <p class="hint">
+                Soldaten an Bord ({{ soldiersAboard(fleet) | number:'1.0-0' }}) und Drohnenfracht
+                kommen auf die Oberfläche dieses Planeten. Liegt hier eine feindliche, kriegführende
+                Kolonie mit aktiver Verteidigung, feuert deren Landungsabwehr zuerst.
+              </p>
+              <button class="primary small" (click)="submitLandTroops(fleet)" [disabled]="busy() === ('landTroops:' + fleet.id)">Landen</button>
             </div>
           }
           @if (isPanelOpen(fleet.id, 'load') && (fleet.locationColonyId || isAtTradeHub(fleet))) {

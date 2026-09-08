@@ -201,6 +201,14 @@ export interface GameApi {
   /** Stellt eingelagerte Drohnen wieder in die Garnison – Gegenstück zu `storeDrones`. */
   deployDrones(colonyId: Id, unitProductTypeId: Id, quantity: number): Promise<void>;
   /**
+   * Landung (Umsetzungskonzept/04_...md): Soldaten an Bord und Drohnenfracht einer eigenen
+   * Flotte im Orbit dieses Planeten kommen auf die Oberfläche – als neuer oder erweiterter
+   * `GroundForceGroup` mit gesetztem `planetId`. Feuert vorher die Landungsabwehr jeder
+   * feindlichen, kriegführenden Kolonie mit aktiver Verteidigung auf diesem Planeten
+   * (Mechanik/05_...md §8); was das kostet, fehlt entsprechend in der Rückgabe.
+   */
+  land(fleetId: Id, targetPlanetId: Id): Promise<GroundForceGroup>;
+  /**
    * Schickt eine stationierte, eigene Flotte über das (uneingeschränkt
    * offene, siehe `Gateway`) Netz los – Reisezeit richtet sich nach der
    * Anzahl Gateway-Sprünge zum Ziel, die intern hop-für-hop abgearbeitet
@@ -240,6 +248,16 @@ export interface GameApi {
 
   // --- Bodentruppen -------------------------------------------------------
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined>;
+  /** Eigene, auf diesem Planeten gelandete Verbände (`planetId` gesetzt) – siehe `land`. */
+  groundForcesAtPlanet(planetId: Id): Signal<GroundForceGroup[]>;
+  /** ALLE eigenen gelandeten Verbände, planetenübergreifend – für die Bodentruppen-Übersicht. */
+  landedGroundForces(): Signal<GroundForceGroup[]>;
+  /**
+   * Verlegt einen gelandeten Verband in eine eigene Kolonie auf demselben Planeten – genau
+   * ein Kampftick Dauer, unabhängig von der Distanz (Mechanik/05_...md §7). Angriff auf fremde
+   * Kolonien/Bodentruppen ist (noch) nicht Teil davon, siehe `land`.
+   */
+  moveGroundForces(groupId: Id, targetColonyId: Id): Promise<void>;
   recruitmentQueue(colonyId: Id): Signal<RecruitmentQueueEntry[]>;
   queueRecruitment(colonyId: Id, unitProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
   resumeRecruitment(colonyId: Id, entryId: Id): Promise<void>;

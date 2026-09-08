@@ -133,11 +133,27 @@ Soldaten, eingeschiffte Soldaten verlassen die Kolonie und kommen vollständig
 zurück, Drohnen fahren den Weg Garnison → Lager → Frachter → Lager → Garnison,
 und Soldaten sind auf keinem Weg Fracht.
 
-## F. Noch offen: die Landung
+## F. Die Landung
 
-Verladen und verlegen funktioniert damit, **landen noch nicht**. Truppen lassen
-sich derzeit nur zwischen eigenen Kolonien verschieben. Es fehlt der Ort
-„Planetenoberfläche" samt `LandingDefenseJob` und Bodengefecht; `04_...md` §2
-nennt die Endpunkte (`ground-transport-fleets/{id}/land`,
-`ground-forces/{groupId}/move`), sie existieren nicht. Das ist der nächste
-Schritt und ein eigenes Vorhaben.
+Umgesetzt in `LandingCommands`: `land(fleetId, targetPlanetId)` nimmt Soldaten
+an Bord und Drohnenfracht einer eigenen Flotte im Orbit eines Planeten und
+erzeugt/erweitert dort eine `GroundForceGroup` mit gesetztem `planetId` (dritte
+Möglichkeit neben `colonyId`/`fleetId`, siehe `GroundForceGroup`-Javadoc).
+Vorher läuft für jede feindliche, kriegführende Kolonie mit aktiver planetarer
+Verteidigung auf diesem Planeten die Landungsabwehr (Mechanik/05_...md §8):
+Abschusskapazität = Ausbaustufe × `Formulas.LANDING_DEFENSE_CAPACITY_PER_LEVEL`
+(Platzhalterwert, wie `GameConstants.DRONES_PER_SOLDIER` – die genaue Kurve ist
+in Mechanik/05_...md §9 selbst als offen markiert) × Zufallsfaktor 0,5-1,0;
+verlorene Transporter über das vorhandene `FleetCommands.consumeShips`,
+Ladungsverlust anteilig aufgerundet (`ceil`) über `FleetCargo`/den
+Bord-Verband. `moveGroundForces(groupId, targetColonyId)` verlegt einen
+gelandeten Verband nach genau einem Kampftick (`Formulas.COMBAT_TICK_HOURS`,
+verarbeitet in `LandingCommands.processGroundForceMovements` über `GameTick`)
+in die Garnison einer **eigenen** Kolonie auf demselben Planeten. Getestet in
+`LandingCommandsTest`.
+
+**Bewusst nicht Teil davon:** Angriff auf fremde Bodentruppen/Kolonien,
+Rückzug, Niederlage, Eroberung (Mechanik/05_...md §10-12) – ein eigenes
+Vorhaben, für das mehrere Zahlen dort selbst noch offen sind (Schadenskurven
+§2, Rekrutierungskurve §5). `moveGroundForces` lehnt deshalb jede Zielkolonie
+ab, die nicht dem eigenen Kommandanten gehört.

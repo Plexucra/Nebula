@@ -274,6 +274,18 @@ public final class Formulas {
   public static final int COMBAT_TICK_HOURS = 8;
 
   /**
+   * Abschusskapazität der planetaren Verteidigung je Ausbaustufe
+   * (Mechanik/05_Bodentruppen_und_Bodenkrieg.md §9: "steigt LINEAR mit
+   * Ausbaustufe" – die genaue Steigung ist dort selbst als offene
+   * Balancingfrage markiert). Wie {@link de.nebula.engine.GameConstants#DRONES_PER_SOLDIER}
+   * ein Startwert zum Weiterentwickeln, kein Balancingergebnis, an einer
+   * einzigen Stelle konfigurierbar. Siehe {@code LandingCommands.land}
+   * (§8: {@code capacity = level × diese Konstante},
+   * {@code tatsächliche Kapazität = capacity × random(0.5, 1.0)}).
+   */
+  public static final double LANDING_DEFENSE_CAPACITY_PER_LEVEL = 2;
+
+  /**
    * Konter-Multiplikator (Mechanik/03_..., §2 und 04_..., §4): ×2 im Vorteil,
    * ×0,5 im Nachteil, sonst ×1. Der Aufrufer prüft beide Richtungen separat
    * (siehe GameEngine.resolveBattleTick, sobald portiert).
