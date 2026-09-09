@@ -28,7 +28,11 @@ public final class EnergyStorageCommands {
   }
 
   public static EnergyStorage storageOf(GameState state, String colonyId) {
-    for (EnergyStorage s : state.energyStorages) if (s.colonyId.equals(colonyId)) return s;
+    // Ohne Kolonie gibt es keinen Speicher – und vor allem darf hier KEIN Eintrag mit
+    // colonyId == null entstehen: er stünde für immer in der Liste und ließe jede
+    // spätere Suche über ihn stolpern (bis hin zum Energie-Tick).
+    if (colonyId == null) throw new CommandException("Für den Energiespeicher fehlt die Kolonie-Angabe.");
+    for (EnergyStorage s : state.energyStorages) if (colonyId.equals(s.colonyId)) return s;
     EnergyStorage s = new EnergyStorage();
     s.colonyId = colonyId;
     s.stored = 0;
@@ -38,7 +42,8 @@ public final class EnergyStorageCommands {
   }
 
   public static double stored(GameState state, String colonyId) {
-    for (EnergyStorage s : state.energyStorages) if (s.colonyId.equals(colonyId)) return s.stored;
+    if (colonyId == null) return 0;
+    for (EnergyStorage s : state.energyStorages) if (colonyId.equals(s.colonyId)) return s.stored;
     return 0;
   }
 
@@ -116,6 +121,6 @@ public final class EnergyStorageCommands {
 
   /** Beim Verschwinden einer Kolonie (Eingliederung nach Eroberung). */
   static void remove(GameState state, String colonyId) {
-    state.energyStorages.removeIf(s -> s.colonyId.equals(colonyId));
+    state.energyStorages.removeIf(s -> colonyId.equals(s.colonyId));
   }
 }

@@ -91,6 +91,25 @@ class EnergyStorageTest {
     assertThrows(CommandException.class, () -> EnergyStorageCommands.setReserve(b.state(), b.playerId(), b.colonyId(), -1.0));
   }
 
+  /**
+   * Eine Abfrage ohne Kolonie-Angabe (etwa ein fehlerhafter Client-Aufruf) muss sauber
+   * abgewiesen werden und darf KEINEN Eintrag anlegen: ein Speicher mit
+   * {@code colonyId == null} stünde für immer in der Liste und ließe jede spätere Suche
+   * über ihn stolpern – bis hin zum Energie-Tick, sobald eine neue Kolonie entsteht.
+   */
+  @Test
+  void aQueryWithoutColonyIsRejectedWithoutLeavingATrace() {
+    Bootstrapped b = newState();
+    assertThrows(CommandException.class, () -> EnergyStorageCommands.storageOf(b.state(), null));
+    assertThrows(CommandException.class, () -> EnergyStorageCommands.view(b.state(), null));
+    assertTrue(b.state().energyStorages.stream().allMatch(s -> s.colonyId != null), "kein Eintrag ohne Kolonie");
+
+    // Und der Energie-Tick läuft danach unverändert weiter.
+    Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 5);
+    EconomyTick.consumePowerUpkeep(b.state());
+    assertEquals(0, EnergyStorageCommands.stored(b.state(), null), 1e-9);
+  }
+
   @Test
   void storageBelongsToTheColonyOnly() {
     Bootstrapped b = newState();
