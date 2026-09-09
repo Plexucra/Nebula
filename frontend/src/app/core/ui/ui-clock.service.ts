@@ -15,8 +15,13 @@ export class UiClockService {
   }
 }
 
+/**
+ * Restzeit als Countdown. Bei abgelaufener Zeit stand hier "bereit" – neben dem
+ * Etikett "LÄUFT" derselben Zeile las sich das wie ein widersprüchlicher
+ * Status. Ein Countdown, der abgelaufen ist, ist schlicht bei null.
+ */
 export function formatCountdown(msRemaining: number): string {
-  if (msRemaining <= 0) return 'bereit';
+  if (msRemaining <= 0) return 'gleich fertig';
   const totalSeconds = Math.ceil(msRemaining / 1000);
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;

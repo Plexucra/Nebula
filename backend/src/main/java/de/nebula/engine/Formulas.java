@@ -140,9 +140,9 @@ public final class Formulas {
     return level <= 0 ? 0 : level;
   }
 
-  /** Tempobonus aus Produktspezialisierung: +10%/Stufe, siehe {@link #specializationThresholdHours}. */
+  /** Tempobonus aus Produktspezialisierung: +20%/Stufe, siehe {@link #specializationThresholdHours}. */
   public static double specializationSpeedFactor(int level) {
-    return 1 + level * 0.1;
+    return 1 + level * 0.2;
   }
 
   /**
@@ -151,9 +151,9 @@ public final class Formulas {
    * {@code level} auf {@code level + 1}. Linear wachsend, kalibriert auf EINE
    * SPIELWOCHE (nicht real): wer ein einzelnes Produkt eine Spielwoche lang
    * (168 Spielstunden) ununterbrochen exklusiv produziert, erreicht kumuliert
-   * Stufe 10 = +100% Tempo. Kumulierte Schwelle bis Stufe 10 ist
+   * Stufe 10 = +200% Tempo. Kumulierte Schwelle bis Stufe 10 ist
    * BASE × (1+2+…+10) = BASE × 55 = 168, also BASE = 168/55 ≈ 3,055. Bis
-   * Stufe 50 (+500%) kumuliert BASE × 1275 ≈ 3895 Spielstunden ≈ 23
+   * Stufe 50 (+1000%) kumuliert BASE × 1275 ≈ 3895 Spielstunden ≈ 23
    * Spielwochen.
    */
   public static final double SPECIALIZATION_THRESHOLD_BASE = (7 * 24) / 55.0;
@@ -185,8 +185,18 @@ public final class Formulas {
    */
   public static final double MAX_SECURITY_PCT = 99;
 
+  /**
+   * Garnisonsstärke, die eine Bevölkerung dieser Größe als VOLL verteidigt
+   * gilt – Bezugsgröße der Sicherheit (100 %) und seit
+   * Umsetzungskonzept/34_...md auch der Zivilverluste. Eigene Methode, damit
+   * beide Rechnungen dieselbe Vorstellung von "eine echte Armee" benutzen.
+   */
+  public static double garrisonReferenceStrength(double population) {
+    return Math.max(population * 0.05, 5);
+  }
+
   public static double securityPct(double garrisonStrength, double population, double loyaltyPct) {
-    double reference = Math.max(population * 0.05, 5);
+    double reference = garrisonReferenceStrength(population);
     double garrisonSecurity = (garrisonStrength / reference) * 100;
     double loyaltyFloor = loyaltyPct * 0.3;
     // Gedeckelt bei 99%: es gibt keine absolute Sicherheit (Umsetzungskonzept/19_...md).
@@ -232,12 +242,31 @@ public final class Formulas {
    * dafür, dass sich die Bevölkerung bei konstanter Güterzufuhr von selbst
    * in dem Bereich einpendelt, den die Versorgung trägt, ohne zu oszillieren.
    */
-  public static de.nebula.model.PopulationGrowthState populationGrowthState(double population, double capacity, double standardOfLivingPct) {
+  public static de.nebula.model.PopulationGrowthState populationGrowthState(double population, double capacity,
+                                                                            double standardOfLivingPct, double foodCoverage) {
     if (population >= capacity) return de.nebula.model.PopulationGrowthState.Overcrowded;
     if (standardOfLivingPct < LIVING_STANDARD_SHRINK_BELOW_PCT) return de.nebula.model.PopulationGrowthState.Shrinking;
+    if (foodCoverage < FOOD_COVERAGE_FOR_GROWTH) return de.nebula.model.PopulationGrowthState.FoodLimited;
     if (standardOfLivingPct < LIVING_STANDARD_GROWTH_FROM_PCT) return de.nebula.model.PopulationGrowthState.Holding;
     return de.nebula.model.PopulationGrowthState.Growing;
   }
+
+  /**
+   * Nahrungsdeckung, ab der eine Kolonie überhaupt wachsen darf
+   * (Umsetzungskonzept/34_...md, Entscheidung zu §J 5). Die Deckung misst je
+   * Tick, ob die Bevölkerung ihren AKTUELLEN Bedarf am Systemmarkt hätte
+   * kaufen können ({@code EconomyTick.runConsumption}); liegt sie unter 100 %,
+   * ernährt die Kolonie nicht einmal ihren Bestand – dann kommt niemand hinzu.
+   *
+   * <p>Vorher hing das Wachstum allein am Lebensstandard, einem geglätteten
+   * Mittel über alle drei Grundbedarfsgüter. Der reagiert so träge, dass eine
+   * Kolonie in die Hungersnot hineinwuchs: Industrie 5 ernährt rund 6 000
+   * Einwohner, die Wohnkapazität ließ 20 000 zu, und der Einbruch kam erst,
+   * als der Lebensstandard nachgezogen hatte. Der Deckel greift dagegen sofort
+   * und lässt die Kolonie an ihrer Versorgungsgrenze STEHEN, statt sie
+   * überschießen und zusammenbrechen zu lassen.</p>
+   */
+  public static final double FOOD_COVERAGE_FOR_GROWTH = 1.0;
 
   /**
    * Bevölkerungsänderung je Spielstunde – LOGISTISCH: proportional zur
@@ -254,14 +283,17 @@ public final class Formulas {
    * Lebensstandard im Totband). Überbevölkerung braucht keinen Sonderfall
    * mehr – oberhalb der Kapazität wird der Klammerterm von selbst negativ.</p>
    */
-  public static double populationGrowthDelta(double population, double capacity, double standardOfLivingPct, double securityPct) {
+  public static double populationGrowthDelta(double population, double capacity, double standardOfLivingPct,
+                                             double securityPct, double foodCoverage) {
     double logistic = POPULATION_BASE_GROWTH_RATE_PER_HOUR * population
         * (capacity > 0 ? 1 - population / capacity : -1) * growthConditionFactor(standardOfLivingPct, securityPct);
-    return switch (populationGrowthState(population, capacity, standardOfLivingPct)) {
+    return switch (populationGrowthState(population, capacity, standardOfLivingPct, foodCoverage)) {
       case Overcrowded -> logistic; // Klammerterm ist hier negativ
       case Shrinking -> -population * POPULATION_SHRINK_RATE_PER_HOUR
           * (LIVING_STANDARD_SHRINK_BELOW_PCT - standardOfLivingPct) / LIVING_STANDARD_SHRINK_BELOW_PCT;
-      case Holding -> 0;
+      // Der Nahrungsdeckel hält die Bevölkerung, er tötet sie nicht: das
+      // Schrumpfen bei echtem Mangel läuft weiter über den Lebensstandard.
+      case FoodLimited, Holding -> 0;
       case Growing -> logistic;
     };
   }
@@ -341,9 +373,47 @@ public final class Formulas {
    */
   public static final double CIVILIAN_LOSS_AT_TOTAL_DEFEAT = 0.5;
 
-  public static double civilianLossFraction(double defenderValueLostThisTick, double defenderValueAtStart) {
+  /**
+   * Obergrenze der Zivilverluste je Kampftick (Umsetzungskonzept/34_...md,
+   * Entscheidung zu §J 8). Auch eine restlos aufgeriebene Großgarnison kostet
+   * damit nicht die halbe Stadt in einer einzigen Runde – der Preis fällt über
+   * mehrere Ticks an und bleibt in der Summe bei
+   * {@link #CIVILIAN_LOSS_AT_TOTAL_DEFEAT}.
+   */
+  public static final double CIVILIAN_LOSS_MAX_PER_TICK = 0.1;
+
+  /**
+   * Wie stark eine Kolonie überhaupt verteidigt war – Garnisonsstärke gemessen
+   * an {@link #garrisonReferenceStrength}, gedeckelt bei 1. Das ist der Faktor,
+   * der aus dem pauschalen "restlos aufgerieben = 50 % Zivilverlust" eine
+   * Aussage über DIESE Schlacht macht: eine Zehn-Drohnen-Startgarnison über
+   * 2 000 Einwohnern ist keine Festung, deren Fall die halbe Bevölkerung
+   * kostet, sondern ein Wachdienst.
+   */
+  public static double garrisonDensity(double garrisonStrengthAtStart, double population) {
+    double reference = garrisonReferenceStrength(population);
+    return reference > 0 ? clamp(garrisonStrengthAtStart / reference, 0, 1) : 0;
+  }
+
+  /**
+   * Zivilverluste EINES Kampfticks. Zwei Faktoren statt einem
+   * (Umsetzungskonzept/34_...md, §J 8): der Anteil der in diesem Tick
+   * zerschlagenen Verteidigung – wie bisher – UND die Dichte der Verteidigung
+   * selbst ({@link #garrisonDensity}). Zusätzlich gedeckelt durch
+   * {@link #CIVILIAN_LOSS_MAX_PER_TICK}.
+   *
+   * <p>Vorher galt die Quote unabhängig von der Garnisonsgröße: der Fall einer
+   * Startgarnison aus zehn leichten Drohnen kostete dieselben 50 % der
+   * Bevölkerung wie eine ausgekämpfte Belagerung. Der Eroberer übernahm damit
+   * regelmäßig eine Ruine statt einer Kolonie.</p>
+   */
+  public static double civilianLossFraction(double defenderValueLostThisTick, double defenderValueAtStart,
+                                            double populationAtStart) {
     if (defenderValueAtStart <= 0) return 0;
-    return clamp(CIVILIAN_LOSS_AT_TOTAL_DEFEAT * defenderValueLostThisTick / defenderValueAtStart, 0, 1);
+    double defeatedShare = defenderValueLostThisTick / defenderValueAtStart;
+    double scaled = CIVILIAN_LOSS_AT_TOTAL_DEFEAT * defeatedShare
+        * garrisonDensity(defenderValueAtStart, populationAtStart);
+    return clamp(Math.min(scaled, CIVILIAN_LOSS_MAX_PER_TICK), 0, 1);
   }
 
   /**

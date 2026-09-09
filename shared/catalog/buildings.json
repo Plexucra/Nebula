@@ -7,7 +7,6 @@
     "baseCostPerLevel": 90,
     "baseHoursPerLevel": 0.8,
     "upkeepPerLevel": 1.5,
-    "productionSlotsPerLevel": null,
     "housingCapacityPerLevel": null,
     "materials": [
       {
@@ -40,7 +39,6 @@
     "baseCostPerLevel": 120,
     "baseHoursPerLevel": 1,
     "upkeepPerLevel": 1.5,
-    "productionSlotsPerLevel": null,
     "housingCapacityPerLevel": 20000,
     "materials": [
       {
@@ -68,7 +66,6 @@
     "baseCostPerLevel": 160,
     "baseHoursPerLevel": 1.2,
     "upkeepPerLevel": 3,
-    "productionSlotsPerLevel": 1,
     "housingCapacityPerLevel": null,
     "materials": [
       {
@@ -96,7 +93,6 @@
     "baseCostPerLevel": 260,
     "baseHoursPerLevel": 2,
     "upkeepPerLevel": 5,
-    "productionSlotsPerLevel": 1,
     "housingCapacityPerLevel": null,
     "materials": [
       {
@@ -134,7 +130,6 @@
     "baseCostPerLevel": 140,
     "baseHoursPerLevel": 1,
     "upkeepPerLevel": 2,
-    "productionSlotsPerLevel": 1,
     "housingCapacityPerLevel": null,
     "materials": [
       {
@@ -162,7 +157,6 @@
     "baseCostPerLevel": 300,
     "baseHoursPerLevel": 2,
     "upkeepPerLevel": 6,
-    "productionSlotsPerLevel": null,
     "housingCapacityPerLevel": null,
     "materials": [
       {

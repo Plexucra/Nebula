@@ -9,10 +9,31 @@
   <div class="panel corner-frame map-panel">
     <div class="panel-header">
       <h2>Bekannte Systeme</h2>
-      <div class="legend">
-        <span class="legend-item"><i class="dot mine"></i>Eigene Flotte</span>
-        <span class="legend-item"><i class="dot colony"></i>Eigene Kolonie</span>
-        <span class="legend-item"><i class="dot enemy"></i>Feindliche Flotte</span>
+      <div class="map-tools">
+        <!-- Suche mit Sprung zum Treffer: bei über 200 Systemen war Ziehen die
+             einzige Art, ein bestimmtes System zu finden. -->
+        <span class="system-search">
+          <input type="search" placeholder="System suchen…" [ngModel]="systemSearch()" (ngModelChange)="systemSearch.set($event)" />
+          @if (systemSearchResults().length > 0) {
+            <div class="search-results">
+              @for (s of systemSearchResults(); track s.id) {
+                <button type="button" class="ghost small" (click)="focusSystemById(s.id)">{{ s.name }}</button>
+              }
+            </div>
+          }
+        </span>
+        <label class="checkbox-inline" title="Sonst erscheinen die Namen erst ab genügend Zoom.">
+          <input type="checkbox" [ngModel]="forceLabels()" (ngModelChange)="forceLabels.set($event)" /> Namen zeigen
+        </label>
+        <div class="legend">
+          <span class="legend-item"><i class="dot mine"></i>Eigene Flotte</span>
+          <span class="legend-item"><i class="dot colony"></i>Eigene Kolonie</span>
+          <span class="legend-item"><i class="dot enemy"></i>Feindliche Flotte</span>
+          <!-- Die beiden fehlenden Legendeneinträge: ohne sie waren der eigene
+               Ring und der Handelsgilde-Kreis unerklärt. -->
+          <span class="legend-item"><i class="dot home"></i>Heimatsystem</span>
+          <span class="legend-item"><i class="dot hub"></i>Handelsgilde-Station</span>
+        </div>
       </div>
     </div>
     <div class="panel-body map-body">
@@ -127,7 +148,8 @@
 
           @if (selectedWeights().length) {
             <div class="divider"></div>
-            <span class="eyebrow">Politisches Gewicht</span>
+            <span class="eyebrow" title="Summe aus Bevölkerung und Ausbaustand der Kolonien eines Kommandanten in diesem System. Wer das höchste Gewicht hat, kontrolliert das Gateway und setzt dort die Zollregeln.">Politisches Gewicht</span>
+            <p class="hint">Wer hier das höchste Gewicht hat, kontrolliert das Gateway des Systems.</p>
             @for (w of selectedWeights(); track w.playerId) {
               <div class="weight-row"><span>{{ w.playerName }}</span><span class="mono">{{ w.weight }}</span></div>
             }

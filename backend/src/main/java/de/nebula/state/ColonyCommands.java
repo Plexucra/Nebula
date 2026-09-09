@@ -18,6 +18,7 @@ import de.nebula.model.NotificationType;
 import de.nebula.model.Planet;
 import de.nebula.model.PlanetResourceConcentration;
 import de.nebula.model.PlanetStats;
+import de.nebula.model.Player;
 import de.nebula.model.Population;
 import de.nebula.model.PopulationGrowthState;
 import de.nebula.model.PopulationMoneySupplyState;
@@ -88,16 +89,20 @@ public final class ColonyCommands {
 
     double housingCapacity = PowerGrid.effectiveHousingCapacity(state, colonyId);
     result.housingCapacity = housingCapacity;
+    double foodCoverage = foodCoverage(state, colonyId);
     result.growthState = stats != null
-        ? Formulas.populationGrowthState(population, housingCapacity, stats.standardOfLivingPct) : PopulationGrowthState.Holding;
+        ? Formulas.populationGrowthState(population, housingCapacity, stats.standardOfLivingPct, foodCoverage)
+        : PopulationGrowthState.Holding;
     result.growthPerHour = stats != null
-        ? Formulas.populationGrowthDelta(population, housingCapacity, stats.standardOfLivingPct, stats.securityPct) : 0;
+        ? Formulas.populationGrowthDelta(population, housingCapacity, stats.standardOfLivingPct, stats.securityPct, foodCoverage) : 0;
     result.shrinkBelowPct = Formulas.LIVING_STANDARD_SHRINK_BELOW_PCT;
     result.growthFromPct = Formulas.LIVING_STANDARD_GROWTH_FROM_PCT;
     BuildSlots slots = BuildingCommands.buildSlots(state, colonyId);
     result.buildSlots = slots;
     result.infrastructureEleriumPerHour = PowerGrid.powerUpkeepPerHour(state, colonyId);
     result.powerCoverage = PowerGrid.coverageRatio(state, colonyId);
+    result.eleriumStock = EnergyStorageCommands.stored(state, colonyId)
+        + Warehouse.qty(state, colonyId, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
 
     Wallet ownerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId);
     double balance = ownerWallet != null ? ownerWallet.balance : 0;
@@ -122,6 +127,11 @@ public final class ColonyCommands {
       else if (up.materials().stream().anyMatch(m -> m.available + 1e-9 < m.required)) blocked = "Fehlende Baustoffe.";
       preview.affordable = blocked == null;
       preview.blockedReason = blocked;
+      // Nur die Infrastruktur treibt ihren eigenen Dauerverbrauch hoch – und
+      // zwar überlinear (Umsetzungskonzept/34_...md, F4/F5). Die Zahl gehört
+      // deshalb VOR den Ausbau, nicht in die Nachbetrachtung eines Blackouts.
+      preview.eleriumPerHourAfterUpgrade = type.id.equals(GameConstants.INFRASTRUCTURE_BUILDING_ID)
+          ? Formulas.infrastructureEleriumPerHour(up.currentLevel() + 1) : 0;
       upgrades.add(preview);
     }
     result.buildingUpgrades = upgrades;
@@ -173,6 +183,19 @@ public final class ColonyCommands {
   /** Deckung (0..1,5) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, siehe {@code EconomyTick.runConsumption}. */
   public static java.util.Map<String, Double> consumptionCoverage(GameState state, String colonyId) {
     return state.consumptionCoverage.getOrDefault(colonyId, java.util.Map.of());
+  }
+
+  /**
+   * Nahrungsdeckung der Kolonie – die Größe, die seit Umsetzungskonzept/34_...md
+   * das WACHSTUM deckelt (siehe {@code Formulas.FOOD_COVERAGE_FOR_GROWTH}).
+   * Solange die Kolonie noch keinen Konsumtick hinter sich hat, gilt sie als
+   * gedeckt: eine frisch gegründete Kolonie soll nicht an einer noch gar nicht
+   * gemessenen Lage hängen bleiben.
+   */
+  public static double foodCoverage(GameState state, String colonyId) {
+    Double coverage = state.consumptionCoverage.getOrDefault(colonyId, java.util.Map.of())
+        .get(GameConstants.FOOD_PRODUCT_ID);
+    return coverage == null ? 1 : coverage;
   }
 
   public static Planet planet(GameState state, String id) {
@@ -331,13 +354,12 @@ public final class ColonyCommands {
       Planet planet = planet(state, c.planetId);
       if (planet == null) continue;
       Colony colony = foundColony(state, ids, c, t);
-      Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_COLONY_FOUNDED,
+      Notifications.notify(state, ids, NotificationType.Info, Notifications.CODE_COLONY_FOUNDED,
           "Kolonie \"" + colony.name + "\" gegründet – " + (long) GameConstants.START_POPULATION
               + " Kolonisten sind gelandet.", colony.id, null);
     }
   }
 
-  private static final int NOTIFICATION_CODE_COLONY_FOUNDED = 120;
 
   private static Colony foundColony(GameState state, IdGenerator ids, Colonization request, long t) {
     Planet planet = planet(state, request.planetId);
@@ -348,7 +370,15 @@ public final class ColonyCommands {
     colony.ownerId = request.ownerId;
     colony.name = request.colonyName;
     colony.foundedAt = t;
-    colony.isHomeworld = false;
+    // Normalerweise ist eine gegründete Kolonie keine Heimatwelt. Hat der
+    // Kommandant aber gerade KEINE (Heimatwelt verloren, siehe
+    // Umsetzungskonzept/34_...md, §J 9), wird diese Gründung sein Neuanfang –
+    // sonst bliebe er dauerhaft ohne Heimatadresse.
+    Player owner = null;
+    for (Player p : state.players) if (p.id.equals(request.ownerId)) owner = p;
+    boolean isNewHome = owner != null && (owner.homeworldColonyId == null || owner.homeworldColonyId.isEmpty());
+    colony.isHomeworld = isNewHome;
+    if (isNewHome) owner.homeworldColonyId = colony.id;
     state.colonies.add(colony);
 
     PlanetStats stats = new PlanetStats();

@@ -4,6 +4,7 @@ import de.nebula.engine.Clock;
 import de.nebula.model.Blockade;
 import de.nebula.model.BlockadeAnchor;
 import de.nebula.model.BlockadeAnchorKind;
+import de.nebula.model.DiplomaticStatus;
 import de.nebula.model.Fleet;
 import de.nebula.model.FleetLocationType;
 import de.nebula.model.FleetStatus;
@@ -30,6 +31,63 @@ public final class BlockadeCommands {
 
   public static List<Blockade> blockadesInSystem(GameState state, String systemId) {
     return state.blockades.stream().filter(b -> b.systemId.equals(systemId)).toList();
+  }
+
+  /**
+   * Sperrwirkung einer Orbit-Blockade (Umsetzungskonzept/34_...md, §J 7): die
+   * Blockade, die DIESEN Kommandanten am Einflug in den Orbit dieses Planeten
+   * hindert – oder {@code null}, wenn er frei passieren darf. Vorher sperrte
+   * eine Blockade im Backend überhaupt nichts, sie machte die blockierende
+   * Flotte nur angreifbar.
+   *
+   * <p>Frei passiert, wer die Blockade selbst gebildet hat oder mit dem
+   * Blockierer einen Friedens- oder Handelsvertrag hat. Frei ist der Weg
+   * außerdem, solange die blockierende Flotte in einem Gefecht gebunden ist –
+   * wer kämpft, kontrolliert den Orbit gerade nicht.</p>
+   *
+   * <p>Der SYSTEMRAUM bleibt bewusst offen: gesperrt ist der Orbit, nicht die
+   * Ankunft am Gateway. Eine einzelne Flotte soll kein ganzes System zusperren
+   * können, und niemand soll unterwegs stranden.</p>
+   */
+  public static Blockade orbitBlockadeAgainst(GameState state, String playerId, String planetId) {
+    if (planetId == null) return null;
+    for (Blockade b : state.blockades) {
+      if (b.anchorKind != BlockadeAnchorKind.PlanetOrbit || !planetId.equals(b.planetId)) continue;
+      if (b.ownerId.equals(playerId)) return null;
+      if (TreatyCommands.hasPeaceTreaty(state, playerId, b.ownerId)
+          || TreatyCommands.hasTradeAgreement(state, playerId, b.ownerId)) return null;
+      if (BattleCommands.activeBattleForFleet(state, b.fleetId) != null) return null;
+      return b;
+    }
+    return null;
+  }
+
+  /**
+   * Der Durchbruch durch eine Blockade: die Flotte wird NICHT zurückgewiesen,
+   * sie gerät ins Gefecht (Nutzerentscheidung zu §J 7 – "nicht stoppen,
+   * sondern in den Kampf zwingen"). Das Gefecht selbst folgt den üblichen
+   * Regeln, also auch der aus F2/F3 bestätigten: gekämpft wird nur im Krieg.
+   * Ohne Krieg und ohne Vertrag bleibt der Orbit deshalb verschlossen – und
+   * die Meldung sagt, was zu tun ist, statt nur "geht nicht". Diese Prüfung
+   * gehört VOR jede Bewegung.
+   */
+  public static void requireBreakthroughPossible(GameState state, String playerId, Blockade blockade) {
+    if (DiplomacyCommands.diplomaticStatus(state, playerId, blockade.ownerId) == DiplomaticStatus.War) return;
+    throw new CommandException("Der Orbit ist von " + GameQueries.ownerDisplayName(state, blockade.ownerId)
+        + " blockiert. Passieren dürfen nur Kommandanten mit Friedens- oder Handelsvertrag – wer sich den Weg "
+        + "freikämpfen will, muss zuerst den Krieg erklären (Diplomatie).");
+  }
+
+  /**
+   * Löst das Gefecht aus, NACHDEM die Flotte eingeflogen ist. Getrennt von
+   * {@link #requireBreakthroughPossible}, weil die Prüfung vor jeder
+   * Zustandsänderung stehen muss: ein abgewiesener Befehl darf die Flotte nicht
+   * schon versetzt haben.
+   */
+  public static void breakThroughOrbitBlockade(GameState state, IdGenerator ids, String playerId,
+                                                String fleetId, Blockade blockade) {
+    requireBreakthroughPossible(state, playerId, blockade);
+    BattleCommands.engageBattle(state, ids, playerId, fleetId, blockade.fleetId);
   }
 
   /** Errichtet eine Blockade mit der eigenen, an diesem Ort bereits stationierten Flotte – macht sie angreifbar. */

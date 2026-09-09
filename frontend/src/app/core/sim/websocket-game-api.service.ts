@@ -3,12 +3,15 @@ import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, CarrierJumpPreview, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
   WarehouseEntry,
 } from '../models';
+
+/** Schlüssel der gemerkten Anmeldung, siehe `rememberSession`. */
+const SESSION_STORAGE_KEY = 'nebula_player_id';
 
 interface ServerMessage {
   type: string;
@@ -65,6 +68,7 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
       this.send<ShipTypeDef[]>('shipTypes', {}).then(v => (this._shipTypes = v));
       this.send<GroundUnitTypeDef[]>('groundUnitTypes', {}).then(v => (this._groundUnitTypes = v));
     });
+    this.ws.addEventListener('open', () => void this.restoreSession());
     this.intervals.push(setInterval(() => this.pollWallet(), 1000));
   }
 
@@ -168,20 +172,68 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
 
   async login(playerId: Id): Promise<void> {
     this.player.set(await this.send<Player>('login', { playerId }));
+    this.rememberSession(playerId);
   }
 
   async logout(): Promise<void> {
     await this.send<void>('logout', {});
     this.player.set(null);
+    this.forgetSession();
   }
 
   async registerPlayer(commanderName: string, homeworldName: string, role: PlayerRole, campId?: string): Promise<void> {
-    this.player.set(await this.send<Player>('registerPlayer', { commanderName, homeworldName, role, campId }));
+    const player = await this.send<Player>('registerPlayer', { commanderName, homeworldName, role, campId });
+    this.player.set(player);
+    this.rememberSession(player.id);
   }
 
   async resetGame(): Promise<void> {
     await this.send<void>('resetGame', {});
     this.player.set(null);
+    this.forgetSession();
+  }
+
+  /**
+   * Merkt den angemeldeten Kommandanten im `localStorage`, damit ein Neuladen
+   * (F5), ein Deep-Link und ein zweiter Tab nicht auf dem Startbildschirm
+   * landen. Vorher war jeder Link auf einen Kampfbericht wertlos, weil er
+   * grundsätzlich zur Anmeldung führte.
+   *
+   * <p>Das ist bewusst KEINE Authentifizierung – es ersetzt nur die verlorene
+   * Sitzung, mehr nicht. Wer sich als jemand anderes anmelden kann, konnte das
+   * vorher genauso; Kennwortschutz ist ein eigenes Thema.</p>
+   */
+  private rememberSession(playerId: Id): void {
+    try {
+      localStorage.setItem(SESSION_STORAGE_KEY, playerId);
+    } catch {
+      // Privater Modus o. ä. – dann bleibt es beim bisherigen Verhalten.
+    }
+  }
+
+  private forgetSession(): void {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {
+      // siehe rememberSession
+    }
+  }
+
+  /** Meldet nach einem Neuladen automatisch wieder an, falls der Kommandant noch existiert. */
+  private async restoreSession(): Promise<void> {
+    let playerId: string | null = null;
+    try {
+      playerId = localStorage.getItem(SESSION_STORAGE_KEY);
+    } catch {
+      return;
+    }
+    if (!playerId) return;
+    try {
+      this.player.set(await this.send<Player>('login', { playerId }));
+    } catch {
+      // Kommandant gelöscht (z. B. Inaktivität oder Reset) – Eintrag verwerfen.
+      this.forgetSession();
+    }
   }
 
   // ==========================================================================
@@ -242,6 +294,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   queueBuilding(colonyId: Id, buildingTypeId: Id): Promise<void> {
     return this.send('queueBuilding', { colonyId, buildingTypeId });
   }
+  queueMissingBuildingMaterials(colonyId: Id, buildingTypeId: Id): Promise<Record<Id, number>> {
+    return this.send('queueMissingBuildingMaterials', { colonyId, buildingTypeId });
+  }
   cancelBuildingOrder(colonyId: Id, buildingId: Id): Promise<void> {
     return this.send('cancelBuildingOrder', { colonyId, buildingId });
   }
@@ -301,6 +356,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   resumeProduction(colonyId: Id, entryId: Id): Promise<void> {
     return this.send('resumeProduction', { colonyId, entryId });
   }
+  moveProductionEntry(colonyId: Id, entryId: Id, direction: -1 | 1): Promise<void> {
+    return this.send('moveProductionEntry', { colonyId, entryId, direction });
+  }
   cancelProduction(colonyId: Id, entryId: Id): Promise<void> {
     return this.send('cancelProduction', { colonyId, entryId });
   }
@@ -321,6 +379,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   populationWallet(colonyId: Id): Signal<Wallet | undefined> {
     return this.poll('populationWallet', () => ({ colonyId }), undefined);
+  }
+  treasuryFlowPerHour(): Signal<number> {
+    return this.poll('treasuryFlowPerHour', () => ({}), 0);
   }
   transactions(): Signal<Transaction[]> {
     return this.poll('transactions', () => ({}), []);
@@ -393,14 +454,20 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   land(fleetId: Id, targetPlanetId: Id): Promise<GroundForceGroup> {
     return this.send('land', { fleetId, targetPlanetId });
   }
-  moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void> {
-    return this.send('moveFleet', { fleetId, destinationSystemId });
+  moveFleet(fleetId: Id, destinationSystemId: Id, viaCarrier = false): Promise<void> {
+    return this.send('moveFleet', { fleetId, destinationSystemId, viaCarrier });
+  }
+  renameFleet(fleetId: Id, name: string): Promise<void> {
+    return this.send('renameFleet', { fleetId, name });
   }
   cancelFleetMove(fleetId: Id): Promise<void> {
     return this.send('cancelFleetMove', { fleetId });
   }
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null> {
     return this.poll('routePreview', () => ({ fleetId, destinationSystemId }), null);
+  }
+  carrierJumpPreview(fleetId: Id, destinationSystemId: Id): Signal<CarrierJumpPreview | null> {
+    return this.poll('carrierJumpPreview', () => ({ fleetId, destinationSystemId }), null);
   }
 
   fleetCargoCapacity(fleetId: Id, productTypeId: Id | null): Signal<FleetCargoCapacity | null> {
@@ -488,6 +555,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   createSellOrderFromFleet(fleetId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist = false): Promise<void> {
     return this.send('createSellOrderFromFleet', { fleetId, productTypeId, quantity, pricePerUnit, autoRelist });
+  }
+  updateSellOrderPrice(orderId: Id, pricePerUnit: number): Promise<void> {
+    return this.send('updateSellOrderPrice', { orderId, pricePerUnit });
   }
   cancelSellOrder(orderId: Id): Promise<void> {
     return this.send('cancelSellOrder', { orderId });

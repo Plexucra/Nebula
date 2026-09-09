@@ -11,6 +11,7 @@ import de.nebula.model.ColonyPowerState;
 import de.nebula.model.GroundForceGroup;
 import de.nebula.model.GroundForceUnitStack;
 import de.nebula.model.Planet;
+import de.nebula.model.Player;
 import de.nebula.model.PlanetStats;
 import de.nebula.model.NotificationType;
 import de.nebula.model.Population;
@@ -234,7 +235,10 @@ public final class EconomyTick {
       if (population == null || stats == null || planet == null) continue;
 
       double capacity = PowerGrid.effectiveHousingCapacity(state, colony.id);
-      double delta = Formulas.populationGrowthDelta(population.currentCount, capacity, stats.standardOfLivingPct, stats.securityPct)
+      // Der Nahrungsdeckel (Umsetzungskonzept/34_...md, §J 5) liest die Deckung
+      // aus DIESEM Tick: runConsumption läuft unmittelbar vorher (GameTick).
+      double delta = Formulas.populationGrowthDelta(population.currentCount, capacity, stats.standardOfLivingPct,
+          stats.securityPct, ColonyCommands.foodCoverage(state, colony.id))
           * GameConstants.TICK_GAME_HOURS;
       // Blackout unterbindet nur Wachstum – Schrumpfung durch Überbevölkerung (negatives Delta) läuft unabhängig davon normal weiter.
       if (delta > 0 && PowerGrid.isBlackout(state, colony.id)) delta = 0;
@@ -303,11 +307,20 @@ public final class EconomyTick {
   }
 
   /** Problem-Code: ein Grundbedarfsgut ist für die Bevölkerung nicht (ausreichend) zu kaufen (Umsetzungskonzept/32_...md, Teil B). */
-  public static final int CODE_SUPPLY_GAP = 505;
   /** Unter dieser Deckung gilt ein Gut als unversorgt. */
   private static final double SUPPLY_WARNING_BELOW = 0.5;
   /** Höchstens eine Warnung je Gut und Kolonie je Spieltag. */
-  private static final double SUPPLY_WARNING_COOLDOWN_GAME_HOURS = 24;
+  /**
+   * REALZEIT-AUSNAHME (siehe {@code GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS}):
+   * Mindestabstand zweier gleicher Versorgungswarnungen in ECHTEN Minuten.
+   *
+   * <p>Vorher stand hier eine Frist von 24 SPIELSTUNDEN. Bei
+   * {@code gameSpeedMultiplier = 4} sind das 15 Realsekunden – je Kolonie und
+   * je fehlendem Gut. Die Glocke enthielt dadurch praktisch nur noch
+   * Versorgungswarnungen und verdrängte alles andere, auch Kampfmeldungen.
+   * Wie oft ein Mensch dieselbe Warnung sehen will, hängt nicht am
+   * Tempo-Regler – deshalb Realzeit.</p>
+   */
 
   /**
    * Warnt den Kommandanten, wenn ein Grundbedarfsgut nicht zu kaufen ist – weil
@@ -321,7 +334,8 @@ public final class EconomyTick {
     for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p;
     if (population == null || population.currentCount < 1) return;
     long now = Clock.now();
-    long cooldownMs = (long) Clock.hoursToMs(SUPPLY_WARNING_COOLDOWN_GAME_HOURS);
+    // REALZEIT-AUSNAHME: bereits Realzeit-Millisekunden, NICHT über Clock.hoursToMs.
+    long cooldownMs = GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS;
     for (Map.Entry<String, Double> e : coverageByGood.entrySet()) {
       if (e.getValue() >= SUPPLY_WARNING_BELOW) continue;
       String key = colony.id + ":" + e.getKey();
@@ -336,7 +350,8 @@ public final class EconomyTick {
               + Math.round(e.getValue() * 100) + " %) – Preis der Verkaufsorder prüfen, das Bevölkerungs-Wallet gibt nicht mehr her."
           : "In \"" + colony.name + "\" gibt es keine Verkaufsorder für " + goodName + " – die Bevölkerung kauft nur aus Orders ihres Systems, "
               + "der Lebensstandard bleibt ohne dieses Gut gedeckelt.";
-      Notifications.notify(state, ids, NotificationType.Problem, CODE_SUPPLY_GAP, message, colony.id, "/kolonien/" + colony.id);
+      Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_SUPPLY_GAP, message,
+          colony.id, Notifications.colonyLink(colony.id));
     }
   }
 
@@ -421,5 +436,138 @@ public final class EconomyTick {
 
     state.universeStats.add(snapshot);
     while (state.universeStats.size() > GameConstants.STATS_HISTORY_LIMIT) state.universeStats.remove(0);
+  }
+
+  /**
+   * Meldet die drei Lagen, die eine Kolonie bzw. ein Reich still zugrunde
+   * richten: Energieausfall, anhaltender Bevölkerungsrückgang und ein leer
+   * laufendes Konto.
+   *
+   * <p>Vorher gab es dafür KEINE Benachrichtigung. In einem Testlauf fiel eine
+   * Kolonie von 7.791 auf 115 Einwohner und das Guthaben von 139.581 auf 0
+   * Credits, ohne dass die Oberfläche das an irgendeiner Stelle gemeldet
+   * hätte – der Blackout war nur an einer Farbänderung und einem angehängten
+   * Halbsatz zu erkennen.</p>
+   *
+   * <p>Alle drei Meldungen sind FLANKENGETRIEBEN
+   * ({@link Notifications#edgeTriggered}): sie kommen einmal beim Eintritt in
+   * die Lage und einmal, wenn sie vorbei ist – nicht bei jedem Tick.</p>
+   */
+  public static void notifyColonyAndTreasuryStates(GameState state, IdGenerator ids) {
+    for (Colony colony : state.colonies) {
+      boolean blackout = PowerGrid.isBlackout(state, colony.id);
+      if (Notifications.edgeTriggered(state, "blackout:" + colony.id, blackout)) {
+        if (blackout) {
+          Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_BLACKOUT,
+              "Energieausfall in \"" + colony.name + "\": Der Infrastruktur fehlt Stabilisiertes Elerium. "
+                  + "Produktion, Sicherheit und Lebensstandard sind stark eingeschränkt, "
+                  + "bis wieder Nachschub im Lager liegt.",
+              colony.id, Notifications.colonyLink(colony.id));
+        } else {
+          Notifications.notify(state, ids, NotificationType.Info, Notifications.CODE_POWER_RESTORED,
+              "Die Energieversorgung von \"" + colony.name + "\" läuft wieder.",
+              colony.id, Notifications.colonyLink(colony.id));
+        }
+      }
+
+      Population population = null;
+      for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p;
+      if (population == null) continue;
+      // Gemeldet wird erst ein DEUTLICHER Rückgang, nicht jedes Zucken um Null:
+      // die Rate ist eine geglättete Größe je Spielstunde.
+      boolean shrinking = population.growthRatePerInterval < -0.001 && population.currentCount > 0;
+      if (Notifications.edgeTriggered(state, "shrinking:" + colony.id, shrinking) && shrinking) {
+        Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_POPULATION_SHRINKING,
+            "Die Bevölkerung von \"" + colony.name + "\" schrumpft. Lebensstandard und Sicherheit prüfen – "
+                + "unter 30 % Lebensstandard wandern die Menschen ab.",
+            colony.id, Notifications.colonyLink(colony.id));
+      }
+    }
+
+    for (Player player : state.players) {
+      Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, player.id);
+      if (wallet == null) continue;
+      double perHour = treasuryFlowPerHour(state, player.id);
+      boolean empty = wallet.balance <= 0.5;
+      // "Läuft leer" = negatives Ergebnis UND weniger als ein Spieltag Reserve.
+      boolean draining = !empty && perHour < 0 && wallet.balance < Math.abs(perHour) * 24;
+
+      if (Notifications.edgeTriggered(state, "treasuryEmpty:" + player.id, empty) && empty) {
+        Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_TREASURY_EMPTY,
+            "Ihr Guthaben ist aufgebraucht. Gebäude- und Flottenunterhalt laufen weiter – "
+                + "Einnahmen schaffen Verkaufsorders für Konsumgüter, entlasten tut ein Rückbau.",
+            null, "/konto");
+      }
+      if (Notifications.edgeTriggered(state, "treasuryLow:" + player.id, draining) && draining) {
+        Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_TREASURY_LOW,
+            "Ihre laufenden Kosten übersteigen die Einnahmen (" + Math.round(perHour)
+                + " Cr je Spielstunde). Das Guthaben reicht noch keinen Spieltag.",
+            null, "/konto");
+      }
+    }
+  }
+
+  /**
+   * Saldo des Kommandanten-Wallets je SPIELSTUNDE: Konsumeinnahmen minus
+   * Löhne, Gebäude- und Flottenunterhalt. Dieselbe Rechnung wie in
+   * {@link #payUpkeepAndWages}/{@link #runConsumption}, nur nicht auf einen
+   * Tick heruntergebrochen – die Zahl, die in der Kopfzeile neben dem Guthaben
+   * steht und deren Fehlen den Bankrott im Testlauf unsichtbar gemacht hat.
+   */
+  public static double treasuryFlowPerHour(GameState state, String playerId) {
+    double outflow = 0;
+    double inflow = 0;
+    for (Colony colony : state.colonies) {
+      if (!colony.ownerId.equals(playerId)) continue;
+      for (Building b : state.buildings) {
+        if (b.colonyId.equals(colony.id) && b.level > 0) {
+          outflow += BuildingCatalog.find(b.typeId).upkeepPerLevel * b.level;
+        }
+      }
+      for (var f : state.fleets) {
+        if (colony.id.equals(f.locationColonyId)) {
+          for (var g : f.ships) outflow += g.quantity * 0.5;
+        }
+      }
+      for (Population p : state.populations) {
+        if (p.colonyId.equals(colony.id)) outflow += p.currentCount * 0.02;
+      }
+      // Einnahmen: was die Bevölkerung dieser Kolonie je Spielstunde für
+      // Konsumgüter ausgibt, landet über die Verkaufsorders beim Kommandanten.
+      inflow += consumptionSpendPerHour(state, colony);
+    }
+    return inflow - outflow;
+  }
+
+  /**
+   * Konsumausgaben der Bevölkerung einer Kolonie je Spielstunde – Gegenstück zu
+   * {@link #runConsumption}, dort aber je Tick und je Gut aufgelöst. Hier
+   * genügt die Rate: Pro-Kopf-Bedarf × Einwohner × tatsächliche Deckung ×
+   * günstigster Preis, über die Grundgüter summiert.
+   */
+  private static double consumptionSpendPerHour(GameState state, Colony colony) {
+    double population = 0;
+    for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p.currentCount;
+    if (population <= 0) return 0;
+    Map<String, Double> coverage = state.consumptionCoverage.get(colony.id);
+    if (coverage == null) return 0;
+
+    double spend = 0;
+    for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
+      double covered = coverage.getOrDefault(goodId, 0.0);
+      if (covered <= 0) continue;
+      double need = population * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(goodId);
+      // Nur eigene Orders zahlen auf das eigene Konto ein – fremde Orders in
+      // demselben System liefern zwar Waren, das Geld geht aber woandershin.
+      double bestOwnPrice = Double.NaN;
+      for (SellOrder o : state.sellOrders) {
+        if (!o.systemId.equals(colony.systemId) || o.remainingQuantity <= 0) continue;
+        if (!o.productTypeId.equals(goodId) || !colony.ownerId.equals(o.sellerId)) continue;
+        if (Double.isNaN(bestOwnPrice) || o.pricePerUnit < bestOwnPrice) bestOwnPrice = o.pricePerUnit;
+      }
+      if (Double.isNaN(bestOwnPrice)) continue;
+      spend += need * Math.min(covered, 1.0) * bestOwnPrice;
+    }
+    return spend;
   }
 }

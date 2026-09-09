@@ -8,9 +8,15 @@
     </div>
 
     <div class="status-strip">
-      <a class="status-chip clickable" routerLink="/konto" title="Transaktionsverlauf ansehen">
+      <a class="status-chip clickable" routerLink="/konto"
+         [title]="'Transaktionsverlauf ansehen – Saldo ' + (treasuryFlowPerHour() | number: '1.0-0') + ' Cr je Spielstunde'">
         <span class="eyebrow">Credits</span>
         <span class="mono value">{{ wallet()?.balance ?? 0 | number: '1.0-0' }}</span>
+        <!-- Der Saldo je Spielstunde steht bewusst DIREKT am Guthaben: ohne ihn
+             war ein schleichender Bankrott nirgends in der Oberfläche zu sehen. -->
+        <span class="mono flow" [class.bad]="treasuryFlowPerHour() < 0" [class.good]="treasuryFlowPerHour() > 0">
+          {{ treasuryFlowPerHour() > 0 ? '+' : '' }}{{ treasuryFlowPerHour() | number: '1.0-0' }}/h
+        </span>
       </a>
       <div class="status-chip">
         <span class="eyebrow">Gateway</span>
@@ -18,12 +24,21 @@
           {{ gatewayActive() ? 'Aktiv' : (gateway()?.state === 'Activating' ? 'Aktivierung läuft' : gateway()?.state === 'Discovered' ? 'Entdeckt' : 'Unentdeckt') }}
         </span>
       </div>
+      @if (activeBattleCount() > 0) {
+        <!-- Laufende Gefechte: dauerhaft sichtbar und rot, weil sie ohne Zutun
+             des Kommandanten Schiffe kosten und in Sekunden entschieden sind. -->
+        <a class="status-chip battle-alert" [routerLink]="battleIndicatorLink()" [title]="battleIndicatorTitle()">
+          <span class="eyebrow">Gefecht</span>
+          <span class="value">⚔ {{ activeBattleCount() }} laufend</span>
+        </a>
+      }
       <div class="notification-bell-wrap">
         <button class="ghost small notification-bell" type="button" (click)="toggleNotificationPanel()" title="Benachrichtigungen">
           🔔
           @if (unreadNotificationCount() > 0) { <span class="notification-badge">{{ unreadNotificationCount() }}</span> }
         </button>
         @if (notificationPanelOpen()) {
+          <div class="panel-backdrop" (click)="closeNotificationPanel()"></div>
           <div class="notification-panel">
             <div class="notification-panel-head">
               <span>Benachrichtigungen</span>
@@ -37,7 +52,7 @@
                     <span class="notification-message">{{ n.message }}</span>
                     <span class="notification-meta">#{{ n.code }} · {{ formatAge(n.createdAt) }}</span>
                     @if (n.link) {
-                      <a class="notification-link" [routerLink]="n.link">Kampfbericht öffnen →</a>
+                      <a class="notification-link" [routerLink]="n.link" (click)="closeNotificationPanel()">{{ n.linkLabel ?? 'Öffnen' }} →</a>
                     }
                     <label class="keep-toggle" (click)="$event.stopPropagation()" [title]="keepHint">
                       <input type="checkbox" [checked]="n.keep" (change)="toggleNotificationKeep(n.id, !n.keep)" />

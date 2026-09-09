@@ -1,15 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { BuildingType, ChainPlan, Id, MaterialRequirement, PlanetType, ProductionQueueEntry } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import { PopulationChartComponent } from '../../shared/population-chart.component';
+import { ENERGY_RESERVE_DEFAULT_GAME_HOURS } from '../../core/shared-constants';
 
-type Tab = 'uebersicht' | 'bebauung' | 'verteidigung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
+/**
+ * Der frühere eigene Tab "verteidigung" ist entfallen: Er enthielt EINE
+ * Gebäudezeile, die nicht einmal den Gebäudenamen trug. Die Planetare Abwehr
+ * steht jetzt in der Bebauungsliste – sie ist ein Gebäude mit Bebauungsplatz
+ * wie die anderen. Alte Links mit `?tab=verteidigung` landen über
+ * `parseTab` auf der Bebauung.
+ */
+type Tab = 'uebersicht' | 'bebauung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
 /** Platzhalter, solange eine Vorschau noch nicht (neu) berechnet wurde – siehe `refreshNewOrderPreview`/`toggleQueueEntry`. */
 const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true, totalWorkHours: 0, workersBoundPerHour: 0 };
@@ -26,23 +34,144 @@ export class ColonyDetailComponent {
   protected readonly api = inject(GAME_API);
   protected readonly clock = inject(UiClockService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly colonyId: Id = this.route.snapshot.paramMap.get('id') ?? '';
   protected readonly colony = this.api.colony(this.colonyId);
   protected readonly stats = this.api.colonyStats(this.colonyId);
   protected readonly population = this.api.population(this.colonyId);
   protected readonly popWallet = this.api.populationWallet(this.colonyId);
-  protected readonly planet = this.api.planet(this.colony()?.planetId ?? '');
-  protected readonly moneyState = this.api.moneySupplyState(this.colony()?.planetId ?? '');
+  /**
+   * ACHTUNG, hier lag ein Fehler: Diese vier Abfragen hingen an
+   * `this.colony()?.planetId ?? ''`, ausgewertet EINMAL bei der Feldinitialisierung.
+   * Zu diesem Zeitpunkt ist `colony()` noch leer, es ging also dauerhaft eine
+   * leere Id an den Server – das Panel "Himmelskörper" blieb leer, die Brotkrume
+   * zeigte "← Planeten · ·" und der Handel-Tab kannte keine Orders. Argumente
+   * einer Abfrage müssen REAKTIV sein, deshalb `computed`.
+   */
+  protected readonly planet = computed(() => {
+    const planetId = this.colony()?.planetId;
+    return planetId ? this.api.planet(planetId)() : undefined;
+  });
+  protected readonly moneyState = computed(() => {
+    const planetId = this.colony()?.planetId;
+    return planetId ? this.api.moneySupplyState(planetId)() : undefined;
+  });
   protected readonly buildings = this.api.buildings(this.colonyId);
   protected readonly warehouse = this.api.warehouse(this.colonyId);
   protected readonly supplyInventory = this.api.supplyInventory(this.colonyId);
+
+  /**
+   * EINE Lagertabelle statt zweier fast gleicher: "Versorgungsinventar" und
+   * "Lagerbestand" listeten dieselben Bestände untereinander und unterschieden
+   * sich nur darin, dass das eine Verbrauch/Reichweite und das andere den
+   * "Anbieten"-Knopf hatte.
+   */
+  protected readonly stockRows = computed(() => {
+    const supply = this.supplyInventory();
+    const byId = new Map(supply.map(s => [s.productTypeId, s]));
+    const rows = supply.map(s => ({ ...s, sellable: true }));
+    for (const w of this.warehouse()) {
+      if (byId.has(w.productTypeId)) continue;
+      rows.push({
+        productTypeId: w.productTypeId,
+        name: this.productName(w.productTypeId),
+        category: '',
+        quantity: w.quantity,
+        consumptionPerGameHour: 0,
+        coverageGameHours: null,
+        pendingFraction: 0,
+        reserved: 0,
+        sellable: true,
+      });
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  });
+
+  /**
+   * Reichweite in Tagen/Monaten statt in Spielstunden. "reicht 50.711,9 h" ist
+   * keine Zahl, mit der man planen kann.
+   */
+  /**
+   * Steckbrief einer Bodeneinheit für die Rekrutierungsauswahl. Vorher war das
+   * ein reines Namens-Auswahlfeld mit vier Einträgen – ohne Aufwand,
+   * Konterverhältnis oder den Hinweis, dass Soldaten selbst nicht kämpfen.
+   */
+  protected groundUnitFacts(productTypeId: Id): string {
+    const def = this.api.groundUnitTypes().find(u => u.productTypeId === productTypeId);
+    const product = this.api.productTypes().find(p => p.id === productTypeId);
+    if (!def || !product) return '';
+    const parts = [`${Math.round(product.workHoursPerUnit).toLocaleString('de-DE')} Ah`];
+    if (def.class === 'Soldier') {
+      parts.push(`kommandiert bis zu ${this.dronesPerSoldier} Drohnen`, 'ohne eigene Kampfwirkung');
+    } else {
+      parts.push('autonome Drohne – kämpft nur, wenn ein Soldat sie kommandiert');
+      if (def.countersClass) parts.push(`kontert ${this.groundUnitClassLabel(def.countersClass)}`);
+    }
+    return parts.join(' · ');
+  }
+
+  protected readonly dronesPerSoldier = 5;
+
+  protected groundUnitClassLabel(unitClass: string): string {
+    const byClass: Record<string, string> = {
+      Soldier: 'Soldaten', LightDrone: 'leichte Drohnen',
+      MediumDrone: 'mittlere Drohnen', HeavyDrone: 'schwere Drohnen',
+    };
+    return byClass[unitClass] ?? unitClass;
+  }
+
+  /** Verschiebt einen wartenden Auftrag in der Warteschlange, siehe `GameApi.moveProductionEntry`. */
+  protected moveQueueEntry(entryId: Id, direction: -1 | 1): void {
+    void this.run(`move:${entryId}`, () => this.api.moveProductionEntry(this.colonyId, entryId, direction));
+  }
+
+  /**
+   * Wachstumsrate je SPIELSTUNDE aus derselben Quelle, die auch der
+   * Bebauungs-Tab und die Verlaufsgrafik nutzen (`colonySpeedBreakdown`).
+   * Die Rate je Tick schwankte zu stark, um daneben eine Aussage wie
+   * "Bevölkerung geht zurück" zu tragen.
+   */
+  protected readonly growthPerHour = computed(() => this.speedBreakdown()?.growthPerHour ?? 0);
+
+  protected formatRange(gameHours: number): string {
+    if (gameHours < 48) return `${gameHours.toFixed(1)} h`;
+    const days = gameHours / 24;
+    if (days < 60) return `${days.toFixed(0)} Spieltage`;
+    return `${(days / 30).toFixed(0)} Spielmonate`;
+  }
+
+  /**
+   * Preisanhalt beim Anbieten: Was die Bevölkerung dieser Kolonie je Stück
+   * überhaupt aufbringen kann. Vorher gab es dafür keinerlei Anhaltspunkt – ein
+   * zu hoch gesetzter Preis führte nur zur Meldung "kann sich das nicht
+   * leisten", ohne zu sagen, welcher Preis ginge.
+   */
+  protected priceHint(productTypeId: Id): string | null {
+    const consumerGoods = ['p_grundnahrung', 'p_grundmedizin', 'p_unterhaltungselektronik'];
+    if (!consumerGoods.includes(productTypeId)) return null;
+    const wallet = this.popWallet()?.balance ?? 0;
+    const population = this.population()?.currentCount ?? 0;
+    if (population <= 0 || wallet <= 0) return null;
+    // Die Bevölkerung gibt je Runde etwa ein Zehntel ihres Guthabens aus und
+    // verteilt es auf die drei Grundgüter.
+    const perGood = (wallet * 0.1) / consumerGoods.length;
+    return `Kaufkraft der Bevölkerung: ${Math.round(wallet).toLocaleString('de-DE')} Cr insgesamt`
+      + ` – für dieses Gut sind derzeit rund ${Math.round(perGood).toLocaleString('de-DE')} Cr je Kaufrunde verfügbar.`;
+  }
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
   protected readonly groundForces = this.api.groundForces(this.colonyId);
   protected readonly recruitmentQueue = this.api.recruitmentQueue(this.colonyId);
-  protected readonly sellOrdersAll = this.api.sellOrders(this.colony()?.systemId ?? '');
-  protected readonly system = this.api.system(this.colony()?.systemId ?? '');
+  /** Reaktiv aus demselben Grund wie `planet` – siehe dort. */
+  protected readonly sellOrdersAll = computed(() => {
+    const systemId = this.colony()?.systemId;
+    return systemId ? this.api.sellOrders(systemId)() : [];
+  });
+  protected readonly system = computed(() => {
+    const systemId = this.colony()?.systemId;
+    return systemId ? this.api.system(systemId)() : undefined;
+  });
   protected readonly housingCapacity = this.api.housingCapacity(this.colonyId);
   protected readonly powerCoverage = this.api.powerCoverage(this.colonyId);
   protected readonly powerUpkeepPerHour = this.api.powerUpkeepPerHour(this.colonyId);
@@ -68,7 +197,7 @@ export class ColonyDetailComponent {
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
-  private static readonly OWNER_ONLY_TABS: Tab[] = ['bebauung', 'verteidigung', 'produktion', 'bodentruppen', 'bevoelkerung'];
+  private static readonly OWNER_ONLY_TABS: Tab[] = ['bebauung', 'produktion', 'bodentruppen', 'bevoelkerung'];
 
   /** Nur die eigene Kolonie erlaubt Bau/Produktion/Truppen/Verwaltung – fremde Kolonien (siehe „System Handel") sind nur für Übersicht/Handel einsehbar. */
   protected isOwnColony(): boolean {
@@ -130,15 +259,49 @@ export class ColonyDetailComponent {
 
   protected readonly buyDraftQty: Partial<Record<Id, number>> = {};
 
+  /** Preisänderung einer eigenen Order – Entwurf je Order, `undefined` = Feld zu. */
+  protected readonly priceDraft: Partial<Record<Id, number>> = {};
+
+  protected startPriceEdit(orderId: Id, current: number): void {
+    this.priceDraft[orderId] = current;
+  }
+
+  protected cancelPriceEdit(orderId: Id): void {
+    this.priceDraft[orderId] = undefined;
+  }
+
+  protected async submitPrice(orderId: Id): Promise<void> {
+    const price = this.priceDraft[orderId];
+    if (!price || price <= 0) return;
+    await this.run(`price:${orderId}`, async () => {
+      await this.api.updateSellOrderPrice(orderId, price);
+      this.priceDraft[orderId] = undefined;
+    });
+  }
+
   protected countdown = formatCountdown;
 
   private initialTab(): Tab {
     const t = this.route.snapshot.queryParamMap.get('tab');
-    const valid: Tab[] = ['uebersicht', 'bebauung', 'verteidigung', 'produktion', 'bodentruppen', 'bevoelkerung', 'handel'];
+    if (t === 'verteidigung') return 'bebauung'; // alter Tab, siehe Tab-Typ
+    const valid: Tab[] = ['uebersicht', 'bebauung', 'produktion', 'bodentruppen', 'bevoelkerung', 'handel'];
     return (valid as string[]).includes(t ?? '') ? (t as Tab) : 'uebersicht';
   }
 
-  protected setTab(t: Tab): void { this.tab.set(t); }
+  /**
+   * Hält die Adresszeile mit dem Tab in Einklang. Vorher blieb dort ein alter
+   * `?tab=...` stehen, sodass Zurück-Taste, Neuladen und weitergegebene Links
+   * auf dem falschen Tab landeten.
+   */
+  protected setTab(t: Tab): void {
+    this.tab.set(t);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: t },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   protected buildingFor(typeId: Id) {
     return this.buildings().find(b => b.typeId === typeId);
@@ -146,6 +309,41 @@ export class ColonyDetailComponent {
 
   protected buildingLevel(typeId: Id): number {
     return this.buildingFor(typeId)?.level ?? 0;
+  }
+
+  /**
+   * Laufender Unterhalt dieses Gebäudes je Spielstunde (aktuelle Stufe) und was
+   * die nächste Stufe zusätzlich kostet. Der Wert steckt seit jeher im Katalog
+   * (`BuildingType.upkeepPerLevel`) und wird jeden Tick abgebucht, war aber
+   * NIRGENDS in der Oberfläche zu sehen: Der Ausbau nannte nur die einmaligen
+   * Kosten, während er die Dauerkosten erhöhte – im Testlauf der direkte Weg in
+   * den Bankrott.
+   */
+  protected currentUpkeep(bt: BuildingType): number {
+    return bt.upkeepPerLevel * this.buildingLevel(bt.id);
+  }
+
+  protected additionalUpkeep(bt: BuildingType): number {
+    return bt.upkeepPerLevel;
+  }
+
+  /** Baustoffe, die dem nächsten Ausbau noch fehlen – Grundlage für den Bündelauftrag. */
+  protected missingMaterials(bt: BuildingType): MaterialRequirement[] {
+    return this.upgradeMaterials(bt).filter(m => m.available + 1e-9 < m.required);
+  }
+
+  /**
+   * Reiht alle fehlenden Baustoffe als EINEN Auftrag ein.
+   *
+   * <p>Der Ausweg aus der Einstiegsfalle: Ein Ausbau braucht bis zu fünf
+   * Baustoffe gleichzeitig, und mehrere davon sind Vorprodukte voneinander
+   * (Leitermetall steckt im Leiterbündel). Wer sie nacheinander einreiht,
+   * verliert den zuerst produzierten still an den zweiten Auftrag. Es gab genau
+   * eine richtige Reihenfolge – und die stand nirgends. Der Bündelauftrag macht
+   * die Reihenfolge irrelevant.</p>
+   */
+  protected produceMissingMaterials(typeId: Id): void {
+    void this.run(`materials:${typeId}`, () => this.api.queueMissingBuildingMaterials(this.colonyId, typeId));
   }
 
   private upgradePreview(typeId: Id) {
@@ -185,8 +383,40 @@ export class ColonyDetailComponent {
       case 'Holding': return 'Halten';
       case 'Growing': return 'Wachstum';
       case 'Overcrowded': return 'Überbevölkert';
+      case 'FoodLimited': return 'Nahrungsgrenze erreicht';
       default: return '–';
     }
+  }
+
+  /** Aktueller Elerium-Dauerverbrauch der Infrastruktur je Spielstunde. */
+  protected eleriumPerHour(): number {
+    return this.speedBreakdown()?.infrastructureEleriumPerHour ?? 0;
+  }
+
+  /**
+   * Elerium-Dauerverbrauch der Infrastruktur nach dem nächsten Ausbau
+   * (0 bei allen anderen Gebäuden) – Umsetzungskonzept/34_...md, F4/F5.
+   */
+  protected eleriumAfterUpgrade(bt: BuildingType): number {
+    return this.upgradePreview(bt.id)?.eleriumPerHourAfterUpgrade ?? 0;
+  }
+
+  /**
+   * Wie lange der vorhandene Eleriumvorrat nach dem Ausbau noch reicht, in
+   * SPIELSTUNDEN. Die ehrlichste verfügbare Warnung: sie rechnet nicht mit
+   * einer geschätzten Nachlieferung, sondern mit dem, was tatsächlich im Lager
+   * und im Speicher liegt.
+   */
+  protected eleriumHoursLeftAfterUpgrade(bt: BuildingType): number {
+    const perHour = this.eleriumAfterUpgrade(bt);
+    if (perHour <= 0) return 0;
+    return (this.speedBreakdown()?.eleriumStock ?? 0) / perHour;
+  }
+
+  /** Reicht der Vorrat nach dem Ausbau nicht einmal mehr für die vorgehaltene Reichweite, ist der Blackout absehbar. */
+  protected eleriumUpgradeWarning(bt: BuildingType): boolean {
+    return this.eleriumAfterUpgrade(bt) > 0
+      && this.eleriumHoursLeftAfterUpgrade(bt) < ENERGY_RESERVE_DEFAULT_GAME_HOURS;
   }
 
   protected upgradeHours(bt: BuildingType): number {

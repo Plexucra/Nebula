@@ -23,13 +23,31 @@ export class NewGameComponent {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /**
+   * Ob die Eingaben vollständig sind. Angular setzt auf dem Formular
+   * `novalidate`, deshalb greift das `required`-Attribut allein NICHT: Ein
+   * leeres Formular ließ sich abschicken und legte still einen Kommandanten
+   * "Unbekannter Kommandant" mit Heimatwelt "Heimatwelt" an. Weil der Name
+   * zugleich die Kennung in der Anmelde- und Empfängerliste ist, entstanden so
+   * nicht unterscheidbare Kommandanten. Der Server weist beides inzwischen
+   * ebenfalls ab – hier wird es nur früher und freundlicher sichtbar.
+   */
+  protected get valid(): boolean {
+    if (!this.commanderName.trim() || !this.homeworldName.trim()) return false;
+    return this.role !== 'Npc' || !!this.campId.trim();
+  }
+
   protected async begin(): Promise<void> {
+    if (!this.valid) {
+      this.error.set('Bitte einen Namen für den Kommandanten und für die Heimatkolonie angeben.');
+      return;
+    }
     this.error.set(null);
     this.busy.set(true);
     try {
       await this.api.registerPlayer(
-        this.commanderName, this.homeworldName, this.role,
-        this.role === 'Npc' ? this.campId : undefined);
+        this.commanderName.trim(), this.homeworldName.trim(), this.role,
+        this.role === 'Npc' ? this.campId.trim() : undefined);
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Unbekannter Fehler.');
     } finally {

@@ -44,8 +44,6 @@ public final class BattleCommands {
   private BattleCommands() {
   }
 
-  private static final int NOTIFICATION_CODE_BATTLE_STARTED = 402;
-  private static final int NOTIFICATION_CODE_BATTLE_ENDED = 403;
 
   public static Battle activeBattleForFleet(GameState state, String fleetId) {
     for (Battle b : state.battles) {
@@ -208,11 +206,10 @@ public final class BattleCommands {
     state.battles.add(battle);
 
     String reportLink = "/kampfbericht/" + battle.reportToken;
-    Player defenderOwner = state.players.stream().filter(p -> p.id.equals(defenderFleet.ownerId)).findFirst().orElse(null);
-    Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_BATTLE_STARTED,
-        me.name + " greift Ihre Flotte \"" + defenderFleet.name + "\" an!", defenderOwner != null ? defenderOwner.homeworldColonyId : null, reportLink);
-    Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_BATTLE_STARTED,
-        "Sie greifen die Flotte \"" + defenderFleet.name + "\" an!", me.homeworldColonyId, reportLink);
+    Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_BATTLE_STARTED,
+        me.name + " greift Ihre Flotte \"" + defenderFleet.name + "\" an!", defenderFleet.ownerId, reportLink);
+    Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_BATTLE_STARTED,
+        "Sie greifen die Flotte \"" + defenderFleet.name + "\" an!", me.id, reportLink);
   }
 
   private static Fleet findFleet(GameState state, String fleetId) {
@@ -311,11 +308,9 @@ public final class BattleCommands {
           : outcome == BattleOutcome.DefenderVictory
           ? defenderName + " hat den Angriff von " + attackerName + " abgewehrt."
           : ("attacker".equals(retreatingSide) ? attackerName : defenderName) + " hat sich aus dem Gefecht zurückgezogen.";
-      String attackerHome = state.players.stream().filter(p -> p.id.equals(battle.attackerId)).map(p -> p.homeworldColonyId).findFirst().orElse(null);
-      String defenderHome = state.players.stream().filter(p -> p.id.equals(battle.defenderId)).map(p -> p.homeworldColonyId).findFirst().orElse(null);
       String reportLink = "/kampfbericht/" + battle.reportToken;
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_BATTLE_ENDED, summary, attackerHome, reportLink);
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_BATTLE_ENDED, summary, defenderHome, reportLink);
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_BATTLE_ENDED, summary, battle.attackerId, reportLink);
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_BATTLE_ENDED, summary, battle.defenderId, reportLink);
     }
     BlockadeCommands.pruneEmptyBlockades(state);
     FleetCommands.removeDestroyedFleets(state);

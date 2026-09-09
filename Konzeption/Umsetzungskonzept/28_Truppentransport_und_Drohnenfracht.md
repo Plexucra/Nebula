@@ -43,7 +43,25 @@ Stellen statt einer.
 | Katalogfeld | `ShipTypeDef.troopCapacity` | `cargoMassKg` / `cargoVolumeM3` |
 | Grenze | Kopfzahl | Masse **und** Volumen, wie jede Ware |
 
-## B. Kapazität des Mannschaftstransporters: 1000 Soldaten
+## B. Kapazität des Mannschaftstransporters: 27 Soldaten
+
+> **Nachgezogen am 9.9.2026 (Umsetzungskonzept/34, §A).** Mit der
+> Neuvermessung der Schiffe ist der Transporter auf rund ein Viertel des
+> Bauaufwands einer Korvette geschrumpft (9 803 t statt 60 000 t), und seine
+> Kapazität mit ihm: **`troopCapacity = 27`**. Die Begründung des Abschnitts
+> unten gilt unverändert und trägt jetzt deutlich weiter – die Truppe verteilt
+> sich zwangsläufig auf viele Rümpfe. Der Preis: **1 000 Soldaten fahren in 37
+> Transportern** (zusammen rund 9,6 Korvetten Bauaufwand und 8,6 Trägerslots),
+> und eine Landungsoperation ist ohne das Zusammenlegen von Flotten
+> (Umsetzungskonzept/33) kaum noch zu befehligen. Die Rechnungen in §C und §D
+> stehen weiter in der alten Größenordnung von 1 000 Soldaten je Schiff; als
+> Größenordnung je SOLDAT bleiben sie gültig, als Zahl je Schiff nicht.
+>
+> Der Test sichert seither die Regel statt der Zahl
+> (`TroopTransportTest.troopCapacityComesOnlyFromTheTroopTransport`): Kapazität
+> ausschließlich am Transporter, Höhe ist eine Balancegröße.
+
+### Die ursprüngliche Herleitung (1000 Soldaten)
 
 Aus der Stückliste ließen sich rund 2000 ableiten: das
 `Mannschaftstransporttruppenmodul` enthält 277 Truppenunterbringungsbaugruppen

@@ -51,7 +51,7 @@ public class GameTick {
       processBuildingCompletions(t);
       EconomyTick.consumePowerUpkeep(state);
       processDefenseActivations(t);
-      FleetCommands.processFleetArrivals(state, t);
+      FleetCommands.processFleetArrivals(state, ids, t);
       BattleCommands.processBattles(state, ids, t);
       GroundBattleCommands.processGroundBattles(state, ids, t);
       ProductionCommands.processProductionQueue(state, ids, t);
@@ -68,6 +68,7 @@ public class GameTick {
       EconomyTick.growPopulationAndMoneySupply(state, ids);
       EconomyTick.runWealthRedistributionIfDue(state, ids, t);
       EconomyTick.recordStatsSnapshotIfDue(state, t);
+      EconomyTick.notifyColonyAndTreasuryStates(state, ids);
       RetentionCleanup.purgeExpired(state, t);
     }
   }
@@ -77,10 +78,24 @@ public class GameTick {
       if (b.pendingOrder != null && b.pendingOrder.completesAt <= t) {
         b.level = b.pendingOrder.targetLevel;
         b.pendingOrder = null;
+        notifyBuildingDone(b);
         // Ein fertiger Industriekomplex weckt wartende Produktionsaufträge (Minimalstart, Umsetzungskonzept/17_...md).
         ProductionCommands.tryStartNextProductionEntry(state, ids, b.colonyId);
       }
     }
+  }
+
+  /**
+   * Ein fertiges Gebäude war bisher nur an der veränderten Stufe zu erkennen –
+   * wer nicht gerade auf dem Bebauungs-Tab stand, erfuhr nichts davon.
+   */
+  private void notifyBuildingDone(Building building) {
+    var colony = ColonyCommands.colony(state, building.colonyId);
+    if (colony == null) return;
+    var type = de.nebula.data.BuildingCatalog.find(building.typeId);
+    Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_BUILDING_DONE,
+        type.name + " in \"" + colony.name + "\" ist auf Stufe " + building.level + " fertig.",
+        colony.id, Notifications.colonyLink(colony.id));
   }
 
   private void processDefenseActivations(long t) {

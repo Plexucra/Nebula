@@ -21,6 +21,7 @@ import de.nebula.model.WalletOwnerType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Bebauung (Umsetzungskonzept/17_...md): Bebauungsplätze statt
@@ -136,6 +137,38 @@ public final class BuildingCommands {
     if (GroundBattleCommands.isUnderGroundAttack(state, colonyId)) {
       throw new CommandException("Während eines laufenden Bodengefechts kann an dieser Kolonie nicht gebaut werden.");
     }
+  }
+
+  /**
+   * Reiht die Baustoffe, die dem nächsten Ausbau dieses Gebäudes noch fehlen,
+   * als EINEN Bündelauftrag ein ({@code ProductionCommands.queueProductionBundle}).
+   *
+   * <p>Das ist der Ausweg aus der Falle, in die vorher jeder neue Kommandant
+   * lief: Ein Ausbau braucht bis zu fünf Baustoffe GLEICHZEITIG, und mehrere
+   * davon sind Vorprodukte voneinander (etwa Leitermetall im Leiterbündel).
+   * Wer sie nacheinander einreiht, verliert den zuerst produzierten Baustoff
+   * still an den zweiten Auftrag und kann den Ausbau nie bezahlen. Es gab genau
+   * eine richtige Reihenfolge, und die Oberfläche verriet sie nirgends – der
+   * Bündelauftrag macht die Reihenfolge irrelevant.</p>
+   *
+   * @return die eingereihten Mengen je Baustoff (leer, wenn nichts fehlt)
+   */
+  public static Map<String, Double> queueMissingMaterials(GameState state, IdGenerator ids, String playerId,
+                                                          String colonyId, String buildingTypeId) {
+    GameQueries.requireOwnColony(state, playerId, colonyId);
+    BuildingType type = BuildingCatalog.find(buildingTypeId);
+    UpgradePreview preview = upgradePreview(state, colonyId, type);
+
+    Map<String, Double> demand = new java.util.LinkedHashMap<>();
+    for (MaterialRequirement m : preview.materials()) {
+      double missing = m.required - m.available;
+      if (missing > 1e-9) demand.put(m.productTypeId, Math.ceil(missing));
+    }
+    if (demand.isEmpty()) {
+      throw new CommandException("Für den nächsten Ausbau von " + type.name + " sind alle Baustoffe vorhanden.");
+    }
+    ProductionCommands.queueProductionBundleCore(state, ids, colonyId, demand, true, false);
+    return demand;
   }
 
   public static void queueBuilding(GameState state, IdGenerator ids, String playerId, String colonyId, String buildingTypeId) {

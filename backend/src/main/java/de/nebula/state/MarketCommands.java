@@ -200,6 +200,7 @@ public final class MarketCommands {
     }
     if (!order.autoRelist) {
       state.sellOrders.remove(order);
+      notifySoldOut(state, ids, order, false);
       return;
     }
     double relistQty = reserveForRelist(state, order);
@@ -213,6 +214,9 @@ public final class MarketCommands {
     } else {
       state.sellOrders.remove(order);
     }
+    // Eine wiederkehrende Order, die nichts mehr nachlegen kann, ist der Moment,
+    // in dem die Einnahmen versiegen – ohne Meldung merkt das niemand.
+    notifySoldOut(state, ids, order, true);
   }
 
   /**
@@ -220,6 +224,35 @@ public final class MarketCommands {
    * sobald ihre Kolonie wieder Lagerbestand hat. NUR kolonie-basierte Orders
    * werden schlafend gehalten (siehe {@link #settleSellOrderPurchase}).
    */
+  /**
+   * Ändert den Preis einer eigenen, offenen Verkaufsorder.
+   *
+   * <p>Vorher ging das nur über Zurückziehen und Neuanlegen – an einer anderen
+   * Stelle der Oberfläche, mit dem Umweg über das Lager. Ein zu hoch gesetzter
+   * Preis (die Bevölkerung kann ihn sich nicht leisten) ist aber der Normalfall
+   * beim ersten Versuch und muss sich direkt korrigieren lassen. Die Ware
+   * liegt bereits in der Order, es ändert sich nur die Zahl.</p>
+   */
+  public static void updateSellOrderPrice(GameState state, String playerId, String orderId, double pricePerUnit) {
+    if (pricePerUnit <= 0) throw new CommandException("Der Preis muss größer als 0 sein.");
+    SellOrder order = state.sellOrders.stream().filter(o -> o.id.equals(orderId)).findFirst()
+        .orElseThrow(() -> new CommandException("Unbekannte Verkaufsorder."));
+    if (!playerId.equals(order.sellerId)) throw new CommandException("Diese Order gehört einem anderen Kommandanten.");
+    order.pricePerUnit = pricePerUnit;
+  }
+
+  /** Meldet dem Verkäufer, dass eine Order leer ist – bei wiederkehrenden Orders mit dem Hinweis auf den fehlenden Nachschub. */
+  private static void notifySoldOut(GameState state, IdGenerator ids, SellOrder order, boolean wasRecurring) {
+    if (order.sellerId == null) return;
+    String productName = de.nebula.data.ProductCatalog.find(order.productTypeId).name;
+    String text = wasRecurring
+        ? "Die wiederkehrende Verkaufsorder für " + productName + " ist leer und im Lager liegt kein Nachschub – "
+          + "die Einnahmen aus diesem Gut versiegen."
+        : "Ihre Verkaufsorder für " + productName + " ist vollständig abverkauft.";
+    Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_SELL_ORDER_SOLD_OUT,
+        text, order.depotColonyId, "/handel");
+  }
+
   public static void replenishDormantSellOrders(GameState state) {
     List<SellOrder> dormant = state.sellOrders.stream()
         .filter(o -> o.remainingQuantity == 0 && o.autoRelist && o.depotColonyId != null && o.sourceFleetId == null)

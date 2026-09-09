@@ -33,7 +33,15 @@ Einzelstücken je Modul unterschieden.
 
 ## A. Die neue Massenskala
 
-Anker ist die Fregatte F125 *Baden-Württemberg* mit rund 7 200 t
+> **Nachgezogen am 9.9.2026 (Umsetzungskonzept/34, §A).** Die Skala ist seither
+> einmal verschoben worden: die Kampfschiffe wurden gemeinsam versechsfacht,
+> die Zivilschiffe nach Bauaufwand neu bemessen. Die zweite Tabelle unten ist
+> der **geltende** Stand; die erste dokumentiert, wovon aus verschoben wurde.
+> Unverändert geblieben sind dabei die Dichten je Klasse und das
+> Massenverhältnis der Kampfschiffe 1 : 10 : 100 – nur der Anker ist nicht mehr
+> die F125.
+
+Anker war die Fregatte F125 *Baden-Württemberg* mit rund 7 200 t
 Einsatzverdrängung. Von dort skalieren Zerstörer und Kreuzer nach Vorgabe mit
 Faktor 10 und 100; die übrigen vier Schiffe sind rollengerecht in dieselbe
 Skala eingeordnet.
@@ -47,6 +55,23 @@ Skala eingeordnet.
 | Trägerschiff | 250 000 t | 1 785 714 m³ | 140 kg/m³ | nimmt Kampfschiffe auf |
 | Kreuzer | 700 000 t | 2 187 500 m³ | 320 kg/m³ | 100 × Korvette |
 | Kolonisationsschiff | 1 240 000 t | 7 863 636 m³ | 158 kg/m³ | abgeleitet, siehe §D |
+
+**Geltender Stand seit dem 9.9.2026** (`shared/catalog/products.json`;
+Herleitung und Folgen in Umsetzungskonzept/34, §A):
+
+| Schiff | Masse | Volumen | Dichte | Korvettenmassen |
+|---|---:|---:|---:|---:|
+| Mannschaftstransporter | 9 803 t | 62 284 m³ | 160 kg/m³ | 0,23 |
+| Frachter | 9 451 t | 86 904 m³ | 110 kg/m³ | 0,23 |
+| Korvette | 42 000 t | 190 909 m³ | 220 kg/m³ | 1,00 |
+| Zerstörer | 420 000 t | 1 615 385 m³ | 260 kg/m³ | 10,00 |
+| Kreuzer | 4 200 000 t | 13 125 000 m³ | 320 kg/m³ | 100,00 |
+| Kolonisationsschiff | 7 440 000 t | 47 181 818 m³ | 158 kg/m³ | 177,14 |
+| Trägerschiff | 12 600 193 t | 90 001 382 m³ | 140 kg/m³ | 300,00 |
+
+Die Korvettenmasse ist damit die Recheneinheit gleich zweier Systeme: ein
+Trägerslot (siehe §C) **und** eine Eleriumkapsel je Sprung
+(Umsetzungskonzept/34, §K).
 
 **Die Dichte je Klasse bleibt unverändert.** Sie war im Altkatalog bereits auf
 glatte Werte gesetzt (Korvette 220, Zerstörer 260, Kreuzer 320, Frachter 110,

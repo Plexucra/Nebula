@@ -90,9 +90,12 @@ public final class ChainPlanner {
     double speed = Formulas.buildingLevelSpeedFactor(level)
         * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
     double hoursWithBonuses = product.baseProductionHours / Math.max(speed, 0.05);
-    // Der Test-Regler teilt die GESAMTE Dauer – auch die Arbeitskraft-Bremse –,
+    // Der Tempo-Regler teilt die GESAMTE Dauer – auch die Arbeitskraft-Bremse –,
     // sonst bliebe bei kleiner Bevölkerung genau die Bremse als Untergrenze
     // stehen und der Regler wäre für die langen Schiffsketten wirkungslos.
+    // Genau deshalb steht er hier und nicht in baseProductionHours: die
+    // Bremsschwelle (Arbeitsstunden/Bevölkerung) bleibt unverschoben, der
+    // Einwohnerbedarf je Kolonie ist vom Fertigungstempo also unabhängig.
     return Formulas.productionHoursWithWorkforce(hoursWithBonuses, product.workHoursPerUnit, population)
         / GameConstants.PRODUCTION_SPEED_MULTIPLIER;
   }

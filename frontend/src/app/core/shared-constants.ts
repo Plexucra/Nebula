@@ -25,8 +25,19 @@ export const REAL_MS_PER_GAME_HOUR: number = sharedConstants.baseRealMsPerGameHo
  * Oberfläche einen laufenden Testlauf als solchen ausweisen kann (Wert ≠ 1).
  */
 export const PRODUCTION_SPEED_MULTIPLIER: number = (sharedConstants as { productionSpeedMultiplier?: number }).productionSpeedMultiplier ?? 1;
-export const NOTIFICATION_RETENTION_GAME_HOURS: number = sharedConstants.notificationRetentionGameHours;
-export const MESSAGE_RETENTION_GAME_HOURS: number = sharedConstants.messageRetentionGameHours;
+/**
+ * REALZEIT-AUSNAHME (siehe `_realTimeException` in `shared/game-constants.json`
+ * und `GameConstants.NOTIFICATION_RETENTION_REAL_MS`): Aufbewahrungsfristen
+ * zählen als EINZIGE Zeitangaben des Spiels in ECHTEN TAGEN, nicht in
+ * Spielstunden – sie hängen deshalb NICHT am Tempo-Regler. Eine Frist, nach der
+ * ein Mensch etwas gelesen haben soll, wird nicht kürzer, weil die Spieluhr
+ * schneller läuft.
+ */
+export const NOTIFICATION_RETENTION_REAL_DAYS: number = sharedConstants.notificationRetentionRealDays;
+/** REALZEIT-AUSNAHME, siehe `NOTIFICATION_RETENTION_REAL_DAYS`. */
+export const MESSAGE_RETENTION_REAL_DAYS: number = sharedConstants.messageRetentionRealDays;
+/** REALZEIT-AUSNAHME, siehe `NOTIFICATION_RETENTION_REAL_DAYS`: Löschfrist für inaktive Kommandanten. */
+export const INACTIVE_PLAYER_DELETION_REAL_DAYS: number = sharedConstants.inactivePlayerDeletionRealDays;
 /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md) – für Hinweistexte. */
 export const PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS: number = sharedConstants.peaceTreatyTerminationNoticeGameHours;
 export const TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS: number = sharedConstants.tradeAgreementTerminationNoticeGameHours;
@@ -39,8 +50,11 @@ export const START_POPULATION: number = sharedConstants.startPopulation;
 export const COLONY_SHIP_BUILD_GAME_HOURS: number = sharedConstants.colonyShipBuildGameHours;
 export const COLONY_SHIP_MIN_LOYALTY_PCT: number = sharedConstants.colonyShipMinLoyaltyPct;
 export const COLONIZATION_GAME_HOURS: number = sharedConstants.colonizationGameHours;
-/** Fassungsvermögen des Treibstofftanks je Schiff (Umsetzungskonzept/26_...md). */
-export const JUMP_FUEL_TANK_PER_SHIP: number = sharedConstants.jumpFuelTankPerShip;
+/** Standard-Reichweite des Energiespeichers in Spielstunden (Umsetzungskonzept/32_...md) – Schwelle der Ausbauwarnung. */
+export const ENERGY_RESERVE_DEFAULT_GAME_HOURS: number = sharedConstants.energyReserveDefaultGameHours;
+/** Trägersprung ohne Gateway (Umsetzungskonzept/06_...md) – für Hinweistexte. */
+export const CARRIER_TRANSIT_TIME_FACTOR: number = sharedConstants.carrierTransitTimeFactor;
+export const CARRIER_TRANSIT_FUEL_FACTOR: number = sharedConstants.carrierTransitFuelFactor;
 
 /** Spielstunden → Spieltage, für Hinweistexte („wird nach N Spieltagen gelöscht"). */
 export function gameHoursToGameDays(gameHours: number): number {

@@ -106,8 +106,12 @@
             <p class="hint">🛡 Orbit blockiert von <strong>{{ ownerDisplay(pb.ownerId) }}</strong></p>
           }
           @if (planet.usable) {
-            <span class="eyebrow">Rohstoffkonzentration</span>
-            @if (explored()) {
+            <!-- Einklappbar: nach dem Erforschen sind das 17 Zeilen JE Planet,
+                 bei zehn Himmelskörpern also eine sehr lange Scrollstrecke. -->
+            <button type="button" class="eyebrow concentration-toggle" (click)="toggleConcentration(planet.id)">
+              Rohstoffkonzentration {{ concentrationOpen(planet.id) ? '▾' : '▸' }}
+            </button>
+            @if (explored() && concentrationOpen(planet.id)) {
               <div class="conc-list">
                 @for (rc of planet.resourceConcentration; track rc.resourceTypeId) {
                   <div class="conc-row">
@@ -117,7 +121,7 @@
                   </div>
                 } @empty { <p class="empty-hint">Keine Rohstoffvorkommen.</p> }
               </div>
-            } @else {
+            } @else if (!explored()) {
               <p class="empty-hint">Nicht erforscht – erst eine hier stationierte eigene Flotte kann die Fördergüten aufdecken.</p>
             }
           }

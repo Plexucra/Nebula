@@ -24,7 +24,9 @@ public final class NotificationCommands {
         .map(c -> c.id)
         .collect(java.util.stream.Collectors.toSet());
     return state.notifications.stream()
-        .filter(n -> n.colonyId == null || myColonyIds.contains(n.colonyId))
+        .filter(n -> n.playerId != null
+            ? n.playerId.equals(playerId)
+            : n.colonyId == null || myColonyIds.contains(n.colonyId))
         .toList();
   }
 

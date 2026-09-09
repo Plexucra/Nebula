@@ -1,6 +1,7 @@
 package de.nebula.data;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import de.nebula.engine.GameConstants;
 import de.nebula.model.ShipTypeDef;
 
 import java.util.List;
@@ -18,9 +19,26 @@ public final class ShipCatalog {
   private ShipCatalog() {
   }
 
-  public static final List<ShipTypeDef> CATALOG =
-      List.copyOf(CatalogJson.load("ships.json", new TypeReference<List<ShipTypeDef>>() {
-      }));
+  public static final List<ShipTypeDef> CATALOG = List.copyOf(withJumpFuel(
+      CatalogJson.load("ships.json", new TypeReference<List<ShipTypeDef>>() {
+      })));
+
+  /**
+   * Rechnet Sprungverbrauch und Tankgröße JE SCHIFF aus seiner Masse aus
+   * (Umsetzungskonzept/34_...md, Entscheidung F7). Bewusst hier beim Laden und
+   * nicht als weitere Spalte in {@code ships.json}: die Masse steht im
+   * Produktkatalog, und zwei gepflegte Zahlen für dieselbe Aussage laufen
+   * auseinander, sobald ein Schiff neu vermessen wird.
+   */
+  private static List<ShipTypeDef> withJumpFuel(List<ShipTypeDef> defs) {
+    double corvetteMass = ProductCatalog.find(GameConstants.CORVETTE_PRODUCT_ID).massKg;
+    for (ShipTypeDef def : defs) {
+      double massRatio = corvetteMass > 0 ? ProductCatalog.find(def.productTypeId).massKg / corvetteMass : 1;
+      def.jumpFuelPerHop = massRatio * GameConstants.JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP;
+      def.fuelTankCapacity = def.jumpFuelPerHop * GameConstants.JUMP_FUEL_TANK_RANGE_HOPS;
+    }
+    return defs;
+  }
 
   public static ShipTypeDef find(String productTypeId) {
     return CATALOG.stream().filter(s -> s.productTypeId.equals(productTypeId)).findFirst()

@@ -22,7 +22,8 @@ public class Fleet {
    * Bewusst KEINE Fracht: Kapseln im Tank belegen weder Masse- noch
    * Volumenkapazität, können aber auch nicht wieder ausgeladen werden – sonst
    * wäre der Tank ein zweiter, viel größerer Frachtraum an jedem Schiff.
-   * Fassungsvermögen: {@code GameConstants.JUMP_FUEL_TANK_PER_SHIP} je Schiff.
+   * Fassungsvermögen: {@code ShipTypeDef.fuelTankCapacity} je Schiff, aus
+   * dessen Masse abgeleitet (Umsetzungskonzept/34_...md, F7).
    */
   public double fuelCapsules;
   /** Ziel des GERADE LAUFENDEN, einzelnen Gateway-Sprungs – nur während InTransit gesetzt. */

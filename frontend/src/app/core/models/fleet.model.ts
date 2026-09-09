@@ -11,7 +11,14 @@ export interface ShipTypeDef {
   cargoMassKg: number;
   /** Frachtkapazität in m³ – siehe `cargoMassKg`. */
   cargoVolumeM3: number;
+  /**
+   * Slots, die dieses Schiff an Bord eines Trägers belegt (Umsetzungskonzept/
+   * 06_...md). Ein Slot ist die Masse einer Korvette – das Slotsystem ist ein
+   * Massensystem.
+   */
   carrierSlotUsage: number;
+  /** Slots, die dieses Schiff selbst AUFNIMMT – nur das Trägerschiff hat einen Wert > 0. */
+  carrierSlotCapacity: number;
   /**
    * Soldaten, die dieses Schiff aufnimmt (Umsetzungskonzept/28_...md). Nur der
    * Mannschaftstransporter hat einen Wert > 0 und nimmt AUSSCHLIESSLICH
@@ -29,6 +36,15 @@ export interface ShipTypeDef {
    * siehe Mechanik/04_..., §2-3.
    */
   countersClass: ShipClass | null;
+  /**
+   * Eleriumkapseln, die dieses Schiff für EINEN Gateway-Sprung verbraucht.
+   * Kommt fertig aus dem Katalog: der Server leitet den Wert aus der
+   * Schiffsmasse ab (Umsetzungskonzept/34_...md, F7) – im Client steht
+   * deshalb keine zweite Formel.
+   */
+  jumpFuelPerHop: number;
+  /** Fassungsvermögen des Treibstofftanks dieses Schiffs in Kapseln (= `jumpFuelPerHop` × Reichweite in Sprüngen). */
+  fuelTankCapacity: number;
 }
 
 /**
@@ -87,7 +103,7 @@ export interface Fleet {
    * Eleriumkapseln im separaten TANK (Umsetzungskonzept/26_...md). Keine Fracht:
    * belegt keine Lade­kapazität, kann aber auch nicht ausgeladen werden – sonst
    * wäre der Tank ein zweiter, weit größerer Frachtraum. Fassungsvermögen:
-   * `JUMP_FUEL_TANK_PER_SHIP` je Schiff der Flotte.
+   * `ShipTypeDef.fuelTankCapacity` je Schiff der Flotte.
    */
   fuelCapsules: number;
   /** Ziel des GERADE LAUFENDEN, einzelnen Gateway-Sprungs – nur während `status === 'InTransit'` gesetzt. Bei einer mehrsprungigen Reise NICHT das Endziel, siehe `pendingHops`. */
@@ -123,6 +139,27 @@ export interface ShipyardQueueEntry {
   plan: ChainPlan;
   startedAt: number | null;
   endsAt: number | null;
+}
+
+/**
+ * Vorschau eines Trägersprungs ohne Gateway (Umsetzungskonzept/06_...md).
+ * Kommt fertig gerechnet vom Backend, damit Vorschau und tatsächlicher Sprung
+ * nie auseinanderlaufen.
+ */
+export interface CarrierJumpPreview {
+  /** false = die Träger fassen die übrigen Schiffe nicht; `reason` nennt den Grund. */
+  possible: boolean;
+  reason: string | null;
+  /** Slots, die die mitfliegenden Schiffe belegen. */
+  slotsNeeded: number;
+  /** Slots, die die Trägerschiffe bereitstellen. */
+  slotsAvailable: number;
+  /** Strecke, gemessen in durchschnittlichen Gateway-Sprüngen. */
+  referenceHops: number;
+  /** Reisedauer in Realzeit-Millisekunden. */
+  ms: number;
+  fuelNeeded: number;
+  fuelInTank: number;
 }
 
 /**

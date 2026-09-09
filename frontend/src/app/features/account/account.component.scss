@@ -67,3 +67,12 @@
   .breakdown-row { grid-template-columns: 1fr auto; }
   .breakdown-row .stat-bar { grid-column: 1 / -1; }
 }
+
+
+.balance-flow {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  margin-top: 2px;
+  &.bad { color: var(--danger); }
+  &.good { color: var(--good); }
+}

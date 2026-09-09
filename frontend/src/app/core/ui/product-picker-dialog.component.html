@@ -6,7 +6,17 @@
         <button class="ghost small" type="button" (click)="dismiss()">✕</button>
       </div>
       <div class="panel-body">
-        @if (!selectedCategory()) {
+        <!-- Suche über alle Produkte: der Katalog hat über hundert Einträge,
+             vorher gab es ausschließlich den Weg über Kategorie und Stufe. -->
+        <input class="picker-search" type="search" placeholder="Produkt suchen…"
+               [ngModel]="search()" (ngModelChange)="search.set($event)" />
+        @if (searchResults().length > 0) {
+          <div class="product-grid">
+            @for (p of searchResults(); track p.id) {
+              <button type="button" class="product-card" (click)="pick(p.id)">{{ p.name }}</button>
+            }
+          </div>
+        } @else if (!selectedCategory()) {
           <span class="hint">Kategorie wählen</span>
           <div class="category-grid">
             @for (cat of categoriesPresent(); track cat) {

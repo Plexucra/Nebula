@@ -46,6 +46,22 @@ export class AccountComponent {
   protected readonly totalIncome = computed(() => this.incomeBreakdown().reduce((sum, r) => sum + r.total, 0));
 
   protected reasonLabel(r: TransactionReason): string { return REASON_LABEL[r]; }
+
+  /**
+   * Ersetzt interne Produkt-IDs in der Buchungsnotiz durch den Produktnamen.
+   * Im Transaktionsverlauf stand vorher wörtlich "Konsum p_grundnahrung".
+   */
+  protected noteText(note: string | null | undefined): string {
+    if (!note) return '';
+    return note.replace(/p_[a-z0-9_]+/gi, id => this.api.productTypes().find(p => p.id === id)?.name ?? id);
+  }
+
+  /**
+   * Saldo je Spielstunde – die Bezugsgröße, die den Blöcken "Zuletzt
+   * ausgegeben/eingenommen" fehlte: "letzte 50 Buchungen" sagt nichts darüber,
+   * ob das Konto wächst oder leerläuft.
+   */
+  protected readonly flowPerHour = this.api.treasuryFlowPerHour();
   protected isIncome(toWalletId: string | null): boolean {
     return toWalletId === this.wallet()?.id;
   }

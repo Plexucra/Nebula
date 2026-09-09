@@ -65,6 +65,8 @@ export class StatisticsComponent {
   }));
 
   protected readonly coverageGoods = COVERAGE_GOODS;
+  /** Auflösung der Ein-Buchstaben-Kürzel – sie standen vorher ohne jede Legende in der Tabelle. */
+  protected readonly coverageLegend = COVERAGE_GOODS.map(g => `${g.short} = ${g.label}`).join(', ');
 
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;

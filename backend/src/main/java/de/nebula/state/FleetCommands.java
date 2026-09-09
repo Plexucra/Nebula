@@ -5,6 +5,7 @@ import de.nebula.data.ShipCatalog;
 import de.nebula.engine.Clock;
 import de.nebula.engine.GameConstants;
 import de.nebula.engine.Graph;
+import de.nebula.model.Blockade;
 import de.nebula.model.Colony;
 import de.nebula.model.Fleet;
 import de.nebula.model.FleetCargoEntry;
@@ -318,10 +319,19 @@ public final class FleetCommands {
    * angeschlossen.
    */
   public static void moveFleet(GameState state, String playerId, String fleetId, String destinationSystemId) {
+    moveFleet(state, playerId, fleetId, destinationSystemId, false);
+  }
+
+  public static void moveFleet(GameState state, String playerId, String fleetId, String destinationSystemId,
+                               boolean viaCarrier) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte ist bereits unterwegs.");
     if (destinationSystemId.equals(fleet.systemId)) throw new CommandException("Die Flotte befindet sich bereits in diesem System.");
     if (state.systems.stream().noneMatch(s -> s.id.equals(destinationSystemId))) throw new CommandException("Unbekanntes Zielsystem.");
+    if (viaCarrier) {
+      startCarrierTransit(state, fleet, destinationSystemId);
+      return;
+    }
     List<String> path = Graph.bfsPath(GatewayCommands.gatewayRoutes(state), fleet.systemId, destinationSystemId);
     if (path == null || path.isEmpty()) throw new CommandException("Kein Gateway-Pfad zu diesem System bekannt.");
     consumeJumpFuel(state, fleet, path.size());
@@ -346,10 +356,204 @@ public final class FleetCommands {
     fleet.locationPlanetId = null;
   }
 
-  /** Fassungsvermögen des Treibstofftanks einer Flotte: {@code JUMP_FUEL_TANK_PER_SHIP} je Schiff. */
+  // ==========================================================================
+  // Trägersprung ohne Gateway (Umsetzungskonzept/06_...md, "CarrierTransit")
+  // ==========================================================================
+
+  /**
+   * Slots, die die Trägerschiffe einer Flotte bereitstellen. Ein Slot ist die
+   * Masse einer Korvette (siehe {@code ShipTypeDef.carrierSlotCapacity}).
+   */
+  public static double carrierSlotCapacity(Fleet fleet) {
+    double sum = 0;
+    for (FleetShipGroup g : fleet.ships) {
+      sum += ShipCatalog.find(g.shipProductTypeId).carrierSlotCapacity * g.quantity;
+    }
+    return sum;
+  }
+
+  /**
+   * Slots, die die ÜBRIGEN Schiffe der Flotte belegen. Träger tragen sich nicht
+   * selbst – sie fliegen den Sprung aus eigener Kraft und zählen deshalb nicht
+   * gegen die eigene Kapazität ({@code carrierSlotUsage} ist beim Träger 0).
+   */
+  public static double carrierSlotLoad(Fleet fleet) {
+    double sum = 0;
+    for (FleetShipGroup g : fleet.ships) {
+      sum += ShipCatalog.find(g.shipProductTypeId).carrierSlotUsage * g.quantity;
+    }
+    return sum;
+  }
+
+  /** Luftlinie zweier Systeme in Karteneinheiten (Galaxie-Koordinaten im Einheitsquadrat). */
+  private static double systemDistance(StarSystem a, StarSystem b) {
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /**
+   * Mittlere Länge einer Gateway-Kante der TATSÄCHLICHEN Topologie – die
+   * Bezugsgröße, in der ein Trägersprung in "Referenz-Sprünge" umgerechnet
+   * wird. Bewusst gemessen statt geraten: Die Galaxie wird zufällig erzeugt und
+   * wächst mit jedem neuen Kommandanten, eine feste Zahl wäre sofort veraltet.
+   */
+  public static double averageGatewayEdgeLength(GameState state) {
+    double sum = 0;
+    int count = 0;
+    for (Graph.Route route : GatewayCommands.gatewayRoutes(state)) {
+      // Jede ungerichtete Kante nur einmal zählen.
+      if (route.a().compareTo(route.b()) >= 0) continue;
+      StarSystem from = findSystem(state, route.a());
+      StarSystem to = findSystem(state, route.b());
+      if (from == null || to == null) continue;
+      sum += systemDistance(from, to);
+      count++;
+    }
+    return count > 0 ? sum / count : GameConstants.CARRIER_FALLBACK_HOP_DISTANCE;
+  }
+
+  /**
+   * Vorschau eines Trägersprungs: Referenz-Sprünge, Dauer, Treibstoffbedarf und
+   * die Slot-Bilanz. {@code possible} ist genau dann {@code false}, wenn die
+   * Träger die übrigen Schiffe nicht fassen – dann steht in {@code reason},
+   * woran es liegt.
+   */
+  public record CarrierJumpPreview(boolean possible, String reason, double slotsNeeded, double slotsAvailable,
+                                   double referenceHops, double ms, double fuelNeeded, double fuelInTank) {
+  }
+
+  public static CarrierJumpPreview carrierJumpPreview(GameState state, String fleetId, String destinationSystemId) {
+    Fleet fleet = find(state, fleetId);
+    if (fleet == null) return null;
+    StarSystem from = findSystem(state, fleet.systemId);
+    StarSystem to = findSystem(state, destinationSystemId);
+    if (from == null || to == null || from.id.equals(to.id)) return null;
+
+    double capacity = carrierSlotCapacity(fleet);
+    double load = carrierSlotLoad(fleet);
+    double hops = referenceHops(state, from, to);
+    double ms = Clock.hoursToMs(hops * GameConstants.HOURS_PER_GATEWAY_HOP * GameConstants.CARRIER_TRANSIT_TIME_FACTOR);
+    double fuel = carrierJumpFuel(fleet, hops);
+
+    if (capacity <= 0) {
+      return new CarrierJumpPreview(false, "Keine Trägerschiffe in dieser Flotte.",
+          load, capacity, hops, ms, fuel, fleet.fuelCapsules);
+    }
+    if (load > capacity + 1e-9) {
+      return new CarrierJumpPreview(false, capacityShortfallMessage(fleet, load, capacity),
+          load, capacity, hops, ms, fuel, fleet.fuelCapsules);
+    }
+    return new CarrierJumpPreview(true, null, load, capacity, hops, ms, fuel, fleet.fuelCapsules);
+  }
+
+  private static double referenceHops(GameState state, StarSystem from, StarSystem to) {
+    double reference = averageGatewayEdgeLength(state);
+    if (reference <= 0) reference = GameConstants.CARRIER_FALLBACK_HOP_DISTANCE;
+    return Math.max(1, systemDistance(from, to) / reference);
+  }
+
+  private static double carrierJumpFuel(Fleet fleet, double referenceHops) {
+    return jumpFuelPerHop(fleet) * referenceHops * GameConstants.CARRIER_TRANSIT_FUEL_FACTOR;
+  }
+
+  /**
+   * Die Fehlermeldung, die den Sprung abbricht, wenn die Träger nicht reichen.
+   * Sie nennt nicht nur "zu wenig Platz", sondern auch, wie viele Träger fehlen
+   * bzw. wie viele Schiffe zurückbleiben müssten – sonst muss der Kommandant
+   * die Slot-Rechnung selbst anstellen.
+   */
+  private static String capacityShortfallMessage(Fleet fleet, double load, double capacity) {
+    double missing = load - capacity;
+    double perCarrier = ShipCatalog.CATALOG.stream()
+        .mapToDouble(s -> s.carrierSlotCapacity).max().orElse(0);
+    String carrierHint = "";
+    if (perCarrier > 0) {
+      long needed = (long) Math.ceil(missing / perCarrier);
+      carrierHint = " Es fehlt " + (needed == 1 ? "ein weiteres Trägerschiff" : needed + " weitere Trägerschiffe")
+          + " – oder es müssen entsprechend weniger Schiffe mitfliegen.";
+    }
+    return "Die Trägerschiffe dieser Flotte fassen die übrigen Schiffe nicht: benötigt "
+        + germanNumber(load) + " Slots, verfügbar " + germanNumber(capacity) + "." + carrierHint;
+  }
+
+  /**
+   * Zahlen in Fehlermeldungen deutsch formatiert. {@link #round2} liefert einen
+   * {@code double}, dessen Java-Standardausgabe einen PUNKT als Dezimaltrenner
+   * hat ("600.0") – in einer sonst durchgehend deutschen Oberfläche liest sich
+   * das falsch.
+   */
+  private static String germanNumber(double value) {
+    return String.format(java.util.Locale.GERMANY, Math.abs(value - Math.rint(value)) < 1e-9 ? "%,.0f" : "%,.2f", value);
+  }
+
+  /**
+   * Startet den Trägersprung. Anders als der Gateway-Flug ist das EIN einziger,
+   * langer Sprung ohne Zwischenstationen: {@code pendingHops} bleibt leer, die
+   * bestehende Ankunftsverarbeitung ({@link #processFleetArrivals}) setzt die
+   * Flotte danach ganz normal auf {@code Stationed}.
+   */
+  private static void startCarrierTransit(GameState state, Fleet fleet, String destinationSystemId) {
+    if (BattleCommands.activeBattleForFleet(state, fleet.id) != null) {
+      throw new CommandException("Eine Flotte in einem laufenden Gefecht kann nicht springen – zuerst zurückziehen.");
+    }
+    CarrierJumpPreview preview = carrierJumpPreview(state, fleet.id, destinationSystemId);
+    if (preview == null) throw new CommandException("Unbekanntes Zielsystem.");
+    if (!preview.possible()) throw new CommandException(preview.reason());
+    if (fleet.fuelCapsules + 1e-9 < preview.fuelNeeded()) {
+      throw new CommandException("Nicht genug Treibstoff für den Trägersprung (benötigt "
+          + germanNumber(preview.fuelNeeded()) + ", im Tank " + germanNumber(fleet.fuelCapsules)
+          + ") – ein Trägersprung kostet das " + (long) GameConstants.CARRIER_TRANSIT_FUEL_FACTOR
+          + "-fache eines Gateway-Sprungs.");
+    }
+    fleet.fuelCapsules = Math.max(0, fleet.fuelCapsules - preview.fuelNeeded());
+
+    // Wer das System verlässt, blockiert dort nichts mehr – dieselbe Regel wie
+    // beim Gateway-Flug und beim Ortswechsel innerhalb des Systems.
+    state.blockades.removeIf(b -> b.fleetId.equals(fleet.id));
+
+    long departedAt = Clock.now();
+    fleet.status = FleetStatus.InTransit;
+    fleet.destinationSystemId = destinationSystemId;
+    fleet.pendingHops = new ArrayList<>();
+    fleet.departedAt = departedAt;
+    fleet.arrivesAt = departedAt + (long) preview.ms();
+    fleet.locationType = FleetLocationType.System;
+    fleet.locationColonyId = null;
+    fleet.locationPlanetId = null;
+  }
+
+  /**
+   * Benennt eine Flotte um. Ohne das hießen alle neuen Flotten
+   * "Flotte &lt;Kolonie&gt; 3", "... 4", "... 5" – ab etwa fünf Flotten war die
+   * Übersicht nicht mehr lesbar.
+   */
+  public static void renameFleet(GameState state, String playerId, String fleetId, String name) {
+    Fleet fleet = requireOwnFleet(state, playerId, fleetId);
+    String trimmed = name == null ? "" : name.trim();
+    if (trimmed.isEmpty()) throw new CommandException("Bitte einen Namen für die Flotte angeben.");
+    if (trimmed.length() > 40) throw new CommandException("Der Flottenname darf höchstens 40 Zeichen lang sein.");
+    fleet.name = trimmed;
+  }
+
+  /**
+   * Fassungsvermögen des Treibstofftanks einer Flotte: die Summe der
+   * Schiffstanks ({@code ShipTypeDef.fuelTankCapacity}, aus der Schiffsmasse
+   * abgeleitet). Weil jeder Schiffstank auf dieselbe Zahl von Sprüngen
+   * ausgelegt ist, hat jede Flotte dieselbe Reichweite –
+   * {@code GameConstants.JUMP_FUEL_TANK_RANGE_HOPS}.
+   */
   public static double fuelTankCapacity(Fleet fleet) {
-    double ships = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
-    return ships * GameConstants.JUMP_FUEL_TANK_PER_SHIP;
+    double sum = 0;
+    for (FleetShipGroup g : fleet.ships) sum += ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
+    return sum;
+  }
+
+  /** Kapseln, die diese Flotte für EINEN Sprung verbraucht – Summe über die Schiffsmassen. */
+  public static double jumpFuelPerHop(Fleet fleet) {
+    double sum = 0;
+    for (FleetShipGroup g : fleet.ships) sum += ShipCatalog.find(g.shipProductTypeId).jumpFuelPerHop * g.quantity;
+    return sum;
   }
 
   /**
@@ -474,15 +678,15 @@ public final class FleetCommands {
   }
 
   /**
-   * Verbraucht Eleriumkapseln für einen kompletten (ggf. mehrsprungigen) Flug, siehe
-   * {@code GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP}: Kosten = Schiffe der Flotte × Sprünge.
+   * Verbraucht Eleriumkapseln für einen kompletten (ggf. mehrsprungigen) Flug:
+   * Kosten = Sprünge × Verbrauch der Flotte je Sprung, und der hängt an der MASSE
+   * der Schiffe ({@link #jumpFuelPerHop}, Umsetzungskonzept/34_...md).
    * Seit Umsetzungskonzept/26_...md kommen sie AUSSCHLIESSLICH aus dem eigenen Tank
    * der Flotte – nicht mehr aus entfernten Kolonielagern. Wer fliegen will, muss
    * vorher betankt haben ({@link #refuelFleet}).
    */
   private static void consumeJumpFuel(GameState state, Fleet fleet, int hops) {
-    double totalShips = fleet.ships.stream().mapToDouble(g -> g.quantity).sum();
-    double needed = totalShips * hops * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    double needed = jumpFuelPerHop(fleet) * hops;
     if (needed <= 0) return;
     // Verlorene Schiffe können den Tank über sein Fassungsvermögen heben – überzähliger
     // Treibstoff verfällt beim nächsten Flug.
@@ -530,12 +734,18 @@ public final class FleetCommands {
    * Instant-Bewegung (keine Flugzeit) zwischen den drei Orten desselben
    * Systems, siehe {@link FleetSystemTarget}/{@link FleetLocationType}.
    */
-  public static void moveFleetWithinSystem(GameState state, String playerId, String fleetId, FleetSystemTarget target) {
+  public static void moveFleetWithinSystem(GameState state, IdGenerator ids, String playerId, String fleetId,
+                                           FleetSystemTarget target) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte ist unterwegs.");
     if (BattleCommands.activeBattleForFleet(state, fleetId) != null) {
       throw new CommandException("Eine Flotte in einem laufenden Gefecht kann sich nicht bewegen – zuerst zurückziehen.");
     }
+    // Blockierter Orbit (Umsetzungskonzept/34_...md, §J 7): VOR der Bewegung
+    // ermittelt, ausgelöst NACH ihr – die Flotte fliegt ein und steht dann im
+    // Gefecht, statt an der Grenze abgewiesen zu werden.
+    Blockade blocking = BlockadeCommands.orbitBlockadeAgainst(state, playerId, targetPlanetId(state, target));
+    if (blocking != null) BlockadeCommands.requireBreakthroughPossible(state, playerId, blocking);
     if (target instanceof FleetSystemTarget.System) {
       fleet.locationType = FleetLocationType.System;
       fleet.locationColonyId = null;
@@ -557,6 +767,17 @@ public final class FleetCommands {
     }
     // Ein Ortswechsel hebt eine eigene Blockade an diesem Ort automatisch auf – man kann nicht blockieren, wo man nicht mehr ist.
     state.blockades.removeIf(b -> b.fleetId.equals(fleetId));
+    if (blocking != null) BlockadeCommands.breakThroughOrbitBlockade(state, ids, playerId, fleetId, blocking);
+  }
+
+  /** Der Planet, um den es beim Ortswechsel geht – {@code null} beim Systemhandelsposten, der nie blockiert ist. */
+  private static String targetPlanetId(GameState state, FleetSystemTarget target) {
+    if (target instanceof FleetSystemTarget.PlanetOrbit po) return po.planetId();
+    if (target instanceof FleetSystemTarget.ColonyOrbit co) {
+      Colony colony = ColonyCommands.colony(state, co.colonyId());
+      return colony != null ? colony.planetId : null;
+    }
+    return null;
   }
 
   /**
@@ -583,7 +804,7 @@ public final class FleetCommands {
    * neu, ob es weiter zum nächsten Sprung geht oder die Flotte hier als
    * {@code Stationed} stehen bleibt.
    */
-  public static void processFleetArrivals(GameState state, long t) {
+  public static void processFleetArrivals(GameState state, IdGenerator ids, long t) {
     List<Fleet> due = state.fleets.stream()
         .filter(f -> f.status == FleetStatus.InTransit && f.arrivesAt != null && f.arrivesAt <= t)
         .toList();
@@ -610,6 +831,10 @@ public final class FleetCommands {
         fleet.pendingHops = List.of();
         fleet.departedAt = null;
         fleet.arrivesAt = null;
+        StarSystem arrived = findSystem(state, reachedSystemId);
+        Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_FLEET_ARRIVED,
+            "\"" + fleet.name + "\" ist in " + (arrived != null ? arrived.name : reachedSystemId) + " angekommen.",
+            null, "/flotten");
       }
       Set<String> known = state.knownSystemIdsByPlayer.computeIfAbsent(fleet.ownerId, k -> new LinkedHashSet<>());
       known.add(reachedSystemId);

@@ -89,6 +89,7 @@
         <div class="battle-row">
           <span>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</span>
           <span class="hint">Tick {{ b.ticksResolved }}, nächster in {{ countdown(b.nextTickAt - clock.now()) }}</span>
+          <a class="ghost small" [routerLink]="['/kampfbericht', b.reportToken]">Bericht öffnen</a>
           <a class="ghost small" [routerLink]="['/flotten']">Zu den Flotten</a>
         </div>
       } @empty { <p class="empty-hint">Keine laufenden Gefechte.</p> }
@@ -101,8 +102,13 @@
   <div class="panel-body">
     <div class="history-list">
       @for (b of battleHistory(); track b.id) {
-        <div class="history-row">
+        <!-- Die Zeile ist jetzt ein LINK auf den Bericht. Vorher war sie tot,
+             und der einzige Weg zum Kampfbericht führte über eine
+             Benachrichtigung, die nach kurzer Zeit gelöscht war – der fertige
+             Bericht war damit praktisch unerreichbar. -->
+        <a class="history-row" [routerLink]="['/kampfbericht', b.reportToken]">
           <span>{{ playerName(b.attackerId) }} ⚔ {{ playerName(b.defenderId) }}</span>
+          <span class="hint">{{ systemName(b.systemId) }}</span>
           <span class="tag" [class.good]="b.outcome === 'AttackerVictory'" [class.warn]="b.outcome === 'DefenderVictory'">
             @switch (b.outcome) {
               @case ('AttackerVictory') { Angreifer siegt }
@@ -112,7 +118,9 @@
             }
           </span>
           <span class="hint mono">{{ b.ticksResolved }} Ticks</span>
-        </div>
+          <span class="hint">{{ formatWhen(b.startedAt) }}</span>
+          <span class="ghost small">Bericht öffnen →</span>
+        </a>
       } @empty { <p class="empty-hint">Noch keine beendeten Gefechte.</p> }
     </div>
   </div>

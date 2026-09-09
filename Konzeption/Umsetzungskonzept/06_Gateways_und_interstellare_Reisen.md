@@ -27,6 +27,38 @@ CarrierTransit
   // arrivesAt - departsAt ≈ 10 × reguläre Gatewayreisezeit
 ```
 
+### CarrierTransit – umgesetzt am 9.9.2026
+
+Der Trägersprung braucht KEINE eigene Entität: Er ist ein Flug mit genau einem
+Sprung und leerer `pendingHops`-Liste (`FleetCommands.startCarrierTransit`), die
+bestehende Ankunftsverarbeitung erledigt den Rest. Ausgelöst wird er über
+`moveFleet(..., viaCarrier = true)`.
+
+**Regeln:**
+
+- Die Trägerschiffe der Flotte müssen ALLE übrigen Schiffe fassen:
+  `Σ carrierSlotUsage` der Nicht-Träger ≤ `Σ carrierSlotCapacity` der Träger.
+  Ein Slot ist die Masse einer Korvette; ein Träger fasst 400 Slots, ein Kreuzer
+  belegt 100. Reicht der Laderaum nicht, wird der Sprung **abgebrochen** – die
+  Flotte bleibt vollständig stehen und die Meldung nennt, wie viele Träger
+  fehlen. Der Träger trägt sich nicht selbst (`carrierSlotUsage = 0`).
+- Die Strecke ist die LUFTLINIE zwischen den Systemen, gemessen in
+  Referenz-Sprüngen: geteilt durch die mittlere Länge einer Gateway-Kante der
+  tatsächlichen Topologie (`FleetCommands.averageGatewayEdgeLength`) – kein
+  geratener Festwert, weil die Galaxie zufällig erzeugt wird und mit jedem
+  Kommandanten wächst.
+- Dauer = Referenz-Sprünge × `HOURS_PER_GATEWAY_HOP` ×
+  `carrierTransitTimeFactor` (10), Treibstoff = Schiffe × Referenz-Sprünge ×
+  `JUMP_FUEL_PER_SHIP_PER_HOP` × `carrierTransitFuelFactor` (5).
+- Ein Gateway wird nicht gebraucht: Der Sprung erreicht auch Systeme, zu denen
+  keine Gateway-Kette führt – der eigentliche Zweck des Schiffs.
+- Die Vorschau (`carrierJumpPreview`) rechnet dieselben Werte und liefert bei
+  Unmöglichkeit denselben Text, mit dem der Sprung abbräche. Die Oberfläche
+  stellt Gateway-Route und Trägersprung als zwei Auswahlmöglichkeiten
+  nebeneinander (`fleets-overview.component`).
+
+Regressionstest: `CarrierTransitTest`.
+
 ## 2. API-Endpunkte
 
 ```text

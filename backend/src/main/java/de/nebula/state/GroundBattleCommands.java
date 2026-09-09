@@ -65,9 +65,6 @@ public final class GroundBattleCommands {
   private GroundBattleCommands() {
   }
 
-  private static final int NOTIFICATION_CODE_GROUND_BATTLE_STARTED = 405;
-  private static final int NOTIFICATION_CODE_GROUND_BATTLE_ENDED = 406;
-  private static final int NOTIFICATION_CODE_GROUND_SIEGE_BEGUN = 407;
 
   // --- Abfragen ------------------------------------------------------------
 
@@ -188,10 +185,10 @@ public final class GroundBattleCommands {
 
     String reportLink = "/bodenkampfbericht/" + battle.reportToken;
     Player defender = GameQueries.requirePlayer(state, target.ownerId);
-    Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_BATTLE_STARTED,
+    Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_BATTLE_STARTED,
         me.name + " landet Bodentruppen bei \"" + target.name + "\" und greift an!", target.id, reportLink);
-    Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_BATTLE_STARTED,
-        "Ihr Bodenangriff auf \"" + target.name + "\" (" + defender.name + ") hat begonnen.", me.homeworldColonyId, reportLink);
+    Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_BATTLE_STARTED,
+        "Ihr Bodenangriff auf \"" + target.name + "\" (" + defender.name + ") hat begonnen.", me.id, reportLink);
 
     // §10: eine Kolonie ohne aktivierbare Waffenträger hat keine wirksame
     // Bodenverteidigung. Gefallen ist sie damit aber NICHT – das Gefecht
@@ -275,7 +272,8 @@ public final class GroundBattleCommands {
     // §2: Zivilverluste in Relation zu den tatsächlichen militärischen
     // Verlusten der VERTEIDIGER, bezogen auf deren Ausgangsstärke.
     double defenderValueLost = defenderStrengthBefore - activeStrength(defender);
-    double civilianFraction = Formulas.civilianLossFraction(defenderValueLost, battle.defenderStrengthAtStart);
+    double civilianFraction = Formulas.civilianLossFraction(defenderValueLost, battle.defenderStrengthAtStart,
+        battle.populationAtStart);
     double civiliansLost = killCivilians(state, battle.colonyId, battle.populationAtStart * civilianFraction);
     battle.civilianLossRatio = Formulas.clamp(battle.civilianLossRatio + civilianFraction, 0, 1);
 
@@ -421,14 +419,14 @@ public final class GroundBattleCommands {
     Player attacker = state.players.stream().filter(p -> p.id.equals(battle.attackerId)).findFirst().orElse(null);
     Player defender = state.players.stream().filter(p -> p.id.equals(battle.defenderId)).findFirst().orElse(null);
     if (attacker != null) {
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_SIEGE_BEGUN,
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_SIEGE_BEGUN,
           "Die Verteidigung von \"" + colonyName + "\" ist gebrochen – die Belagerung hat begonnen.",
-          attacker.homeworldColonyId, reportLink);
+          attacker.id, reportLink);
     }
     if (defender != null) {
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_SIEGE_BEGUN,
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_SIEGE_BEGUN,
           attackerName + " belagert \"" + colonyName + "\" – ohne neue Bodentruppen fällt die Kolonie, sobald die Loyalität unter "
-              + (long) Formulas.SIEGE_SURRENDER_LOYALTY_PCT + " % sinkt.", defender.homeworldColonyId, reportLink);
+              + (long) Formulas.SIEGE_SURRENDER_LOYALTY_PCT + " % sinkt.", defender.id, reportLink);
     }
   }
 
@@ -527,12 +525,12 @@ public final class GroundBattleCommands {
     Player attacker = state.players.stream().filter(p -> p.id.equals(battle.attackerId)).findFirst().orElse(null);
     Player defender = state.players.stream().filter(p -> p.id.equals(battle.defenderId)).findFirst().orElse(null);
     if (attacker != null) {
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_BATTLE_ENDED, summary,
-          attacker.homeworldColonyId, reportLink);
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_BATTLE_ENDED, summary,
+          attacker.id, reportLink);
     }
     if (defender != null) {
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_GROUND_BATTLE_ENDED, summary,
-          defender.homeworldColonyId, reportLink);
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_GROUND_BATTLE_ENDED, summary,
+          defender.id, reportLink);
     }
   }
 

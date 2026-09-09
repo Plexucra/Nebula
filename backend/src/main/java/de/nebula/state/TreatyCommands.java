@@ -39,11 +39,6 @@ public final class TreatyCommands {
   private TreatyCommands() {
   }
 
-  private static final int NOTIFICATION_CODE_TREATY_OFFERED = 111;
-  private static final int NOTIFICATION_CODE_TREATY_ACCEPTED = 112;
-  private static final int NOTIFICATION_CODE_TREATY_REJECTED = 113;
-  private static final int NOTIFICATION_CODE_TREATY_TERMINATION_REQUESTED = 114;
-  private static final int NOTIFICATION_CODE_TREATY_ENDED = 115;
 
   /** Kanonische, sortierte Paar-Reihenfolge – analog {@code DiplomacyCommands.relationKey}. */
   private static String[] key(String a, String b) {
@@ -113,8 +108,8 @@ public final class TreatyCommands {
     offer.type = type;
     offer.createdAt = Clock.now();
     state.treatyOffers.add(offer);
-    Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_TREATY_OFFERED,
-        me.name + " bietet Ihnen einen " + label(type) + " an.", other.homeworldColonyId, "/diplomatie");
+    Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_TREATY_OFFERED,
+        me.name + " bietet Ihnen einen " + label(type) + " an.", other.id, "/diplomatie");
   }
 
   /** Nur der Empfänger darf antworten. Ablehnen löscht das Angebot ersatzlos. */
@@ -127,8 +122,8 @@ public final class TreatyCommands {
     Player sender = state.players.stream().filter(p -> p.id.equals(offer.fromPlayerId)).findFirst().orElse(null);
     if (!accept) {
       if (sender != null) {
-        Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_TREATY_REJECTED,
-            me.name + " hat Ihr Angebot für einen " + label(offer.type) + " abgelehnt.", sender.homeworldColonyId, "/diplomatie");
+        Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_TREATY_REJECTED,
+            me.name + " hat Ihr Angebot für einen " + label(offer.type) + " abgelehnt.", sender.id, "/diplomatie");
       }
       return;
     }
@@ -152,8 +147,8 @@ public final class TreatyCommands {
       state.treaties.add(treaty);
     }
     if (sender != null) {
-      Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_TREATY_ACCEPTED,
-          me.name + " hat Ihr Angebot für einen " + label(offer.type) + " angenommen.", sender.homeworldColonyId, "/diplomatie");
+      Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_TREATY_ACCEPTED,
+          me.name + " hat Ihr Angebot für einen " + label(offer.type) + " angenommen.", sender.id, "/diplomatie");
     }
   }
 
@@ -171,8 +166,8 @@ public final class TreatyCommands {
     treaty.terminationEffectiveAt = Clock.now() + (long) Clock.hoursToMs(noticeHours);
     Player other = state.players.stream().filter(p -> p.id.equals(otherPlayerId)).findFirst().orElse(null);
     if (other != null) {
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_TREATY_TERMINATION_REQUESTED,
-          me.name + " hat den " + label(type) + " gekündigt.", other.homeworldColonyId, "/diplomatie");
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_TREATY_TERMINATION_REQUESTED,
+          me.name + " hat den " + label(type) + " gekündigt.", other.id, "/diplomatie");
     }
   }
 
@@ -200,9 +195,9 @@ public final class TreatyCommands {
       Player p = state.players.stream().filter(x -> x.id.equals(pid)).findFirst().orElse(null);
       if (p == null) continue;
       String otherId = tr.playerAId.equals(pid) ? tr.playerBId : tr.playerAId;
-      Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_TREATY_ENDED,
+      Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_TREATY_ENDED,
           "Der " + label(tr.type) + " mit " + GameQueries.ownerDisplayName(state, otherId) + " ist ausgelaufen.",
-          p.homeworldColonyId, "/diplomatie");
+          p.id, "/diplomatie");
     }
   }
 

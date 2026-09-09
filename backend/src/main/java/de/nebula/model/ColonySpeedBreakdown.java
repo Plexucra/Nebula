@@ -43,6 +43,15 @@ public class ColonySpeedBreakdown {
   /** Elerium-Bedarf der Infrastruktur je Spielstunde und aktuelle Deckung. */
   public double infrastructureEleriumPerHour;
   public double powerCoverage;
+  /**
+   * Eleriumvorrat der Kolonie: Lager PLUS Energiespeicher
+   * (Umsetzungskonzept/32_...md). Zusammen mit
+   * {@link BuildingUpgradePreview#eleriumPerHourAfterUpgrade} die Grundlage der
+   * Ausbauwarnung aus Umsetzungskonzept/34_...md (F4/F5): der Ausbau der
+   * Infrastruktur ist der einzige, der seine eigenen Betriebskosten
+   * überlinear hochtreibt, und der Zusammenbruch kam bisher ohne Vorwarnung.
+   */
+  public double eleriumStock;
   public List<BuildingUpgradePreview> buildingUpgrades;
   /** productTypeId -> Tempobonus der Spezialisierung in Prozent (nur Produkte mit Spezialisierung in dieser Kolonie). */
   public Map<String, Double> specializationSpeedBonusPctByProduct;
@@ -67,5 +76,14 @@ public class ColonySpeedBreakdown {
     public boolean affordable;
     /** Grund, falls nicht {@code affordable} – derselbe Text, den {@code queueBuilding} als Fehler liefern würde. */
     public String blockedReason;
+    /**
+     * Elerium-Dauerverbrauch der Infrastruktur NACH diesem Ausbauschritt, je
+     * Spielstunde – nur beim Infrastrukturgebäude gesetzt, sonst 0. Der
+     * Verbrauch wächst überlinear mit der Stufe
+     * ({@code Formulas.infrastructureEleriumPerHour}); bei Stufe 20 überstieg
+     * der Unterhalt im Testlauf sämtliche Konsumeinnahmen, und die Kolonie
+     * fiel in den Blackout, ohne dass das vorher irgendwo stand.
+     */
+    public double eleriumPerHourAfterUpgrade;
   }
 }

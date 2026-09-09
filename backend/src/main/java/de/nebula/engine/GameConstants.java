@@ -76,7 +76,7 @@ public final class GameConstants {
   /** Dauer der Landung/Koloniegründung in Spielstunden, nachdem "kolonisieren" ausgelöst wurde. */
   public static final double COLONIZATION_HOURS = SharedConstants.colonizationGameHours();
   /**
-   * Test-Regler für das Fertigungstempo (1 = unveränderte Balance), siehe
+   * Balance-Konstante für das Fertigungstempo (1 = ungestaucht), siehe
    * {@link SharedConstants#productionSpeedMultiplier()} und
    * {@code ChainPlanner.computeProductionHours}.
    */
@@ -100,6 +100,13 @@ public final class GameConstants {
    * Tempo 1 ist damit unverändert.</p>
    */
   public static final List<String> CONSUMER_GOODS_ORDER = List.of("p_grundnahrung", "p_grundmedizin", "p_unterhaltungselektronik");
+  /**
+   * Das Grundnahrungsmittel – das einzige Konsumgut, an dem nicht nur der
+   * Lebensstandard hängt, sondern das WACHSTUM selbst
+   * (Umsetzungskonzept/34_...md, §J 5: eine Kolonie wächst nicht über das
+   * hinaus, was sie ernähren kann).
+   */
+  public static final String FOOD_PRODUCT_ID = "p_grundnahrung";
   public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA_PER_HOUR = Map.of(
       "p_grundnahrung", 0.0002, "p_grundmedizin", 0.0001, "p_unterhaltungselektronik", 0.0001);
 
@@ -114,20 +121,38 @@ public final class GameConstants {
   public static final int STATS_HISTORY_LIMIT = 400;
 
   /**
-   * Aufbewahrungsfristen für Benachrichtigungen und Nachrichten OHNE gesetztes
-   * "Beibehalten"-Kennzeichen, gezählt in SPIELZEIT (siehe
-   * {@code RetentionCleanup}, Umsetzungskonzept/15_...md, Auftrag 2). Die
-   * Zahlenwerte stehen an EINER Stelle in {@code shared/game-constants.json}
-   * (siehe {@link SharedConstants}), damit auch das Frontend sie für seine
-   * Hinweistexte kennt, ohne sie zu duplizieren.
+   * ======================= REALZEIT-AUSNAHME =============================
+   * Die EINZIGEN Zeitangaben des Spiels, die NICHT in Spielstunden rechnen.
    *
-   * <p>Umrechnung in Realzeit bei Tempo 1 ({@code Clock.REAL_MS_PER_GAME_HOUR
-   * = 2500}): 48 Spielstunden (2 Spieltage) ≈ 2 Realminuten, 168 Spielstunden
-   * (7 Spieltage) ≈ 7 Realminuten – bei höherem
-   * {@link Clock#GAME_SPEED_MULTIPLIER} entsprechend weniger.</p>
+   * <p>Regel im Rest des Codes: Jede Dauer steht in Spielstunden und wird über
+   * {@link Clock#hoursToMs(double)} umgerechnet, damit sie am Tempo-Regler
+   * hängt. Diese vier Werte tun das BEWUSST NICHT – sie sind bereits
+   * Realzeit-Millisekunden und dürfen NIEMALS durch {@code Clock.hoursToMs}
+   * laufen.</p>
+   *
+   * <p><b>Warum die Ausnahme:</b> Aufbewahrungsfristen und Inaktivität sind
+   * keine Spielmechanik. Sie messen, wann ein MENSCH wieder an den Rechner
+   * kommt – und der wird nicht schneller, wenn die Spieluhr schneller läuft.
+   * In Spielzeit gerechnet war eine Nachricht bei {@code gameSpeedMultiplier
+   * = 4} nach 105 Realsekunden gelöscht und der einzige Link auf einen
+   * Kampfbericht nach 30 Realsekunden verschwunden; das Nachrichten- und
+   * Benachrichtigungssystem war damit praktisch funktionslos.</p>
+   *
+   * <p>Alle Verwendungsstellen sind mit dem Wort {@code REALZEIT-AUSNAHME}
+   * markiert: {@code RetentionCleanup}, {@code EconomyTick.warnAboutSupplyGaps}.</p>
    */
-  public static final double NOTIFICATION_RETENTION_GAME_HOURS = SharedConstants.notificationRetentionGameHours();
-  public static final double MESSAGE_RETENTION_GAME_HOURS = SharedConstants.messageRetentionGameHours();
+  public static final long NOTIFICATION_RETENTION_REAL_MS =
+      (long) (SharedConstants.notificationRetentionRealDays() * 24 * 60 * 60 * 1000);
+  /** REALZEIT-AUSNAHME, siehe {@link #NOTIFICATION_RETENTION_REAL_MS}. */
+  public static final long MESSAGE_RETENTION_REAL_MS =
+      (long) (SharedConstants.messageRetentionRealDays() * 24 * 60 * 60 * 1000);
+  /** REALZEIT-AUSNAHME, siehe {@link #NOTIFICATION_RETENTION_REAL_MS}. */
+  public static final long SUPPLY_WARNING_COOLDOWN_REAL_MS =
+      (long) (SharedConstants.supplyWarningCooldownRealMinutes() * 60 * 1000);
+  /** REALZEIT-AUSNAHME, siehe {@link #NOTIFICATION_RETENTION_REAL_MS}. */
+  public static final long INACTIVE_PLAYER_DELETION_REAL_MS =
+      (long) (SharedConstants.inactivePlayerDeletionRealDays() * 24 * 60 * 60 * 1000);
+  // ===================== Ende REALZEIT-AUSNAHME ===========================
 
   /**
    * Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md,
@@ -151,22 +176,54 @@ public final class GameConstants {
   public static final double HOURS_PER_GATEWAY_HOP = 4;
 
   /**
-   * Treibstoff für Gateway-Sprünge (Nutzervorgabe): jeder Sprung verbraucht je Schiff der
-   * springenden Flotte {@link #JUMP_FUEL_PER_SHIP_PER_HOP} Eleriumkapseln, entnommen aus den
-   * Kolonielagern des Flottenbesitzers (siehe {@code FleetCommands.moveFleet}). Neue
-   * Kommandanten starten mit einem kleinen Vorrat ({@code WorldSeed.STARTER_JUMP_FUEL_QUANTITY}),
-   * der für viele Sprünge weniger Schiffe reicht; wer viele Frachter gleichzeitig bewegt, muss
-   * die Sprungkosten zunehmend einplanen und selbst Eleriumkapseln nachproduzieren.
+   * Trägersprung ohne Gateway (Umsetzungskonzept/06_...md, {@code CarrierTransit}).
+   * Ein Trägerschiff nimmt die übrigen Schiffe der Flotte an Bord und springt
+   * geradlinig zu einem beliebigen bekannten System – auch ohne Gateway-Kette.
+   *
+   * <p>Die Distanz wird in "Referenz-Sprüngen" gemessen: Die Luftlinie zwischen
+   * Start und Ziel (Galaxie-Koordinaten {@code StarSystem.x/y}, Einheitsquadrat)
+   * wird durch die MITTLERE LÄNGE EINER GATEWAY-KANTE geteilt – letztere rechnet
+   * {@code FleetCommands.averageGatewayEdgeLength} aus der tatsächlichen
+   * Topologie aus, statt sie zu raten. Ein Trägersprung über dieselbe Strecke
+   * dauert dann das {@link #CARRIER_TRANSIT_TIME_FACTOR}-fache eines
+   * Gateway-Sprungs und kostet das {@link #CARRIER_TRANSIT_FUEL_FACTOR}-fache
+   * an Treibstoff – teuer und langsam, dafür unabhängig von Gateways, Zöllen
+   * und Blockaden und auch dorthin möglich, wohin keine Gateway-Kette führt.</p>
+   */
+  public static final double CARRIER_TRANSIT_TIME_FACTOR = SharedConstants.carrierTransitTimeFactor();
+  public static final double CARRIER_TRANSIT_FUEL_FACTOR = SharedConstants.carrierTransitFuelFactor();
+  /** Rückfallwert für die mittlere Gateway-Kantenlänge, falls es (noch) keine Kanten gibt. */
+  public static final double CARRIER_FALLBACK_HOP_DISTANCE = 0.1;
+
+  /**
+   * Treibstoff für Gateway-Sprünge (Umsetzungskonzept/26_...md, neu bemessen in
+   * Umsetzungskonzept/34_...md, Entscheidung F7): Verbrauch hängt an MASSE und
+   * DISTANZ. Ein Sprung kostet je Schiff
+   * {@link #JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP} Eleriumkapseln je
+   * KORVETTENMASSE – dieselbe Bezugsgröße, in der auch die Trägerslots rechnen
+   * ({@code ShipTypeDef.carrierSlotUsage}). Eine Korvette kostet damit eine
+   * Kapsel je Sprung, ein Kreuzer hundert. Die Distanz steckt in der Zahl der
+   * Sprünge (beim Trägersprung in Referenzsprüngen).
+   *
+   * <p>Vorher waren es pauschal 0,01 Kapseln je SCHIFF und Sprung gegen einen
+   * Tank von 1 000 Kapseln je Schiff: eine Tankfüllung reichte für 100 000
+   * Sprünge, Treibstoff war faktisch keine Ressource, sondern nur eine Hürde
+   * beim allerersten Flug.</p>
    */
   public static final String JUMP_FUEL_PRODUCT_ID = "p_elerium_kapsel";
-  public static final double JUMP_FUEL_PER_SHIP_PER_HOP = 0.01;
+  public static final double JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP = SharedConstants.jumpFuelPerCorvetteMassPerHop();
   /**
-   * Fassungsvermögen des Treibstofftanks JE SCHIFF in Eleriumkapseln
-   * (Umsetzungskonzept/26_...md). Der Tank ist von der Fracht getrennt: er
-   * belegt keine Lade­kapazität, dafür kann Treibstoff auch nicht wieder
-   * ausgeladen werden – sonst wäre er ein Frachtraum durch die Hintertür.
+   * Reichweite einer vollen Tankfüllung in Sprüngen. Das Fassungsvermögen je
+   * Schiff ist daraus abgeleitet (Verbrauch je Sprung × Reichweite), nicht
+   * umgekehrt: die Reichweite ist deshalb für JEDE Flotte gleich, egal wie
+   * groß ihre Schiffe sind – teuer wird die Größe beim Betanken, nicht beim
+   * Fliegen. Der Tank bleibt von der Fracht getrennt (Umsetzungskonzept/26):
+   * er belegt keine Ladekapazität, dafür kann Treibstoff auch nicht wieder
+   * ausgeladen werden.
    */
-  public static final double JUMP_FUEL_TANK_PER_SHIP = SharedConstants.jumpFuelTankPerShip();
+  public static final double JUMP_FUEL_TANK_RANGE_HOPS = SharedConstants.jumpFuelTankRangeHops();
+  /** Bezugsschiff der Massenskala (Umsetzungskonzept/27_...md, §A) – ein Trägerslot und eine Kapsel je Sprung. */
+  public static final String CORVETTE_PRODUCT_ID = "p_corvette";
 
   /** Bodentruppen-Crewing (Mechanik/05_..., §3-4). */
   public static final List<String> DRONE_PRODUCT_IDS = List.of("p_drone_light", "p_drone_medium", "p_drone_heavy");

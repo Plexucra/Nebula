@@ -175,6 +175,30 @@ final class World {
     return list(q("sellOrders", Map.of("systemId", systemId)));
   }
 
+  private Map<String, Double> shipTankCapacities;
+
+  /**
+   * Fassungsvermögen des Treibstofftanks EINER Flotte in Eleriumkapseln –
+   * Summe der Schiffstanks aus {@code shipTypes}. Seit
+   * Umsetzungskonzept/34_...md hängt der Sprungverbrauch an der Schiffsmasse;
+   * eine feste Kapselzahl je Schiff (der frühere Bot-Richtwert) lässt schwere
+   * Flotten mit leerem Tank stehen.
+   */
+  double fleetTankCapacity(JsonNode fleet) {
+    if (shipTankCapacities == null) {
+      Map<String, Double> all = new HashMap<>();
+      for (JsonNode d : list(c.call("shipTypes", Map.of()))) {
+        all.put(text(d, "productTypeId"), Json.dbl(d, "fuelTankCapacity"));
+      }
+      shipTankCapacities = all;
+    }
+    double sum = 0;
+    for (JsonNode s : fleet.path("ships")) {
+      sum += shipTankCapacities.getOrDefault(text(s, "shipProductTypeId"), 0.0) * Json.dbl(s, "quantity");
+    }
+    return sum;
+  }
+
   private Map<String, Map<String, Double>> recipes;
 
   /** Rezept eines Produkts aus dem statischen Katalog ({@code productTypes}) – einmal geladen, gilt für den ganzen Lauf. */

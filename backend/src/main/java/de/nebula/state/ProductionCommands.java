@@ -13,6 +13,7 @@ import de.nebula.model.Specialization;
 import de.nebula.model.WarehouseEntry;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -39,6 +40,42 @@ public final class ProductionCommands {
 
   public static List<ProductionQueueEntry> productionQueueFor(GameState state, String colonyId) {
     return state.productionQueue.stream().filter(q -> q.colonyId.equals(colonyId)).toList();
+  }
+
+  /**
+   * Verschiebt einen wartenden Auftrag in der Warteschlange um eine Position.
+   *
+   * <p>Pro Kolonie läuft immer nur EIN Auftrag – die Reihenfolge entscheidet
+   * damit darüber, was zuerst fertig wird, und ist eine der wichtigsten
+   * Stellschrauben des Spiels. Sie ließ sich bislang überhaupt nicht ändern:
+   * Wer versehentlich einen langen Auftrag vor einen dringenden setzte, musste
+   * abbrechen und neu einreihen.</p>
+   *
+   * <p>Der LAUFENDE Auftrag bleibt an seiner Stelle – er hat bereits Rohstoffe
+   * gebunden und eine Endzeit.</p>
+   */
+  public static void moveProductionEntry(GameState state, String playerId, String colonyId, String entryId, int direction) {
+    GameQueries.requireOwnColony(state, playerId, colonyId);
+    List<ProductionQueueEntry> queue = new ArrayList<>(productionQueueFor(state, colonyId));
+    int index = -1;
+    for (int i = 0; i < queue.size(); i++) if (queue.get(i).id.equals(entryId)) index = i;
+    if (index < 0) throw new CommandException("Unbekannter Auftrag.");
+    ProductionQueueEntry entry = queue.get(index);
+    if (entry.status == ProductionQueueStatus.running) {
+      throw new CommandException("Der laufende Auftrag lässt sich nicht verschieben – erst abbrechen.");
+    }
+    int target = index + (direction < 0 ? -1 : 1);
+    if (target < 0 || target >= queue.size()) return;
+    if (queue.get(target).status == ProductionQueueStatus.running) {
+      throw new CommandException("Vor den laufenden Auftrag lässt sich nichts schieben – erst abbrechen.");
+    }
+    // Die Gesamtliste enthält die Aufträge ALLER Kolonien; getauscht werden
+    // deshalb die Positionen der beiden Einträge in genau dieser Liste.
+    int a = state.productionQueue.indexOf(entry);
+    int b = state.productionQueue.indexOf(queue.get(target));
+    if (a < 0 || b < 0) return;
+    state.productionQueue.set(a, queue.get(target));
+    state.productionQueue.set(b, entry);
   }
 
   public static void queueProduction(GameState state, IdGenerator ids, String playerId, String colonyId,

@@ -21,9 +21,6 @@ public final class DiplomacyCommands {
   private DiplomacyCommands() {
   }
 
-  private static final int NOTIFICATION_CODE_PEACE_OFFERED = 101;
-  private static final int NOTIFICATION_CODE_PEACE_ACCEPTED = 102;
-  private static final int NOTIFICATION_CODE_WAR_DECLARED = 401;
   private static final double WAR_MIN_DURATION_HOURS = 24;
 
   /** Kanonische, sortierte Paar-Reihenfolge für {@link DiplomaticRelation} – EIN Eintrag je Paar. */
@@ -96,8 +93,8 @@ public final class DiplomacyCommands {
     // Krieg beendet automatisch einen ggf. noch laufenden Handelsvertrag (und dessen Angebote/Kündigungsfrist) –
     // ein Friedensvertrag kann hier nicht mehr bestehen, siehe Sperre oben.
     TreatyCommands.endAllImmediately(state, me.id, otherPlayerId);
-    Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_WAR_DECLARED,
-        me.name + " hat Ihnen den Krieg erklärt.", other.homeworldColonyId, null);
+    Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_WAR_DECLARED,
+        me.name + " hat Ihnen den Krieg erklärt.", other.id, null);
   }
 
   /**
@@ -127,8 +124,8 @@ public final class DiplomacyCommands {
     offer.toPlayerId = otherPlayerId;
     offer.createdAt = Clock.now();
     state.peaceOffers.add(offer);
-    Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_PEACE_OFFERED,
-        me.name + " bietet Ihnen Frieden an.", other.homeworldColonyId, null);
+    Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_PEACE_OFFERED,
+        me.name + " bietet Ihnen Frieden an.", other.id, null);
   }
 
   /** Nur der Empfänger darf antworten. Ablehnen löscht das Angebot ersatzlos, der Krieg läuft weiter. */
@@ -147,9 +144,8 @@ public final class DiplomacyCommands {
           r.since = t;
         }
       }
-      Player sender = state.players.stream().filter(p -> p.id.equals(offer.fromPlayerId)).findFirst().orElse(null);
-      Notifications.notify(state, ids, NotificationType.Info, NOTIFICATION_CODE_PEACE_ACCEPTED,
-          me.name + " hat Ihr Friedensangebot angenommen.", sender != null ? sender.homeworldColonyId : null, null);
+      Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_PEACE_ACCEPTED,
+          me.name + " hat Ihr Friedensangebot angenommen.", offer.fromPlayerId, null);
     }
   }
 }

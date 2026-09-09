@@ -1,10 +1,13 @@
-<div class="page-head">
-  <span class="eyebrow">Kommunikation</span>
-  <h1>Nachrichten</h1>
+<div class="page-head page-head-row">
+  <div>
+    <span class="eyebrow">Kommunikation</span>
+    <h1>Nachrichten</h1>
+  </div>
   <button class="primary small" (click)="openCompose()" [disabled]="otherPlayers().length === 0">✉ Neue Nachricht</button>
 </div>
 
 @if (error()) { <div class="error">{{ error() }}</div> }
+@if (sentConfirmation(); as ok) { <div class="success">{{ ok }}</div> }
 
 @if (composeOpen()) {
   <div class="panel corner-frame compose-panel">
@@ -50,10 +53,15 @@
           </div>
           <div class="message-subject">{{ m.subject }}</div>
           <div class="message-body">{{ m.body }}</div>
-          <label class="keep-toggle" (click)="$event.stopPropagation()" [title]="keepHint">
-            <input type="checkbox" [checked]="m.keep" (change)="toggleKeep(m.id, !m.keep)" />
-            <span>Beibehalten</span>
-          </label>
+          <div class="message-actions" (click)="$event.stopPropagation()">
+            <!-- Antworten: vorher musste man den Absender in "Neue Nachricht"
+                 aus einer Namensliste heraussuchen. -->
+            <button class="ghost small" (click)="reply(m.fromPlayerId, m.subject)">Antworten</button>
+            <label class="keep-toggle" [title]="keepHint">
+              <input type="checkbox" [checked]="m.keep" (change)="toggleKeep(m.id, !m.keep)" />
+              <span>Beibehalten</span>
+            </label>
+          </div>
         </div>
       } @empty { <p class="empty-hint">Posteingang ist leer.</p> }
     } @else {

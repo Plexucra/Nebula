@@ -43,3 +43,10 @@
   background: var(--bg-inset);
   font-size: 13px;
 }
+
+
+@media (max-width: 720px) {
+  .garrison-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; align-items: stretch; }
+  .form-row select, .form-row input, .form-row button { width: 100%; min-height: 40px; }
+}

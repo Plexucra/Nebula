@@ -396,14 +396,17 @@ final class Trade {
    */
   void topUpFuel(String fleetId) {
     JsonNode fleet = bot.world.ownFleet(fleetId);
-    // Eine Kapsel reicht einem Schiff für 100 Sprünge (0,01 je Schiff und Sprung). Nur
-    // nachtanken, wenn der Tank wirklich knapp ist – der Frachter zog sonst mit jeder
-    // Handelsfahrt fünf Kapseln in seinen Tank und ließ dem Transporter keine.
-    double ships = fleet == null ? 1 : World.shipCount(fleet);
-    double tank = fleet == null ? 0 : Json.dbl(fleet, "fuelCapsules");
-    if (tank >= ships * 0.5) return;
+    if (fleet == null) return;
+    // Seit Umsetzungskonzept/34_...md hängt der Sprungverbrauch an der MASSE:
+    // ein voller Tank sind immer gleich viele Sprünge, egal wie schwer die
+    // Flotte ist. Nachgetankt wird deshalb gegen das Fassungsvermögen und erst
+    // unter der Hälfte – sonst zieht ein Frachter mit jeder Handelsfahrt
+    // Kapseln, die der schwere Transporter dringender braucht.
+    double capacity = bot.world.fleetTankCapacity(fleet);
+    double tank = Json.dbl(fleet, "fuelCapsules");
+    if (capacity <= 0 || tank >= capacity * 0.5) return;
     double stock = Math.floor(bot.world.stock(bot.homeColonyId, Catalog.JUMP_FUEL));
-    double qty = Math.min(Math.max(1, Math.ceil(ships * 0.5)), stock);
+    double qty = Math.min(Math.floor(capacity - tank), stock);
     if (qty < 1) return;
     try {
       bot.call("refuelFleet", Map.of("fleetId", fleetId, "quantity", qty));

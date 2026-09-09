@@ -15,7 +15,9 @@
         <span class="mono">{{ o.remainingQuantity }} Einh.</span>
         <span class="mono">{{ o.pricePerUnit | number:'1.0-2' }} Cr/Einh.</span>
         <span class="hint">{{ sellerColony(o.depotColonyId) }}</span>
-        <a class="ghost small" [routerLink]="['/planeten', o.depotColonyId]">Öffnen</a>
+        <!-- Führt jetzt in den HANDEL-Tab der Kolonie statt in deren Übersicht:
+             dort liegt die Order, um die es geht. -->
+        <a class="ghost small" [routerLink]="['/planeten', o.depotColonyId]" [queryParams]="{ tab: 'handel' }">Order öffnen</a>
       </div>
     } @empty {
       <p class="empty-hint">Noch keine Verkaufsorders im System. Im Handel-Tab einer Kolonie das

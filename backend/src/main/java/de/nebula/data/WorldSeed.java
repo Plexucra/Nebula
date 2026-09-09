@@ -109,12 +109,21 @@ public final class WorldSeed {
    */
   private static final double STARTER_ELERIUM_QUANTITY = 3;
   /**
-   * Treibstoff, mit dem jede Startflotte betankt AUSLÄUFT (Umsetzungskonzept/26_...md).
-   * Ohne ihn stünde ein frischer Kommandant vor einer Flotte, die sich erst nach
-   * einem Betankungsbefehl bewegen kann – ein unnötiger Stolperstein. 5 Kapseln
-   * reichen dem Startfrachter (1 Schiff) für 500 Sprünge, der Kampfflotte für gut 70.
+   * Jede Startflotte läuft mit VOLLEM Tank aus (Umsetzungskonzept/26_...md).
+   * Ohne Treibstoff stünde ein frischer Kommandant vor einer Flotte, die sich
+   * erst nach einem Betankungsbefehl bewegen kann – ein unnötiger Stolperstein.
+   * Seit der massenabhängigen Bemessung (Umsetzungskonzept/34_...md, F7) ist
+   * "voll" die einzige Angabe, die für jede Flottenzusammensetzung stimmt: eine
+   * feste Kapselzahl wäre für den Startfrachter über dem Fassungsvermögen und
+   * für die Kampfflotte ein Tropfen. Ein voller Tank sind
+   * {@code GameConstants.JUMP_FUEL_TANK_RANGE_HOPS} Sprünge, egal wie schwer
+   * die Schiffe sind.
    */
-  private static final double STARTER_FLEET_FUEL = 5;
+  private static double fullTank(List<FleetShipGroup> ships) {
+    double sum = 0;
+    for (FleetShipGroup g : ships) sum += ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
+    return sum;
+  }
 
   /** Gesamter Startbestand je Grundkonsumgut, aufgeteilt in Lager + sofort eingestellte Verkaufsorder. */
   private static final double STARTER_CONSUMER_GOODS_STOCK =
@@ -169,15 +178,26 @@ public final class WorldSeed {
 
   /**
    * Start-Vorrat an Eleriumkapseln ({@code GameConstants.JUMP_FUEL_PRODUCT_ID}), die jeder
-   * Sprung einer Flotte verbraucht (siehe {@code FleetCommands.moveFleet}). Zehn Kapseln
-   * reichen für rund 1000 Schiff-Sprünge (10 / 0,01) – ein neuer Kommandant mit wenigen
-   * Schiffen kommt damit lange ohne eigene Kapselproduktion aus, während eine große Flotte
-   * aus vielen Frachtern den Verbrauch schnell spürt.
+   * Sprung einer Flotte verbraucht (siehe {@code FleetCommands.moveFleet}).
+   *
+   * <p>Mit dem massenabhängigen Verbrauch (Umsetzungskonzept/34_...md, F7) kostet
+   * ein Sprung eine Kapsel je Korvettenmasse: eine Korvette 1, ein Frachter 0,23,
+   * ein Kolonisationsschiff 177. Der Vorrat ist auf die ERSTE Kolonisationsfahrt
+   * bemessen – rund drei Sprünge mit einem Kolonisationsschiff plus Begleitfrachter
+   * ({@code 3 × 178 ≈ 534}), aufgerundet. Danach muss der Kommandant Kapseln selbst
+   * produzieren; sie sind billig zu fertigen, kosten aber Elerium, das auch die
+   * Infrastruktur braucht.</p>
    */
-  private static final double STARTER_JUMP_FUEL_QUANTITY = 10;
+  private static final double STARTER_JUMP_FUEL_QUANTITY = 600;
 
-  private static final List<String> PLANET_NAMES_HOME =
-      List.of("Aurelia Prime", "Kessar", "Vantis", "Thal Minor", "Rho Cindra");
+  /**
+   * Anzahl besiedelbarer Himmelskörper im Heimatsystem. Früher eine feste
+   * Namensliste ("Aurelia Prime", "Kessar", ...) – die trug aber JEDES
+   * Heimatsystem, sodass derselbe Planetenname in mehreren Systemen vorkam.
+   * Die Namen leiten sich jetzt aus dem Systemnamen ab
+   * ({@code planetNameBase}) und sind damit galaxieweit eindeutig.
+   */
+  private static final int HOME_USABLE_BODY_COUNT = 5;
 
   /** Bahn-Suffixe für die Himmelskörper eines fremden Systems, siehe {@link #buildForeignSystemPlanets}. */
   private static final List<String> ORBIT_NUMERALS =
@@ -365,7 +385,7 @@ public final class WorldSeed {
     f.status = FleetStatus.Stationed;
     f.ships = List.of(new FleetShipGroup("p_freighter", 1));
     f.cargo = List.of();
-    f.fuelCapsules = STARTER_FLEET_FUEL;
+    f.fuelCapsules = fullTank(f.ships);
     f.destinationSystemId = null;
     f.pendingHops = List.of();
     f.departedAt = null;
@@ -400,7 +420,7 @@ public final class WorldSeed {
         new FleetShipGroup("p_destroyer", randInt(rnd, 1, 5)),
         new FleetShipGroup("p_cruiser", randInt(rnd, 1, 3)));
     f.cargo = List.of();
-    f.fuelCapsules = STARTER_FLEET_FUEL;
+    f.fuelCapsules = fullTank(f.ships);
     f.destinationSystemId = null;
     f.pendingHops = List.of();
     f.departedAt = null;
@@ -597,7 +617,17 @@ public final class WorldSeed {
    * ({@link #createWorldSeed}) oder nachträglich in eine bestehende eingefügt
    * wird ({@link #createAdditionalPlayerSeed}).
    */
+  /**
+   * Kurzform des Systemnamens als Namensstamm der Himmelskörper, z. B.
+   * "Aurelia-System" → "Aurelia".
+   */
+  private static String planetNameBase(String systemName) {
+    String base = systemName.replace("-System", "").trim();
+    return base.isEmpty() ? systemName : base;
+  }
+
   private static HomeworldBundle buildHomeworldBundle(String commanderName, String homeworldName, String homeSystemId,
+                                                        String homeSystemName,
                                                         Rng rnd, long t, IdGenerator ids, PlayerRole role, String campId,
                                                         Map<String, Double> clusterValues) {
     Player player = new Player();
@@ -609,9 +639,14 @@ public final class WorldSeed {
     player.role = role;
     player.campId = campId;
 
+    // Namensstamm ist der SYSTEMNAME. Vorher trug jedes Heimatsystem dieselben
+    // fünf Namen ("Aurelia Prime", "Kessar", ...) – in der Systemansicht eines
+    // fremden Systems stand damit derselbe Planetenname wie im eigenen, ohne
+    // dass erkennbar war, welcher gemeint ist.
+    String nameBase = planetNameBase(homeSystemName);
     List<Planet> planets = new ArrayList<>();
-    for (int i = 0; i < PLANET_NAMES_HOME.size(); i++) {
-      String name = PLANET_NAMES_HOME.get(i);
+    for (int i = 0; i < HOME_USABLE_BODY_COUNT; i++) {
+      String name = i == 0 ? nameBase + " Prime" : nameBase + " " + ORBIT_NUMERALS.get(i);
       // Der Spieler startet auf einem temperierten Biosphärenplaneten
       // (Nebula_Planetentypen_..., §8) – die übrigen Himmelskörper im
       // Heimatsystem sind zunächst unbesiedelt, aber (wie alle fünf
@@ -637,10 +672,11 @@ public final class WorldSeed {
     int unusableCount = randInt(rnd, UNUSABLE_BODIES_MIN, UNUSABLE_BODIES_MAX);
     for (int i = 0; i < unusableCount; i++) {
       PlanetType type = randomPlanetType(rnd);
-      int orbitIndex = PLANET_NAMES_HOME.size() + i;
-      // Kein Systemname zur Hand (der Anzeigename des Heimatsystems entsteht erst in
-      // createWorldSeed) – bewusst neutrale Bezeichnung statt Kolonienamens.
-      planets.add(buildUnusablePlanet(homeSystemId, "Trümmerkörper", orbitIndex, type, rnd, ids));
+      int orbitIndex = HOME_USABLE_BODY_COUNT + i;
+      // Systemname als Stamm, wie in fremden Systemen auch. Vorher hieß jeder
+      // dieser Körper wörtlich "Trümmerkörper VI" – auch dann, wenn er als
+      // "Supererde" oder "Gasriese" klassifiziert war, was sich widersprach.
+      planets.add(buildUnusablePlanet(homeSystemId, nameBase, orbitIndex, type, rnd, ids));
     }
 
     Colony colony = new Colony();
@@ -785,8 +821,9 @@ public final class WorldSeed {
     int homeIndex = galaxy.centralIndex();
     GalaxyGenerator.Point homePos = galaxy.positions().get(homeIndex);
 
-    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemIds.get(homeIndex), rnd, t, ids,
-        role, campId, clusterField.valuesAt(homePos.x(), homePos.y()));
+    String homeSystemName = "Aurelia-System";
+    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemIds.get(homeIndex), homeSystemName,
+        rnd, t, ids, role, campId, clusterField.valuesAt(homePos.x(), homePos.y()));
 
     List<StarSystem> systems = new ArrayList<>();
     List<Planet> allPlanets = new ArrayList<>(home.planets());
@@ -795,7 +832,7 @@ public final class WorldSeed {
       boolean isHub = tradeHubSet.contains(i);
       StarSystem s = new StarSystem();
       s.id = systemIds.get(i);
-      s.name = isHome ? "Aurelia-System" : systemNameAt(names, i);
+      s.name = isHome ? homeSystemName : systemNameAt(names, i);
       s.x = galaxy.positions().get(i).x();
       s.y = galaxy.positions().get(i).y();
       if (isHome) {
@@ -929,12 +966,12 @@ public final class WorldSeed {
     // Kein Zugriff auf das ResourceClusterField der ursprünglichen Galaxie (dieses System liegt
     // außerhalb davon) – stattdessen ein frisch gewürfelter, aber wie gewohnt über den ganzen
     // Heimatplaneten-Cluster gemeinsamer Clusterwert je Rohstoff.
-    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemId, rnd, t, ids, role, campId,
-        randomClusterValues(rnd));
-
     Set<String> usedNames = new LinkedHashSet<>();
     for (StarSystem s : existingSystems) usedNames.add(s.name);
     String systemName = pickAdditionalSystemName(usedNames, rnd);
+
+    HomeworldBundle home = buildHomeworldBundle(commanderName, homeworldName, systemId, systemName, rnd, t, ids,
+        role, campId, randomClusterValues(rnd));
 
     StarSystem newSystem = new StarSystem();
     newSystem.id = systemId;

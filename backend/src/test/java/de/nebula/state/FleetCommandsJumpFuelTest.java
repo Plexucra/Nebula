@@ -18,8 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifiziert den Eleriumkapsel-Sprungtreibstoff: 0,01 Kapseln je Schiff und
- * Gateway-Sprung, entnommen aus dem eigenen TANK der Flotte
+ * Verifiziert den Eleriumkapsel-Sprungtreibstoff: der Verbrauch je Gateway-Sprung
+ * hängt an der MASSE der Schiffe – eine Kapsel je Korvettenmasse
+ * (Umsetzungskonzept/34_...md, F7) –, entnommen aus dem eigenen TANK der Flotte
  * (Umsetzungskonzept/26_...md). Betankt wird ausschließlich über den eigenen
  * Befehl {@code refuelFleet} – abgetankt wird mit {@code drainFleetFuel} bzw.
  * zwischen Flotten mit {@code transferFuelBetweenFleets}. Nur GANZE Kapseln
@@ -66,19 +67,28 @@ class FleetCommandsJumpFuelTest {
   @Test
   void newCommanderStartsWithFuelInTheTankAndCapsulesInStock() {
     Bootstrapped b = newBootstrappedState();
-    assertEquals(10.0, Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID));
+    assertTrue(Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID) > 0,
+        "Startvorrat an Kapseln im Heimatlager");
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     assertTrue(freighter.fuelCapsules > 0, "Startflotten laufen betankt aus");
   }
 
-  /** Tankgröße ist 1.000 Kapseln JE SCHIFF – eine reine Flotteneigenschaft. */
+  /** Tankgröße ist die Summe der Schiffstanks – und die hängen an der Schiffsmasse. */
   @Test
-  void tankCapacityScalesWithShipCount() {
+  void tankCapacityIsTheSumOfTheShipTanks() {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     Fleet combat = fleetNamed(b.state(), b.playerId(), "Kampfflotte Testheim");
-    assertEquals(GameConstants.JUMP_FUEL_TANK_PER_SHIP * totalShips(freighter), FleetCommands.fuelTankCapacity(freighter), 1e-9);
-    assertEquals(GameConstants.JUMP_FUEL_TANK_PER_SHIP * totalShips(combat), FleetCommands.fuelTankCapacity(combat), 1e-9);
+    assertEquals(expectedTank(freighter), FleetCommands.fuelTankCapacity(freighter), 1e-9);
+    assertEquals(expectedTank(combat), FleetCommands.fuelTankCapacity(combat), 1e-9);
+    assertTrue(FleetCommands.fuelTankCapacity(combat) > FleetCommands.fuelTankCapacity(freighter),
+        "Die schwerere Kampfflotte hat den größeren Tank");
+  }
+
+  private static double expectedTank(Fleet fleet) {
+    double sum = 0;
+    for (var g : fleet.ships) sum += de.nebula.data.ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
+    return sum;
   }
 
   /**
@@ -89,6 +99,9 @@ class FleetCommandsJumpFuelTest {
   void refuellingMovesCapsulesFromStockIntoTheTankWithoutTouchingCargo() {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    // Startflotten laufen mit VOLLEM Tank aus – erst Platz schaffen, sonst gibt
+    // es nichts zu betanken.
+    freighter.fuelCapsules = 0;
     double stockBefore = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
     double tankBefore = freighter.fuelCapsules;
     int cargoEntriesBefore = freighter.cargo.size();
@@ -129,8 +142,9 @@ class FleetCommandsJumpFuelTest {
   }
 
   /**
-   * Ein einzelner Sprung kostet weniger als eine ganze Kapsel: der Tank sinkt um
-   * genau diesen Bruchteil, der Rest der Kapsel bleibt als angebrochene an Bord.
+   * Ein einzelner Sprung des leichten Frachters kostet weniger als eine ganze
+   * Kapsel: der Tank sinkt um genau diesen Bruchteil, der Rest der Kapsel bleibt
+   * als angebrochene an Bord.
    */
   @Test
   void singleShipSingleHopBroachesExactlyOneCapsule() {
@@ -139,13 +153,46 @@ class FleetCommandsJumpFuelTest {
     assertEquals(1.0, totalShips(freighter), 0.0001, "Startfrachter sollte genau 1 Schiff sein");
     String destination = neighborOf(b.state(), freighter.systemId);
     double tankBefore = freighter.fuelCapsules;
+    double perHop = FleetCommands.jumpFuelPerHop(freighter);
+    assertTrue(perHop > 0 && perHop < 1, "Der Frachter ist leichter als eine Korvette: " + perHop);
 
     FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
 
-    assertEquals(tankBefore - GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, freighter.fuelCapsules, 1e-9,
+    assertEquals(tankBefore - perHop, freighter.fuelCapsules, 1e-9,
         "Der Tank führt den Bruchteil selbst – er IST die angebrochene Kapsel");
     assertEquals(FleetStatus.InTransit, freighter.status);
     assertEquals(destination, freighter.destinationSystemId);
+  }
+
+  /**
+   * Der Kern der neuen Bemessung: Verbrauch NACH MASSE. Eine Korvette ist die
+   * Bezugsgröße (eine Kapsel je Sprung), ein Kreuzer wiegt hundert Korvetten und
+   * kostet hundert Kapseln – dieselbe Skala, in der auch die Trägerslots rechnen.
+   */
+  @Test
+  void fuelPerHopFollowsTheShipMass() {
+    double corvette = de.nebula.data.ShipCatalog.find("p_corvette").jumpFuelPerHop;
+    double cruiser = de.nebula.data.ShipCatalog.find("p_cruiser").jumpFuelPerHop;
+    double corvetteMass = de.nebula.data.ProductCatalog.find("p_corvette").massKg;
+    double cruiserMass = de.nebula.data.ProductCatalog.find("p_cruiser").massKg;
+
+    assertEquals(GameConstants.JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP, corvette, 1e-9,
+        "Die Korvette IST die Bezugsmasse");
+    assertEquals(cruiserMass / corvetteMass, cruiser / corvette, 1e-6,
+        "Verbrauch je Sprung muss sich wie die Masse verhalten");
+  }
+
+  /**
+   * Die Reichweite ist für JEDE Flotte dieselbe, weil der Tank aus dem
+   * Verbrauch abgeleitet ist – ein schwereres Schiff kostet mehr Kapseln, hat
+   * aber im selben Verhältnis mehr Tank.
+   */
+  @Test
+  void aFullTankIsAlwaysTheSameNumberOfJumps() {
+    for (var def : de.nebula.data.ShipCatalog.CATALOG) {
+      assertEquals(GameConstants.JUMP_FUEL_TANK_RANGE_HOPS, def.fuelTankCapacity / def.jumpFuelPerHop, 1e-6,
+          def.productTypeId + ": Tank muss genau die Reichweite abbilden");
+    }
   }
 
   /** Über viele Sprünge entspricht der Tankverbrauch exakt der Rate. */
@@ -154,21 +201,25 @@ class FleetCommandsJumpFuelTest {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
     String destination = neighborOf(b.state(), freighter.systemId);
-    Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, 100);
-    FleetCommands.refuelFleet(b.state(), b.playerId(), freighter.id, 100);
+    // Voll betanken: mehr als das Fassungsvermögen nimmt der Tank nicht auf.
+    double free = Math.floor(FleetCommands.fuelTankCapacity(freighter) - freighter.fuelCapsules);
+    if (free > 0) {
+      Warehouse.add(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID, free);
+      FleetCommands.refuelFleet(b.state(), b.playerId(), freighter.id, free);
+    }
     double tankBefore = freighter.fuelCapsules;
 
-    int jumps = 500;
+    int jumps = (int) Math.floor(tankBefore / FleetCommands.jumpFuelPerHop(freighter));
     for (int i = 0; i < jumps; i++) {
       freighter.status = FleetStatus.Stationed;
       freighter.destinationSystemId = null;
       FleetCommands.moveFleet(b.state(), b.playerId(), freighter.id, destination);
     }
     double verbraucht = tankBefore - freighter.fuelCapsules;
-    double erwartet = jumps * totalShips(freighter) * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    double erwartet = jumps * FleetCommands.jumpFuelPerHop(freighter);
 
-    assertEquals(erwartet, verbraucht, 1.0, "Langfristiger Verbrauch muss der Rate entsprechen");
-    assertEquals(verbraucht, Math.floor(verbraucht), 1e-9, "Abgebucht wurden nur ganze Kapseln");
+    assertEquals(erwartet, verbraucht, 1e-6, "Langfristiger Verbrauch muss der Rate entsprechen");
+    assertTrue(jumps >= 5, "Eine volle Tankfüllung muss für mehrere Sprünge reichen, war: " + jumps);
   }
 
   @Test
@@ -182,7 +233,7 @@ class FleetCommandsJumpFuelTest {
     double tankBefore = combat.fuelCapsules;
     FleetCommands.moveFleet(b.state(), b.playerId(), combat.id, twoHopsAway);
 
-    double expected = ships * 2 * GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP;
+    double expected = FleetCommands.jumpFuelPerHop(combat) * 2;
     assertEquals(tankBefore - expected, combat.fuelCapsules, 1e-9);
     assertEquals(2, combat.pendingHops.size() + 1, "Route sollte genau 2 Sprünge (1 laufend + 1 pending) umfassen");
   }
@@ -210,8 +261,10 @@ class FleetCommandsJumpFuelTest {
   @Test
   void jumpFuelProductIsTheExistingEleriumkapselProduct() {
     assertEquals("p_elerium_kapsel", GameConstants.JUMP_FUEL_PRODUCT_ID);
-    assertEquals(0.01, GameConstants.JUMP_FUEL_PER_SHIP_PER_HOP, 0.0001);
-    assertEquals(1000, GameConstants.JUMP_FUEL_TANK_PER_SHIP, 0.0001);
+    // Die konkreten Zahlen sind Balancegrößen (shared/game-constants.json) – der
+    // Test sichert, dass beide gesetzt sind und Treibstoff überhaupt knapp wird.
+    assertTrue(GameConstants.JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP > 0);
+    assertTrue(GameConstants.JUMP_FUEL_TANK_RANGE_HOPS > 0);
   }
 
   /**
@@ -222,6 +275,7 @@ class FleetCommandsJumpFuelTest {
   void fuelFlowsBothWaysBetweenTankAndColonyStock() {
     Bootstrapped b = newBootstrappedState();
     Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    freighter.fuelCapsules = 0;  // Platz im vollen Starttank schaffen
     double stockBefore = Warehouse.qty(b.state(), b.home().id, GameConstants.JUMP_FUEL_PRODUCT_ID);
     double tankBefore = freighter.fuelCapsules;
 

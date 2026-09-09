@@ -23,7 +23,6 @@ export interface BuildingType {
   baseCostPerLevel: number;
   baseHoursPerLevel: number;
   upkeepPerLevel: number;
-  productionSlotsPerLevel: number | null;
   /** Für Housing: Wohnkapazität pro Level. */
   housingCapacityPerLevel: number | null;
   materials: BuildingMaterial[];

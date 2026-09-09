@@ -206,3 +206,29 @@
 
   &:hover { border-color: var(--line-accent); background: rgba(62, 226, 255, 0.06); }
 }
+
+
+.map-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.system-search { position: relative; input { min-width: 180px; min-height: 32px; } }
+.system-search .search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-width: 200px;
+}
+.legend .dot.home { border: 2px solid var(--text); background: transparent; }
+.legend .dot.hub { border: 2px dashed var(--warn, orange); background: transparent; }
+
+@media (max-width: 720px) {
+  .map-tools { width: 100%; }
+  .system-search input { width: 100%; }
+  .legend { font-size: 10px; }
+}

@@ -210,8 +210,13 @@ class GroundBattleTest {
         "Übergeben wird erst unter der Kapitulationsschwelle – und dort bleibt die Loyalität auch");
 
     assertTrue(battle.civilianLossRatio > 0, "Eine aufgeriebene Verteidigung kostet Zivilbevölkerung (§2)");
-    assertTrue(battle.civilianLossRatio >= Formulas.CIVILIAN_LOSS_AT_TOTAL_DEFEAT,
-        "Vollständig aufgeriebene Verteidigung = mindestens der Referenzpunkt 50 % aus §2, plus die Toten der Belagerung");
+    // Seit Umsetzungskonzept/34_...md skaliert die Quote mit der DICHTE der
+    // Verteidigung: diese Garnison ist gegenüber der Bevölkerung schwach, ihr
+    // Fall darf die Kolonie deshalb nicht halb entvölkern. Der Referenzpunkt
+    // "50 % bei restlos aufgeriebener Verteidigung" gilt nur noch für eine
+    // Garnison in voller Stärke (siehe zivilverlusteSkalierenMitDerGarnison).
+    assertTrue(battle.civilianLossRatio < Formulas.CIVILIAN_LOSS_AT_TOTAL_DEFEAT,
+        "Eine dünne Garnison darf keine 50 % Zivilverlust nach sich ziehen, war: " + battle.civilianLossRatio);
     assertTrue(population(a, a.defenderColonyId()) < populationBefore);
     assertTrue(industry.level < 8, "Materialschaden muss die Produktionsanlagen treffen (§2)");
     assertTrue(Warehouse.qty(a.state(), a.defenderColonyId(), "p_stahl") < 100,
@@ -222,6 +227,80 @@ class GroundBattleTest {
     assertNotNull(newGarrison);
     assertEquals(a.attackerId(), newGarrison.ownerId);
     assertNull(newGarrison.planetId);
+  }
+
+  /**
+   * Umsetzungskonzept/34_...md, §J 9: Der Verlust der Heimatwelt schaltet den
+   * Kommandanten NICHT aus. Er behält Flotten und übrige Kolonien, sein
+   * Heimatverweis wird gelöst (er zeigte sonst auf fremden Besitz), und seine
+   * Post kommt weiterhin bei ihm an statt beim Eroberer.
+   */
+  @Test
+  void derVerlustDerHeimatweltSchaltetDenKommandantenNichtAus() {
+    Arena a = newArena();
+    DiplomacyCommands.declareWar(a.state(), a.ids(), a.attackerId(), a.defenderId());
+    GroundForceGroup group = landedGroup(a, 200, "p_drone_light", 1000);
+    garrison(a, 4, "p_drone_heavy", 20);
+    de.nebula.model.Player verlierer = a.state().players.stream()
+        .filter(p -> p.id.equals(a.defenderId())).findFirst().orElseThrow();
+    assertEquals(a.defenderColonyId(), verlierer.homeworldColonyId, "Vorbedingung: die angegriffene Kolonie IST die Heimatwelt");
+    long flottenVorher = a.state().fleets.stream().filter(f -> f.ownerId.equals(a.defenderId())).count();
+    assertTrue(flottenVorher > 0, "Vorbedingung: der Verteidiger hat Flotten");
+
+    GroundBattle battle = GroundBattleCommands.engageGroundBattle(
+        a.state(), a.ids(), a.attackerId(), group.id, a.defenderColonyId());
+    runUntilEnded(a, battle, 60);
+    assertEquals(BattleOutcome.AttackerVictory, battle.outcome);
+
+    assertTrue(a.state().players.stream().anyMatch(p -> p.id.equals(a.defenderId())),
+        "Der Kommandant bleibt im Spiel");
+    assertEquals("", verlierer.homeworldColonyId,
+        "Der Heimatverweis muss gelöst werden – er zeigte sonst auf die Kolonie des Eroberers");
+    assertEquals(flottenVorher, a.state().fleets.stream().filter(f -> f.ownerId.equals(a.defenderId())).count(),
+        "Die Flotten bleiben dem Kommandanten");
+
+    // Die Meldung geht an IHN, nicht an die verlorene Kolonie (und damit an den Eroberer).
+    assertTrue(a.state().notifications.stream()
+            .anyMatch(n -> n.code == Notifications.CODE_HOMEWORLD_LOST && a.defenderId().equals(n.playerId)),
+        "Der Verlierer muss über den Verlust seiner Heimatwelt benachrichtigt werden");
+    assertTrue(NotificationCommands.notifications(a.state(), a.defenderId()).stream()
+            .anyMatch(n -> n.code == Notifications.CODE_HOMEWORLD_LOST),
+        "…und die Meldung muss in SEINEM Postfach liegen");
+    assertTrue(NotificationCommands.notifications(a.state(), a.attackerId()).stream()
+            .noneMatch(n -> n.code == Notifications.CODE_HOMEWORLD_LOST),
+        "…und nicht im Postfach des Eroberers");
+  }
+
+  /**
+   * Umsetzungskonzept/34_...md, Entscheidung zu §J 8: die Zivilverlustquote
+   * hängt nicht mehr allein daran, WIE VIEL der Verteidigung fällt, sondern
+   * auch daran, wie viel Verteidigung überhaupt dastand. Dieselbe restlos
+   * aufgeriebene Verteidigung kostet über einer kleinen Bevölkerung viel und
+   * über einer großen wenig – und nie mehr als der Tick-Deckel zulässt.
+   */
+  @Test
+  void zivilverlusteSkalierenMitDerGarnison() {
+    double garnison = 100;
+    double vollstaendigGefallen = garnison;
+
+    // Dieselbe Garnison, zwei Bevölkerungsgrößen: bei 2 000 Einwohnern ist sie
+    // die volle Referenzstärke (5 % = 100), bei 20 000 nur ein Zehntel davon.
+    double dicht = Formulas.civilianLossFraction(vollstaendigGefallen, garnison, 2_000);
+    double duenn = Formulas.civilianLossFraction(vollstaendigGefallen, garnison, 20_000);
+
+    assertTrue(dicht > duenn, "Die dichtere Verteidigung kostet mehr Zivilisten");
+    assertEquals(0.1 * Formulas.CIVILIAN_LOSS_AT_TOTAL_DEFEAT, duenn, 1e-9,
+        "Ein Zehntel der Referenzstärke = ein Zehntel der Quote");
+    assertTrue(dicht <= Formulas.CIVILIAN_LOSS_MAX_PER_TICK + 1e-9,
+        "Kein Tick darf über den Deckel hinausgehen, war: " + dicht);
+
+    // Die Zehn-Drohnen-Startgarnison aus dem Befund: praktisch bedeutungslos.
+    double startgarnison = Formulas.civilianLossFraction(1, 1, 2_000);
+    assertTrue(startgarnison < 0.01,
+        "Der Fall eines Wachdienstes darf keine spürbaren Zivilverluste kosten, war: " + startgarnison);
+
+    assertEquals(0, Formulas.civilianLossFraction(0, garnison, 2_000), 1e-9,
+        "Ohne militärische Verluste keine Zivilverluste");
   }
 
   @Test

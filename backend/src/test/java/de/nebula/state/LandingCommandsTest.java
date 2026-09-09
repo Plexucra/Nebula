@@ -168,9 +168,15 @@ class LandingCommandsTest {
     double lostFraction = (double) expectedDestroyed / 10;
     assertEquals(1000 - Math.ceil(1000 * lostFraction), unitCount(surface, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
     assertEquals(100 - Math.ceil(100 * lostFraction), unitCount(surface, "p_drone_light"), 0.001);
+    // Adressiert an den KOMMANDANTEN, nicht an seine Heimatwelt
+    // (Umsetzungskonzept/34_...md, §J 9).
     assertEquals(1, a.state().notifications.stream()
-        .filter(n -> n.colonyId != null && n.colonyId.equals(a.state().players.get(0).homeworldColonyId)).count(),
+        .filter(n -> a.attackerId().equals(n.playerId)).count(),
         "Der Angreifer muss über die Landungsabwehr benachrichtigt werden");
+    assertEquals(1, a.state().notifications.stream()
+        .filter(n -> a.defenderColonyId().equals(n.colonyId)
+            && n.code == Notifications.CODE_LANDING_INTERCEPTED).count(),
+        "Der Verteidiger erfährt es an der angegriffenen Kolonie");
   }
 
   @Test

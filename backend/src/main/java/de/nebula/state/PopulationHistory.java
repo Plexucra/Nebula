@@ -53,7 +53,8 @@ public final class PopulationHistory {
       sample.population = population.currentCount;
       sample.standardOfLivingPct = stats.standardOfLivingPct;
       sample.housingCapacity = capacity;
-      sample.growthState = Formulas.populationGrowthState(population.currentCount, capacity, stats.standardOfLivingPct);
+      sample.growthState = Formulas.populationGrowthState(population.currentCount, capacity, stats.standardOfLivingPct,
+          ColonyCommands.foodCoverage(state, colony.id));
 
       List<PopulationSample> history = state.populationHistory.computeIfAbsent(colony.id, id -> new ArrayList<>());
       synchronized (history) {

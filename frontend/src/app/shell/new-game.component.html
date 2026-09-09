@@ -37,7 +37,7 @@
       <div class="error">{{ error() }}</div>
     }
 
-    <button type="submit" class="primary" [disabled]="busy()">
+    <button type="submit" class="primary" [disabled]="busy() || !valid">
       {{ busy() ? 'Initialisiere Heimatsystem…' : 'Herrschaft antreten' }}
     </button>
 

@@ -2,6 +2,7 @@ import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, ViewChild, computed, effect, inject, signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Fleet, Id, System } from '../../core/models';
 import { bfsHops } from '../../core/util/graph';
@@ -32,7 +33,7 @@ const WHEEL_ZOOM_STEP = 1.15;
 @Component({
   selector: 'app-galaxy-map',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './galaxy-map.component.html',
   styleUrl: './galaxy-map.component.scss',
@@ -131,7 +132,34 @@ export class GalaxyMapComponent implements AfterViewInit {
   // ==========================================================================
 
   protected readonly viewBox = signal<ViewBox>(this.initialViewBox());
-  protected readonly showLabels = computed(() => this.viewBox().w < NAME_LABEL_ZOOM_THRESHOLD);
+  /**
+   * Beschriftungen: automatisch ab genügend Zoom – oder dauerhaft, wenn der
+   * Kommandant den Schalter setzt. Vorher waren bei herausgezoomter Karte alle
+   * 200 Systeme namenlose Punkte, und es gab keine Möglichkeit, das zu ändern.
+   */
+  protected readonly forceLabels = signal(false);
+  protected readonly showLabels = computed(
+    () => this.forceLabels() || this.viewBox().w < NAME_LABEL_ZOOM_THRESHOLD);
+
+  /**
+   * Systemsuche mit Sprung zum Treffer. Bei über 200 Systemen war Ziehen die
+   * einzige Art, ein bestimmtes System zu finden.
+   */
+  protected readonly systemSearch = signal('');
+
+  protected readonly systemSearchResults = computed(() => {
+    const needle = this.systemSearch().trim().toLowerCase();
+    if (needle.length < 2) return [];
+    return this.systems().filter(s => s.name.toLowerCase().includes(needle)).slice(0, 8);
+  });
+
+  /** Springt aus der Suche zu einem System – nutzt dieselbe Zentrierung wie die Flottenliste. */
+  protected focusSystemById(systemId: Id): void {
+    const target = this.systems().find(s => s.id === systemId);
+    if (!target) return;
+    this.focusSystem(target);
+    this.systemSearch.set('');
+  }
   protected readonly isDragging = signal(false);
 
   /**

@@ -68,6 +68,51 @@ class FleetLifecycleTest {
     assertEquals(1, a.state().blockades.size());
   }
 
+  /**
+   * Umsetzungskonzept/34_...md, §J 7: Eine Orbit-Blockade sperrt den Orbit –
+   * passieren darf nur, wer einen Friedens- oder Handelsvertrag hat. Wer sich
+   * den Weg freikämpfen will, wird nicht abgewiesen, sondern steht anschließend
+   * im Gefecht mit der blockierenden Flotte.
+   */
+  @Test
+  void eineBlockadeSperrtDenOrbitUndZwingtDenAnfliegerInsGefecht() {
+    Arena a = newArena();
+    Fleet blockader = combatFleet(a.state(), a.defenderId());
+    Fleet ankommend = combatFleet(a.state(), a.attackerId());
+    BlockadeCommands.formBlockade(a.state(), a.ids(), a.defenderId(), blockader.id,
+        new BlockadeAnchor.PlanetOrbit(a.defenderHome().planetId));
+
+    // Der Anflieger steht im Systemraum desselben Systems – der bleibt frei.
+    ankommend.systemId = a.defenderHome().systemId;
+    ankommend.locationType = FleetLocationType.System;
+    ankommend.locationColonyId = null;
+    ankommend.locationPlanetId = null;
+
+    // 1. Ohne Vertrag UND ohne Krieg bleibt der Orbit zu – mit einer Meldung, die sagt, was fehlt.
+    var target = new de.nebula.model.FleetSystemTarget.PlanetOrbit(a.defenderHome().planetId);
+    CommandException zu = org.junit.jupiter.api.Assertions.assertThrows(CommandException.class,
+        () -> FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.attackerId(), ankommend.id, target));
+    assertTrue(zu.getMessage().contains("blockiert") && zu.getMessage().contains("Krieg"), zu.getMessage());
+    assertEquals(FleetLocationType.System, ankommend.locationType, "Ohne Krieg bleibt die Flotte, wo sie war");
+
+    // 2. Mit Handelsvertrag passiert dieselbe Flotte ungehindert.
+    TreatyCommands.offerTreaty(a.state(), a.ids(), a.attackerId(), a.defenderId(), de.nebula.model.TreatyType.Trade);
+    var angebot = a.state().treatyOffers.get(0);
+    TreatyCommands.respondToTreatyOffer(a.state(), a.ids(), a.defenderId(), angebot.id, true);
+    FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.attackerId(), ankommend.id, target);
+    assertEquals(FleetLocationType.PlanetOrbit, ankommend.locationType, "Mit Vertrag ist der Orbit offen");
+    assertTrue(a.state().battles.isEmpty(), "Ein Vertragspartner fliegt ein, ohne zu kämpfen");
+
+    // 3. Im Krieg führt derselbe Einflug ins Gefecht – die Flotte wird NICHT gestoppt.
+    FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.attackerId(), ankommend.id,
+        new de.nebula.model.FleetSystemTarget.System());
+    DiplomacyCommands.declareWar(a.state(), a.ids(), a.attackerId(), a.defenderId());
+    FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.attackerId(), ankommend.id, target);
+    assertEquals(FleetLocationType.PlanetOrbit, ankommend.locationType, "Die Flotte fliegt ein …");
+    assertEquals(1, a.state().battles.size(), "… und steht dort im Gefecht mit der Blockade");
+    assertEquals(blockader.id, a.state().battles.get(0).defenderFleetId);
+  }
+
   @Test
   void annihilatedFleetDisappearsWithBlockadeAndTroops() {
     Arena a = newArena();

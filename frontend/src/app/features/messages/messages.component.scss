@@ -93,3 +93,28 @@
   cursor: pointer;
 }
 .keep-toggle input { cursor: pointer; }
+
+
+/* Linksbündig wie jede andere Seite – dieser Seitenkopf war als einziger zentriert. */
+.page-head-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+}
+.message-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.success {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--good);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+}
+
+@media (max-width: 720px) {
+  .page-head-row { flex-direction: column; align-items: stretch; }
+  .compose-form select, .compose-form input, .compose-form textarea { width: 100%; }
+  .message-actions { flex-wrap: wrap; }
+}

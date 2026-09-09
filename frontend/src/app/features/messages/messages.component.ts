@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Id, Player } from '../../core/models';
-import { MESSAGE_RETENTION_GAME_HOURS, gameHoursToGameDays, gameHoursToRealMinutes } from '../../core/shared-constants';
+import { MESSAGE_RETENTION_REAL_DAYS } from '../../core/shared-constants';
 import { UiClockService } from '../../core/ui/ui-clock.service';
 
 type Tab = 'inbox' | 'sent';
@@ -78,11 +78,32 @@ export class MessagesComponent {
     }
   }
 
+  /** Kurze Erfolgsmeldung nach dem Senden – vorher schloss sich das Formular kommentarlos. */
+  protected readonly sentConfirmation = signal<string | null>(null);
+
   protected async send(): Promise<void> {
     const to = this.composeTo();
     if (!to) return;
+    const recipient = this.playerName(to);
     await this.run('send', () => this.api.sendMessage(to, this.composeSubject(), this.composeBody()));
-    if (!this.error()) this.closeCompose();
+    if (!this.error()) {
+      this.closeCompose();
+      // Ohne Rückmeldung war nicht erkennbar, ob die Nachricht raus ist: die
+      // Ansicht blieb auf dem (leeren) Posteingang stehen.
+      this.sentConfirmation.set(`Nachricht an ${recipient} gesendet.`);
+      this.tab.set('sent');
+      setTimeout(() => this.sentConfirmation.set(null), 6000);
+    }
+  }
+
+  /**
+   * Antworten auf eine erhaltene Nachricht. Vorher gab es das nicht – man
+   * musste "Neue Nachricht" öffnen und den Empfänger aus einer Liste
+   * heraussuchen, in der zwei Kommandanten gleich heißen konnten.
+   */
+  protected reply(fromPlayerId: Id, subject: string): void {
+    this.openCompose(fromPlayerId);
+    this.composeSubject.set(subject.startsWith('Re: ') ? subject : `Re: ${subject}`);
   }
 
   /**
@@ -91,12 +112,12 @@ export class MessagesComponent {
    * erneut hartkodiert zu werden.
    */
   protected readonly keepHint =
-    `Ohne "Beibehalten" wird diese Nachricht nach ${gameHoursToGameDays(MESSAGE_RETENTION_GAME_HOURS)} Spieltagen `
-    + `(ca. ${Math.round(gameHoursToRealMinutes(MESSAGE_RETENTION_GAME_HOURS))} Minuten Echtzeit) automatisch gelöscht.`;
+    `Ohne "Beibehalten" wird diese Nachricht nach ${MESSAGE_RETENTION_REAL_DAYS} echten Tagen automatisch gelöscht.`;
 
   /**
    * "Beibehalten": ohne diesen Schalter räumt der Server Nachrichten nach
-   * 7 Spieltagen automatisch weg (siehe `RetentionCleanup` im Backend).
+   * `MESSAGE_RETENTION_REAL_DAYS` echten Tagen weg (siehe `RetentionCleanup`
+   * im Backend, REALZEIT-AUSNAHME).
    * Absender UND Empfänger dürfen ihn setzen – beide sehen dieselbe Nachricht.
    */
   protected async toggleKeep(id: Id, keep: boolean): Promise<void> {

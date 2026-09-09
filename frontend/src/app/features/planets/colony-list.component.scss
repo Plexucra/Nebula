@@ -70,3 +70,11 @@
 @media (max-width: 720px) {
   .colony-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Zahl neben der Beschriftung – die Balken allein waren nicht ablesbar. */
+.stat-item .label { display: flex; justify-content: space-between; gap: 8px; }
+.stat-item .val { color: var(--text); }
+
+/* Zustandsmarke der Kolonie (Blackout/schrumpft/wächst). */
+.colony-status { align-self: flex-start; margin: 4px 0 8px; }

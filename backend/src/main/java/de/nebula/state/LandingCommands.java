@@ -40,7 +40,6 @@ public final class LandingCommands {
   private LandingCommands() {
   }
 
-  private static final int NOTIFICATION_CODE_LANDING_INTERCEPTED = 404;
 
   /** Wie {@link #land(GameState, IdGenerator, String, String, String, Rng)}, mit echtem Zufall. */
   public static GroundForceGroup land(GameState state, IdGenerator ids, String playerId, String fleetId, String targetPlanetId) {
@@ -61,6 +60,17 @@ public final class LandingCommands {
     }
     if (!hasLandableCargo(state, fleet)) {
       throw new CommandException("Diese Flotte hat weder Soldaten an Bord noch Drohnen geladen.");
+    }
+    // Eine Blockade sperrt auch die Landung (Umsetzungskonzept/34_...md, §J 7).
+    // Der Fall tritt ein, wenn sich die Blockade erst gebildet hat, NACHDEM die
+    // Flotte in den Orbit eingeflogen ist – wer landen will, muss sie zuerst
+    // brechen, statt an ihr vorbei abzusetzen.
+    var blocking = BlockadeCommands.orbitBlockadeAgainst(state, playerId, targetPlanetId);
+    if (blocking != null) {
+      BlockadeCommands.breakThroughOrbitBlockade(state, ids, playerId, fleetId, blocking);
+      return state.groundForceGroups.stream()
+          .filter(g -> playerId.equals(g.ownerId) && targetPlanetId.equals(g.planetId))
+          .findFirst().orElse(null);
     }
 
     resolveLandingDefense(state, ids, playerId, fleet, targetPlanetId, rng);
@@ -144,13 +154,12 @@ public final class LandingCommands {
       applyProportionalLosses(state, fleet, lostFraction);
 
       Player attacker = GameQueries.requirePlayer(state, playerId);
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_LANDING_INTERCEPTED,
+      Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_LANDING_INTERCEPTED,
           "Landungsabwehr von \"" + colony.name + "\" hat " + destroyed + " Ihrer Transporter abgeschossen.",
-          attacker.homeworldColonyId, null);
-      Player defender = GameQueries.requirePlayer(state, colony.ownerId);
-      Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_LANDING_INTERCEPTED,
+          attacker.id, null);
+      Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_LANDING_INTERCEPTED,
           attacker.name + " versucht bei \"" + colony.name + "\" zu landen – " + destroyed + " Transporter abgeschossen.",
-          defender.homeworldColonyId, null);
+          colony.id, null);
     }
   }
 

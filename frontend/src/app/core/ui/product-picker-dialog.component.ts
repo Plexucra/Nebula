@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Id, ProductCategory, ProductType } from '../models';
 import { PRODUCT_CATEGORY_LABELS } from './product-category-labels';
 
@@ -17,6 +18,7 @@ interface TierGroup {
 @Component({
   selector: 'app-product-picker-dialog',
   standalone: true,
+  imports: [FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-picker-dialog.component.html',
   styleUrl: './product-picker-dialog.component.scss',
@@ -29,6 +31,22 @@ export class ProductPickerDialogComponent {
 
   protected readonly categoryLabels = PRODUCT_CATEGORY_LABELS;
   protected readonly selectedCategory = signal<ProductCategory | null>(null);
+
+  /**
+   * Freitextsuche über ALLE Produkte. Bei über hundert Produkten war der Weg
+   * "Kategorie → Stufe → Name suchen" der einzige – wer den Namen kennt, will
+   * ihn tippen können.
+   */
+  protected readonly search = signal('');
+
+  protected readonly searchResults = computed(() => {
+    const needle = this.search().trim().toLowerCase();
+    if (needle.length < 2) return [];
+    return this.products
+      .filter(p => p.name.toLowerCase().includes(needle))
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+      .slice(0, 40);
+  });
 
   protected categoriesPresent(): ProductCategory[] {
     const seen = new Set<ProductCategory>();

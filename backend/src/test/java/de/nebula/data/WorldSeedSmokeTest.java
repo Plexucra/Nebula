@@ -56,9 +56,13 @@ class WorldSeedSmokeTest {
     assertTrue(homeBuildings.stream().noneMatch(b -> b.typeId.equals("b_shipyard")), "keine Werft im Start");
     assertTrue(seed.warehouse.stream().noneMatch(w -> w.productTypeId.equals("p_stahl")), "keine Baustoffe im Startlager");
 
-    // Startvorrat an Eleriumkapseln für Gateway-Sprünge (Nutzervorgabe).
-    assertEquals(10.0, seed.warehouse.stream().filter(w -> w.colonyId.equals(home.id) && w.productTypeId.equals("p_elerium_kapsel"))
-        .findFirst().orElseThrow().quantity);
+    // Startvorrat an Eleriumkapseln für Gateway-Sprünge: bemessen auf die erste
+    // Kolonisationsfahrt (Umsetzungskonzept/34_...md, F7 – Verbrauch nach Masse).
+    double starterCapsules = seed.warehouse.stream()
+        .filter(w -> w.colonyId.equals(home.id) && w.productTypeId.equals("p_elerium_kapsel"))
+        .findFirst().orElseThrow().quantity;
+    assertTrue(starterCapsules >= 3 * de.nebula.data.ShipCatalog.find(de.nebula.engine.GameConstants.COLONY_SHIP_PRODUCT_ID).jumpFuelPerHop,
+        "Der Startvorrat muss drei Sprünge eines Kolonisationsschiffs tragen, war: " + starterCapsules);
 
     // Heimatplanet-Rohstoffprofil (Nutzervorgabe): Nahrungsrohstoffe + Elerium liegen immer
     // zwischen 50 und 60 %, alle übrigen (bis auf eine Zufalls-Ausnahme) unter 10 %.

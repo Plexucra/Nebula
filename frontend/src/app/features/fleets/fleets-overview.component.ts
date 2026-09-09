@@ -2,9 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { JUMP_FUEL_TANK_PER_SHIP } from '../../core/shared-constants';
+import { CARRIER_TRANSIT_FUEL_FACTOR, CARRIER_TRANSIT_TIME_FACTOR } from '../../core/shared-constants';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { Colony, Fleet, Id } from '../../core/models';
+import { CarrierJumpPreview, Colony, Fleet, Id, ShipTypeDef } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 
 type FleetPanel = 'load' | 'unload' | 'sell' | 'move' | 'land' | 'landTroops' | 'transfer' | 'attack' | 'merge' | 'split' | null;
@@ -31,6 +31,63 @@ export class FleetsOverviewComponent {
 
   protected readonly busy = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
+
+  /**
+   * Steckbrief eines Schiffstyps für die Bauauswahl. Vorher war das ein reines
+   * Namens-Auswahlfeld: weder Preis noch Bauzeit, Frachtraum, Truppenplätze,
+   * Trägerkapazität oder Konterverhältnis waren zu sehen – man kaufte blind.
+   *
+   * <p>Kampfwerte gibt es bewusst keine: Schaden und Haltbarkeit leiten sich
+   * ausschließlich aus dem Produktionsaufwand ab (Mechanik/04_..., §2-3), also
+   * ist der Arbeitsaufwand die aussagekräftige Zahl.</p>
+   */
+  protected shipFacts(productTypeId: Id): string {
+    const def = this.shipDef(productTypeId);
+    const product = this.api.productTypes().find(p => p.id === productTypeId);
+    if (!def || !product) return '';
+    const parts: string[] = [];
+    parts.push(`${Math.round(product.workHoursPerUnit).toLocaleString('de-DE')} Ah`);
+    if (def.cargoMassKg > 0) parts.push(`Fracht ${this.formatTons(def.cargoMassKg)}`);
+    if (def.troopCapacity > 0) parts.push(`${def.troopCapacity} Soldaten`);
+    if (def.carrierSlotCapacity > 0) parts.push(`Trägerdeck ${def.carrierSlotCapacity} Slots`);
+    if (def.carrierSlotUsage > 0) {
+      const slots = Math.round(def.carrierSlotUsage * 100) / 100;
+      parts.push(`belegt ${slots.toLocaleString('de-DE')} ${slots === 1 ? 'Slot' : 'Slots'} im Träger`);
+    }
+    if (def.countersClass) parts.push(`kontert ${this.shipClassLabel(def.countersClass)}`);
+    return parts.join(' · ');
+  }
+
+  protected shipClassLabel(shipClass: string): string {
+    const byClass: Record<string, string> = {
+      Corvette: 'Korvette', Destroyer: 'Zerstörer', Cruiser: 'Kreuzer', Freighter: 'Frachter',
+      Carrier: 'Trägerschiff', TroopTransport: 'Mannschaftstransporter', ColonyShip: 'Kolonisationsschiff',
+    };
+    return byClass[shipClass] ?? shipClass;
+  }
+
+  /**
+   * Massen in Tonnen bzw. Millionen Tonnen statt in Kilogramm. "113.416.791 kg"
+   * ist keine ablesbare Zahl – die Schiffe dieses Spiels bewegen Kilotonnen.
+   */
+  protected formatTons(kg: number): string {
+    const tons = kg / 1000;
+    if (tons >= 1_000_000) return `${(tons / 1_000_000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Mio. t`;
+    if (tons >= 1000) return `${(tons / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} kt`;
+    return `${tons.toLocaleString('de-DE', { maximumFractionDigits: 0 })} t`;
+  }
+
+  /**
+   * Reichweite des Tanks in Sprüngen – die Zahl, die den Kommandanten
+   * interessiert. Der Verbrauch je Sprung hängt an der Schiffsmasse
+   * (Umsetzungskonzept/34_...md, F7), ein voller Tank reicht deshalb bei jeder
+   * Flotte für dieselbe Zahl Sprünge; nur der Füllstand entscheidet.
+   */
+  protected fuelRangeInJumps(fleet: Fleet): number {
+    const perHop = this.jumpFuelPerHop(fleet);
+    if (perHop <= 0) return 0;
+    return Math.floor(fleet.fuelCapsules / perHop);
+  }
 
   protected shipyardLevel(colonyId: Id): number {
     return this.api.buildings(colonyId)().find(b => b.typeId === 'b_shipyard')?.level ?? 0;
@@ -267,9 +324,18 @@ export class FleetsOverviewComponent {
 
   protected readonly refuelQty: Partial<Record<Id, number>> = {};
 
-  /** Fassungsvermögen des Tanks: JUMP_FUEL_TANK_PER_SHIP je Schiff der Flotte. */
+  /**
+   * Fassungsvermögen des Tanks: `ShipTypeDef.fuelTankCapacity` je Schiff der
+   * Flotte. Der Wert kommt fertig aus dem Katalog (der Server leitet ihn aus
+   * der Schiffsmasse ab) – hier steht bewusst keine zweite Formel.
+   */
   protected fuelTankCapacity(fleet: Fleet): number {
-    return fleet.ships.reduce((sum, g) => sum + g.quantity, 0) * JUMP_FUEL_TANK_PER_SHIP;
+    return fleet.ships.reduce((sum, g) => sum + (this.shipDef(g.shipProductTypeId)?.fuelTankCapacity ?? 0) * g.quantity, 0);
+  }
+
+  /** Kapseln, die diese Flotte für EINEN Sprung verbraucht – Summe über die Schiffsmassen. */
+  protected jumpFuelPerHop(fleet: Fleet): number {
+    return fleet.ships.reduce((sum, g) => sum + (this.shipDef(g.shipProductTypeId)?.jumpFuelPerHop ?? 0) * g.quantity, 0);
   }
 
   protected async submitRefuel(fleet: Fleet): Promise<void> {
@@ -329,13 +395,85 @@ export class FleetsOverviewComponent {
     await this.run('sell:' + fleet.id, () => this.api.createSellOrderFromFleet(fleet.id, productTypeId, qty, price, autoRelist));
   }
 
+  /** Umbenennen: der Entwurf je Flotte, `undefined` = Feld zu. */
+  protected readonly renameDraft: Partial<Record<Id, string>> = {};
+
+  protected startRename(fleet: Fleet): void {
+    this.renameDraft[fleet.id] = fleet.name;
+  }
+
+  protected cancelRename(fleet: Fleet): void {
+    this.renameDraft[fleet.id] = undefined;
+  }
+
+  protected async submitRename(fleet: Fleet): Promise<void> {
+    const name = (this.renameDraft[fleet.id] ?? '').trim();
+    if (!name || name === fleet.name) {
+      this.renameDraft[fleet.id] = undefined;
+      return;
+    }
+    await this.run('rename:' + fleet.id, async () => {
+      await this.api.renameFleet(fleet.id, name);
+      this.renameDraft[fleet.id] = undefined;
+    });
+  }
+
   protected readonly moveDestination: Partial<Record<Id, Id>> = {};
+  /** Trägersprung statt Gateway-Kette – siehe `carrierPreview`. */
+  protected readonly moveViaCarrier: Partial<Record<Id, boolean>> = {};
+
+  protected readonly carrierTimeFactor = CARRIER_TRANSIT_TIME_FACTOR;
+  protected readonly carrierFuelFactor = CARRIER_TRANSIT_FUEL_FACTOR;
+
+  /**
+   * Zielsysteme nach ENTFERNUNG sortiert, mit Sprunganzahl im Text. Vorher war
+   * das eine unsortierte Liste aller 203 Systeme ohne jede Angabe – man wählte
+   * blind aus Namen.
+   */
+  protected moveTargets(fleet: Fleet): { id: Id; label: string }[] {
+    return this.allSystems()
+      .filter(s => s.id !== fleet.systemId)
+      .map(s => {
+        const route = this.api.routePreview(fleet.id, s.id)();
+        return {
+          id: s.id,
+          hops: route?.hops ?? Number.POSITIVE_INFINITY,
+          label: route
+            ? `${s.name} · ${route.hops} ${route.hops === 1 ? 'Sprung' : 'Sprünge'} · ${this.countdown(route.ms)}`
+            : `${s.name} · keine Gateway-Route`,
+        };
+      })
+      .sort((a, b) => a.hops - b.hops || a.label.localeCompare(b.label, 'de'))
+      .map(({ id, label }) => ({ id, label }));
+  }
+
+  /** Gateway-Routenvorschau für das gewählte Ziel – am Ort der Entscheidung, nicht erst nach dem Start. */
+  protected movePreview(fleet: Fleet): { hops: number; ms: number } | null {
+    const destination = this.moveDestination[fleet.id];
+    return destination ? this.api.routePreview(fleet.id, destination)() : null;
+  }
+
+  /** Vorschau des Trägersprungs – Slot-Bilanz, Dauer, Treibstoff. */
+  protected carrierPreview(fleet: Fleet): CarrierJumpPreview | null {
+    const destination = this.moveDestination[fleet.id];
+    return destination ? this.api.carrierJumpPreview(fleet.id, destination)() : null;
+  }
+
+  /** Hat die Flotte überhaupt einen Träger an Bord? */
+  protected hasCarrier(fleet: Fleet): boolean {
+    return fleet.ships.some(g => (this.shipDef(g.shipProductTypeId)?.carrierSlotCapacity ?? 0) > 0);
+  }
+
+  protected shipDef(productTypeId: Id): ShipTypeDef | undefined {
+    return this.api.shipTypes().find(s => s.productTypeId === productTypeId);
+  }
 
   protected async submitMove(fleet: Fleet): Promise<void> {
     const destinationSystemId = this.moveDestination[fleet.id];
     if (!destinationSystemId) return;
+    const viaCarrier = this.moveViaCarrier[fleet.id] === true;
     await this.run('move:' + fleet.id, async () => {
-      await this.api.moveFleet(fleet.id, destinationSystemId);
+      await this.api.moveFleet(fleet.id, destinationSystemId, viaCarrier);
       this.openPanel.set(null);
     });
   }
@@ -439,12 +577,43 @@ export class FleetsOverviewComponent {
     return this.api.attackableFleetsInSystem(fleet.systemId)();
   }
 
+  /**
+   * Erklärt, warum kein Angriff möglich ist, wenn fremde Flotten im selben
+   * System stehen. Die Regel ("nur blockierende Flotten sind angreifbar") stand
+   * vorher ausschließlich als Kommentar im Quelltext – in der Oberfläche
+   * verschwand der Angriffsknopf einfach kommentarlos, und eine Kampfflotte im
+   * feindlichen Heimatorbit hatte keinerlei erkennbare Handlungsmöglichkeit.
+   */
+  protected attackBlockedHint(fleet: Fleet): string | null {
+    if (fleet.status !== 'Stationed') return null;
+    if (this.battleForFleet(fleet.id)) return null;
+    if (this.attackableFleets(fleet).length > 0) return null;
+    const ownerId = this.api.player()?.id;
+    const foreign = this.allFleets().filter(f => f.systemId === fleet.systemId && f.ownerId !== ownerId);
+    if (foreign.length === 0) return null;
+    return 'Hier stehen fremde Flotten, angreifbar ist aber keine: Ein Gefecht lässt sich nur gegen eine Flotte '
+      + 'eröffnen, die im Krieg eine Blockade hält. Solange die Gegenseite nicht blockiert, ist sie unangreifbar – '
+      + 'eine eigene Blockade an derselben Stelle verhindert zudem, dass die Gegenseite dort blockieren kann.';
+  }
+
   /** Das laufende Gefecht, in dem diese eigene Flotte gerade steht (Angreifer ODER Verteidiger) – `undefined`, wenn keins läuft. */
   protected battleForFleet(fleetId: Id) {
     return this.api.activeBattles()().find(b => b.attackerFleetId === fleetId || b.defenderFleetId === fleetId);
   }
 
+  /** Schiffszahl einer (auch fremden) Flotte – der Angriffsknopf nannte vorher nur "3 Schiffstypen". */
+  protected shipCountOf(fleet: Fleet): number {
+    return fleet.ships.reduce((sum, g) => sum + g.quantity, 0);
+  }
+
   protected async submitAttack(fleet: Fleet, defenderFleetId: Id): Promise<void> {
+    const defender = this.allFleets().find(f => f.id === defenderFleetId);
+    const own = this.shipCountOf(fleet);
+    const theirs = defender ? this.shipCountOf(defender) : 0;
+    // Ein Gefecht ist unumkehrbar und kostet in Sekunden Schiffe – vorher startete
+    // es mit einem einzigen Klick ohne Rückfrage.
+    if (!confirm(`Gefecht eröffnen: ${own} eigene Schiffe gegen ${theirs} Schiffe von "${defender?.name ?? 'unbekannt'}"?`
+        + ' Der Kampf beginnt sofort und läuft, bis eine Seite vernichtet ist oder sich zurückzieht.')) return;
     await this.run('attack:' + fleet.id, async () => {
       await this.api.engageBattle(fleet.id, defenderFleetId);
       this.openPanel.set(null);

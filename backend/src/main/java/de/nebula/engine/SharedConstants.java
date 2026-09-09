@@ -51,11 +51,18 @@ public final class SharedConstants {
   }
 
   /**
-   * Zweiter, davon unabhängiger Test-Regler: Teiler für JEDE Fertigungsdauer
-   * (Industrie, Werft, Ausbildungszentrum), siehe {@code ChainPlanner}. 1 =
-   * unveränderte Balance; nur für Testläufe gedacht, in denen die sehr langen
-   * Schiffsketten (Mannschaftstransporter, Kolonisationsschiff) erreichbar
-   * sein sollen (Umsetzungskonzept/31_...md).
+   * Teiler für JEDE Fertigungsdauer (Industrie, Werft, Ausbildungszentrum),
+   * siehe {@code ChainPlanner}. Ursprünglich ein reiner Test-Regler
+   * (Umsetzungskonzept/31_...md), inzwischen die BALANCE-Konstante für das
+   * Fertigungstempo: kalibriert auf "erster Träger unter Idealbedingungen in
+   * einem Spielmonat" (200 spezialisierte Kolonien, Industriekomplex 12,
+   * Spezialisierung 50 → 30 Spieltage).
+   *
+   * <p>Der Regler greift bewusst ERST NACH der Arbeitskraft-Bremse. Würde man
+   * stattdessen {@code baseProductionHours} teilen, verschöbe sich mit der
+   * Dauer auch die Bremsschwelle und jede Kolonie bräuchte das Neunfache an
+   * Bevölkerung (beim Trägermodul 3,5 Mio. statt 394 000 Einwohner). So bleibt
+   * der Einwohnerbedarf, wo er war, und nur die Zeit wird gestaucht.</p>
    */
   public static double productionSpeedMultiplier() {
     JsonNode node = ROOT.path("productionSpeedMultiplier");
@@ -64,13 +71,33 @@ public final class SharedConstants {
     return value;
   }
 
-  public static double notificationRetentionGameHours() {
-    return ROOT.path("notificationRetentionGameHours").asDouble();
+  // --- REALZEIT-AUSNAHME ---------------------------------------------------
+  // Die folgenden vier Werte sind die EINZIGEN Zeitangaben des Spiels, die
+  // NICHT in Spielstunden rechnen und deshalb NICHT über Clock.hoursToMs
+  // umgerechnet werden dürfen. Sie richten sich danach, wann ein MENSCH wieder
+  // an den Rechner kommt, nicht danach, wie schnell die Spieluhr läuft.
+  // Begründung siehe "_realTimeException" in shared/game-constants.json.
+
+  /** REALZEIT-AUSNAHME: Aufbewahrung einer Benachrichtigung in echten Tagen. */
+  public static double notificationRetentionRealDays() {
+    return ROOT.path("notificationRetentionRealDays").asDouble();
   }
 
-  public static double messageRetentionGameHours() {
-    return ROOT.path("messageRetentionGameHours").asDouble();
+  /** REALZEIT-AUSNAHME: Aufbewahrung einer Spieler-Nachricht in echten Tagen. */
+  public static double messageRetentionRealDays() {
+    return ROOT.path("messageRetentionRealDays").asDouble();
   }
+
+  /** REALZEIT-AUSNAHME: Mindestabstand zweier gleicher Versorgungswarnungen in echten Minuten. */
+  public static double supplyWarningCooldownRealMinutes() {
+    return ROOT.path("supplyWarningCooldownRealMinutes").asDouble();
+  }
+
+  /** REALZEIT-AUSNAHME: Nach so vielen echten Tagen ohne Anmeldung wird ein Kommandant gelöscht. */
+  public static double inactivePlayerDeletionRealDays() {
+    return ROOT.path("inactivePlayerDeletionRealDays").asDouble();
+  }
+  // --- Ende REALZEIT-AUSNAHME ---------------------------------------------
 
   /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md). */
   public static double peaceTreatyTerminationNoticeGameHours() {
@@ -164,7 +191,23 @@ public final class SharedConstants {
   }
 
   /** Fassungsvermögen des Treibstofftanks je Schiff in Eleriumkapseln (Umsetzungskonzept/26_...md). */
-  public static double jumpFuelTankPerShip() {
-    return ROOT.path("jumpFuelTankPerShip").asDouble();
+  /** Trägersprung ohne Gateway (Umsetzungskonzept/06_...md): Zeitfaktor gegenüber einem Gateway-Sprung. */
+  public static double carrierTransitTimeFactor() {
+    return ROOT.path("carrierTransitTimeFactor").asDouble();
+  }
+
+  /** Trägersprung ohne Gateway: Treibstofffaktor gegenüber einem Gateway-Sprung. */
+  public static double carrierTransitFuelFactor() {
+    return ROOT.path("carrierTransitFuelFactor").asDouble();
+  }
+
+  /** Kapseln je Korvettenmasse und Sprung, siehe {@code GameConstants.JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP}. */
+  public static double jumpFuelPerCorvetteMassPerHop() {
+    return ROOT.path("jumpFuelPerCorvetteMassPerHop").asDouble();
+  }
+
+  /** Reichweite einer vollen Tankfüllung in Sprüngen – daraus folgt das Fassungsvermögen je Schiff. */
+  public static double jumpFuelTankRangeHops() {
+    return ROOT.path("jumpFuelTankRangeHops").asDouble();
   }
 }

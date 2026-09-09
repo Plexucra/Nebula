@@ -7,7 +7,9 @@ import de.nebula.model.Colony;
 import de.nebula.model.FleetLocationType;
 import de.nebula.model.GroundBattle;
 import de.nebula.model.GroundForceGroup;
+import de.nebula.model.NotificationType;
 import de.nebula.model.PlanetStats;
+import de.nebula.model.Player;
 import de.nebula.model.Population;
 import de.nebula.model.ProductionQueueEntry;
 import de.nebula.model.RecruitmentQueueEntry;
@@ -51,6 +53,7 @@ final class ColonyConquest {
   static String conquer(GameState state, IdGenerator ids, GroundBattle battle, GroundForceGroup victoriousGroup) {
     Colony colony = ColonyCommands.colony(state, battle.colonyId);
     if (colony == null) return null;
+    String previousOwnerId = colony.ownerId;
     String previousOwnerName = GameQueries.ownerDisplayName(state, colony.ownerId);
     String attackerName = GameQueries.ownerDisplayName(state, battle.attackerId);
 
@@ -86,7 +89,32 @@ final class ColonyConquest {
       summary = attackerName + " hat \"" + colony.name + "\" von " + previousOwnerName + " erobert.";
       moveGarrisonInto(state, victoriousGroup, colony.id);
     }
+    releaseHomeworld(state, ids, previousOwnerId, battle.colonyId, colony.name);
     return summary;
+  }
+
+  /**
+   * Verlust der Heimatwelt (Umsetzungskonzept/34_...md, §J 9). Der Kommandant
+   * bleibt im Spiel – mit seinen Flotten, seinen übrigen Kolonien und der
+   * Möglichkeit, mit einem Kolonisationsschiff neu anzufangen (die nächste
+   * Gründung wird dann wieder seine Heimatwelt, siehe
+   * {@code ColonyCommands.colonizePlanet}). Was NICHT bleiben darf, ist der
+   * Verweis: {@code homeworldColonyId} zeigte nach der Eroberung auf fremden
+   * Besitz, und alles, was daran adressiert war, landete beim Eroberer.
+   */
+  private static void releaseHomeworld(GameState state, IdGenerator ids, String previousOwnerId,
+                                       String conqueredColonyId, String colonyName) {
+    Player loser = null;
+    for (Player p : state.players) if (p.id.equals(previousOwnerId)) loser = p;
+    if (loser == null || !conqueredColonyId.equals(loser.homeworldColonyId)) return;
+    loser.homeworldColonyId = "";
+    boolean hasOtherColony = state.colonies.stream().anyMatch(c -> c.ownerId.equals(previousOwnerId));
+    Notifications.notifyPlayer(state, ids, NotificationType.Problem, Notifications.CODE_HOMEWORLD_LOST,
+        "Ihre Heimatwelt \"" + colonyName + "\" ist verloren."
+            + (hasOtherColony
+                ? " Ihre übrigen Kolonien und Flotten bleiben Ihnen."
+                : " Sie befehligen nur noch Ihre Flotten – ein Kolonisationsschiff gründet eine neue Heimat."),
+        previousOwnerId, "/flotten");
   }
 
   /**

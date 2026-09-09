@@ -2,39 +2,71 @@
 
 ## Offen
 
-- [ ] **Balancing: Produktionsbäume der Schiffe (Konzept 31 §I/§J, Vorschlag 1).**
-  Die Kette einer Korvette kostet 54 000 Fertigungsstunden bei Industrie 5 und
-  5,36 Mio. Arbeitsstunden (Untergrenze 268 h selbst mit 20 000 Arbeitern), ein
-  Mannschaftstransporter 262 000 h, ein Kolonisationsschiff 255 000 h. Werft-
-  und Akademiestufe wirken seit dem 9.9.2026 korrekt (nur Endmontage), ändern
-  daran aber nichts – Entscheidung über Zwischenprodukt-Skalierung offen.
-- [ ] **Balancing/Design: offene Entscheidungen aus Konzept 31 §J** –
-  parallele Fertigungsslots, Elerium als Kettenzutat, Konsumpreise/Kaufkraft,
-  Nahrungskapazität, Handelsgilde-Preisdrift, Blockade-Durchflugregel,
-  Zivilverluste, Kommandant ohne Kolonie, Bebauungsplätze.
+- [ ] **Handelsgilde-Preisdrift** (Konzept 31 §J 6): 5er-Lose, ±10 % je
+  Ausführung ohne Rückkehr, Konsumgüter zu 1,4 % des lokalen Preises. Offen:
+  Driftrate zum Basispreis je Spieltag – und ob die Gilde überhaupt eine
+  Geldquelle sein soll (Konzept 22 sagt: kleine Lose).
+- [ ] **Fehlende Benachrichtigungen** (Testergebnis F19): „Bauauftrag fertig",
+  „Schiff fertig", „Flotte angekommen", „Order ausverkauft", „Blackout",
+  „Bevölkerung schrumpft". Die Codes stehen teils schon in `Notifications`,
+  die Auslöser fehlen. Das sind genau die Ereignisse, wegen derer man in ein
+  Aufbauspiel zurückkehrt.
+- [ ] **Kennwortschutz und Reset-Knopf** (F14/F15): die Anmeldung ist
+  kennwortlos, der Reset-Knopf für jeden sichtbar. Für einen LAN-Abend mit
+  mehreren Personen riskant. Eigenes Thema, bewusst nicht Teil von Konzept 34.
+- [ ] **Persistenz des Weltzustands** (Konzept 31 §J 11): ein Neustart des
+  Backends vernichtet ein laufendes LAN-Spiel. Eigenes Vorhaben mit eigenem
+  Konzept; die Sitzung selbst übersteht das Neuladen inzwischen
+  (Konzept 34 §L).
+- [ ] **Anzeigefragen aus dem Testergebnis**: F8 (Spezialisierungsschwellen
+  stehen nirgends), F9 (politisches Gewicht – woraus berechnet, wofür gut?),
+  F11 (mehrere Kommandanten auf einem Planeten sind gewollt, aber in der
+  Systemansicht nicht erkennbar), F12 (doppelte Planetennamen).
 
 ## Erledigt
+
+- [x] ~~Dreizehn offene Entscheidungen aus Konzept 31 §J und Testergebnis §7~~ –
+  entschieden am 9.9.2026 und umgesetzt, siehe
+  `Konzeption/Umsetzungskonzept/34_Offene_Entscheidungen_Blockade_Nahrung_Treibstoff.md`
+  (Entscheidung, Begründung und Umsetzungsstand je Punkt). Kurz:
+  **Katalogstand der Schiffe gilt** (Konzepte 27 §A und 28 §B nachgezogen),
+  **Kettentiefe bleibt** (19 Spieltage je Korvette bei Industrie 5 – Schiffe
+  sind ein Vorhaben mehrerer Kolonien), **Warteschlangen bleiben sequentiell**
+  (totes Feld `productionSlotsPerLevel` entfernt), **Konsumpreise bleiben**
+  (Kaufkraft-Lücke ist Sache des Spielers), **Nahrung deckelt das Wachstum**
+  (`PopulationGrowthState.FoodLimited`), **Blockade sperrt den Orbit und zwingt
+  Anflieger in den Kampf**, **Zivilverluste skalieren mit der Garnisonsstärke**
+  (plus Tick-Deckel), **Heimatverlust schaltet den Kommandanten nicht aus**
+  (Benachrichtigungen adressieren jetzt den Spieler statt eine Kolonie),
+  **Bebauungsplätze bleiben bei 1 je Stufe**, **Infrastruktur-Ausbau rechnet
+  seinen Eleriumverbrauch vorher vor**, **Treibstoff hängt an Masse und
+  Distanz** (Tank = 50 Sprünge für jede Flotte).
+
+- [x] ~~Oberflächen-Testlauf 9.9.2026: 7 kritische, 11 hohe und 19 mittlere Befunde~~ –
+  behoben, siehe `Konzeption/Testergebnis_2026-09-09_End-to-End_Oberflaeche.md`
+  (das Dokument enthält den vollständigen Befund UND den Umsetzungsstand je
+  Punkt). Kernpunkte: Aufbewahrungsfristen und Inaktivitäts-Löschung rechnen
+  jetzt als EINZIGE Zeitangaben in Realzeit (überall mit `REALZEIT-AUSNAHME`
+  markiert), der Trägersprung ohne Gateway ist implementiert
+  (`CarrierTransitTest`), laufende Gefechte stehen rot in der Kopfzeile, der
+  Kampfbericht ist aus dem Kampfprotokoll verlinkt, fehlende Baustoffe lassen
+  sich als EIN Bündelauftrag einreihen, und der Gebäudeunterhalt steht am
+  Ausbau. Die Entwurfsfragen aus §7 sind mit Konzept 34 abgeräumt, soweit sie
+  entschieden wurden; der Rest steht oben unter „Offen".
+
+- [x] ~~Balancing: Produktionsbäume der Schiffe (Konzept 31 §I/§J, Vorschlag 1)~~ –
+  **entschieden: so lassen** (Konzept 34 §B). Die Kette einer Korvette bleibt
+  bei 19 Spieltagen (Industrie 5, eine Kolonie); die Zahl steckt in 150 483
+  Fertigungsvorgängen der Tier 0–4, nicht in der Endmontage. Wenn die
+  Entscheidung später doch fällt, gehört der Faktor auf die Nicht-Endprodukte,
+  nicht in `productionSpeedMultiplier` – Rechnung in Konzept 34 §B.
 
 - [x] ~~Balancing: Elerium-Startreserve passt nicht mehr zur Startbebauung~~ –
   entschärft durch den **Energiespeicher** (Umsetzungskonzept/32): eintreffendes
   Elerium füllt zuerst eine für Ketten unsichtbare Vorhaltemenge (automatisch 10
   Tage Verbrauch der aktuellen Infrastrukturstufe), die Infrastruktur zieht zuerst
-  daraus. Die Startreserve selbst ist unverändert; ursprünglicher Befund:
-  `WorldSeed.STARTER_ELERIUM_QUANTITY` (3 je Warteschlangen-Umlauf) und die
-  25er-Startreserve sind laut ihrem eigenen Kommentar für „bis Infrastruktur 3"
-  (0,0198 Elerium/Spielstunde) bemessen. Der Start liegt inzwischen aber bei
-  **Infrastruktur 6** = 0,047/h, also dem 2,4-fachen Verbrauch. Gemessen an einer
-  frischen Kolonie: der Elerium-Dauerauftrag kam in 10 Realminuten genau EINMAL an
-  die Reihe (die Kolonie hat nur EINE sequentielle Warteschlange, lange Bauaufträge
-  verdrängen ihn), der Bestand fiel monoton 25,0 → 16,9. Ein längerer Ausbau führt
-  damit in den Blackout. Verschärfend: `EconomyTick.consumePowerUpkeep` glättet mit
-  `0,8·alt + 0,2·neu` gegen die Blackout-Schwelle 0,999 – ein einziger ungedeckter
-  Tick kostet rund 24 Ticks Blackout, und im Blackout (Produktion ×0,1,
-  Kernwerte ×0,5) kann die Kolonie das Elerium kaum noch selbst nachliefern.
-  Beobachtet: Bevölkerung 120 → 4, Lebensstandard 0, Warteschlange leer.
-  Offene Balancing-Entscheidung (Reserve/Menge anheben, oder die
-  Energieversorgung aus der sequentiellen Warteschlange herausnehmen) – bewusst
-  nicht selbständig geändert.
+  daraus. Seit Konzept 34 §J rechnet die Ausbauvorschau zusätzlich vor, wie lange
+  der Vorrat NACH dem Ausbau noch reicht, und warnt, bevor der Blackout kommt.
 
 - [x] ~~Baustoffe verbrauchen einander als Vorprodukt – Reihenfolge ist eine Falle~~ –
   behoben, und zwar an der Ursache, nicht nur mit einer Einreihungsreihenfolge:

@@ -286,3 +286,43 @@
     max-height: 70vh;
   }
 }
+
+
+/* Laufendes Gefecht: der einzige Zustand, der dauerhaft ROT in der Kopfzeile
+   steht. Bewusst kein dezenter Hinweis – ein Kampf kostet Schiffe, während man
+   woanders in der Oberfläche unterwegs ist. */
+.status-chip.battle-alert {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+  text-decoration: none;
+  animation: battle-pulse 1.6s ease-in-out infinite;
+
+  .eyebrow, .value { color: var(--danger); }
+}
+
+@keyframes battle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Bei "Bewegung reduzieren" nicht blinken – der Farbkontrast trägt die Meldung. */
+@media (prefers-reduced-motion: reduce) {
+  .status-chip.battle-alert { animation: none; }
+}
+
+/* Saldo je Spielstunde direkt am Guthaben. */
+.status-chip .flow {
+  font-size: 10px;
+  opacity: 0.85;
+  &.bad { color: var(--danger); }
+  &.good { color: var(--good); }
+}
+
+/* Fängt Klicks neben dem Benachrichtigungsfeld ab, damit es sich schließt. */
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.notification-panel { z-index: 41; }

@@ -78,3 +78,8 @@
 @media (max-width: 720px) {
   .tile-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 }
+
+
+/* Gleich hohe Kacheln: Titel als kurze Bezeichnung, Erklärung im Untertitel –
+   ein Titel im Satzformat sprengte vorher das Raster. */
+.tile-grid { align-items: stretch; }

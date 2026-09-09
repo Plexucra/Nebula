@@ -1,7 +1,12 @@
 import { Id } from './common.model';
 import { BuildSlots, MaterialRequirement } from './building.model';
 
-export type PopulationGrowthState = 'Shrinking' | 'Holding' | 'Growing' | 'Overcrowded';
+/**
+ * `FoodLimited`: die Nahrungsdeckung trägt den Bestand, aber keinen Zuwachs
+ * (Umsetzungskonzept/34_...md, §J 5) – eigener Zustand, damit die Kolonieansicht
+ * den Grund des Stillstands benennen kann.
+ */
+export type PopulationGrowthState = 'Shrinking' | 'Holding' | 'Growing' | 'Overcrowded' | 'FoodLimited';
 
 /** Vorschau für den nächsten Ausbauschritt EINES Gebäudetyps auf einer Kolonie. */
 export interface BuildingUpgradePreview {
@@ -19,6 +24,13 @@ export interface BuildingUpgradePreview {
   needsSlot: boolean;
   affordable: boolean;
   blockedReason: string | null;
+  /**
+   * Elerium-Dauerverbrauch der Infrastruktur NACH diesem Ausbau, je Spielstunde
+   * (nur beim Infrastrukturgebäude > 0). Der Verbrauch wächst überlinear mit
+   * der Stufe – ohne diese Zahl war der Ausbau ein Blindflug in den Blackout
+   * (Umsetzungskonzept/34_...md, F4/F5).
+   */
+  eleriumPerHourAfterUpgrade: number;
 }
 
 /**
@@ -50,6 +62,8 @@ export interface ColonySpeedBreakdown {
   buildSlots: BuildSlots;
   infrastructureEleriumPerHour: number;
   powerCoverage: number;
+  /** Eleriumvorrat der Kolonie: Lager plus Energiespeicher (Umsetzungskonzept/32_...md). */
+  eleriumStock: number;
   buildingUpgrades: BuildingUpgradePreview[];
   /** productTypeId -> Tempobonus der Spezialisierung in Prozent. */
   specializationSpeedBonusPctByProduct: Record<Id, number>;

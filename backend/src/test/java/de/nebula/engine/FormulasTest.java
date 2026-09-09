@@ -81,8 +81,8 @@ class FormulasTest {
 
   /**
    * Formulas#SPECIALIZATION_THRESHOLD_BASE: kalibriert auf EINE Spielwoche –
-   * 168 Spielstunden exklusive Produktion ergeben kumuliert Stufe 10 (+100 % Tempo),
-   * bis Stufe 50 (+500 %) kumuliert ≈ 3895 Spielstunden.
+   * 168 Spielstunden exklusive Produktion ergeben kumuliert Stufe 10 (+200 % Tempo),
+   * bis Stufe 50 (+1000 %) kumuliert ≈ 3895 Spielstunden.
    */
   @Test
   void specializationIsCalibratedToOneGameWeekForLevelTen() {
@@ -94,8 +94,8 @@ class FormulasTest {
     for (int level = 0; level < 50; level++) cumulativeToFifty += Formulas.specializationThresholdHours(level);
     assertEquals(3895, cumulativeToFifty, 1);
 
-    assertEquals(2.0, Formulas.specializationSpeedFactor(10), EPS);
-    assertEquals(6.0, Formulas.specializationSpeedFactor(50), EPS);
+    assertEquals(3.0, Formulas.specializationSpeedFactor(10), EPS);
+    assertEquals(11.0, Formulas.specializationSpeedFactor(50), EPS);
   }
 
   /**
@@ -169,22 +169,51 @@ class FormulasTest {
    * Lebensstandard – darunter schrumpft die Bevölkerung, darin hält sie,
    * darüber wächst sie; oberhalb der Wohnkapazität schrumpft sie ebenfalls.
    */
+  /** Volle Nahrungsdeckung – der Normalfall, in dem der Nahrungsdeckel nichts tut. */
+  private static final double GEDECKT = 1.0;
+
   @Test
   void populationDeadBandHoldsBetweenThirtyAndFiftyPercent() {
     double capacity = 20_000;
     double population = 120;
 
-    assertEquals(PopulationGrowthState.Shrinking, Formulas.populationGrowthState(population, capacity, 29));
-    assertEquals(PopulationGrowthState.Holding, Formulas.populationGrowthState(population, capacity, 30));
-    assertEquals(PopulationGrowthState.Holding, Formulas.populationGrowthState(population, capacity, 49));
-    assertEquals(PopulationGrowthState.Growing, Formulas.populationGrowthState(population, capacity, 50));
-    assertEquals(PopulationGrowthState.Overcrowded, Formulas.populationGrowthState(capacity, capacity, 100));
+    assertEquals(PopulationGrowthState.Shrinking, Formulas.populationGrowthState(population, capacity, 29, GEDECKT));
+    assertEquals(PopulationGrowthState.Holding, Formulas.populationGrowthState(population, capacity, 30, GEDECKT));
+    assertEquals(PopulationGrowthState.Holding, Formulas.populationGrowthState(population, capacity, 49, GEDECKT));
+    assertEquals(PopulationGrowthState.Growing, Formulas.populationGrowthState(population, capacity, 50, GEDECKT));
+    assertEquals(PopulationGrowthState.Overcrowded, Formulas.populationGrowthState(capacity, capacity, 100, GEDECKT));
 
-    assertEquals(0, Formulas.populationGrowthDelta(population, capacity, 40, 100), EPS);
-    assertTrue(Formulas.populationGrowthDelta(population, capacity, 10, 100) < 0);
-    assertTrue(Formulas.populationGrowthDelta(population, capacity, 100, 100) > 0);
-    assertTrue(Formulas.populationGrowthDelta(capacity + 100, capacity, 100, 100) < 0,
+    assertEquals(0, Formulas.populationGrowthDelta(population, capacity, 40, 100, GEDECKT), EPS);
+    assertTrue(Formulas.populationGrowthDelta(population, capacity, 10, 100, GEDECKT) < 0);
+    assertTrue(Formulas.populationGrowthDelta(population, capacity, 100, 100, GEDECKT) > 0);
+    assertTrue(Formulas.populationGrowthDelta(capacity + 100, capacity, 100, 100, GEDECKT) < 0,
         "Oberhalb der Wohnkapazität muss der logistische Klammerterm von selbst negativ werden");
+  }
+
+  /**
+   * Umsetzungskonzept/34_...md, §J 5: eine Kolonie wächst nicht über das hinaus,
+   * was sie ernähren kann – und zwar SOFORT, nicht erst wenn der geglättete
+   * Lebensstandard nachgezogen hat. Bester Lebensstandard, freier Wohnraum,
+   * volle Sicherheit: solange die Nahrungsdeckung unter 100 % liegt, kommt
+   * niemand hinzu. Die Bevölkerung stirbt davon aber auch nicht – das
+   * Schrumpfen bleibt Sache des Lebensstandards.
+   */
+  @Test
+  void growthStopsWhileFoodIsShortEvenAtFullLivingStandard() {
+    double capacity = 20_000;
+    double population = 6_000;
+    double knapp = 0.99;
+
+    assertEquals(PopulationGrowthState.FoodLimited,
+        Formulas.populationGrowthState(population, capacity, 100, knapp));
+    assertEquals(0, Formulas.populationGrowthDelta(population, capacity, 100, 100, knapp), EPS,
+        "Ohne volle Nahrungsdeckung darf die Kolonie nicht wachsen");
+    assertTrue(Formulas.populationGrowthDelta(population, capacity, 100, 100, GEDECKT) > 0,
+        "Mit voller Deckung wächst dieselbe Kolonie wieder");
+
+    // Echter Mangel schrumpft weiterhin über den Lebensstandard, nicht über den Deckel.
+    assertTrue(Formulas.populationGrowthDelta(population, capacity, 10, 100, knapp) < 0);
+    assertEquals(PopulationGrowthState.Shrinking, Formulas.populationGrowthState(population, capacity, 10, knapp));
   }
 
   /**
@@ -197,11 +226,11 @@ class FormulasTest {
   @Test
   void populationGrowthIsLogisticNotProportionalToFreeHousing() {
     double capacity = 20_000;
-    double delta = Formulas.populationGrowthDelta(120, capacity, 100, 100);
+    double delta = Formulas.populationGrowthDelta(120, capacity, 100, 100, GEDECKT);
     assertTrue(delta < 2, "120 Einwohner dürfen nicht sprunghaft wachsen, war " + delta);
     // Proportional zur Bevölkerung: die zehnfache Bevölkerung wächst (fern der
     // Kapazitätsgrenze) annähernd zehnmal so schnell.
-    double deltaTenfold = Formulas.populationGrowthDelta(1_200, capacity, 100, 100);
+    double deltaTenfold = Formulas.populationGrowthDelta(1_200, capacity, 100, 100, GEDECKT);
     assertEquals(10, deltaTenfold / delta, 0.6);
   }
 

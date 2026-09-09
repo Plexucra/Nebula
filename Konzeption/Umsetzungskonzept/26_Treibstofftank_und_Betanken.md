@@ -11,10 +11,17 @@ Anspruch auf ein entferntes Lager.
 
 ## A. Der Tank
 
-Jede Flotte hat jetzt einen eigenen Treibstofftank (`Fleet.fuelCapsules`) mit
-einem Fassungsvermögen von `JUMP_FUEL_TANK_PER_SHIP` = **1.000 Eleriumkapseln
-je Schiff** (`shared/game-constants.json`, also dieselbe Zahl für Backend und
-Frontend). Eine Flotte aus sieben Schiffen fasst somit 7.000 Kapseln.
+> **Neu bemessen am 9.9.2026 (Umsetzungskonzept/34, §K).** Verbrauch und
+> Fassungsvermögen hängen seither an der **Masse** der Schiffe: ein Sprung
+> kostet je Schiff eine Kapsel je Korvettenmasse, der Tank fasst genau
+> `jumpFuelTankRangeHops` = 50 Sprünge. Die Reichweite ist damit für jede
+> Flotte gleich; teuer wird die Größe beim Betanken. Die pauschalen Zahlen in
+> diesem Abschnitt (1.000 Kapseln je Schiff, 0,01 je Schiff und Sprung) sind
+> ersetzt – alles Übrige an diesem Konzept gilt unverändert.
+
+Jede Flotte hat einen eigenen Treibstofftank (`Fleet.fuelCapsules`). Sein
+Fassungsvermögen ist die Summe der Schiffstanks
+(`ShipTypeDef.fuelTankCapacity`, aus der Schiffsmasse abgeleitet).
 
 Der Tank ist **keine Fracht**:
 
@@ -65,9 +72,9 @@ Kapsel an Bord.
 
 ## D. Verbrauch
 
-`consumeJumpFuel` zieht die Kosten (Schiffe × Sprünge × 0,01 Kapseln) jetzt
-ausschließlich aus dem Tank der fliegenden Flotte, und zwar als exakten
-Bruchteil. Reicht der Tank nicht, wird der Sprung abgelehnt, bevor die Flotte
+`consumeJumpFuel` zieht die Kosten (Sprünge × Verbrauch der Flotte je Sprung,
+und der hängt an der Schiffsmasse – Umsetzungskonzept/34, §K) ausschließlich
+aus dem Tank der fliegenden Flotte, und zwar als exakten Bruchteil. Reicht der Tank nicht, wird der Sprung abgelehnt, bevor die Flotte
 losfliegt – mit dem Hinweis, dass betankt werden muss. Entfernte Kolonielager
 helfen nicht mehr aus.
 
@@ -77,10 +84,11 @@ seltenen Randfall.
 
 ## E. Startausstattung und Bots
 
-Startflotten laufen mit `STARTER_FLEET_FUEL` = 5 Kapseln betankt aus; ohne das
-stünde ein frischer Kommandant vor einer Flotte, die sich erst nach einem
-Betankungsbefehl bewegen kann. Das Kolonielager behält seine 10 Kapseln zum
-Nachtanken.
+Startflotten laufen mit **vollem Tank** aus; ohne das stünde ein frischer
+Kommandant vor einer Flotte, die sich erst nach einem Betankungsbefehl bewegen
+kann, und eine feste Kapselzahl passt seit der massenabhängigen Bemessung zu
+keiner Flotte mehr. Das Kolonielager startet mit 600 Kapseln zum Nachtanken –
+bemessen auf die erste Kolonisationsfahrt (Umsetzungskonzept/34, §K).
 
 Die NPC-Bots betanken vor jeder Abreise (`Bot.topUpFuel`), und zwar bevor sie zur
 Handelsgilde-Station aufbrechen – an der Station gibt es keine eigene Kolonie,

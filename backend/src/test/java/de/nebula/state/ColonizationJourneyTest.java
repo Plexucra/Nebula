@@ -124,7 +124,7 @@ class ColonizationJourneyTest {
     assertEquals(FleetStatus.Stationed, fleet.status);
 
     Planet target = freeUsablePlanet(b.state(), homeSystem(b.state()).id);
-    FleetCommands.moveFleetWithinSystem(b.state(), b.playerId(), fleet.id,
+    FleetCommands.moveFleetWithinSystem(b.state(), b.ids(), b.playerId(), fleet.id,
         new FleetSystemTarget.PlanetOrbit(target.id));
     assertEquals(FleetLocationType.PlanetOrbit, fleet.locationType);
     assertEquals(target.id, fleet.locationPlanetId);
@@ -164,19 +164,22 @@ class ColonizationJourneyTest {
     String home = homeSystem(b.state()).id;
     String neighbour = neighbourSystem(b.state(), home);
 
-    // Treibstoff aus dem Startvorrat der Heimatkolonie in den Flottentank.
+    // Treibstoff aus dem Startvorrat der Heimatkolonie in den Flottentank. Ein
+    // Sprung kostet nach Masse (Umsetzungskonzept/34_...md, F7) – das
+    // Kolonisationsschiff ist schwer, genau dafür ist der Startvorrat bemessen.
+    double needed = Math.ceil(FleetCommands.jumpFuelPerHop(fleet));
     double fuelBefore = Warehouse.qty(b.state(), b.colonyId(), GameConstants.JUMP_FUEL_PRODUCT_ID);
-    assertTrue(fuelBefore >= 1, "Vorbedingung: Startvorrat an Eleriumkapseln im Lager");
-    FleetCommands.refuelFleet(b.state(), b.playerId(), fleet.id, 1);
+    assertTrue(fuelBefore >= needed, "Vorbedingung: Startvorrat trägt einen Sprung, brauchte " + needed);
+    FleetCommands.refuelFleet(b.state(), b.playerId(), fleet.id, needed);
 
     FleetCommands.moveFleet(b.state(), b.playerId(), fleet.id, neighbour);
     assertEquals(FleetStatus.InTransit, fleet.status);
-    FleetCommands.processFleetArrivals(b.state(), fleet.arrivesAt);
+    FleetCommands.processFleetArrivals(b.state(), b.ids(), fleet.arrivesAt);
     assertEquals(FleetStatus.Stationed, fleet.status, "Nach dem Sprung muss die Flotte stationiert sein");
     assertEquals(neighbour, fleet.systemId);
 
     Planet target = freeUsablePlanet(b.state(), neighbour);
-    FleetCommands.moveFleetWithinSystem(b.state(), b.playerId(), fleet.id,
+    FleetCommands.moveFleetWithinSystem(b.state(), b.ids(), b.playerId(), fleet.id,
         new FleetSystemTarget.PlanetOrbit(target.id));
 
     Colonization running = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), target.id);
@@ -204,7 +207,7 @@ class ColonizationJourneyTest {
         GameConstants.COLONY_SHIP_PRODUCT_ID, 1, null);
     Fleet fleet = onlyColonyFleet(b);
     Planet target = freeUsablePlanet(b.state(), homeSystem(b.state()).id);
-    FleetCommands.moveFleetWithinSystem(b.state(), b.playerId(), fleet.id,
+    FleetCommands.moveFleetWithinSystem(b.state(), b.ids(), b.playerId(), fleet.id,
         new FleetSystemTarget.PlanetOrbit(target.id));
 
     ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), target.id);
@@ -234,7 +237,7 @@ class ColonizationJourneyTest {
     FleetCommands.refuelFleet(b.state(), b.playerId(), fleet.id, 2);
 
     Planet target = freeUsablePlanet(b.state(), homeSystem(b.state()).id);
-    FleetCommands.moveFleetWithinSystem(b.state(), b.playerId(), fleet.id,
+    FleetCommands.moveFleetWithinSystem(b.state(), b.ids(), b.playerId(), fleet.id,
         new FleetSystemTarget.PlanetOrbit(target.id));
     ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), target.id);
 

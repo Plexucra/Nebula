@@ -32,6 +32,23 @@ interface SystemLocationOption {
   styleUrl: './system-view.component.scss',
 })
 export class SystemViewComponent {
+
+  /**
+   * Aufgeklappte Rohstofflisten je Planet. Nach dem Erforschen hat jede Karte
+   * 17 Zeilen – bei zehn Himmelskörpern war die Seite sonst kaum noch zu
+   * überblicken, erst recht nicht auf einem Handy.
+   */
+  private readonly openConcentrations = signal<ReadonlySet<Id>>(new Set());
+
+  protected concentrationOpen(planetId: Id): boolean {
+    return this.openConcentrations().has(planetId);
+  }
+
+  protected toggleConcentration(planetId: Id): void {
+    const next = new Set(this.openConcentrations());
+    if (!next.delete(planetId)) next.add(planetId);
+    this.openConcentrations.set(next);
+  }
   protected readonly api = inject(GAME_API);
   protected readonly clock = inject(UiClockService);
   protected readonly countdown = formatCountdown;

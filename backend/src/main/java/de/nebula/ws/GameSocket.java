@@ -154,6 +154,7 @@ public class GameSocket {
       case "colonySpeedBreakdown" -> ColonyCommands.colonySpeedBreakdown(state, text(payload, "colonyId"));
       case "populationTrend" -> de.nebula.state.PopulationHistory.trend(state, text(payload, "colonyId"));
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
+      case "treasuryFlowPerHour" -> EconomyTick.treasuryFlowPerHour(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
       case "planet" -> ColonyCommands.planetForPlayer(state, text(payload, "id"), currentPlayerId());
@@ -181,6 +182,8 @@ public class GameSocket {
         BuildingCommands.queueBuilding(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "buildingTypeId"));
         yield null;
       }
+      case "queueMissingBuildingMaterials" -> BuildingCommands.queueMissingMaterials(state, ids, requirePlayerId(),
+          text(payload, "colonyId"), text(payload, "buildingTypeId"));
       case "cancelBuildingOrder" -> {
         BuildingCommands.cancelBuildingOrder(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "buildingId"));
         yield null;
@@ -218,6 +221,11 @@ public class GameSocket {
             payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false));
         yield null;
       }
+      case "moveProductionEntry" -> {
+        ProductionCommands.moveProductionEntry(state, requirePlayerId(), text(payload, "colonyId"),
+            text(payload, "entryId"), payload.path("direction").asInt());
+        yield null;
+      }
       case "resumeProduction" -> {
         ProductionCommands.resumeProduction(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "entryId"));
         yield null;
@@ -233,6 +241,11 @@ public class GameSocket {
       case "createSellOrder" -> {
         MarketCommands.createSellOrder(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "productTypeId"),
             payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble(), payload.path("autoRelist").asBoolean(false));
+        yield null;
+      }
+      case "updateSellOrderPrice" -> {
+        MarketCommands.updateSellOrderPrice(state, requirePlayerId(), text(payload, "orderId"),
+            payload.path("pricePerUnit").asDouble());
         yield null;
       }
       case "cancelSellOrder" -> {
@@ -396,7 +409,14 @@ public class GameSocket {
         yield state.groundForceGroups.stream().filter(g -> playerId.equals(g.ownerId) && g.planetId != null).toList();
       }
       case "moveFleet" -> {
-        FleetCommands.moveFleet(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "destinationSystemId"));
+        FleetCommands.moveFleet(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "destinationSystemId"),
+            payload.path("viaCarrier").asBoolean(false));
+        yield null;
+      }
+      case "carrierJumpPreview" -> FleetCommands.carrierJumpPreview(state, text(payload, "fleetId"),
+          text(payload, "destinationSystemId"));
+      case "renameFleet" -> {
+        FleetCommands.renameFleet(state, requirePlayerId(), text(payload, "fleetId"), text(payload, "name"));
         yield null;
       }
       case "cancelFleetMove" -> {
@@ -416,7 +436,7 @@ public class GameSocket {
           payload.path("soldiers").asDouble(0), text(payload, "name"));
 
       case "moveFleetWithinSystem" -> {
-        FleetCommands.moveFleetWithinSystem(state, requirePlayerId(), text(payload, "fleetId"), parseFleetSystemTarget(payload.path("target")));
+        FleetCommands.moveFleetWithinSystem(state, ids, requirePlayerId(), text(payload, "fleetId"), parseFleetSystemTarget(payload.path("target")));
         yield null;
       }
       case "exploreSystem" -> {
@@ -602,6 +622,9 @@ public class GameSocket {
       throw new CommandException("Unbekannter Kommandant: " + playerId);
     }
     connections.login(playerId, connection);
+    // REALZEIT-AUSNAHME: echter Zeitstempel für die Inaktivitäts-Löschfrist
+    // (siehe RetentionCleanup) – bewusst keine Spielzeit.
+    player.get().lastSeenAt = System.currentTimeMillis();
     return player.get();
   }
 
@@ -623,8 +646,19 @@ public class GameSocket {
   private Player handleRegisterPlayer(JsonNode payload) {
     String commanderName = payload.path("commanderName").asText("").trim();
     String homeworldName = payload.path("homeworldName").asText("").trim();
-    if (commanderName.isEmpty()) commanderName = "Unbekannter Kommandant";
-    if (homeworldName.isEmpty()) homeworldName = "Heimatwelt";
+    // Vorher wurden leere Eingaben still auf "Unbekannter Kommandant"/"Heimatwelt"
+    // gesetzt. Weil der Name zugleich die Kennung in der Anmeldeliste und im
+    // Empfängerfeld ist, entstanden so nicht unterscheidbare Kommandanten.
+    if (commanderName.isEmpty()) {
+      throw new CommandException("Bitte einen Namen für den Kommandanten angeben.");
+    }
+    if (homeworldName.isEmpty()) {
+      throw new CommandException("Bitte einen Namen für die Heimatkolonie angeben.");
+    }
+    String candidate = commanderName;
+    if (state.players.stream().anyMatch(p -> p.name.equalsIgnoreCase(candidate))) {
+      throw new CommandException("Den Kommandanten \"" + commanderName + "\" gibt es bereits – bitte einen anderen Namen wählen.");
+    }
     PlayerRole role;
     try {
       role = PlayerRole.valueOf(payload.path("role").asText(PlayerRole.Normal.name()));
@@ -648,6 +682,8 @@ public class GameSocket {
       }
     }
     connections.login(player.id, connection);
+    // REALZEIT-AUSNAHME, siehe handleLogin.
+    player.lastSeenAt = System.currentTimeMillis();
     connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.copyOf(state.players)));
     return player;
   }

@@ -1,7 +1,7 @@
 import { EnergyStorage } from '../models/building.model';
 import { Signal } from '@angular/core';
 import {
-  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
+  Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, CarrierJumpPreview, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
@@ -93,6 +93,14 @@ export interface GameApi {
   // --- Bebauung -------------------------------------------------------------
   buildings(colonyId: Id): Signal<Building[]>;
   queueBuilding(colonyId: Id, buildingTypeId: Id): Promise<void>;
+  /**
+   * Reiht die für den nächsten Ausbau FEHLENDEN Baustoffe als EINEN
+   * Bündelauftrag ein. Nötig, weil ein Ausbau mehrere Baustoffe gleichzeitig
+   * braucht, von denen einer Vorprodukt eines anderen sein kann – einzeln
+   * eingereiht nehmen sie sich gegenseitig den Lagerbestand weg. Liefert die
+   * eingereihten Mengen je Produkt zurück.
+   */
+  queueMissingBuildingMaterials(colonyId: Id, buildingTypeId: Id): Promise<Record<Id, number>>;
   cancelBuildingOrder(colonyId: Id, buildingId: Id): Promise<void>;
   demolishBuilding(colonyId: Id, buildingId: Id): Promise<void>;
   activateDefense(colonyId: Id, buildingId: Id): Promise<void>;
@@ -141,6 +149,13 @@ export interface GameApi {
   resumeProduction(colonyId: Id, entryId: Id): Promise<void>;
   /** Bei laufendem Auftrag anteilige Gutschrift nach verstrichener Zeit (abgerundet je Schritt), siehe Dokument §4. */
   cancelProduction(colonyId: Id, entryId: Id): Promise<void>;
+  /**
+   * Verschiebt einen wartenden Auftrag um eine Position (`-1` = nach vorn,
+   * `+1` = nach hinten). Pro Kolonie läuft nur EIN Auftrag – die Reihenfolge
+   * entscheidet also, was zuerst fertig wird, und war bislang gar nicht
+   * änderbar.
+   */
+  moveProductionEntry(colonyId: Id, entryId: Id, direction: -1 | 1): Promise<void>;
 
   // --- Bevölkerung / Geld -----------------------------------------------------
   population(colonyId: Id): Signal<Population | undefined>;
@@ -153,6 +168,12 @@ export interface GameApi {
   moneySupplyState(planetId: Id): Signal<PopulationMoneySupplyState | undefined>;
   populationWallet(colonyId: Id): Signal<Wallet | undefined>;
   transactions(): Signal<Transaction[]>;
+  /**
+   * Saldo des Kommandanten-Kontos je SPIELSTUNDE (Einnahmen minus Löhne,
+   * Gebäude- und Flottenunterhalt). Die Zahl, ohne die ein schleichender
+   * Bankrott unsichtbar bleibt – steht in der Kopfzeile neben dem Guthaben.
+   */
+  treasuryFlowPerHour(): Signal<number>;
   transfer(toPlayerName: string, amount: number): Promise<void>;
 
   // --- Flotten ------------------------------------------------------------
@@ -222,7 +243,7 @@ export interface GameApi {
    * siehe Konzeption/Umsetzungskonzept/10_...md) gilt das jeweils erreichte
    * System für diesen Kommandanten fortan als besucht (`hasVisitedSystem`).
    */
-  moveFleet(fleetId: Id, destinationSystemId: Id): Promise<void>;
+  moveFleet(fleetId: Id, destinationSystemId: Id, viaCarrier?: boolean): Promise<void>;
   /**
    * Bricht eine unterwegs befindliche Flotte ab: der gerade laufende
    * Gateway-Sprung wird noch zu Ende geflogen, alle weiteren geplanten
@@ -232,8 +253,17 @@ export interface GameApi {
    * gesperrt wird.
    */
   cancelFleetMove(fleetId: Id): Promise<void>;
+  /** Benennt eine Flotte um – automatisch vergebene Namen wie "Flotte Alpha Prime 5" sind ab wenigen Flotten nicht mehr unterscheidbar. */
+  renameFleet(fleetId: Id, name: string): Promise<void>;
   /** Reine Vorschau (keine Bewegung) für "Bewegen" auf der Galaxiekarte: Sprunganzahl + geschätzte Reisezeit (ms) zu einem Zielsystem – `null`, wenn kein Gateway-Pfad bekannt ist. Dieselbe Berechnung wie `moveFleet`, damit Vorschau und tatsächliche Ankunft nie auseinanderlaufen. */
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null>;
+  /**
+   * Vorschau des Trägersprungs OHNE Gateway (Umsetzungskonzept/06_...md):
+   * Slot-Bilanz, Dauer und Treibstoffbedarf. `possible: false` heißt, dass die
+   * Träger die übrigen Schiffe nicht fassen – `reason` nennt den Grund und ist
+   * derselbe Text, mit dem `moveFleet(..., viaCarrier)` den Sprung abbricht.
+   */
+  carrierJumpPreview(fleetId: Id, destinationSystemId: Id): Signal<CarrierJumpPreview | null>;
   /**
    * Frachtkapazität/Auslastung einer Flotte und die maximal ladbare Stückzahl
    * des angegebenen Produkts – vom Backend berechnet (dieselbe Regel, die
@@ -327,6 +357,8 @@ export interface GameApi {
    */
   createSellOrderFromFleet(fleetId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
   cancelSellOrder(orderId: Id): Promise<void>;
+  /** Ändert den Preis einer eigenen, offenen Verkaufsorder – vorher ging das nur über Zurückziehen und Neuanlegen. */
+  updateSellOrderPrice(orderId: Id, pricePerUnit: number): Promise<void>;
   buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
 
   // --- Handelsgilde-Station: Depot & Orderbuch (Umsetzungskonzept/22_...md) ---

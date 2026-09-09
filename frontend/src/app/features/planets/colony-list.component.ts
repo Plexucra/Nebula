@@ -34,6 +34,20 @@ export class ColonyListComponent {
 
   protected stats(colonyId: string) { return this.api.colonyStats(colonyId); }
   protected population(colonyId: string) { return this.api.population(colonyId); }
+  protected powerCoverage(colonyId: string) { return this.api.powerCoverage(colonyId); }
+
+  /**
+   * Zustand der Kolonie in einem Wort – die Karte zeigte vorher nur vier
+   * unbeschriftete Balken. Wer mehrere Kolonien hat, sah damit NICHT, dass eine
+   * davon im Blackout steckt und ihre Bevölkerung verliert.
+   */
+  protected colonyStatus(colonyId: string): { label: string; kind: 'bad' | 'warn' | 'good' } | null {
+    if (this.powerCoverage(colonyId)() < 0.999) return { label: 'Energieausfall', kind: 'bad' };
+    const growth = this.population(colonyId)()?.growthRatePerInterval ?? 0;
+    if (growth < -0.001) return { label: 'Bevölkerung schrumpft', kind: 'bad' };
+    if (growth > 0.001) return { label: 'wächst', kind: 'good' };
+    return { label: 'hält', kind: 'warn' };
+  }
   protected planetName(colony: Colony): string {
     return this.api.planet(colony.planetId)()?.name ?? '—';
   }

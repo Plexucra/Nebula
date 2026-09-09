@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { NOTIFICATION_RETENTION_GAME_HOURS, gameHoursToGameDays, gameHoursToRealMinutes } from '../core/shared-constants';
+import { NOTIFICATION_RETENTION_REAL_DAYS } from '../core/shared-constants';
 import { GAME_API } from '../core/sim/game-api.token';
-import { Id, NotificationType } from '../core/models';
+import { Battle, GroundBattle, Id, NotificationType } from '../core/models';
 import { UiClockService } from '../core/ui/ui-clock.service';
 
 interface NavItem {
@@ -32,6 +32,38 @@ export class AppShellComponent {
   protected readonly gateway = computed(() => this.api.gateway(this.homeSystemId())());
   protected readonly gatewayActive = () => this.gateway()?.state === 'Active';
 
+  /**
+   * Laufende Gefechte – dauerhaft und rot in der Kopfzeile, weil ein Kampf die
+   * einzige Lage ist, die ohne Zutun des Kommandanten Schiffe kostet und in
+   * Sekunden entschieden ist. Vorher war er nur zu sehen, wenn man zufällig auf
+   * der Flotten- oder Diplomatieseite stand.
+   */
+  protected readonly activeBattles = this.api.activeBattles();
+  protected readonly activeGroundBattles = this.api.activeGroundBattles();
+  protected readonly activeBattleCount = computed(
+    () => this.activeBattles().length + this.activeGroundBattles().length);
+
+  /** Ziel des Kampf-Anzeigers: bei genau einem Gefecht direkt der Bericht, sonst die Übersicht. */
+  protected readonly battleIndicatorLink = computed(() => {
+    const space = this.activeBattles();
+    const ground = this.activeGroundBattles();
+    if (space.length === 1 && ground.length === 0) return `/kampfbericht/${space[0].reportToken}`;
+    if (ground.length === 1 && space.length === 0) return `/bodenkampfbericht/${ground[0].reportToken}`;
+    return '/diplomatie';
+  });
+
+  protected readonly battleIndicatorTitle = computed(() => {
+    const n = this.activeBattleCount();
+    return n === 1 ? 'Ein Gefecht läuft gerade – Bericht öffnen' : `${n} Gefechte laufen gerade – Übersicht öffnen`;
+  });
+
+  /**
+   * Saldo je Spielstunde neben dem Guthaben. Ohne diese Zahl war ein
+   * schleichender Bankrott unsichtbar: Im Test fiel ein Konto von 139.581 auf
+   * 0 Credits, ohne dass die Oberfläche das irgendwo angezeigt hätte.
+   */
+  protected readonly treasuryFlowPerHour = this.api.treasuryFlowPerHour();
+
   protected readonly notifications = this.api.notifications();
   protected readonly unreadNotificationCount = this.api.unreadNotificationCount();
   protected readonly notificationPanelOpen = signal(false);
@@ -55,6 +87,21 @@ export class AppShellComponent {
     this.notificationPanelOpen.update(v => !v);
   }
 
+  /**
+   * Schließt das Benachrichtigungsfeld bei einem Klick daneben oder mit Escape.
+   * Vorher blieb es offen stehen und verdeckte die halbe Seite, bis man erneut
+   * genau die Glocke traf.
+   */
+  protected closeNotificationPanel(): void {
+    this.notificationPanelOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.notificationPanelOpen.set(false);
+    this.mobileNavOpen.set(false);
+  }
+
   protected async markRead(id: Id): Promise<void> {
     await this.api.markNotificationRead(id);
   }
@@ -65,12 +112,12 @@ export class AppShellComponent {
 
   /** Hinweistext zur Aufbewahrungsfrist – Zahlen aus `shared/game-constants.json` (siehe Backend `SharedConstants`). */
   protected readonly keepHint =
-    `Ohne "Beibehalten" wird diese Benachrichtigung nach ${gameHoursToGameDays(NOTIFICATION_RETENTION_GAME_HOURS)} Spieltagen `
-    + `(ca. ${Math.round(gameHoursToRealMinutes(NOTIFICATION_RETENTION_GAME_HOURS))} Minuten Echtzeit) automatisch gelöscht.`;
+    `Ohne "Beibehalten" wird diese Benachrichtigung nach ${NOTIFICATION_RETENTION_REAL_DAYS} echten Tagen automatisch gelöscht.`;
 
   /**
    * "Beibehalten": ohne diesen Schalter räumt der Server Benachrichtigungen
-   * nach 2 Spieltagen automatisch weg (siehe `RetentionCleanup` im Backend).
+   * nach `NOTIFICATION_RETENTION_REAL_DAYS` echten Tagen weg (siehe
+   * `RetentionCleanup` im Backend, REALZEIT-AUSNAHME).
    */
   protected async toggleNotificationKeep(id: Id, keep: boolean): Promise<void> {
     await this.api.setNotificationKeep(id, keep);
@@ -108,7 +155,14 @@ export class AppShellComponent {
 
   /** Löscht die GESAMTE gemeinsame Galaxie – auch die aller anderen Kommandanten, nicht nur den eigenen Fortschritt. */
   protected async resetGame(): Promise<void> {
-    if (!confirm('Die komplette Galaxie wirklich zurücksetzen? Der Fortschritt ALLER Kommandanten geht unwiderruflich verloren.')) return;
+    // Ein einzelnes "OK" ist für eine Aktion, die stundenlang gewachsene Reiche
+    // ALLER Mitspieler löscht, zu wenig – deshalb muss der Wortlaut getippt
+    // werden. (Eine echte Berechtigungsprüfung kommt mit der Anmeldung.)
+    const expected = 'GALAXIE LOESCHEN';
+    const answer = prompt(
+      'Das löscht die komplette Galaxie – auch die Kolonien, Flotten und Konten ALLER anderen Kommandanten. '
+      + `Zum Bestätigen "${expected}" eingeben:`);
+    if (answer?.trim().toUpperCase() !== expected) return;
     await this.api.resetGame();
   }
 

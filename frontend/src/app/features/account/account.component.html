@@ -7,6 +7,14 @@
   <div class="panel-body">
     <span class="eyebrow">Guthaben</span>
     <div class="balance">{{ wallet()?.balance ?? 0 | number:'1.0-0' }} <span class="unit">Credits</span></div>
+    <!-- Der Saldo je Spielstunde: "letzte 50 Buchungen" ist keine Bezugsgröße,
+         an der man einen schleichenden Bankrott erkennen könnte. -->
+    <div class="balance-flow" [class.bad]="flowPerHour() < 0" [class.good]="flowPerHour() > 0">
+      {{ flowPerHour() > 0 ? '+' : '' }}{{ flowPerHour() | number:'1.0-1' }} Credits je Spielstunde
+      @if (flowPerHour() < 0 && (wallet()?.balance ?? 0) > 0) {
+        <span class="hint">— reicht noch rund {{ (wallet()?.balance ?? 0) / -flowPerHour() | number:'1.0-0' }} Spielstunden</span>
+      }
+    </div>
     <p class="hint">Credits kreisen zwischen Ihnen und Ihrer Bevölkerung: Sie zahlen Löhne und Unterhalt,
       die Bevölkerung kauft dafür Ihre Waren. Wirklich neues Geld entsteht nur, wenn eine Kolonie über ihren
       bisherigen Höchststand hinauswächst. Einmal pro Spieltag zieht der galaktische Ausgleichsfonds zudem
@@ -69,7 +77,7 @@
       @for (tx of transactions(); track tx.id) {
         <div class="tx-row">
           <span class="tag" [class.good]="isIncome(tx.toWalletId)" [class.bad]="!isIncome(tx.toWalletId)">{{ reasonLabel(tx.reason) }}</span>
-          <span class="note">{{ tx.note }}</span>
+          <span class="note">{{ noteText(tx.note) }}</span>
           <span class="mono amount" [class.good]="isIncome(tx.toWalletId)" [class.bad]="!isIncome(tx.toWalletId)">
             {{ isIncome(tx.toWalletId) ? '+' : '−' }}{{ tx.amount | number:'1.0-2' }}
           </span>

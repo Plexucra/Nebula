@@ -17,9 +17,11 @@
         <p class="hint">Keine Werft vorhanden. Im Bebauungs-Tab der Kolonie ausbauen.</p>
       } @else {
         <div class="form-row">
+          <!-- Mit Kennzahlen im Eintrag: vorher standen hier nur sieben Namen,
+               ohne Aufwand, Frachtraum, Truppenplätze oder Konterverhältnis. -->
           <select [(ngModel)]="selFor(colony).productId">
             @for (s of shipTypes; track s.id) {
-              <option [value]="s.id">{{ s.name }}</option>
+              <option [value]="s.id">{{ s.name }} — {{ shipFacts(s.id) }}</option>
             }
           </select>
           <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
@@ -31,6 +33,9 @@
           </label>
           <button class="primary small" [disabled]="busy() === ('queueship:' + colony.id)" (click)="queueShip(colony)">Bauen</button>
         </div>
+        @if (selFor(colony).productId) {
+          <p class="hint mono">{{ productName(selFor(colony).productId) }}: {{ shipFacts(selFor(colony).productId) }}</p>
+        }
 
         <div class="queue-list">
           @for (entry of shipyardQueue(colony.id); track entry.id) {
@@ -84,7 +89,18 @@
     @for (fleet of fleets(); track fleet.id) {
       <div class="fleet-card">
         <div class="fleet-head">
-          <strong>{{ fleet.name }}</strong>
+          @if (renameDraft[fleet.id] !== undefined) {
+            <span class="rename-form">
+              <input type="text" maxlength="40" [(ngModel)]="renameDraft[fleet.id]" (keyup.enter)="submitRename(fleet)" />
+              <button class="small" (click)="submitRename(fleet)" [disabled]="busy() === ('rename:' + fleet.id)">Übernehmen</button>
+              <button class="ghost small" (click)="cancelRename(fleet)">Abbrechen</button>
+            </span>
+          } @else {
+            <strong>{{ fleet.name }}</strong>
+            <!-- Umbenennen: automatisch vergebene Namen ("Flotte Alpha Prime 5")
+                 sind ab wenigen Flotten nicht mehr auseinanderzuhalten. -->
+            <button class="ghost small rename-btn" (click)="startRename(fleet)" title="Flotte umbenennen">✎</button>
+          }
           <span class="tag" [class.warn]="fleet.status === 'InTransit'" [class.good]="fleet.status === 'Stationed'">
             {{ fleet.status === 'InTransit' ? 'Unterwegs' : 'Stationiert' }}
           </span>
@@ -141,7 +157,12 @@
           <div class="cargo-manifest">
             <span class="eyebrow">Treibstofftank</span>
             <div class="cargo-row">
-              <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fuelTankCapacity(fleet) | number:'1.0-0' }} Kapseln</span>
+              <!-- Reichweite statt nur Füllstand: Der Tank fasst ein Vielfaches
+                   dessen, was je gebraucht wird, der Balken sah deshalb immer
+                   leer aus und schreckte vom Losfliegen ab. -->
+              <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fuelTankCapacity(fleet) | number:'1.0-0' }} Kapseln
+                <span class="hint">— reicht für {{ fuelRangeInJumps(fleet) | number:'1.0-0' }} Gateway-Sprünge dieser Flotte</span>
+              </span>
               @if ((fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) || isAtTradeHub(fleet)) {
                 <input type="number" min="1" [(ngModel)]="refuelQty[fleet.id]" placeholder="Menge" />
                 <button class="ghost small" (click)="submitRefuel(fleet)" [disabled]="busy() === ('refuel:' + fleet.id)">Betanken</button>
@@ -179,7 +200,7 @@
                 }
               </div>
             } @empty { <p class="empty-hint">Kein Frachtgut geladen.</p> }
-            <span class="mono hint">{{ fleetCargoMassKg(fleet) | number:'1.0-0' }} / {{ fleetCapacityMassKg(fleet) | number:'1.0-0' }} kg · {{ fleetCargoVolumeM3(fleet) | number:'1.0-0' }} / {{ fleetCapacityVolumeM3(fleet) | number:'1.0-0' }} m³</span>
+            <span class="mono hint">{{ formatTons(fleetCargoMassKg(fleet)) }} / {{ formatTons(fleetCapacityMassKg(fleet)) }} · {{ fleetCargoVolumeM3(fleet) | number:'1.0-0' }} / {{ fleetCapacityVolumeM3(fleet) | number:'1.0-0' }} m³</span>
 
             @if (troopCapacity(fleet) > 0) {
               <span class="eyebrow">Truppen</span>
@@ -233,6 +254,11 @@
             }
           </div>
 
+          @if (attackBlockedHint(fleet); as hint) {
+            <!-- Warum hier kein "Angreifen" steht – die Regel war vorher nur im Quelltext dokumentiert. -->
+            <p class="hint attack-blocked">{{ hint }}</p>
+          }
+
           @if (isPanelOpen(fleet.id, 'merge')) {
             <div class="fleet-panel form-row">
               <p class="hint">Die gewählte Flotte wird aufgelöst; ihre Schiffe, Fracht, Soldaten und ihr Treibstoff gehen in „{{ fleet.name }}" über.</p>
@@ -282,14 +308,56 @@
           }
 
           @if (isPanelOpen(fleet.id, 'move')) {
-            <div class="fleet-panel form-row">
-              <select [(ngModel)]="moveDestination[fleet.id]">
-                <option value="">Zielsystem wählen…</option>
-                @for (s of allSystems(); track s.id) {
-                  @if (s.id !== fleet.systemId) { <option [value]="s.id">{{ s.name }}</option> }
-                }
-              </select>
-              <button class="primary small" (click)="submitMove(fleet)" [disabled]="busy() === ('move:' + fleet.id)">Losfliegen</button>
+            <div class="fleet-panel move-panel">
+              <div class="form-row">
+                <!-- Nach Entfernung sortiert und mit Sprüngen/Dauer beschriftet:
+                     vorher standen hier 203 Systeme in beliebiger Reihenfolge
+                     ohne jede Angabe. -->
+                <select [(ngModel)]="moveDestination[fleet.id]">
+                  <option value="">Zielsystem wählen…</option>
+                  @for (t of moveTargets(fleet); track t.id) {
+                    <option [value]="t.id">{{ t.label }}</option>
+                  }
+                </select>
+                <button class="primary small" (click)="submitMove(fleet)" [disabled]="busy() === ('move:' + fleet.id)">Losfliegen</button>
+              </div>
+
+              @if (moveDestination[fleet.id]) {
+                <!-- Die Routenvorschau steht jetzt AM ORT DER ENTSCHEIDUNG.
+                     Vorher gab es sie nur auf der Galaxiekarte, und die Route
+                     erschien erst, nachdem die Flotte schon unterwegs war. -->
+                <div class="route-preview">
+                  @if (movePreview(fleet); as r) {
+                    <label class="checkbox-inline">
+                      <input type="radio" name="mode-{{ fleet.id }}" [value]="false" [(ngModel)]="moveViaCarrier[fleet.id]" />
+                      <span>Gateway-Route: {{ r.hops }} {{ r.hops === 1 ? 'Sprung' : 'Sprünge' }} · {{ countdown(r.ms) }}</span>
+                    </label>
+                  } @else {
+                    <p class="hint bad">Keine Gateway-Route zu diesem System – nur ein Trägersprung kommt dorthin.</p>
+                  }
+
+                  @if (hasCarrier(fleet)) {
+                    @if (carrierPreview(fleet); as c) {
+                      <label class="checkbox-inline">
+                        <input type="radio" name="mode-{{ fleet.id }}" [value]="true" [(ngModel)]="moveViaCarrier[fleet.id]" [disabled]="!c.possible" />
+                        <span>
+                          Trägersprung ohne Gateway: {{ countdown(c.ms) }} · {{ c.fuelNeeded | number:'1.0-2' }} Kapseln
+                          (im Tank {{ c.fuelInTank | number:'1.0-2' }})
+                        </span>
+                      </label>
+                      <p class="hint">
+                        Der Träger nimmt die übrigen Schiffe an Bord und springt geradlinig – unabhängig von Gateways,
+                        Zöllen und Blockaden. Er braucht dafür das {{ carrierTimeFactor }}-fache der Zeit und das
+                        {{ carrierFuelFactor }}-fache an Treibstoff eines Gateway-Sprungs.
+                        Laderaum: {{ c.slotsNeeded | number:'1.0-1' }} / {{ c.slotsAvailable | number:'1.0-1' }} Slots.
+                      </p>
+                      @if (!c.possible) { <p class="hint bad">{{ c.reason }}</p> }
+                    }
+                  } @else {
+                    <p class="hint">Ein Trägerschiff in dieser Flotte erlaubt zusätzlich den Sprung ohne Gateway.</p>
+                  }
+                </div>
+              }
             </div>
           }
           @if (isPanelOpen(fleet.id, 'land')) {
@@ -326,7 +394,8 @@
             <div class="fleet-panel attack-list">
               @for (target of attackableFleets(fleet); track target.id) {
                 <button class="ghost small danger" (click)="submitAttack(fleet, target.id)" [disabled]="busy() === ('attack:' + fleet.id)">
-                  "{{ target.name }}" ({{ target.ships.length }} Schiffstypen) angreifen
+                  <!-- Schiffszahl statt "3 Schiffstypen": vorher griff man an, ohne die Stärke zu kennen. -->
+                  "{{ target.name }}" ({{ shipCountOf(target) }} Schiffe) angreifen
                 </button>
               } @empty { <p class="empty-hint">Keine angreifbare gegnerische Flotte in diesem System.</p> }
             </div>

@@ -70,18 +70,55 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
 }
 
 .building-list { display: flex; flex-direction: column; gap: 10px; }
+/**
+ * Vorher: `grid-template-columns: 1fr auto auto`. Die mittlere Spalte (Stufe +
+ * Baustoffliste) ist `auto` und nimmt sich, was sie braucht – sobald die
+ * Baustoffliste von drei auf vier Einträge wuchs (Infrastruktur ab Stufe 8),
+ * quetschte sie die Beschreibungsspalte auf rund 150 px zusammen: der Text
+ * stand als dünne, 400 px hohe Säule da, während rechts die halbe Zeile leer
+ * blieb.
+ *
+ * Jetzt bekommt die Beschreibung eine Mindestbreite und die Aktionsspalte eine
+ * Höchstbreite; unterhalb des Mobil-Breakpoints stapelt die Zeile ganz
+ * (vorher gar nicht – drei Spalten auf 390 px waren unbenutzbar).
+ */
 .building-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
+  grid-template-columns: minmax(260px, 1fr) auto minmax(240px, 0.9fr);
+  align-items: start;
   gap: 16px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg-inset);
 }
+.building-actions,
+.building-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.building-actions .upkeep { color: var(--text-faint); }
+
+/* Auffälliger Zustandshinweis (Blackout) – bewusst ein Banner, kein Halbsatz. */
+.alert-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+
+  strong { color: var(--danger); }
+  span { font-size: 12px; }
+}
 .building-info strong { display: block; font-size: 13.5px; margin-bottom: 2px; }
-.building-info .hint { margin: 0; }
+/* display:block, weil sonst der Beschreibungstext und die Kennzahl daneben
+   ohne Trenner zusammenlaufen ("...verdoppeln sich mit.Wohnkapazität 20.000"). */
+.building-info .hint { margin: 0; display: block; }
 .building-info .hint.power-upkeep-hint { display: block; margin-top: 4px; font-size: 11px; }
 .building-level { text-align: center; }
 .building-level .big { font-size: 20px; color: var(--accent-soft); }
@@ -250,11 +287,27 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
 /* Mobil (Umsetzungskonzept/16_...md): Der Tab-Streifen scrollt bereits
    horizontal (siehe .tabs oben); hier zusätzlich größere Tippflächen und
    gestapelte Detailraster. Desktop unverändert. */
+@media (max-width: 900px) {
+  /* Ab hier reicht die Breite für drei Spalten nicht mehr – die Zeile stapelt. */
+  .building-row { grid-template-columns: 1fr; }
+  .building-level { display: flex; flex-direction: row; align-items: baseline; gap: 8px; text-align: left; }
+}
+
 @media (max-width: 720px) {
   .tab-btn { min-height: 44px; padding: 10px 12px; }
   .grid-2 { grid-template-columns: 1fr; }
+  /* Touchziele: Bau- und Rückbauknöpfe sind die wichtigsten Aktionen der Seite. */
+  .building-actions button { min-height: 40px; }
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 
 /* Baustoff-Zeilen der Ausbau-Vorschau (Umsetzungskonzept/17_...md, Teil B). */
 .material.good { color: var(--good); }
 .material.bad { color: var(--danger); }
+
+
+.price-edit { display: inline-flex; gap: 6px; align-items: center; input { width: 110px; } }
+/* Beschriftete Eingabefelder im Anbieten-Formular. */
+.stock-sale-form .field { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--text-faint); }
+.stock-sale-form .field input { width: 140px; }
+.link-like { cursor: pointer; text-decoration: underline; }

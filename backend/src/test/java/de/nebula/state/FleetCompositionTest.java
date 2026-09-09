@@ -1,5 +1,6 @@
 package de.nebula.state;
 
+import de.nebula.data.ShipCatalog;
 import de.nebula.data.WorldSeed;
 import de.nebula.engine.GameConstants;
 import de.nebula.model.Colony;
@@ -28,6 +29,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Schiffe fassen – beim Aufteilen auf BEIDEN Seiten.
  */
 class FleetCompositionTest {
+
+  /**
+   * Plätze je Mannschaftstransporter aus dem Katalog statt fest verdrahtet – die
+   * Zahl ist eine Balancegröße (zuletzt mit der Verkleinerung des Transporters
+   * gesenkt), die Aussagen dieser Tests sind es nicht.
+   */
+  private static final int TROOP_CAPACITY = (int) ShipCatalog.find("p_trooptransport").troopCapacity;
 
   private record Arena(GameState state, IdGenerator ids, String playerId, Colony home) {
   }
@@ -84,7 +92,7 @@ class FleetCompositionTest {
     double fuelBefore = target.fuelCapsules + source.fuelCapsules;
     FleetCargo.add(source, "p_grundnahrung", 40);
     source.ships = List.of(new FleetShipGroup("p_freighter", 1), new FleetShipGroup("p_trooptransport", 1));
-    putSoldiersAboard(a, source, 120);
+    putSoldiersAboard(a, source, TROOP_CAPACITY);
 
     FleetCompositionCommands.mergeFleets(a.state(), a.playerId(), target.id, source.id);
 
@@ -94,7 +102,7 @@ class FleetCompositionTest {
     assertEquals(1, shipCount(target, "p_trooptransport"), 1e-9);
     assertEquals(40, FleetCargo.qty(target, "p_grundnahrung"), 1e-9, "die Fracht ist mitgekommen");
     assertEquals(fuelBefore, target.fuelCapsules, 0.01, "beide Tanks addieren sich");
-    assertEquals(120, TroopTransportCommands.soldiersAboard(a.state(), target.id), 1e-9, "die Soldaten sind an Bord der Zielflotte");
+    assertEquals(TROOP_CAPACITY, TroopTransportCommands.soldiersAboard(a.state(), target.id), 1e-9, "die Soldaten sind an Bord der Zielflotte");
     assertTrue(a.state().groundForceGroups.stream().noneMatch(g -> source.id.equals(g.fleetId)), "kein Verband ohne Flotte");
   }
 
@@ -105,13 +113,13 @@ class FleetCompositionTest {
     Fleet source = freighter(a);
 
     // Andere Position im selben System: Frachter legt ab, die Kampfflotte bleibt im Kolonieorbit.
-    FleetCommands.moveFleetWithinSystem(a.state(), a.playerId(), source.id, new de.nebula.model.FleetSystemTarget.System());
+    FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.playerId(), source.id, new de.nebula.model.FleetSystemTarget.System());
     CommandException differentPlace = assertThrows(CommandException.class,
         () -> FleetCompositionCommands.mergeFleets(a.state(), a.playerId(), target.id, source.id));
     assertTrue(differentPlace.getMessage().contains("selben Ort"), differentPlace.getMessage());
 
     // Wieder am selben Ort, aber unterwegs.
-    FleetCommands.moveFleetWithinSystem(a.state(), a.playerId(), source.id,
+    FleetCommands.moveFleetWithinSystem(a.state(), a.ids(), a.playerId(), source.id,
         new de.nebula.model.FleetSystemTarget.ColonyOrbit(a.home().id));
     source.status = FleetStatus.InTransit;
     CommandException inTransit = assertThrows(CommandException.class,
@@ -132,11 +140,11 @@ class FleetCompositionTest {
         new FleetShipGroup("p_trooptransport", 2));
     source.fuelCapsules = 8;
     FleetCargo.add(source, "p_grundnahrung", 100);
-    putSoldiersAboard(a, source, 1500);
+    putSoldiersAboard(a, source, 2 * TROOP_CAPACITY);
 
     Fleet fresh = FleetCompositionCommands.splitFleet(a.state(), a.ids(), a.playerId(), source.id,
         Map.of("p_corvette", 1.0, "p_freighter", 1.0, "p_trooptransport", 1.0),
-        Map.of("p_grundnahrung", 60.0), 900, "Landungsverband");
+        Map.of("p_grundnahrung", 60.0), TROOP_CAPACITY, "Landungsverband");
 
     assertEquals("Landungsverband", fresh.name);
     assertEquals(source.systemId, fresh.systemId);
@@ -149,8 +157,8 @@ class FleetCompositionTest {
     assertEquals(1, shipCount(fresh, "p_freighter"), 1e-9);
     assertEquals(60, FleetCargo.qty(fresh, "p_grundnahrung"), 1e-9);
     assertEquals(40, FleetCargo.qty(source, "p_grundnahrung"), 1e-9);
-    assertEquals(900, TroopTransportCommands.soldiersAboard(a.state(), fresh.id), 1e-9);
-    assertEquals(600, TroopTransportCommands.soldiersAboard(a.state(), source.id), 1e-9);
+    assertEquals(TROOP_CAPACITY, TroopTransportCommands.soldiersAboard(a.state(), fresh.id), 1e-9);
+    assertEquals(TROOP_CAPACITY, TroopTransportCommands.soldiersAboard(a.state(), source.id), 1e-9);
     // 3 von 8 Schiffen gehen mit, also auch 3/8 des Tanks.
     assertEquals(3.0, fresh.fuelCapsules, 0.01);
     assertEquals(5.0, source.fuelCapsules, 0.01);
@@ -182,7 +190,7 @@ class FleetCompositionTest {
     Arena a = newArena();
     Fleet source = combat(a);
     source.ships = List.of(new FleetShipGroup("p_corvette", 2), new FleetShipGroup("p_trooptransport", 1));
-    putSoldiersAboard(a, source, 800);
+    putSoldiersAboard(a, source, TROOP_CAPACITY);
 
     // Der einzige Mannschaftstransporter geht mit, die Soldaten sollen bleiben.
     CommandException stranded = assertThrows(CommandException.class, () -> FleetCompositionCommands.splitFleet(
@@ -191,13 +199,13 @@ class FleetCompositionTest {
 
     // Und andersherum: mehr Soldaten, als der mitgegebene Transporter fasst.
     CommandException overloaded = assertThrows(CommandException.class, () -> FleetCompositionCommands.splitFleet(
-        a.state(), a.ids(), a.playerId(), source.id, Map.of("p_corvette", 1.0), Map.of(), 800, "Ohne Platz"));
+        a.state(), a.ids(), a.playerId(), source.id, Map.of("p_corvette", 1.0), Map.of(), TROOP_CAPACITY, "Ohne Platz"));
     assertTrue(overloaded.getMessage().contains("Platz für 0 Soldaten"), overloaded.getMessage());
 
     // Der zulässige Fall: Transporter UND Soldaten gehen gemeinsam.
     Fleet fresh = FleetCompositionCommands.splitFleet(a.state(), a.ids(), a.playerId(), source.id,
-        Map.of("p_trooptransport", 1.0), Map.of(), 800, "Landung");
-    assertEquals(800, TroopTransportCommands.soldiersAboard(a.state(), fresh.id), 1e-9);
+        Map.of("p_trooptransport", 1.0), Map.of(), TROOP_CAPACITY, "Landung");
+    assertEquals(TROOP_CAPACITY, TroopTransportCommands.soldiersAboard(a.state(), fresh.id), 1e-9);
     assertEquals(0, TroopTransportCommands.soldiersAboard(a.state(), source.id), 1e-9);
     assertNotNull(TroopTransportCommands.embarkedForces(a.state(), fresh.id));
     assertTrue(a.state().groundForceGroups.stream().noneMatch(g -> source.id.equals(g.fleetId)),

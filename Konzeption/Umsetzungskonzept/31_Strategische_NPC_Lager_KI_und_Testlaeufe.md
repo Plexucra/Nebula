@@ -494,6 +494,14 @@ des Siedlers ohne Endlosschleife.
 
 ## J. Vorschläge – Entscheidungen, die nicht im Code getroffen werden sollten
 
+> **Abgeräumt am 9.9.2026.** Alle Punkte dieses Abschnitts sind entschieden –
+> siehe `34_Offene_Entscheidungen_Blockade_Nahrung_Treibstoff.md`, das je Punkt
+> Entscheidung, Begründung und Umsetzungsstand festhält. Offen geblieben sind
+> nur Nummer 6 (Handelsgilde-Preisdrift) und die Persistenz aus Nummer 11; sie
+> stehen in `TODO.md`. Der Text unten bleibt als Befund stehen, ist aber nicht
+> mehr die Arbeitsgrundlage.
+
+
 1. **Tiefe der Produktionsbäume (die eigentliche Ursache der Schiffsdauern).**
    Die Kette einer Korvette kostet 2 000-mal so viel Arbeit wie ihre
    Endmontage (5,36 Mio. gegen 2 500 Arbeitsstunden) und 225-mal so viele

@@ -16,8 +16,6 @@ public class BuildingType {
   public double baseCostPerLevel;
   public double baseHoursPerLevel;
   public double upkeepPerLevel;
-  /** Für ProductionFacility: parallele Produktionsslots pro Level. {@code null} sonst. */
-  public Integer productionSlotsPerLevel;
   /** Für Housing: Wohnkapazität pro Level. {@code null} sonst. */
   public Integer housingCapacityPerLevel;
   /** Baustoffbedarf je Ausbau, siehe {@link BuildingMaterial}. */

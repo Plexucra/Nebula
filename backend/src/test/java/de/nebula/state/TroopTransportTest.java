@@ -82,7 +82,10 @@ class TroopTransportTest {
 
   @Test
   void troopCapacityComesOnlyFromTheTroopTransport() {
-    assertEquals(1000, ShipCatalog.find("p_trooptransport").troopCapacity, 0.001);
+    // Die konkrete Platzzahl ist eine Balancegröße (zuletzt mit der Verkleinerung
+    // des Transporters auf ein Fünftel eines Korvetten-Bauaufwands gesenkt) – der
+    // Test sichert die REGEL, nicht die Zahl.
+    assertTrue(ShipCatalog.find("p_trooptransport").troopCapacity > 0);
     for (var ship : ShipCatalog.CATALOG) {
       if (ship.productTypeId.equals("p_trooptransport")) continue;
       assertEquals(0, ship.troopCapacity, 0.001,
@@ -94,13 +97,17 @@ class TroopTransportTest {
   void soldiersEmbarkUpToCapacityAndNoFurther() {
     Bootstrapped b = newState();
     Fleet fleet = fleetAtColony(b, "p_trooptransport", 2);
-    putSoldiersInGarrison(b, 2500);
+    // Aus dem Katalog abgeleitet statt fest verdrahtet: die Platzzahl je Transporter
+    // ist eine Balancegröße, die Aussage des Tests ist die Kapazitätsgrenze.
+    int capacity = (int) (2 * ShipCatalog.find("p_trooptransport").troopCapacity);
+    int surplus = 500;
+    putSoldiersInGarrison(b, capacity + surplus);
 
-    TroopTransportCommands.embarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, 2000);
-    assertEquals(2000, TroopTransportCommands.soldiersAboard(b.state(), fleet.id), 0.001);
-    assertEquals(500, garrisonCount(b, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
+    TroopTransportCommands.embarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, capacity);
+    assertEquals(capacity, TroopTransportCommands.soldiersAboard(b.state(), fleet.id), 0.001);
+    assertEquals(surplus, garrisonCount(b, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
 
-    // 2 Transporter × 1000 Plätze sind voll.
+    // Beide Transporter sind voll.
     var tooMany = assertThrows(CommandException.class,
         () -> TroopTransportCommands.embarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, 1));
     assertTrue(tooMany.getMessage().contains("Platz"), tooMany.getMessage());
@@ -127,9 +134,10 @@ class TroopTransportTest {
   void embarkedSoldiersLeaveTheColonyAndComeBack() {
     Bootstrapped b = newState();
     Fleet fleet = fleetAtColony(b, "p_trooptransport", 1);
-    putSoldiersInGarrison(b, 300);
+    int capacity = (int) ShipCatalog.find("p_trooptransport").troopCapacity;
+    putSoldiersInGarrison(b, capacity);
 
-    TroopTransportCommands.embarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, 300);
+    TroopTransportCommands.embarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, capacity);
     assertEquals(0, garrisonCount(b, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
 
     GroundForceGroup aboard = TroopTransportCommands.embarkedForces(b.state(), fleet.id);
@@ -141,8 +149,8 @@ class TroopTransportTest {
     PlanetStats stats = ColonyCommands.colonyStats(b.state(), b.colonyId());
     assertNotNull(stats);
 
-    TroopTransportCommands.disembarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, 300);
-    assertEquals(300, garrisonCount(b, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
+    TroopTransportCommands.disembarkSoldiers(b.state(), b.ids(), b.playerId(), fleet.id, capacity);
+    assertEquals(capacity, garrisonCount(b, GameConstants.SOLDIER_PRODUCT_ID), 0.001);
     assertNull(TroopTransportCommands.embarkedForces(b.state(), fleet.id),
         "Der leere Verband an Bord muss verschwinden, keine Geistergruppe zurücklassen");
   }

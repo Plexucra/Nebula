@@ -24,3 +24,11 @@
   font-size: 12.5px;
 }
 .side-label { font-weight: 600; min-width: 140px; }
+
+
+@media (max-width: 720px) {
+  /* min-width auf dem Seitenlabel sprengte die Zeile zusammen mit den langen
+     Schiffslisten – auf schmalen Displays stapelt die Zeile stattdessen. */
+  .side-label { min-width: 0; }
+  .tick-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+}

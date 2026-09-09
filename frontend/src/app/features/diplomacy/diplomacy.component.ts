@@ -70,7 +70,20 @@ export class DiplomacyComponent {
     }
   }
 
+  protected systemName(systemId: Id): string {
+    return this.api.system(systemId)()?.name ?? '—';
+  }
+
+  /** Zeitpunkt eines Gefechts – der Bericht nannte vorher gar keinen. */
+  protected formatWhen(at: number): string {
+    return new Date(at).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
   protected async declareWar(otherPlayerId: Id): Promise<void> {
+    // Krieg beginnt sofort und unumkehrbar (der Friedensvertrag hat dagegen
+    // sieben Spieltage Kündigungsfrist) – vorher genügte dafür ein Klick.
+    if (!confirm(`"${this.playerName(otherPlayerId)}" wirklich den Krieg erklären?`
+        + ' Der Kriegszustand gilt sofort; beide Seiten können danach Flotten angreifen und Kolonien blockieren.')) return;
     await this.run('war:' + otherPlayerId, () => this.api.declareWar(otherPlayerId));
   }
 
@@ -101,6 +114,10 @@ export class DiplomacyComponent {
   }
 
   protected async terminateTreaty(otherPlayerId: Id, type: TreatyType): Promise<void> {
+    // Vorher stand an der Zeile nur "Kündigen" – bei Friedens- UND Handelsvertrag
+    // mit derselben Partei war nicht erkennbar, welcher gemeint ist.
+    if (!confirm(`${this.treatyLabel(type)} mit "${this.playerName(otherPlayerId)}" kündigen?`
+        + ' Der Vertrag bleibt bis zum Ablauf der Kündigungsfrist voll gültig.')) return;
     await this.run('terminatetreaty:' + type + ':' + otherPlayerId, () => this.api.terminateTreaty(otherPlayerId, type));
   }
 

@@ -12,6 +12,18 @@ public class ShipTypeDef {
   public double cargoVolumeM3;
   public double carrierSlotUsage;
   /**
+   * Slots, die dieses Schiff selbst AUFNIMMT – Gegenstück zu
+   * {@link #carrierSlotUsage}. Nur das Trägerschiff hat einen Wert &gt; 0.
+   *
+   * <p>Ein Slot entspricht genau der Masse einer Korvette (42 000 t): jede
+   * {@code carrierSlotUsage} im Katalog ist exakt {@code massKg / 42 000 t},
+   * das Slotsystem ist also ein Massensystem. Die 400 Slots des Trägers sind
+   * deshalb keine freie Zahl, sondern die Zusicherung "nimmt vier Kreuzer auf"
+   * (4 × 100 Slots = 16,8 Mio. t Zuladung) – der Träger wiegt mit 12,6 Mio. t
+   * selbst drei Kreuzer.</p>
+   */
+  public double carrierSlotCapacity;
+  /**
    * Soldaten, die dieses Schiff aufnimmt (Umsetzungskonzept/28_...md). Nur der
    * Mannschaftstransporter hat einen Wert &gt; 0; er nimmt AUSSCHLIESSLICH
    * Soldaten auf, keine Drohnen und keine Waren. Drohnen sind Maschinen und
@@ -30,4 +42,19 @@ public class ShipTypeDef {
    * (workHoursPerUnit × baseProductionHours) ab.
    */
   public ShipClass countersClass;
+  /**
+   * Eleriumkapseln, die dieses Schiff für EINEN Gateway-Sprung verbraucht –
+   * abgeleitet aus seiner Masse ({@code massKg / Korvettenmasse ×
+   * GameConstants.JUMP_FUEL_PER_CORVETTE_MASS_PER_HOP}, siehe
+   * {@code ShipCatalog}), nicht im Katalog gepflegt. Steht hier statt als
+   * Formel im Client, damit Verbrauchsanzeige und Abrechnung dieselbe Regel
+   * benutzen (Umsetzungskonzept/15_...md, "EINE Regelquelle").
+   */
+  public double jumpFuelPerHop;
+  /**
+   * Fassungsvermögen des Treibstofftanks dieses Schiffs in Kapseln:
+   * {@link #jumpFuelPerHop} × {@code GameConstants.JUMP_FUEL_TANK_RANGE_HOPS}.
+   * Die Reichweite ist damit für jedes Schiff gleich.
+   */
+  public double fuelTankCapacity;
 }

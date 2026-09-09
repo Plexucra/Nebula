@@ -24,20 +24,20 @@
       [series]="populationSeries()"
       hint="Spieler + alle NPC-Kolonien" />
     <app-sparkline-tile
-      title="Alle Credits der Galaxie zusammen – sie wächst nur, wenn Kolonien über ihren bisherigen Höchststand hinauswachsen"
+      title="Geldmenge"
       [value]="((latest()?.totalCredits ?? 0) | number:'1.0-0') ?? ''"
       [series]="creditsSeries()"
-      hint="Summe aller Wallets – validiert den geschlossenen Geldkreislauf" />
+      hint="Summe aller Wallets. Wächst nur, wenn Kolonien über ihren bisherigen Höchststand hinauswachsen." />
     <app-sparkline-tile
       title="Aktive Kolonien"
       [value]="((latest()?.colonyCount ?? 0) | number:'1.0-0') ?? ''"
       [series]="colonyCountSeries()" />
     <app-sparkline-tile
-      title="Kolonien mit sehr niedrigem Lebensstandard oder brüchiger Loyalität – hier droht Abwanderung"
+      title="Kolonien in Not"
       [value]="((latest()?.strugglingColonyCount ?? 0) | number:'1.0-0') ?? ''"
       [series]="strugglingSeries()"
       [tone]="(latest()?.strugglingColonyCount ?? 0) > 0 ? 'danger' : 'good'"
-      hint="Lebensstandard < 30% oder Loyalität < 20%" />
+      hint="Lebensstandard unter 30 % oder Loyalität unter 20 % – hier droht Abwanderung." />
     <app-sparkline-tile
       title="Offene Marktorders"
       [value]="((latest()?.openSellOrderCount ?? 0) | number:'1.0-0') ?? ''"
@@ -66,7 +66,8 @@
           <span>Bevölkerung</span>
           <span>Credits</span>
           <span>Lebensstd.</span>
-          <span>Deckung Grundgüter</span>
+          <!-- Legende direkt in der Kopfzeile: die Kürzel waren nirgends erklärt. -->
+          <span>Deckung Grundgüter <span class="hint">({{ coverageLegend }})</span></span>
           <span>Loyalität</span>
           <span>Status</span>
         </div>
@@ -86,10 +87,14 @@
             </span>
             <span class="mono">{{ row.stats()?.loyaltyPct ?? 0 | number:'1.0-0' }}%</span>
             <span>
-              @if (row.blackout()) { <span class="tag blackout" title="Der Infrastruktur fehlt Stabilisiertes Elerium – die Produktion kriecht, Sicherheit und Lebensstandard brechen ein.">Blackout</span> }
+              <!-- "stabil" nur, wenn WIRKLICH nichts anliegt. Vorher stand neben
+                   einem laufenden Blackout trotzdem "stabil". -->
+              @if (row.blackout()) {
+                <span class="tag blackout" title="Der Infrastruktur fehlt Stabilisiertes Elerium – die Produktion kriecht, Sicherheit und Lebensstandard brechen ein.">Blackout</span>
+              }
               @if (isStruggling(row.stats())) {
                 <span class="tag bad" [title]="strugglingReason(row.stats())">gefährdet</span>
-              } @else {
+              } @else if (!row.blackout()) {
                 <span class="tag good">stabil</span>
               }
             </span>

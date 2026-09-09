@@ -18,22 +18,29 @@
         </div>
       </div>
 
+      @if (colonyStatus(colony.id); as st) {
+        <span class="tag colony-status" [class.bad]="st.kind === 'bad'" [class.warn]="st.kind === 'warn'"
+              [class.good]="st.kind === 'good'">{{ st.label }}</span>
+      }
+
       @if (stats(colony.id)(); as s) {
+        <!-- Mit ZAHLEN: die Balken allein sagten nicht, ob 40 % oder 90 % anliegen –
+             genau die Werte, nach denen man entscheidet, welche Kolonie dran ist. -->
         <div class="stat-row">
           <div class="stat-item">
-            <span class="label">Wohnraum</span>
-            <div class="stat-bar"><span [style.width.%]="s.infrastructurePct"></span></div>
+            <span class="label">Wohnraum <span class="mono val">{{ s.infrastructurePct | number:'1.0-0' }}%</span></span>
+            <div class="stat-bar"><span [style.width.%]="s.infrastructurePct > 100 ? 100 : s.infrastructurePct"></span></div>
           </div>
           <div class="stat-item">
-            <span class="label">Sicherheit</span>
+            <span class="label">Sicherheit <span class="mono val">{{ s.securityPct | number:'1.0-0' }}%</span></span>
             <div class="stat-bar"><span [style.width.%]="s.securityPct"></span></div>
           </div>
           <div class="stat-item">
-            <span class="label">Lebensstd.</span>
+            <span class="label">Lebensstd. <span class="mono val">{{ s.standardOfLivingPct | number:'1.0-0' }}%</span></span>
             <div class="stat-bar"><span [style.width.%]="s.standardOfLivingPct"></span></div>
           </div>
           <div class="stat-item">
-            <span class="label">Loyalität</span>
+            <span class="label">Loyalität <span class="mono val">{{ s.loyaltyPct | number:'1.0-0' }}%</span></span>
             <div class="stat-bar"><span [style.width.%]="s.loyaltyPct"></span></div>
           </div>
         </div>

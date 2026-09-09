@@ -210,6 +210,7 @@ public final class ShipyardCommands {
     Warehouse.add(state, entry.colonyId, entry.shipProductTypeId, entry.quantity);
     Specializations.registerProducedChain(state, entry.colonyId, entry.plan);
     state.shipyardQueue.remove(entry);
+    notifyShipDone(state, ids, entry);
     if (entry.requeueOnComplete) {
       ShipyardQueueEntry fresh = new ShipyardQueueEntry();
       fresh.id = ids.next("sy");
@@ -226,6 +227,20 @@ public final class ShipyardCommands {
       state.shipyardQueue.add(fresh);
     }
     tryStartNextShipyardEntry(state, ids, entry.colonyId);
+  }
+
+  /**
+   * Fertige Schiffe landen unzugeordnet im Lager – ohne Meldung merkte das
+   * niemand, der nicht zufällig auf der Flottenseite stand.
+   */
+  private static void notifyShipDone(GameState state, IdGenerator ids, ShipyardQueueEntry entry) {
+    var colony = ColonyCommands.colony(state, entry.colonyId);
+    if (colony == null) return;
+    String shipName = de.nebula.data.ProductCatalog.find(entry.shipProductTypeId).name;
+    Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_SHIP_DONE,
+        (long) entry.quantity + "× " + shipName + " in \"" + colony.name
+            + "\" fertiggestellt – im Lager, noch keiner Flotte zugeordnet.",
+        colony.id, Notifications.colonyLink(colony.id));
   }
 
   public static void processShipyardCompletions(GameState state, IdGenerator ids, long t) {
