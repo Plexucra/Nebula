@@ -153,11 +153,27 @@ public final class FleetCommands {
       if (left > 0) remaining.add(new FleetShipGroup(g.shipProductTypeId, left));
     }
     fleet.ships = remaining;
-    if (remaining.isEmpty()) {
-      state.fleets.remove(fleet);
-      // Ohne Flotte keine Blockade – dieselbe Regel wie beim Ortswechsel in moveFleetWithinSystem.
-      state.blockades.removeIf(b -> b.fleetId.equals(fleet.id));
+    if (remaining.isEmpty()) removeFleet(state, fleet);
+  }
+
+  /**
+   * Eine im Gefecht restlos vernichtete Flotte verschwindet – samt Blockade, Fracht
+   * und eingeschifften Truppen (die Soldaten gehen mit ihrem Transporter unter).
+   * Vorher blieb sie als Flotte mit null Schiffen stehen (sieben Stück im Live-Spiel,
+   * Konzept 31 §A): sichtbar in jeder Übersicht, ohne Tank, aber beliebig sprungfähig,
+   * weil {@link #consumeJumpFuel} bei null Schiffen nichts verbraucht.
+   */
+  public static void removeDestroyedFleets(GameState state) {
+    for (Fleet f : new ArrayList<>(state.fleets)) {
+      if (f.ships.stream().noneMatch(s -> s.quantity > 0)) removeFleet(state, f);
     }
+  }
+
+  private static void removeFleet(GameState state, Fleet fleet) {
+    state.fleets.remove(fleet);
+    // Ohne Flotte keine Blockade – dieselbe Regel wie beim Ortswechsel in moveFleetWithinSystem.
+    state.blockades.removeIf(b -> b.fleetId.equals(fleet.id));
+    state.groundForceGroups.removeIf(g -> fleet.id.equals(g.fleetId));
   }
 
   /**
@@ -299,6 +315,12 @@ public final class FleetCommands {
     List<String> path = Graph.bfsPath(GatewayCommands.gatewayRoutes(state), fleet.systemId, destinationSystemId);
     if (path == null || path.isEmpty()) throw new CommandException("Kein Gateway-Pfad zu diesem System bekannt.");
     consumeJumpFuel(state, fleet, path.size());
+    // Wer das System verlässt, blockiert dort nichts mehr – dieselbe Regel wie beim
+    // Ortswechsel innerhalb des Systems (moveFleetWithinSystem). Vorher blieb der
+    // Blockade-Eintrag stehen: die Flotte war überall angreifbar (engageBattle prüft nur
+    // die Existenz eines Eintrags) und konnte nach der Rückkehr keine neue Blockade
+    // bilden ("wird bereits blockiert" – durch sich selbst), siehe Konzept 31 §H.
+    state.blockades.removeIf(b -> b.fleetId.equals(fleetId));
     String firstHop = path.get(0);
     List<String> pendingHops = path.subList(1, path.size());
     long departedAt = Clock.now();

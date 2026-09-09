@@ -75,19 +75,6 @@ final class Catalog {
   static final Map<String, String> DRONE_COUNTERS = Map.of(
       DRONE_LIGHT, DRONE_HEAVY, DRONE_MEDIUM, DRONE_LIGHT, DRONE_HEAVY, DRONE_MEDIUM);
 
-  /**
-   * Direkte Rezeptzutaten der Bodeneinheiten (products.json). Der Bot lässt
-   * diese Zutaten im INDUSTRIEKOMPLEX vorfertigen (Stufe 5+, schnell) und
-   * überlässt dem Ausbildungszentrum (Stufe 1-3, langsam) nur die Endmontage –
-   * die Rekrutierungskette würde sonst komplett mit dem Tempo des
-   * Ausbildungszentrums laufen ({@code ChainPlanner.planChain(..., "b_academy")}).
-   */
-  static final Map<String, Map<String, Double>> UNIT_RECIPES = Map.of(
-      SOLDIER, Map.of("p_infanterieausruestung", 1.0),
-      DRONE_LIGHT, Map.of("p_strukturzelle", 1.0, "p_manoevertriebwerk", 1.0),
-      DRONE_MEDIUM, Map.of("p_strukturzelle", 2.0, "p_manoevertriebwerk", 1.0, "p_sensorfeld", 1.0),
-      DRONE_HEAVY, Map.of("p_panzerbaugruppe", 2.0, "p_manoevertriebwerk", 2.0, "p_sensorfeld", 1.0));
-
   /** Welche Drohnenklasse die gegebene kontert (Umkehrung von {@link #DRONE_COUNTERS}). */
   static String counterFor(String droneType) {
     for (Map.Entry<String, String> e : DRONE_COUNTERS.entrySet()) if (e.getValue().equals(droneType)) return e.getKey();

@@ -184,9 +184,16 @@ public final class ChainPlanner {
           totalDemand.merge(input.inputProductTypeId, input.quantity * toProduce, Double::sum);
         }
       }
-      double hoursPerUnit = computeProductionHours(state, colonyId, product, facilityTypeId);
+      // Jeder Schritt läuft in der Anlage, die sein Produkt herstellt – nicht in der
+      // Anlage des Wurzelprodukts. Vorher rechnete ein Werftauftrag seine gesamte
+      // Vorkette (Rohstoffe, Legierungen, Module) mit dem Tempo der Werft (Stufe 1-3)
+      // statt mit dem des Industriekomplexes (Stufe 5+), ein Rekrutierungsauftrag
+      // seine Vorkette mit dem des Ausbildungszentrums: derselbe Mannschaftstransporter
+      // dauerte im Werftauftrag fünfmal so lange wie in der Vorschau (Konzept 31 §B).
+      String stepFacility = facilityFor(product);
+      double hoursPerUnit = computeProductionHours(state, colonyId, product, stepFacility);
       double hours = toProduce > 0 ? toProduce * hoursPerUnit : 0;
-      double unlimitedPerUnit = computeProductionHoursWithoutWorkforce(state, colonyId, product, facilityTypeId);
+      double unlimitedPerUnit = computeProductionHoursWithoutWorkforce(state, colonyId, product, stepFacility);
       ChainPlanStep step = new ChainPlanStep();
       step.productTypeId = pid;
       step.isRoot = isRoot;
@@ -222,6 +229,21 @@ public final class ChainPlanner {
     }
 
     return new ChainPlan(totalHours, steps, feasible, totalWorkHours, workersBoundPerHour);
+  }
+
+  /**
+   * Die Anlage, die ein Produkt herstellt: Schiffe die Werft, Bodeneinheiten das
+   * Ausbildungszentrum, alles andere der Industriekomplex. Damit beschleunigt eine
+   * höhere Werftstufe genau die Endmontage der Schiffe (wie eine höhere Industriestufe
+   * die Fertigung), und die Vorkette profitiert von der Industriestufe – unabhängig
+   * davon, aus welcher Warteschlange der Auftrag stammt.
+   */
+  static String facilityFor(ProductType product) {
+    return switch (product.category) {
+      case Ship -> "b_shipyard";
+      case GroundUnit -> "b_academy";
+      default -> "b_industry";
+    };
   }
 
   private static void discover(String productTypeId, Set<String> reachable) {

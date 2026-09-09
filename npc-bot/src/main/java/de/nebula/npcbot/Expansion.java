@@ -116,38 +116,11 @@ final class Expansion {
       blockedReason = "Werft belegt";
       return;
     }
-    // Rohstoffe des Schiffs erst im Industriekomplex vorfertigen (siehe Economy.orderShip) –
-    // die Werft würde die Kette sonst mit ihrem eigenen, viel niedrigeren Tempo rechnen.
-    Map<String, Double> recipe = bot.world.recipe(Catalog.COLONY_SHIP);
-    LinkedHashMap<String, Double> missing = new LinkedHashMap<>();
-    for (Map.Entry<String, Double> e : recipe.entrySet()) {
-      double need = e.getValue() - bot.world.stock(bot.homeColonyId, e.getKey());
-      // Kleine Fehlmengen (Kohlenstoff ist zugleich Zutat der Grundnahrung und schwankt
-      // laufend) gelten als gedeckt – der Werftauftrag füllt sie per Auto-Produktion auf.
-      // Sonst bestellt der Bot in jedem Takt 84 Stück Kohlenstoff nach und kommt nie zum
-      // nächsten Rohstoff (Testlauf B).
-      if (need > e.getValue() * 0.02) missing.put(e.getKey(), Math.ceil(need));
-    }
-    if (!missing.isEmpty()) {
-      boolean queued = false;
-      for (JsonNode q : bot.world.productionQueue(bot.homeColonyId)) {
-        if (recipe.containsKey(text(q, "productTypeId"))) queued = true;
-      }
-      Economy.Health home = bot.economy.home();
-      // Ein Rohstoff je Auftrag (16 Positionen, 1,27 Mio. Einheiten insgesamt) – dazwischen
-      // bleibt die Warteschlange für Grundbedarf und Elerium frei.
-      Map.Entry<String, Double> first = missing.entrySet().iterator().next();
-      for (Map.Entry<String, Double> e : missing.entrySet()) if (e.getValue() > first.getValue()) first = e;
-      Map<String, Double> chunk = Map.of(first.getKey(), first.getValue());
-      if (!queued && home != null && bot.economy.energyGuard(home, chunk, "Rohstoff " + first.getKey())) {
-        bot.call("queueProduction", Map.of("colonyId", bot.homeColonyId, "productTypeId", first.getKey(), "quantity", first.getValue(),
-            "autoProduceMissing", true, "requeueOnComplete", false));
-        bot.world.invalidate("productionQueue");
-        bot.monitor.event("COLONY_SHIP_MATERIALS_ORDERED", "Rohstoff " + first.getKey() + " x" + first.getValue().longValue()
-            + " für das Kolonisationsschiff eingereiht (" + missing.size() + " Rohstoffe fehlen noch, "
-            + (long) missing.values().stream().mapToDouble(Double::doubleValue).sum() + " Einheiten)", "planet", targetPlanetId, "product", first.getKey());
-      }
-      blockedReason = "Rohstoffe für das Kolonisationsschiff in Fertigung (" + missing.size() + " offen)";
+    // Der Werftauftrag holt die 1,27 Mio. Rohstoffeinheiten selbst mit Industrietempo
+    // (Konzept 31 §I); nur Energie- und Versorgungs-Wache gelten.
+    Economy.Health home = bot.economy.home();
+    if (home != null && !bot.economy.energyGuard(home, Map.of(Catalog.COLONY_SHIP, 1.0), "Kolonisationsschiff")) {
+      blockedReason = "wartet auf Energie-/Versorgungsreserve für das Kolonisationsschiff";
       return;
     }
     JsonNode preview = bot.world.previewChain(bot.homeColonyId, Catalog.COLONY_SHIP, 1);

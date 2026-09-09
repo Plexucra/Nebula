@@ -197,10 +197,7 @@ final class Military {
 
   /** Vor der Wirtschaft: Soldaten-/Drohnenbedarf für das zugeteilte Ziel in den Plan schreiben. */
   void prepare(Strategy.Plan plan, Strategy.Assignment a) {
-    if (a.role != Strategy.MilitaryRole.INVADER) {
-      bot.economy.requestComponents(Map.of());
-      return;
-    }
+    if (a.role != Strategy.MilitaryRole.INVADER) return;
     if (phase == InvasionPhase.NONE) {
       if (a.targetColonyId == null) {
         blockedReason = "kein Ziel zugeteilt";
@@ -219,14 +216,6 @@ final class Military {
       int loaded = freighterFleet == null ? 0 : (int) World.cargoQty(freighterFleet, droneType);
       plan.wantSoldiers = Math.max(0, neededSoldiers + HOME_SOLDIER_RESERVE - aboard);
       plan.wantDrones = Math.max(0, neededDrones + (droneType.equals(Catalog.DRONE_LIGHT) ? HOME_DRONE_RESERVE : 0) - loaded);
-      Map<String, Double> components = new LinkedHashMap<>();
-      for (Map.Entry<String, Double> e : Catalog.UNIT_RECIPES.get(Catalog.SOLDIER).entrySet()) {
-        components.merge(e.getKey(), e.getValue() * plan.wantSoldiers, Double::sum);
-      }
-      for (Map.Entry<String, Double> e : Catalog.UNIT_RECIPES.get(droneType).entrySet()) {
-        components.merge(e.getKey(), e.getValue() * plan.wantDrones, Double::sum);
-      }
-      bot.economy.requestComponents(components);
     }
   }
 

@@ -2,6 +2,17 @@
 
 ## Offen
 
+- [ ] **Balancing: Produktionsbäume der Schiffe (Konzept 31 §I/§J, Vorschlag 1).**
+  Die Kette einer Korvette kostet 54 000 Fertigungsstunden bei Industrie 5 und
+  5,36 Mio. Arbeitsstunden (Untergrenze 268 h selbst mit 20 000 Arbeitern), ein
+  Mannschaftstransporter 262 000 h, ein Kolonisationsschiff 255 000 h. Werft-
+  und Akademiestufe wirken seit dem 9.9.2026 korrekt (nur Endmontage), ändern
+  daran aber nichts – Entscheidung über Zwischenprodukt-Skalierung offen.
+- [ ] **Balancing/Design: offene Entscheidungen aus Konzept 31 §J** –
+  parallele Fertigungsslots, Elerium als Kettenzutat, Konsumpreise/Kaufkraft,
+  Nahrungskapazität, Handelsgilde-Preisdrift, Blockade-Durchflugregel,
+  Zivilverluste, Kommandant ohne Kolonie, Bebauungsplätze.
+
 - [ ] **Balancing: Elerium-Startreserve passt nicht mehr zur Startbebauung.**
   `WorldSeed.STARTER_ELERIUM_QUANTITY` (3 je Warteschlangen-Umlauf) und die
   25er-Startreserve sind laut ihrem eigenen Kommentar für „bis Infrastruktur 3"

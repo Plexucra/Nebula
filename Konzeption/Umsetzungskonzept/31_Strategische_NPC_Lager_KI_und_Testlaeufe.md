@@ -116,7 +116,7 @@ World (Weltsicht, je Takt gecacht)
 | `World` | Alle Serverabfragen, je Entscheidungstakt einmal gecacht; Gateway-Graph mit BFS-Sprungdistanz; Katalog-Rezepte (`productTypes`). |
 | `Strategy` | Strategien `EMERGENCY_POWER`, `FAMINE`, `UNDER_ATTACK`, `RECOVER`, `PREPARE_INVASION`, `INVADE`, `RAID`, `SETTLE`, `BUILD_UP`; Militärrollen `INVADER`, `RAIDER`, `SETTLER`, `DEFENDER`. Reihenfolge = Priorität: Überleben vor Verteidigung vor Rollenaufgabe. |
 | `Coordination` | Das Lagerprotokoll (siehe §D). |
-| `Economy` | Jede eigene Kolonie: Energie zuerst (Dauerauftrag, Umsortieren der Warteschlange), Grundbedarf samt **eigener Verkaufsorders**, Spezialisierungscharge, Ausbau mit Baustoff-Bündeln, Werft (Module im Industriekomplex vorfertigen), Ausbildungszentrum (Zutaten im Industriekomplex vorfertigen). |
+| `Economy` | Jede eigene Kolonie: Energie zuerst (Dauerauftrag, Umsortieren der Warteschlange), Grundbedarf samt **eigener Verkaufsorders**, Spezialisierungscharge, Ausbau mit Baustoff-Bündeln, Werft- und Rekrutierungsaufträge hinter Energie- und Versorgungs-Wache (die Vorfertigung von Modulen im Industriekomplex aus den ersten Läufen ist seit §I überflüssig). |
 | `Trade` | Der Startfrachter: Versorgungsfahrten zu jungen Kolonien, Leihgabe an das Militär als Drohnentransporter, sonst Handelsfahrt mit Kreditreserve. |
 | `Diplomacy` | Krieg gegen jeden des anderen Lagers, Friedens- **und** Handelsvertrag mit jedem des eigenen Lagers, gegnerische Friedensangebote ablehnen, Menschen unbehelligt. |
 | `Military` | Raum: Heimatblockade, Raids mit Stärkeschätzung, Rückzug, Wiederaufbau. Boden: die komplette Landungsoperation (§E). |
@@ -424,3 +424,152 @@ beobachtet.
 6. 50 % Zivilverluste beim Fall einer Zehn-Drohnen-Garnison.
 7. Nur eine Start-Verkaufsorder (Nahrung); Geisterflotten nach Gefechten;
    ein Kommandant ohne Kolonie bleibt bestehen.
+
+## I. Nachtrag: Behebungen (9. September 2026)
+
+Auf Nutzervorgabe wurden die klaren Fehler aus §G/§H behoben; alles, was
+eine Balance- oder Designentscheidung ist, steht als Vorschlag in §J.
+
+### 1. Werft und Ausbildungszentrum rechnen wie der Industriekomplex
+
+`ChainPlanner.planChain` bestimmt die Anlage jetzt **je Kettenschritt** aus
+der Produktkategorie (`facilityFor`): Schiffe → Werft, Bodeneinheiten →
+Ausbildungszentrum, alles andere → Industriekomplex. Der Anlagenparameter
+des Aufrufers spielt für die Vorkette keine Rolle mehr. Damit
+
+- beschleunigt eine höhere Werftstufe genau die Endmontage der Schiffe, so
+  wie eine höhere Industriestufe die Fertigung – linear mit der Stufe
+  (`Formulas.buildingLevelSpeedFactor`);
+- läuft die Vorkette eines Werft- oder Rekrutierungsauftrags mit dem
+  Industrietempo, egal aus welcher Warteschlange der Auftrag kommt;
+- stimmen Vorschau (Kolonieansicht) und echter Werftauftrag überein
+  (`ChainPlannerFacilityTest`).
+
+Die Bots brauchen die Vorfertigung von Modulen und Zutaten im
+Industriekomplex deshalb nicht mehr; sie bestellen Schiffe und Einheiten
+direkt in Werft bzw. Akademie, hinter Energie- und Versorgungs-Wache. Das
+hält zugleich die Industrie-Warteschlange für Grundbedarf und Elerium frei.
+
+**Was das an der Gesamtdauer ändert – und was nicht.** Die Endmontage ist
+ein winziger Teil der Kette:
+
+| Produkt | Kette bei Industrie 5 / Werft 1 | Industrie 5 / Werft 5 | Industrie 8 / Werft 5 | Endmontage selbst | Arbeitsstunden der Kette | Untergrenze bei 20 000 Arbeitern |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Korvette | 53 985 h | 53 793 h | 33 639 h | 240 h | 5,36 Mio. | 268 h |
+| Zerstörer | 404 199 h | 403 815 h | 252 420 h | 480 h | 41,0 Mio. | 2 048 h |
+| Frachter | 132 539 h | 132 219 h | 82 667 h | 400 h | 13,4 Mio. | 670 h |
+| Mannschaftstransporter | 262 334 h | 261 950 h | 163 755 h | 480 h | 26,9 Mio. | 1 346 h |
+| Kolonisationsschiff | 255 206 h | 255 072 h | 159 433 h | 168 h (fest) | 127,5 Mio. | 6 376 h |
+
+Die Werftstufe von 1 auf 5 spart bei der Korvette 0,4 %. Die Dauer steckt
+in den Zwischenprodukten (Tier 1–3: Leitermetall, Polymergrundstoff,
+Raffinate, Konzentrate – je 4–20 Basisstunden, tausende Stück je Schiff),
+nicht in Rohstoffen (7 %) und nicht in der Montage. Dazu kommt die
+Arbeitskraft-Bremse: die Kette einer Korvette bindet 5,36 Mio.
+Arbeitsstunden, bei 2 000 Einwohnern also mindestens 2 678 Stunden, egal wie
+schnell die Anlagen sind. Das ist keine Fehlfunktion des Kettenplaners mehr,
+sondern der Katalog selbst – siehe §J, Vorschlag 1.
+
+### 2. Gateway-Absprung hebt die Blockade auf
+
+`FleetCommands.moveFleet` entfernt die Blockade der abreisenden Flotte,
+wie `moveFleetWithinSystem` es beim Ortswechsel im System schon tat. Vorher
+war die Flotte mit dem verwaisten Eintrag überall angreifbar und konnte nach
+der Rückkehr keine neue Blockade bilden (`FleetLifecycleTest`).
+
+### 3. Keine Geisterflotten mehr
+
+`FleetCommands.removeDestroyedFleets` (aufgerufen nach jedem Kampftick)
+entfernt Flotten ohne Schiffe samt Blockade und eingeschifften Truppen –
+dieselbe Regel, die bei der Koloniegründung schon galt (`consumeShips`).
+Vorher blieben sieben schiffslose Flotten im Live-Spiel stehen, sichtbar
+in jeder Übersicht und ohne Tank beliebig sprungfähig.
+
+### 4. Bot-Härtung aus Lauf B
+
+Wiederanmeldung am bestehenden Kommandanten statt Doppelregistrierung,
+Betanken nach Tankstand statt fester Menge, Ausfall der Heimatwelt
+(`HOME_MOVED`/`ELIMINATED`), lokale Elektronikproduktion, Rohstoffbestellung
+des Siedlers ohne Endlosschleife.
+
+## J. Vorschläge – Entscheidungen, die nicht im Code getroffen werden sollten
+
+1. **Tiefe der Produktionsbäume (die eigentliche Ursache der Schiffsdauern).**
+   Die Kette einer Korvette kostet 2 000-mal so viel Arbeit wie ihre
+   Endmontage (5,36 Mio. gegen 2 500 Arbeitsstunden) und 225-mal so viele
+   Fertigungsstunden. Wird die Balance auf „Korvette ≈ 2 Spieltage, Transporter
+   ≈ 1 Spielwoche bei Industrie 5" gezogen, müssen `baseProductionHours` UND
+   `workHoursPerUnit` der Zwischenprodukte (Tier 1–5, nicht Schiffe, nicht
+   Einheiten) um etwa den Faktor 500–1 000 sinken. Die Kampfwerte bleiben
+   dabei unberührt: `Formulas.productionAspect` nutzt nur die Werte des
+   Schiffs selbst. Alternativ: ein globaler Faktor
+   `intermediateProductionScale` in `game-constants.json`, der beide Größen
+   für Nicht-Endprodukte teilt – reversibel und ohne Katalogumbau.
+   Entscheidung: Zielwerte je Schiffsklasse und ob per Faktor oder per
+   Katalog.
+2. **Parallele Fertigung.** `buildings.json` kennt `productionSlotsPerLevel`
+   (1 je Stufe), die Warteschlangen sind aber strikt sequentiell – das Feld
+   ist tot. Vorschlag: so viele laufende Aufträge je Kolonie wie
+   Anlagenstufe × Slots, und im Kettenplaner die Dauer als kritischer Pfad
+   statt als Summe. Das würde die Warteschlangen-Verdrängung (Elerium,
+   Nahrung hinter Baustoffen) strukturell lösen, die alle Wachen des Bots
+   nur umschiffen. Aufwand: Warteschlangen in Produktion, Werft, Akademie
+   plus Anzeige.
+3. **Elerium als Kettenzutat.** Der Planer deckt Zwischenschritte zuerst aus
+   dem Lager; ein Transporter zieht 188 Elerium, ein Zerstörer 455. Optionen:
+   (a) Infrastruktur-Verbrauch bekommt einen reservierten Bestand
+   (`eleriumReserveHours`), den Ketten nicht anfassen; (b) Ketten produzieren
+   ihre Zutaten immer selbst und nehmen nur explizit freigegebene
+   Lagermengen. Entscheidung: welche Regel, und ob sie für alle Zutaten oder
+   nur für Betriebsstoffe gilt.
+4. **Konsumpreise und Kaufkraft.** Startpreis 450 Cr gegen ≈ 50 Cr Kaufkraft
+   ohne Wachstum (Befund 11). Entweder den Startpreis auf die Löhne
+   beziehen (Preis ≈ Lohn je Kopf und Stunde / Bedarf je Kopf und Stunde,
+   also ≈ 50 Cr bei drei Gütern) oder die Löhne anheben. Zusammenhängend:
+   das Elektronik-Drittel des Bevölkerungsbudgets, das ohne Order liegen
+   bleibt (Befund 12) – entweder Budget nur auf angebotene Güter verteilen
+   oder Elektronik wieder in die Startausstattung nehmen (Konzept 20 hatte
+   sie bewusst gestrichen).
+5. **Nahrungskapazität gegen Wachstum.** Industrie 5 ernährt ≈ 6 000
+   Einwohner, die Wohnkapazität lässt 20 000 zu (Befund 13). Optionen:
+   Ertrag der Grundnahrung je Stück erhöhen, Pro-Kopf-Bedarf senken, oder
+   Wachstum an die Versorgungslage koppeln (heute nur der Lebensstandard,
+   der träge reagiert).
+6. **Handelsgilde.** 5er-Lose, ±10 % je Ausführung ohne Rückkehr, Konsumgüter
+   zu 1,4 % des lokalen Preises. Vorschlag: Market-Maker-Preise driften je
+   Spieltag um x % zum Basispreis zurück, und der Basispreis von Konsumgütern
+   orientiert sich am Bevölkerungspreis. Entscheidung: Driftrate und ob die
+   Gilde überhaupt eine Geldquelle sein soll (Konzept 22 sagt: kleine Lose).
+7. **Blockade-Durchflugregel.** Im Backend sperrt eine Blockade nichts. Für
+   die vom Nutzer gemeinte Regel („nur mit Friedens- oder Handelsvertrag
+   passieren") ist zu entscheiden: Gilt sie am Gateway (Ankunft im System
+   wird verweigert, Flotte bleibt im Vorsystem) und/oder im Orbit (kein
+   Eintritt in den Orbit, keine Landung, kein Andocken)? Was geschieht mit
+   einer Flotte, die unterwegs auf eine neu gebildete Blockade trifft? Erst
+   mit dieser Antwort lässt sich das in `moveFleet`/`processFleetArrivals`
+   und `moveFleetWithinSystem`/`land` einbauen; die Bots pflegen die Verträge
+   bereits.
+8. **Zivilverluste in der Kampfphase.** Der Fall einer Zehn-Drohnen-
+   Startgarnison kostet 50 % der Bevölkerung (Konzept 30 §C wendet die Quote
+   „restlos aufgerieben = 50 %" unabhängig von der Garnisonsgröße an).
+   Vorschlag: Quote zusätzlich mit dem Verhältnis Garnisonswert zu
+   Bevölkerung skalieren, oder je Tick auf x % deckeln.
+9. **Kommandant ohne Kolonie.** Nach dem Verlust der Heimatwelt bleibt der
+   Spieler bestehen, `Player.homeworldColonyId` zeigt auf fremden Besitz und
+   Benachrichtigungen, die an die Heimatwelt adressiert sind, landen beim
+   Eroberer. Entscheidung: Eliminierung (Spieler verschwindet, Flotten
+   verfallen), Neustart mit frischer Heimatwelt, oder Weiterleben mit
+   Flotten; in jedem Fall Benachrichtigungen an den Spieler statt an eine
+   Kolonie adressieren.
+10. **Bebauungsplätze.** Jedes Gebäude kostet eine Infrastrukturstufe
+    (`slotsPerInfrastructureLevel: 1`); Werft und Akademie treiben eine
+    Startkolonie auf Infrastruktur 8 mit `p_energienetzbaugruppe ×15` und
+    doppeltem Eleriumverbrauch. Vorschlag: 2 Plätze je Stufe oder die
+    Startbebauung mit Werft 1 und Akademie 1.
+11. **Weitere Implementierungspunkte.** Keine Persistenz (ein Neustart
+    vernichtet ein LAN-Spiel); kein Beobachterzugriff im Protokoll
+    (`observer.mjs` muss sich nacheinander als jeder Bot anmelden); kein
+    Befehl, Schiffe zwischen Flotten zu verschieben (eine Landungsoperation
+    fährt zwangsläufig als drei Flotten); `previewProductionChain` kennt keine
+    Werft-/Akademieprodukte in der Kolonieansicht (jetzt rechnerisch korrekt,
+    aber nirgends angezeigt).

@@ -36,8 +36,8 @@ import static de.nebula.npcbot.Json.text;
  *       Baustoffe als EIN gebündelter Auftrag; Infrastruktur nur, wenn die
  *       Energiereserve das trägt.</li>
  *   <li><b>Werft/Ausbildungszentrum</b> nach den Wünschen des Plans
- *       (Transporter, Kriegsschiffe, Soldaten, Drohnen). Einheiten-Zutaten
- *       werden im Industriekomplex vorgefertigt, siehe {@link Catalog#UNIT_RECIPES}.</li>
+ *       (Transporter, Kriegsschiffe, Soldaten, Drohnen) – jeweils hinter der
+ *       Energie- und Versorgungs-Wache ({@link #energyGuard}).</li>
  * </ol>
  */
 final class Economy {
@@ -66,7 +66,6 @@ final class Economy {
   private final Map<String, Set<String>> materialOrders = new HashMap<>();
   private final Map<String, Health> health = new LinkedHashMap<>();
   private final Map<String, Double> shopping = new LinkedHashMap<>();
-  private final Map<String, Double> componentDemand = new LinkedHashMap<>();
   private final Map<String, Integer> blackoutTicks = new HashMap<>();
   private final Map<String, Integer> lastReorderTick = new HashMap<>();
   private final Map<String, String> energyGuardLogged = new HashMap<>();
@@ -74,7 +73,6 @@ final class Economy {
   private final Map<String, Integer> lastPriceChangeTick = new HashMap<>();
   private static final int PRICE_COOLDOWN_TICKS = 8;
   private static final double MIN_CONSUMER_PRICE = 15;
-  private static final double COMPONENT_CHUNK = 40;
   /** Reserve (Spielstunden Verbrauch), die nach Abzug des Kettenbedarfs im Lager bleiben muss. */
   private static final double GUARD_RESERVE_HOURS = 240;
 
@@ -175,12 +173,6 @@ final class Economy {
     return reorders;
   }
 
-  /** Military meldet hier an, welche Einheiten-Zutaten der Industriekomplex vorfertigen soll. */
-  void requestComponents(Map<String, Double> demand) {
-    componentDemand.clear();
-    componentDemand.putAll(demand);
-  }
-
   /** Nur lesen – bewertet jede eigene Kolonie, ohne einen Befehl abzusetzen. */
   void assess() {
     World w = bot.world;
@@ -249,7 +241,6 @@ final class Economy {
       managePower(h, queue, queuedProducts);
       manageConsumerGoods(h, queuedProducts, specialty);
       manageSpecialty(h, queuedProducts, specialty);
-      manageComponents(h, queuedProducts);
     } else {
       shopping.merge(Catalog.ELERIUM, 20.0, Double::sum);
     }
@@ -505,28 +496,6 @@ final class Economy {
     bot.monitor.log(h.name() + ": Spezialisierungscharge eingereiht: " + specialty + " x" + (long) batch);
   }
 
-  private void manageComponents(Health h, Set<String> queuedProducts) {
-    if (!h.home() || componentDemand.isEmpty()) return;
-    // Auch hier eine Position je Auftrag und höchstens 40 Stück, damit die
-    // Warteschlange zwischendurch für Nahrung, Medizin und Elerium frei wird.
-    for (String pid : componentDemand.keySet()) if (queuedProducts.contains(pid)) return;
-    LinkedHashMap<String, Double> order = new LinkedHashMap<>();
-    for (Map.Entry<String, Double> e : componentDemand.entrySet()) {
-      double missing = e.getValue() - bot.world.stock(h.colonyId(), e.getKey());
-      if (missing > 0) {
-        order.put(e.getKey(), Math.min(COMPONENT_CHUNK, Math.ceil(missing)));
-        break;
-      }
-    }
-    if (order.isEmpty() || !energyGuard(h, order, "Einheiten-Zutaten")) return;
-    try {
-      bot.call("queueProductionBundle", Map.of("colonyId", h.colonyId(), "products", order, "autoProduceMissing", true, "requeueOnComplete", false));
-      bot.monitor.log(h.name() + ": Einheiten-Zutaten im Industriekomplex eingereiht: " + order);
-    } catch (CommandException e) {
-      bot.monitor.log(h.name() + ": Zutaten-Auftrag abgelehnt: " + e.getMessage());
-    }
-  }
-
   // --- Ausbau ---------------------------------------------------------------------
 
   private void manageBuildings(Health h, Strategy.Plan plan) {
@@ -607,54 +576,23 @@ final class Economy {
   }
 
   /**
-   * Ein Werftauftrag lässt seine GESAMTE Vorkette mit dem Tempo der Werft laufen
-   * ({@code ShipyardCommands} plant mit Anlage {@code b_shipyard}, Stufe 1-3) –
-   * derselbe Mannschaftstransporter dauert dort fünfmal so lange wie im
-   * Industriekomplex (Stufe 5+). Deshalb fertigt der Bot die direkten Module
-   * (Rumpf, Antrieb, ...) bzw. beim Kolonisationsschiff die Rohstoffe erst im
-   * Industriekomplex vor und reiht das Schiff ein, sobald sie im Lager liegen;
-   * die Werft übernimmt dann nur die Endmontage ({@code baseProductionHours}).
+   * Werftauftrag mit Auto-Produktion: seit dem Kettenplaner jeden Schritt in
+   * seiner eigenen Anlage rechnet (Konzept 31 §I), läuft die Vorkette mit
+   * Industrietempo und nur die Endmontage mit Werfttempo – und der Auftrag
+   * belegt die Werft-Warteschlange, nicht die des Industriekomplexes, der frei
+   * bleibt für Nahrung, Medizin und Elerium. Die Energie-/Versorgungs-Wache
+   * gilt trotzdem: die Kette zieht Elerium aus dem Lager.
    */
   private void orderShip(Health h, String shipType, String eventType) {
     String id = h.colonyId();
-    Map<String, Double> recipe = bot.world.recipe(shipType);
-    LinkedHashMap<String, Double> missing = new LinkedHashMap<>();
-    for (Map.Entry<String, Double> e : recipe.entrySet()) {
-      double need = e.getValue() - bot.world.stock(id, e.getKey());
-      if (need > 0) missing.put(e.getKey(), Math.ceil(need));
-    }
-    if (!missing.isEmpty()) {
-      Set<String> queued = new HashSet<>();
-      for (JsonNode q : bot.world.productionQueue(id)) queued.addAll(productsOf(q));
-      missing.keySet().removeAll(queued);
-      // EIN Modul je Auftrag: zwischen zwei Modulen kommen Nahrung, Medizin und der
-      // Elerium-Dauerauftrag an die Reihe – ein Sechs-Modul-Bündel hätte die einzige
-      // Warteschlange für die gesamte Dauer belegt (Umsetzungskonzept/31 §G).
-      boolean moduleRunning = recipe.keySet().stream().anyMatch(queued::contains);
-      if (!missing.isEmpty() && !moduleRunning) {
-        Map.Entry<String, Double> first = missing.entrySet().iterator().next();
-        Map<String, Double> chunk = Map.of(first.getKey(), first.getValue());
-        if (!energyGuard(h, chunk, "Modul " + first.getKey())) return;
-        try {
-          bot.call("queueProduction", Map.of("colonyId", id, "productTypeId", first.getKey(), "quantity", first.getValue(),
-              "autoProduceMissing", true, "requeueOnComplete", false));
-          double eta = Json.dbl(bot.world.previewChain(id, first.getKey(), first.getValue()), "totalHours");
-          bot.monitor.event("SHIP_MODULES_ORDERED", h.name() + ": Modul " + first.getKey() + " für " + shipType + " im Industriekomplex eingereiht ("
-              + missing.size() + " Module fehlen noch, Vorschau " + fmtHours(eta) + ")", "colonyId", id, "ship", shipType, "module", first.getKey(), "etaGameHours", eta);
-          bot.world.invalidate("productionQueue");
-        } catch (CommandException e) {
-          bot.monitor.log(h.name() + ": Modul-Auftrag für " + shipType + " abgelehnt: " + e.getMessage());
-        }
-      }
-      return;
-    }
+    if (!energyGuard(h, Map.of(shipType, 1.0), "Werftauftrag " + shipType)) return;
     JsonNode preview = bot.world.previewChain(id, shipType, 1);
     double eta = Json.dbl(preview, "totalHours");
     try {
-      bot.call("queueShip", Map.of("colonyId", h.colonyId(), "shipProductTypeId", shipType, "quantity", 1.0,
+      bot.call("queueShip", Map.of("colonyId", id, "shipProductTypeId", shipType, "quantity", 1.0,
           "autoProduceMissing", true, "requeueOnComplete", false));
       bot.monitor.event(eventType, h.name() + ": Werftauftrag " + shipType + " (Kettenvorschau " + fmtHours(eta) + ")",
-          "colonyId", h.colonyId(), "ship", shipType, "etaGameHours", eta);
+          "colonyId", id, "ship", shipType, "etaGameHours", eta);
       bot.world.invalidate("shipyardQueue");
     } catch (CommandException e) {
       bot.monitor.log(h.name() + ": Werftauftrag " + shipType + " abgelehnt: " + e.getMessage());
@@ -679,28 +617,9 @@ final class Economy {
   }
 
   private void recruit(Health h, String unitType, int quantity) {
-    Map<String, Double> recipe = Catalog.UNIT_RECIPES.getOrDefault(unitType, Map.of());
-    // Zutaten vorfertigen lassen, solange sie fehlen – die Rekrutierungskette
-    // liefe sonst komplett mit dem Tempo des Ausbildungszentrums.
-    LinkedHashMap<String, Double> missing = new LinkedHashMap<>();
-    for (Map.Entry<String, Double> e : recipe.entrySet()) {
-      double need = e.getValue() * quantity - bot.world.stock(h.colonyId(), e.getKey());
-      if (need > 0) missing.put(e.getKey(), Math.ceil(need));
-    }
-    if (!missing.isEmpty()) {
-      Set<String> queued = new HashSet<>();
-      for (JsonNode q : bot.world.productionQueue(h.colonyId())) queued.addAll(productsOf(q));
-      missing.keySet().removeAll(queued);
-      if (!missing.isEmpty() && energyGuard(h, missing, "Zutaten " + unitType)) {
-        try {
-          bot.call("queueProductionBundle", Map.of("colonyId", h.colonyId(), "products", missing, "autoProduceMissing", true, "requeueOnComplete", false));
-          bot.monitor.log(h.name() + ": Zutaten für " + quantity + "x " + unitType + " im Industriekomplex eingereiht: " + missing);
-        } catch (CommandException e) {
-          bot.monitor.log(h.name() + ": Zutaten-Auftrag abgelehnt: " + e.getMessage());
-        }
-      }
-      return;
-    }
+    // Wie beim Werftauftrag: die Kette läuft in der Akademie-Warteschlange, ihre
+    // Vorprodukte mit Industrietempo (Konzept 31 §I); nur die Wachen gelten.
+    if (!energyGuard(h, Map.of(unitType, (double) quantity), "Rekrutierung " + unitType)) return;
     try {
       bot.call("queueRecruitment", Map.of("colonyId", h.colonyId(), "unitProductTypeId", unitType, "quantity", (double) quantity,
           "autoProduceMissing", true, "requeueOnComplete", false));

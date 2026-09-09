@@ -318,5 +318,6 @@ public final class BattleCommands {
       Notifications.notify(state, ids, NotificationType.Warnung, NOTIFICATION_CODE_BATTLE_ENDED, summary, defenderHome, reportLink);
     }
     BlockadeCommands.pruneEmptyBlockades(state);
+    FleetCommands.removeDestroyedFleets(state);
   }
 }
