@@ -22,4 +22,6 @@ public class SupplyInventoryEntry {
   public Double coverageGameHours;
   /** Offener Rest im Übertragskonto (immer kleiner als ein Stück), siehe {@code FractionPot}. */
   public double pendingFraction;
+  /** Nur Stabilisiertes Elerium: zusätzlich im Energiespeicher vorgehaltene Menge (Umsetzungskonzept/32_...md) – zählt zur Reichweite, nicht zum Lager. */
+  public double reserved;
 }

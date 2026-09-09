@@ -168,6 +168,14 @@ public class GameSocket {
       case "powerCoverage" -> de.nebula.state.PowerGrid.coverageRatio(state, text(payload, "colonyId"));
       case "isBlackout" -> de.nebula.state.PowerGrid.isBlackout(state, text(payload, "colonyId"));
       case "powerUpkeepPerHour" -> de.nebula.state.PowerGrid.powerUpkeepPerHour(state, text(payload, "colonyId"));
+      // Energiespeicher (Umsetzungskonzept/32_...md): reserveTarget null = automatisch
+      case "energyStorage" -> de.nebula.state.EnergyStorageCommands.view(state, text(payload, "colonyId"));
+      case "setEnergyReserve" -> {
+        JsonNode target = payload.path("reserveTarget");
+        de.nebula.state.EnergyStorageCommands.setReserve(state, requirePlayerId(), text(payload, "colonyId"),
+            target.isMissingNode() || target.isNull() ? null : target.asDouble());
+        yield null;
+      }
       case "queueBuilding" -> {
         BuildingCommands.queueBuilding(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "buildingTypeId"));
         yield null;

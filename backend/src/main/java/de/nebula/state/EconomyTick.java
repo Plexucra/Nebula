@@ -12,6 +12,7 @@ import de.nebula.model.GroundForceGroup;
 import de.nebula.model.GroundForceUnitStack;
 import de.nebula.model.Planet;
 import de.nebula.model.PlanetStats;
+import de.nebula.model.NotificationType;
 import de.nebula.model.Population;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.ProductType;
@@ -174,6 +175,7 @@ public final class EconomyTick {
         weightSum += weight;
       }
       state.consumptionCoverage.put(colony.id, coverageByGood);
+      warnAboutSupplyGaps(state, ids, colony, coverageByGood);
       double prevRaw = state.rawStandardOfLiving.getOrDefault(colony.id, stats.standardOfLivingPct);
       double newStandard = weightSum > 0 ? (coverageSum / weightSum) * 100 : prevRaw;
       double standardAlpha = Formulas.smoothingAlpha(Formulas.LIVING_STANDARD_SMOOTHING_TAU_HOURS);
@@ -280,13 +282,14 @@ public final class EconomyTick {
         continue;
       }
       double need = Formulas.infrastructureEleriumPerHour(level) * GameConstants.TICK_GAME_HOURS;
-      double stock = Math.floor(Warehouse.qty(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID));
+      // Speicher plus Lager: der Energiespeicher (Umsetzungskonzept/32_...md) ist die
+      // Reserve, die Produktionsketten nicht anfassen; das Lager der Rest.
+      double stock = Math.floor(EnergyStorageCommands.totalFuel(state, colony.id));
       // Verbrauch in GANZEN Zellen über das Übertragskonto: bei Infrastruktur 6
       // sind je Tick nur 0,0188 Zellen fällig, eine ganze also erst alle 53 Ticks
       // (Umsetzungskonzept/25_...md).
       double due = FractionPot.due(state, FractionPot.key("power", colony.id), need);
-      double covered = Math.min(due, stock);
-      if (covered > 0) Warehouse.add(state, colony.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, -covered);
+      double covered = EnergyStorageCommands.drawForUpkeep(state, colony.id, Math.min(due, stock));
       // Ist gerade nichts fällig, entscheidet der blanke Vorrat: eine Kolonie ohne
       // eine einzige Zelle im Lager gilt als unversorgt, auch wenn in diesem Tick
       // nichts abgebucht wurde.
@@ -297,6 +300,44 @@ public final class EconomyTick {
     }
     state.powerStates.clear();
     state.powerStates.addAll(next);
+  }
+
+  /** Problem-Code: ein Grundbedarfsgut ist für die Bevölkerung nicht (ausreichend) zu kaufen (Umsetzungskonzept/32_...md, Teil B). */
+  public static final int CODE_SUPPLY_GAP = 505;
+  /** Unter dieser Deckung gilt ein Gut als unversorgt. */
+  private static final double SUPPLY_WARNING_BELOW = 0.5;
+  /** Höchstens eine Warnung je Gut und Kolonie je Spieltag. */
+  private static final double SUPPLY_WARNING_COOLDOWN_GAME_HOURS = 24;
+
+  /**
+   * Warnt den Kommandanten, wenn ein Grundbedarfsgut nicht zu kaufen ist – weil
+   * keine Verkaufsorder steht (im Testlauf der Bot-Armee blieb der Lebensstandard
+   * deshalb bei 50 %, Konzept 31 Befund 3) oder weil die Bevölkerung sich den Preis
+   * nicht leisten kann (Befund 11). Die Entscheidung bleibt beim Kommandanten; die
+   * Warnung nennt nur, was fehlt.
+   */
+  private static void warnAboutSupplyGaps(GameState state, IdGenerator ids, Colony colony, Map<String, Double> coverageByGood) {
+    Population population = null;
+    for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p;
+    if (population == null || population.currentCount < 1) return;
+    long now = Clock.now();
+    long cooldownMs = (long) Clock.hoursToMs(SUPPLY_WARNING_COOLDOWN_GAME_HOURS);
+    for (Map.Entry<String, Double> e : coverageByGood.entrySet()) {
+      if (e.getValue() >= SUPPLY_WARNING_BELOW) continue;
+      String key = colony.id + ":" + e.getKey();
+      Long last = state.lastSupplyWarningAt.get(key);
+      if (last != null && now - last < cooldownMs) continue;
+      state.lastSupplyWarningAt.put(key, now);
+      boolean anyOrder = state.sellOrders.stream()
+          .anyMatch(o -> o.systemId.equals(colony.systemId) && o.productTypeId.equals(e.getKey()) && o.remainingQuantity > 0);
+      String goodName = de.nebula.data.ProductCatalog.find(e.getKey()).name;
+      String message = anyOrder
+          ? "Die Bevölkerung von \"" + colony.name + "\" kann sich " + goodName + " nicht leisten (Deckung "
+              + Math.round(e.getValue() * 100) + " %) – Preis der Verkaufsorder prüfen, das Bevölkerungs-Wallet gibt nicht mehr her."
+          : "In \"" + colony.name + "\" gibt es keine Verkaufsorder für " + goodName + " – die Bevölkerung kauft nur aus Orders ihres Systems, "
+              + "der Lebensstandard bleibt ohne dieses Gut gedeckelt.";
+      Notifications.notify(state, ids, NotificationType.Problem, CODE_SUPPLY_GAP, message, colony.id, "/kolonien/" + colony.id);
+    }
   }
 
   /**

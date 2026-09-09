@@ -1,3 +1,4 @@
+import { EnergyStorage } from '../models/building.model';
 import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
@@ -268,6 +269,14 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   powerUpkeepPerHour(colonyId: Id): Signal<number> {
     return this.poll('powerUpkeepPerHour', () => ({ colonyId }), 0);
+  }
+
+  energyStorage(colonyId: Id): Signal<EnergyStorage | null> {
+    return this.poll('energyStorage', () => ({ colonyId }), null);
+  }
+
+  setEnergyReserve(colonyId: Id, reserveTarget: number | null): Promise<void> {
+    return this.send('setEnergyReserve', { colonyId, reserveTarget });
   }
 
   // ==========================================================================

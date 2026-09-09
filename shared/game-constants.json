@@ -10,6 +10,8 @@
   "peaceTreatyTerminationNoticeGameHours": 168,
   "tradeAgreementTerminationNoticeGameHours": 48,
   "slotsPerInfrastructureLevel": 1,
+  "_energyReserveDefaultGameHours": "Energiespeicher (Umsetzungskonzept/32): Vorhaltemenge, wenn der Kommandant nichts konfiguriert hat - so viele Spielstunden Infrastrukturverbrauch (10 Spieltage). Produktionsketten sehen den Speicher nicht.",
+  "energyReserveDefaultGameHours": 240,
   "eleriumUpkeepBasePerHour": 0.005,
   "eleriumUpkeepLevelExponent": 1.25,
   "maxInfrastructureByPlanetSize": {

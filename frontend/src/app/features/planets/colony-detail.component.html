@@ -123,6 +123,26 @@
                   <span class="hint">{{ bt.description }}</span>
                   @if (bt.category === 'Infrastructure' && buildingLevel(bt.id) > 0) {
                     <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.3-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
+                    @if (energyStorage(); as es) {
+                      <div class="energy-storage">
+                        <span class="eyebrow">Energiespeicher</span>
+                        <span class="hint mono">
+                          Vorrat {{ es.stored | number:'1.0-0' }} / {{ es.reserveTarget | number:'1.0-0' }} Stabilisiertes Elerium
+                          @if (es.storedCoverageGameHours !== null) { · reicht {{ es.storedCoverageGameHours / 24 | number:'1.0-1' }} Tage }
+                          @if (es.automatic) { · automatisch ({{ es.defaultTarget | number:'1.0-0' }} = 10 Tage Verbrauch der aktuellen Stufe) } @else { · fest eingestellt (automatisch wären {{ es.defaultTarget | number:'1.0-0' }}) }
+                        </span>
+                        <span class="hint">Eintreffendes Stabilisiertes Elerium füllt zuerst den Speicher; nur er versorgt die Infrastruktur zuerst, Produktionsketten sehen ausschließlich das Lager. Wird die Vorhaltemenge gesenkt, geht der Überschuss ins Lager.</span>
+                        <div class="energy-storage-form">
+                          <label>Vorhaltemenge
+                            <input type="number" min="0" step="1" [(ngModel)]="energyReserveDraft" [placeholder]="es.reserveTarget | number:'1.0-0'" [disabled]="busy() === 'energy-reserve'" />
+                          </label>
+                          <button type="button" class="btn small" (click)="applyEnergyReserve()" [disabled]="busy() === 'energy-reserve'">Übernehmen</button>
+                          @if (!es.automatic) {
+                            <button type="button" class="btn small ghost" (click)="resetEnergyReserveToAutomatic()" [disabled]="busy() === 'energy-reserve'">Automatisch</button>
+                          }
+                        </div>
+                      </div>
+                    }
                   }
                   @if (bt.category === 'Infrastructure' && slots(); as sl) {
                     <span class="hint mono">Liefert {{ sl.total }} Bebauungsplätze · planetweit {{ sl.planetInfrastructureTotal }} / {{ sl.planetInfrastructureMax }} (Kosten steigen mit der Summe aller Kolonien des Planeten)</span>
@@ -375,6 +395,7 @@
                   <span class="hint mono">
                     −{{ s.consumptionPerGameHour | number:'1.0-1' }}/h · reicht {{ s.coverageGameHours | number:'1.0-1' }} h
                     @if (s.pendingFraction > 0) { · offen {{ s.pendingFraction | number:'1.0-1' }} }
+                    @if (s.reserved > 0) { · davon im Energiespeicher {{ s.reserved | number:'1.0-0' }} }
                   </span>
                 } @else {
                   <span class="hint">kein laufender Verbrauch</span>

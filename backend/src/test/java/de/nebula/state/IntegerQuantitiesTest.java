@@ -78,12 +78,14 @@ class IntegerQuantitiesTest {
   void powerUpkeepMatchesTheRateOverManyTicks() {
     Bootstrapped b = newWorld();
     Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 1000);
-    double before = Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
+    // Seit dem Energiespeicher (Umsetzungskonzept/32) liegt ein Teil davon im Speicher und wird
+    // zuerst von dort verbraucht – gemessen wird deshalb Speicher plus Lager.
+    double before = EnergyStorageCommands.totalFuel(b.state(), b.colonyId());
 
     int ticks = 2000;
     for (int i = 0; i < ticks; i++) EconomyTick.consumePowerUpkeep(b.state());
 
-    double verbraucht = before - Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
+    double verbraucht = before - EnergyStorageCommands.totalFuel(b.state(), b.colonyId());
     int level = GameQueries.getBuildingLevel(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_BUILDING_ID);
     double erwartet = ticks * de.nebula.engine.Formulas.infrastructureEleriumPerHour(level) * GameConstants.TICK_GAME_HOURS;
 

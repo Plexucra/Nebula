@@ -111,6 +111,9 @@ final class ColonyConquest {
       double lost = Math.floor(w.quantity * materialLoss);
       if (lost > 0) Warehouse.add(state, colony.id, w.productTypeId, -lost);
     }
+    // Der Energiespeicher ist Lagerbestand im Sinne von §2 – derselbe Schaden.
+    de.nebula.model.EnergyStorage storage = EnergyStorageCommands.storageOf(state, colony.id);
+    storage.stored -= Math.floor(storage.stored * materialLoss);
   }
 
   /**
@@ -143,6 +146,9 @@ final class ColonyConquest {
       if (!w.colonyId.equals(conquered.id) || w.quantity <= 0) continue;
       Warehouse.add(state, target.id, w.productTypeId, w.quantity);
     }
+    // Vorgehaltenes Elerium wandert mit – und füllt beim Ziel zuerst dessen Speicher.
+    double storedFuel = EnergyStorageCommands.stored(state, conquered.id);
+    if (storedFuel > 0) Warehouse.add(state, target.id, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, storedFuel);
     dissolve(state, conquered);
   }
 
@@ -150,6 +156,7 @@ final class ColonyConquest {
   private static void dissolve(GameState state, Colony colony) {
     String id = colony.id;
     state.warehouse.removeIf(w -> w.colonyId.equals(id));
+    EnergyStorageCommands.remove(state, id);
     state.buildings.removeIf(b -> b.colonyId.equals(id));
     state.specializations.removeIf(s -> s.colonyId.equals(id));
     state.productionQueue.removeIf((ProductionQueueEntry e) -> e.colonyId.equals(id));

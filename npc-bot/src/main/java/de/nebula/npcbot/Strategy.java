@@ -1,9 +1,7 @@
 package de.nebula.npcbot;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Die Strategie-Ebene des Bots: aus der Lage ({@link Situation}) und der vom
@@ -88,8 +86,9 @@ enum Strategy {
 
   /** Was die Module in diesem Takt tun sollen. */
   static final class Plan {
+    /** Ausbaustufen in Prioritätsreihenfolge; derselbe Gebäudetyp darf mehrfach mit steigender Obergrenze vorkommen (Stufenplan). */
     final List<String> buildPriority = new ArrayList<>();
-    final Map<String, Integer> buildCap = new LinkedHashMap<>();
+    final List<Integer> buildCaps = new ArrayList<>();
     boolean exportAllowed = true;
     boolean allowInfrastructureGrowth = true;
     boolean wantTransport;
@@ -102,7 +101,7 @@ enum Strategy {
 
     Plan build(String type, int cap) {
       buildPriority.add(type);
-      buildCap.put(type, cap);
+      buildCaps.add(cap);
       return this;
     }
   }
@@ -173,7 +172,7 @@ enum Strategy {
       case PREPARE_INVASION, INVADE -> {
         // Jedes neue Gebäude kostet eine Infrastrukturstufe (Bebauungsplätze) – Werft und
         // Ausbildungszentrum zuerst auf Stufe 1, erst dann die teureren Ausbauten.
-        p.build(Catalog.SHIPYARD, 1).build(Catalog.ACADEMY, 1).build(Catalog.INDUSTRY, 6).build(Catalog.SHIPYARD, 3).build(Catalog.ACADEMY, 3).build(Catalog.HABITAT, 2);
+        p.build(Catalog.SHIPYARD, 1).build(Catalog.ACADEMY, 1).build(Catalog.INDUSTRY, 8).build(Catalog.HABITAT, 3).build(Catalog.SHIPYARD, 3).build(Catalog.ACADEMY, 3).build(Catalog.INDUSTRY, 12).build(Catalog.HABITAT, 4);
         p.wantTransport = true;
         p.wantWarships = s.shipyardLevel >= 2;
         // Soldaten-/Drohnenbedarf setzt Military anhand des konkreten Ziels.
@@ -181,18 +180,18 @@ enum Strategy {
         p.hubImports.add(Catalog.STEEL);
       }
       case RAID -> {
-        p.build(Catalog.SHIPYARD, 1).build(Catalog.INDUSTRY, 6).build(Catalog.SHIPYARD, 3).build(Catalog.HABITAT, 2);
+        p.build(Catalog.SHIPYARD, 1).build(Catalog.INDUSTRY, 8).build(Catalog.HABITAT, 3).build(Catalog.SHIPYARD, 3).build(Catalog.INDUSTRY, 12).build(Catalog.HABITAT, 4);
         p.wantWarships = true;
         p.hubImports.add(Catalog.ELERIUM);
         p.hubImports.add(Catalog.STEEL);
       }
       case SETTLE -> {
-        p.build(Catalog.SHIPYARD, 1).build(Catalog.INDUSTRY, 6).build(Catalog.SHIPYARD, 2).build(Catalog.HABITAT, 2);
+        p.build(Catalog.SHIPYARD, 1).build(Catalog.INDUSTRY, 8).build(Catalog.HABITAT, 3).build(Catalog.SHIPYARD, 2).build(Catalog.INDUSTRY, 12).build(Catalog.HABITAT, 4);
         p.wantColonyShip = true;
         p.hubImports.add(Catalog.ELERIUM);
       }
       case BUILD_UP -> {
-        p.build(Catalog.ACADEMY, 1).build(Catalog.DEFENSE, 1).build(Catalog.INDUSTRY, 6).build(Catalog.ACADEMY, 2).build(Catalog.SHIPYARD, 2).build(Catalog.HABITAT, 2);
+        p.build(Catalog.ACADEMY, 1).build(Catalog.DEFENSE, 1).build(Catalog.INDUSTRY, 8).build(Catalog.HABITAT, 3).build(Catalog.ACADEMY, 2).build(Catalog.SHIPYARD, 2).build(Catalog.INDUSTRY, 12).build(Catalog.HABITAT, 4);
         p.wantSoldiers = 8;
         p.wantDrones = 30;
         p.wantDroneType = Catalog.DRONE_MEDIUM;

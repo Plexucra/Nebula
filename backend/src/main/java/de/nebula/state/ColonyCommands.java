@@ -297,9 +297,10 @@ public final class ColonyCommands {
       } else if (GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID.equals(w.productTypeId)) {
         entry.consumptionPerGameHour = Formulas.infrastructureEleriumPerHour(infrastructureLevel);
         entry.pendingFraction = FractionPot.pending(state, FractionPot.key("power", colonyId));
+        entry.reserved = EnergyStorageCommands.stored(state, colonyId);
       }
       entry.coverageGameHours = entry.consumptionPerGameHour > 0
-          ? entry.quantity / entry.consumptionPerGameHour : null;
+          ? (entry.quantity + entry.reserved) / entry.consumptionPerGameHour : null;
       result.add(entry);
     }
     result.sort(Comparator.comparing((SupplyInventoryEntry e) -> e.category.name()).thenComparing(e -> e.name));

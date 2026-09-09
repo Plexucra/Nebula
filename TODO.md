@@ -13,7 +13,13 @@
   Nahrungskapazität, Handelsgilde-Preisdrift, Blockade-Durchflugregel,
   Zivilverluste, Kommandant ohne Kolonie, Bebauungsplätze.
 
-- [ ] **Balancing: Elerium-Startreserve passt nicht mehr zur Startbebauung.**
+## Erledigt
+
+- [x] ~~Balancing: Elerium-Startreserve passt nicht mehr zur Startbebauung~~ –
+  entschärft durch den **Energiespeicher** (Umsetzungskonzept/32): eintreffendes
+  Elerium füllt zuerst eine für Ketten unsichtbare Vorhaltemenge (automatisch 10
+  Tage Verbrauch der aktuellen Infrastrukturstufe), die Infrastruktur zieht zuerst
+  daraus. Die Startreserve selbst ist unverändert; ursprünglicher Befund:
   `WorldSeed.STARTER_ELERIUM_QUANTITY` (3 je Warteschlangen-Umlauf) und die
   25er-Startreserve sind laut ihrem eigenen Kommentar für „bis Infrastruktur 3"
   (0,0198 Elerium/Spielstunde) bemessen. Der Start liegt inzwischen aber bei
@@ -29,8 +35,6 @@
   Offene Balancing-Entscheidung (Reserve/Menge anheben, oder die
   Energieversorgung aus der sequentiellen Warteschlange herausnehmen) – bewusst
   nicht selbständig geändert.
-
-## Erledigt
 
 - [x] ~~Baustoffe verbrauchen einander als Vorprodukt – Reihenfolge ist eine Falle~~ –
   behoben, und zwar an der Ursache, nicht nur mit einer Einreihungsreihenfolge:

@@ -1,0 +1,103 @@
+package de.nebula.state;
+
+import de.nebula.data.WorldSeed;
+import de.nebula.engine.GameConstants;
+import de.nebula.model.Building;
+import de.nebula.model.ChainPlan;
+import de.nebula.model.ChainPlanStep;
+import de.nebula.model.ColonyPowerState;
+import de.nebula.model.EnergyStorage;
+import de.nebula.model.EnergyStorageView;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Energiespeicher (Umsetzungskonzept/32_...md): Elerium fließt zuerst in den
+ * Speicher, Ketten sehen ihn nicht, die Infrastruktur zieht zuerst daraus, und
+ * eine gesenkte Vorhaltemenge gibt den Überschuss ans Lager zurück.
+ */
+class EnergyStorageTest {
+
+  private record Bootstrapped(GameState state, IdGenerator ids, String playerId, String colonyId) {
+  }
+
+  private static Bootstrapped newState() {
+    GameState state = new GameState();
+    IdGenerator ids = new IdGenerator();
+    GameStateSeeder.bootstrap(state, WorldSeed.createWorldSeed("Testkommandant", "Testheim", ids), ids);
+    String colonyId = state.players.get(0).homeworldColonyId;
+    // Sauberer Ausgangspunkt: kein Elerium im Lager, Speicher leer.
+    state.warehouse.removeIf(w -> w.colonyId.equals(colonyId) && w.productTypeId.equals(GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID));
+    return new Bootstrapped(state, ids, state.players.get(0).id, colonyId);
+  }
+
+  private static int infrastructureLevel(Bootstrapped b) {
+    for (Building bl : b.state().buildings) if (bl.colonyId.equals(b.colonyId()) && bl.typeId.equals("b_infrastructure")) return bl.level;
+    return 0;
+  }
+
+  @Test
+  void incomingEleriumFillsTheStorageFirstAndChainsDoNotSeeIt() {
+    Bootstrapped b = newState();
+    double target = EnergyStorageCommands.effectiveTarget(b.state(), b.colonyId());
+    assertTrue(target > 0, "automatische Vorhaltemenge folgt der Infrastrukturstufe");
+
+    Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, target + 7);
+    assertEquals(target, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9, "Speicher voll bis zur Vorhaltemenge");
+    assertEquals(7, Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID), 1e-9, "nur der Rest liegt im Lager");
+
+    // Eine Kette, die Elerium braucht, deckt sich NUR aus dem Lager (7), nie aus dem Speicher.
+    ChainPlan plan = ChainPlanner.planChain(b.state(), b.colonyId(), "p_elerium_kapsel", 20, "b_industry");
+    ChainPlanStep elerium = plan.steps.stream().filter(s -> s.productTypeId.equals(GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID)).findFirst().orElseThrow();
+    assertEquals(7, elerium.quantityFromWarehouse, 1e-9);
+    assertEquals(13, elerium.quantityToProduce, 1e-9);
+  }
+
+  @Test
+  void upkeepDrawsFromStorageBeforeWarehouseAndCountsBothAsCoverage() {
+    Bootstrapped b = newState();
+    Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 5);
+    assertEquals(5, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9);
+    // Eine ganze Zelle fällig machen: Übertragskonto vorfüllen.
+    b.state().fractionPots.put(FractionPot.key("power", b.colonyId()), 0.999);
+    EconomyTick.consumePowerUpkeep(b.state());
+    assertEquals(4, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9, "die fällige Zelle kam aus dem Speicher");
+    assertEquals(0, Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID), 1e-9);
+    ColonyPowerState ps = b.state().powerStates.stream().filter(p -> p.colonyId.equals(b.colonyId())).findFirst().orElseThrow();
+    assertTrue(ps.coverageRatio > 0.99, "versorgt, obwohl das Lager leer ist");
+  }
+
+  @Test
+  void loweringTheReserveReleasesSurplusIntoTheWarehouse() {
+    Bootstrapped b = newState();
+    EnergyStorageCommands.setReserve(b.state(), b.playerId(), b.colonyId(), 50.0);
+    Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 50);
+    assertEquals(50, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9);
+
+    EnergyStorageCommands.setReserve(b.state(), b.playerId(), b.colonyId(), 20.0);
+    assertEquals(20, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9);
+    assertEquals(30, Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID), 1e-9);
+
+    // Zurück auf Automatik: die Vorhaltemenge folgt wieder der Infrastrukturstufe.
+    EnergyStorageCommands.setReserve(b.state(), b.playerId(), b.colonyId(), null);
+    EnergyStorageView view = EnergyStorageCommands.view(b.state(), b.colonyId());
+    assertTrue(view.automatic);
+    assertEquals(EnergyStorageCommands.defaultTarget(b.state(), b.colonyId()), view.reserveTarget, 1e-9);
+    assertTrue(infrastructureLevel(b) > 0);
+
+    assertThrows(CommandException.class, () -> EnergyStorageCommands.setReserve(b.state(), b.playerId(), b.colonyId(), -1.0));
+  }
+
+  @Test
+  void storageBelongsToTheColonyOnly() {
+    Bootstrapped b = newState();
+    EnergyStorage s = EnergyStorageCommands.storageOf(b.state(), b.colonyId());
+    assertEquals(b.colonyId(), s.colonyId);
+    assertEquals(1, b.state().energyStorages.size(), "einmal angelegt, danach wiederverwendet");
+    EnergyStorageCommands.storageOf(b.state(), b.colonyId());
+    assertEquals(1, b.state().energyStorages.size());
+  }
+}

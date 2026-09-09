@@ -42,6 +42,8 @@ export interface SupplyInventoryEntry {
   /** null, wenn die Kolonie dieses Produkt nicht laufend verbraucht. */
   coverageGameHours: number | null;
   pendingFraction: number;
+  /** Nur Stabilisiertes Elerium: im Energiespeicher vorgehalten (zählt zur Reichweite, nicht zum Lager). */
+  reserved: number;
 }
 
 /** Die vier zentralen Planetenwerte, siehe Konzeption/07_..., §5. */

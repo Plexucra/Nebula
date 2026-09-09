@@ -73,3 +73,21 @@ export interface ColonyPowerState {
   colonyId: Id;
   coverageRatio: number;
 }
+
+/**
+ * Energiespeicher einer Kolonie (Umsetzungskonzept/32_...md): kommt mit der
+ * Infrastruktur, hält Stabilisiertes Elerium für das Energienetz vor.
+ * Produktionsketten sehen nur das Lager (`warehouseStock`), nie `stored`.
+ */
+export interface EnergyStorage {
+  colonyId: Id;
+  stored: number;
+  /** Wirksame Vorhaltemenge (konfiguriert oder automatisch). */
+  reserveTarget: number;
+  /** true = folgt der Infrastrukturstufe (`defaultTarget`). */
+  automatic: boolean;
+  defaultTarget: number;
+  upkeepPerHour: number;
+  storedCoverageGameHours: number | null;
+  warehouseStock: number;
+}

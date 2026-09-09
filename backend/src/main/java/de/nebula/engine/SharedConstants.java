@@ -86,6 +86,12 @@ public final class SharedConstants {
     return ROOT.path("slotsPerInfrastructureLevel").asInt();
   }
 
+  /** Energiespeicher: automatische Vorhaltemenge in Spielstunden Infrastrukturverbrauch (Umsetzungskonzept/32_...md). */
+  public static double energyReserveDefaultGameHours() {
+    JsonNode node = ROOT.path("energyReserveDefaultGameHours");
+    return node.isMissingNode() ? 240 : node.asDouble();
+  }
+
   public static double eleriumUpkeepBasePerHour() {
     return ROOT.path("eleriumUpkeepBasePerHour").asDouble();
   }

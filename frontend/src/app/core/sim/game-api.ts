@@ -1,3 +1,4 @@
+import { EnergyStorage } from '../models/building.model';
 import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
@@ -110,6 +111,10 @@ export interface GameApi {
   isBlackout(colonyId: Id): Signal<boolean>;
   /** Aktueller Elerium-Energiezelle-Bedarf des Energienetzes pro Spielstunde (0 ohne Energienetz) – unabhängig davon, ob er gerade gedeckt ist (siehe `powerCoverage`). */
   powerUpkeepPerHour(colonyId: Id): Signal<number>;
+  /** Energiespeicher der Kolonie (Umsetzungskonzept/32_...md). */
+  energyStorage(colonyId: Id): Signal<EnergyStorage | null>;
+  /** Vorhaltemenge setzen; `null` = automatisch (folgt der Infrastrukturstufe). Überschuss geht ins Lager. */
+  setEnergyReserve(colonyId: Id, reserveTarget: number | null): Promise<void>;
 
   // --- Produktion (sequentielle Warteschlange, siehe Konzeption/Umsetzungskonzept/
   //     10_Sequentielle_Produktionsauftraege_und_Ereignissystem.md) ------------

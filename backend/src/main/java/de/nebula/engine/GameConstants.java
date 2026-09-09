@@ -44,6 +44,8 @@ public final class GameConstants {
   public static final double ELERIUM_UPKEEP_BASE_PER_HOUR = SharedConstants.eleriumUpkeepBasePerHour();
   public static final double ELERIUM_UPKEEP_LEVEL_EXPONENT = SharedConstants.eleriumUpkeepLevelExponent();
   public static final String INFRASTRUCTURE_FUEL_PRODUCT_ID = "p_elerium_stabil";
+  /** Automatische Vorhaltemenge des Energiespeichers in Spielstunden Infrastrukturverbrauch (Umsetzungskonzept/32_...md). */
+  public static final double ENERGY_RESERVE_DEFAULT_GAME_HOURS = SharedConstants.energyReserveDefaultGameHours();
   public static final String INFRASTRUCTURE_BUILDING_ID = "b_infrastructure";
   /** Planetare Abwehr (Mechanik/05_...md §9, {@code LandingCommands}-Landungsabwehr). */
   public static final String PLANETARY_DEFENSE_BUILDING_ID = "b_defense";

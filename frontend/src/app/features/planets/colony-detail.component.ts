@@ -46,6 +46,10 @@ export class ColonyDetailComponent {
   protected readonly housingCapacity = this.api.housingCapacity(this.colonyId);
   protected readonly powerCoverage = this.api.powerCoverage(this.colonyId);
   protected readonly powerUpkeepPerHour = this.api.powerUpkeepPerHour(this.colonyId);
+  /** Energiespeicher der Kolonie (Umsetzungskonzept/32_...md) – Anzeige und Konfiguration im Tab "Bebauung". */
+  protected readonly energyStorage = this.api.energyStorage(this.colonyId);
+  /** Eingabe für die Vorhaltemenge; null = noch nichts eingegeben. */
+  protected energyReserveDraft: number | null = null;
   /**
    * Alle Tempo-/Kostenfaktoren dieser Kolonie – fertig BERECHNET vom Backend
    * (siehe `GameApi.colonySpeedBreakdown`). Früher rechnete diese Komponente
@@ -269,6 +273,20 @@ export class ColonyDetailComponent {
     } finally {
       this.busy.set(null);
     }
+  }
+
+  protected applyEnergyReserve(): void {
+    const value = this.energyReserveDraft;
+    if (value === null || !Number.isFinite(value) || value < 0) {
+      this.error.set('Bitte eine Vorhaltemenge von 0 oder mehr eingeben.');
+      return;
+    }
+    void this.run('energy-reserve', () => this.api.setEnergyReserve(this.colonyId, Math.floor(value)));
+  }
+
+  protected resetEnergyReserveToAutomatic(): void {
+    this.energyReserveDraft = null;
+    void this.run('energy-reserve', () => this.api.setEnergyReserve(this.colonyId, null));
   }
 
   protected upgradeBuilding(typeId: Id): void {

@@ -143,6 +143,11 @@ final class World {
     return q("powerCoverage", Map.of("colonyId", colonyId)).asDouble(1);
   }
 
+  /** Energiespeicher der Kolonie (Umsetzungskonzept/32): stored, reserveTarget, automatic, warehouseStock. */
+  JsonNode energyStorage(String colonyId) {
+    return q("energyStorage", Map.of("colonyId", colonyId));
+  }
+
   JsonNode consumptionCoverage(String colonyId) {
     return q("consumptionCoverage", Map.of("colonyId", colonyId));
   }

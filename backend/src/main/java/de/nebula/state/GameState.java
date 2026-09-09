@@ -53,6 +53,10 @@ public class GameState {
   public final List<de.nebula.model.Colonization> colonizations = new CopyOnWriteArrayList<>();
   public final List<PlanetStats> planetStats = new CopyOnWriteArrayList<>();
   public final List<ColonyPowerState> powerStates = new CopyOnWriteArrayList<>();
+  /** Energiespeicher je Kolonie (Umsetzungskonzept/32_...md) – entsteht beim ersten Zugriff. */
+  public final List<de.nebula.model.EnergyStorage> energyStorages = new CopyOnWriteArrayList<>();
+  /** Letzte Versorgungswarnung je "colonyId:productTypeId" (Umsetzungskonzept/32_...md, Teil B). */
+  public final Map<String, Long> lastSupplyWarningAt = new ConcurrentHashMap<>();
   public final List<Population> populations = new CopyOnWriteArrayList<>();
   public final List<PopulationMoneySupplyState> moneySupplyStates = new CopyOnWriteArrayList<>();
   public final List<Wallet> wallets = new CopyOnWriteArrayList<>();

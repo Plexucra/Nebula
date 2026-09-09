@@ -90,63 +90,46 @@ final class Economy {
   boolean energyGuard(Health h, Map<String, Double> products, String purpose) {
     String id = h.colonyId();
     double perHour = Catalog.eleriumPerHour(h.infrastructure());
-    double demand = 0;
     double hours = 0;
     for (Map.Entry<String, Double> e : products.entrySet()) {
-      demand += bot.world.chainDemand(e.getKey(), e.getValue(), Catalog.ELERIUM);
-      if (e.getKey().equals(Catalog.ELERIUM)) demand -= e.getValue();
       hours += Json.dbl(bot.world.previewChain(id, e.getKey(), e.getValue()), "totalHours");
     }
-    double need = Math.ceil(demand + perHour * (hours + GUARD_RESERVE_HOURS));
-    double stock = bot.world.stock(id, Catalog.ELERIUM);
-    // Zweite Wache: Grundbedarf. Ein langer Auftrag blockiert auch die Nahrungs-
-    // und Medizinchargen – im Testlauf verhungerte der Nahrungs-Spezialist hinter
-    // seinen eigenen Transportermodulen, während seine Bevölkerung 27 000 Cr
-    // unausgegeben hielt. Die Chargen sind bereits eingereiht (manageConsumerGoods);
-    // der große Auftrag wartet, bis sie durch sind.
-    for (String good : List.of(Catalog.FOOD, Catalog.MEDICINE)) {
-      if (h.population() <= 20) continue;
-      // Wie beim Elerium: Verbrauch der Bevölkerung über die Laufzeit des Auftrags plus
-      // Reserve muss im Lager liegen, bevor der Auftrag die Warteschlange belegt.
-      double rate = Catalog.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(good);
-      double goodNeed = Math.ceil(h.population() * rate * (hours + GUARD_RESERVE_HOURS));
-      double goodStock = bot.world.stock(id, good);
-      if (goodStock >= goodNeed) continue;
-      double goodMissing = Math.ceil(goodNeed - goodStock);
-      boolean batchQueued = false;
-      for (JsonNode q : bot.world.productionQueue(id)) {
-        if (productsOf(q).contains(good) && Json.dbl(q, "quantity") >= goodMissing * 0.9) batchQueued = true;
+    // Energie: die Vorhaltemenge des Energiespeichers (Konzept 32) auf den Verbrauch über die
+    // Laufzeit des Auftrags plus Reserve setzen und warten, bis er voll ist. Der Kettenbedarf
+    // selbst spielt keine Rolle mehr – die Kette nimmt nur, was im LAGER liegt, und produziert
+    // den Rest; der Speicher bleibt unangetastet.
+    JsonNode storage = bot.world.energyStorage(id);
+    double need = Math.ceil(perHour * (hours + GUARD_RESERVE_HOURS));
+    double stored = Json.dbl(storage, "stored");
+    double target = Json.dbl(storage, "reserveTarget");
+    if (target < need) {
+      try {
+        bot.call("setEnergyReserve", Map.of("colonyId", id, "reserveTarget", need));
+        bot.world.invalidate("energyStorage", "warehouse");
+        bot.monitor.event("ENERGY_RESERVE_SET", h.name() + ": Vorhaltemenge des Energiespeichers auf " + (long) need
+            + " gesetzt (" + purpose + ", Laufzeit " + fmtHours(hours) + " + Reserve)", "colonyId", id, "target", need, "purpose", purpose);
+      } catch (CommandException e) {
+        bot.monitor.log(h.name() + ": Vorhaltemenge abgelehnt: " + e.getMessage());
       }
-      if (!batchQueued) queueProduction(id, good, goodMissing, false);
-      String key = id + purpose + good;
-      if (!energyGuardLogged.containsKey(key)) {
-        energyGuardLogged.put(key, purpose);
-        bot.monitor.event("SUPPLY_GUARD", h.name() + ": " + purpose + " wartet auf " + good + " – Laufzeit " + fmtHours(hours)
-            + " kostet " + (long) (h.population() * rate * hours) + ", Reserve " + (long) (h.population() * rate * GUARD_RESERVE_HOURS)
-            + " → " + (long) goodNeed + " nötig, " + (long) goodStock + " im Lager, Charge x" + (long) goodMissing + " eingereiht",
-            "colonyId", id, "purpose", purpose, "good", good, "need", goodNeed, "stock", goodStock);
-      }
-      return false;
     }
-    if (stock >= need) {
+    if (stored >= need) {
       energyGuardLogged.remove(id + purpose);
       return true;
     }
-    double missing = Math.ceil(need - stock);
+    // Der Speicher füllt sich aus jeder eintreffenden Charge – eine passende Charge einreihen.
+    double missing = Math.ceil(need - stored);
     boolean queued = false;
     for (JsonNode q : bot.world.productionQueue(id)) {
       if (productsOf(q).contains(Catalog.ELERIUM) && !Json.bool(q, "requeueOnComplete") && Json.dbl(q, "quantity") >= missing * 0.9) queued = true;
     }
-    if (!queued) {
-      queueProduction(id, Catalog.ELERIUM, missing, false);
-    }
+    if (!queued) queueProduction(id, Catalog.ELERIUM, missing, false);
     String key = id + purpose;
     if (!energyGuardLogged.containsKey(key)) {
       energyGuardLogged.put(key, purpose);
-      bot.monitor.event("ENERGY_GUARD", h.name() + ": " + purpose + " wartet auf Elerium – Kette zieht " + (long) demand
-          + ", Laufzeit " + fmtHours(hours) + " kostet " + (long) (perHour * hours) + ", Reserve " + (long) (perHour * GUARD_RESERVE_HOURS)
-          + " → " + (long) need + " nötig, " + (long) stock + " im Lager, Charge x" + (long) missing + " eingereiht",
-          "colonyId", id, "purpose", purpose, "need", need, "stock", stock, "demand", demand, "hours", hours);
+      bot.monitor.event("ENERGY_GUARD", h.name() + ": " + purpose + " wartet auf den Energiespeicher – Laufzeit " + fmtHours(hours)
+          + " kostet " + (long) (perHour * hours) + ", Reserve " + (long) (perHour * GUARD_RESERVE_HOURS)
+          + " → " + (long) need + " nötig, " + (long) stored + " im Speicher, Charge x" + (long) missing + " eingereiht",
+          "colonyId", id, "purpose", purpose, "need", need, "stored", stored, "hours", hours);
     }
     return false;
   }
@@ -181,7 +164,9 @@ final class Economy {
       String id = text(c, "id");
       int infra = w.buildingLevel(id, Catalog.INFRASTRUCTURE);
       double perHour = Catalog.eleriumPerHour(infra);
-      double stock = w.stock(id, Catalog.ELERIUM);
+      // Speicher plus Lager: der Energiespeicher (Konzept 32) ist die Reserve, die
+      // Ketten nicht anfassen können; das Lager der Rest.
+      double stock = w.stock(id, Catalog.ELERIUM) + Json.dbl(w.energyStorage(id), "stored");
       double hours = perHour > 0 ? stock / perHour : Double.MAX_VALUE;
       JsonNode stats = w.stats(id);
       JsonNode coverage = w.consumptionCoverage(id);
@@ -501,8 +486,9 @@ final class Economy {
   private void manageBuildings(Health h, Strategy.Plan plan) {
     String id = h.colonyId();
     World w = bot.world;
-    for (String typeId : plan.buildPriority) {
-      int cap = plan.buildCap.getOrDefault(typeId, 1);
+    for (int i = 0; i < plan.buildPriority.size(); i++) {
+      String typeId = plan.buildPriority.get(i);
+      int cap = plan.buildCaps.get(i);
       int level = w.buildingLevel(id, typeId);
       if (level >= cap || w.buildingPending(id, typeId)) continue;
       if (typeId.equals(Catalog.DEFENSE) && !h.home()) continue;
