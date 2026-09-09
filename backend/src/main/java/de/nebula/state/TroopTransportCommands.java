@@ -42,8 +42,13 @@ public final class TroopTransportCommands {
 
   /** Plätze für Soldaten in dieser Flotte: Summe über alle Schiffe (nur der Mannschaftstransporter hat {@code troopCapacity > 0}). */
   public static double troopCapacity(Fleet fleet) {
+    return troopCapacity(fleet.ships);
+  }
+
+  /** Wie {@link #troopCapacity(Fleet)}, für eine Schiffsliste, die noch zu keiner Flotte gehört ({@code FleetCompositionCommands}). */
+  public static double troopCapacity(java.util.List<FleetShipGroup> ships) {
     double capacity = 0;
-    for (FleetShipGroup g : fleet.ships) {
+    for (FleetShipGroup g : ships) {
       if (g.quantity <= 0) continue;
       capacity += ShipCatalog.find(g.shipProductTypeId).troopCapacity * g.quantity;
     }

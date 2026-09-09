@@ -225,7 +225,61 @@
             @if (canExplore(fleet)) {
               <button class="ghost small" (click)="exploreSystem(fleet)" [disabled]="busy() === ('explore:' + fleet.id)">System erforschen</button>
             }
+            @if (fleet.status === 'Stationed') {
+              @if (mergeCandidates(fleet).length > 0) {
+                <button class="ghost small" (click)="togglePanel(fleet.id, 'merge')">Zusammenlegen</button>
+              }
+              <button class="ghost small" (click)="togglePanel(fleet.id, 'split')">Aufteilen</button>
+            }
           </div>
+
+          @if (isPanelOpen(fleet.id, 'merge')) {
+            <div class="fleet-panel form-row">
+              <p class="hint">Die gewählte Flotte wird aufgelöst; ihre Schiffe, Fracht, Soldaten und ihr Treibstoff gehen in „{{ fleet.name }}" über.</p>
+              <select [(ngModel)]="mergeSource[fleet.id]">
+                <option value="">Flotte wählen…</option>
+                @for (f of mergeCandidates(fleet); track f.id) {
+                  <option [value]="f.id">{{ f.name }}</option>
+                }
+              </select>
+              <button class="primary small" (click)="submitMerge(fleet)" [disabled]="busy() === ('merge:' + fleet.id)">Zusammenlegen</button>
+            </div>
+          }
+          @if (isPanelOpen(fleet.id, 'split')) {
+            <div class="fleet-panel split-form">
+              <p class="hint">
+                Was hier eingetragen wird, bildet die neue Flotte – der Rest bleibt bei „{{ fleet.name }}". Beide Seiten müssen
+                ihre Fracht tragen und ihre Soldaten unterbringen können; sonst lehnt der Server die Aufteilung ab.
+              </p>
+              <label class="split-name">Name der neuen Flotte
+                <input type="text" [(ngModel)]="splitName[fleet.id]" placeholder="Flottenverband" />
+              </label>
+              <span class="eyebrow">Schiffe</span>
+              @for (g of fleet.ships; track g.shipProductTypeId) {
+                <label class="split-row">
+                  <span>{{ productName(g.shipProductTypeId) }} <span class="hint mono">({{ g.quantity | number:'1.0-0' }} vorhanden)</span></span>
+                  <input type="number" min="0" step="1" [max]="g.quantity" [(ngModel)]="splitShipQty[splitKey(fleet.id, g.shipProductTypeId)]" placeholder="0" />
+                </label>
+              }
+              @if (fleet.cargo.length > 0) {
+                <span class="eyebrow">Fracht</span>
+                @for (c of fleet.cargo; track c.productTypeId) {
+                  <label class="split-row">
+                    <span>{{ productName(c.productTypeId) }} <span class="hint mono">({{ c.quantity | number:'1.0-0' }} an Bord)</span></span>
+                    <input type="number" min="0" step="1" [max]="c.quantity" [(ngModel)]="splitCargoQty[splitKey(fleet.id, c.productTypeId)]" placeholder="0" />
+                  </label>
+                }
+              }
+              @if (soldiersAboard(fleet) > 0) {
+                <span class="eyebrow">Soldaten</span>
+                <label class="split-row">
+                  <span>Soldaten <span class="hint mono">({{ soldiersAboard(fleet) | number:'1.0-0' }} an Bord, nur im Mannschaftstransporter)</span></span>
+                  <input type="number" min="0" step="1" [max]="soldiersAboard(fleet)" [(ngModel)]="splitSoldiers[fleet.id]" placeholder="0" />
+                </label>
+              }
+              <button class="primary small" (click)="submitSplit(fleet)" [disabled]="busy() === ('split:' + fleet.id)">Abspalten</button>
+            </div>
+          }
 
           @if (isPanelOpen(fleet.id, 'move')) {
             <div class="fleet-panel form-row">

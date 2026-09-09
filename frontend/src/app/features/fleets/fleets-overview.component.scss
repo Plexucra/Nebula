@@ -124,3 +124,9 @@
   gap: 6px;
   border-color: var(--danger);
 }
+
+/* Aufteilen-Formular (Umsetzungskonzept/33_...md) */
+.split-form { display: flex; flex-direction: column; gap: 8px; }
+.split-form .split-name { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.split-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; }
+.split-row input { width: 110px; }

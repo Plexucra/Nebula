@@ -250,6 +250,18 @@ export interface GameApi {
    * läuft weiterhin über `moveFleet`.
    */
   moveFleetWithinSystem(fleetId: Id, target: FleetSystemTarget): Promise<void>;
+  /**
+   * Legt `sourceFleetId` in `targetFleetId` zusammen (Umsetzungskonzept/33_...md):
+   * Schiffe, Fracht, Treibstoff und eingeschiffte Truppen wandern hinüber, die
+   * Quellflotte verschwindet. Beide müssen am selben Ort stationiert sein.
+   */
+  mergeFleets(targetFleetId: Id, sourceFleetId: Id): Promise<void>;
+  /**
+   * Spaltet eine neue Flotte ab: `ships`/`cargo` als Produkt-Id → Stückzahl,
+   * dazu die mitfahrenden Soldaten und der Name der neuen Flotte. Der Server
+   * prüft, dass BEIDE Seiten ihre Fracht und ihre Soldaten tragen können.
+   */
+  splitFleet(fleetId: Id, ships: Record<Id, number>, cargo: Record<Id, number>, soldiers: number, name: string): Promise<void>;
 
   // --- Bodentruppen -------------------------------------------------------
   groundForces(colonyId: Id): Signal<GroundForceGroup | undefined>;

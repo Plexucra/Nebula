@@ -58,12 +58,13 @@ public final class FleetCommands {
     return null;
   }
 
-  private record Capacity(double massKg, double volumeM3) {
+  record Capacity(double massKg, double volumeM3) {
   }
 
-  private static Capacity fleetCargoCapacity(Fleet fleet) {
+  /** Frachtkapazität EINER Schiffsliste – auch für Schiffe, die noch in keiner Flotte stehen ({@code FleetCompositionCommands}). */
+  static Capacity cargoCapacityOf(List<FleetShipGroup> ships) {
     double mass = 0, volume = 0;
-    for (FleetShipGroup g : fleet.ships) {
+    for (FleetShipGroup g : ships) {
       ShipTypeDef def = ShipCatalog.find(g.shipProductTypeId);
       mass += def.cargoMassKg * g.quantity;
       volume += def.cargoVolumeM3 * g.quantity;
@@ -71,14 +72,23 @@ public final class FleetCommands {
     return new Capacity(mass, volume);
   }
 
-  private static Capacity fleetCargoUsed(Fleet fleet) {
+  /** Masse und Volumen EINER Frachtliste – Gegenstück zu {@link #cargoCapacityOf}. */
+  static Capacity cargoUsedOf(List<FleetCargoEntry> cargo) {
     double mass = 0, volume = 0;
-    for (FleetCargoEntry c : fleet.cargo) {
+    for (FleetCargoEntry c : cargo) {
       ProductType product = ProductCatalog.find(c.productTypeId);
       mass += product.massKg * c.quantity;
       volume += product.volumeM3 * c.quantity;
     }
     return new Capacity(mass, volume);
+  }
+
+  private static Capacity fleetCargoCapacity(Fleet fleet) {
+    return cargoCapacityOf(fleet.ships);
+  }
+
+  private static Capacity fleetCargoUsed(Fleet fleet) {
+    return cargoUsedOf(fleet.cargo);
   }
 
   public static void transferShipsToFleet(GameState state, IdGenerator ids, String playerId, String colonyId,

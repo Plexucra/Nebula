@@ -7,7 +7,7 @@ import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Fleet, Id } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 
-type FleetPanel = 'load' | 'unload' | 'sell' | 'move' | 'land' | 'landTroops' | 'transfer' | 'attack' | null;
+type FleetPanel = 'load' | 'unload' | 'sell' | 'move' | 'land' | 'landTroops' | 'transfer' | 'attack' | 'merge' | 'split' | null;
 
 @Component({
   selector: 'app-fleets-overview',
@@ -358,6 +358,78 @@ export class FleetsOverviewComponent {
 
   protected async exploreSystem(fleet: Fleet): Promise<void> {
     await this.run('explore:' + fleet.id, () => this.api.exploreSystem(fleet.id));
+  }
+
+  // --- Zusammenstellung: zusammenlegen und aufteilen (Umsetzungskonzept/33_...md) ---
+
+  /**
+   * Eigene, stationierte Flotten am GENAU selben Ort – dasselbe System und
+   * dieselbe Position darin. Der Server prüft dieselbe Bedingung noch einmal
+   * (`mergeFleets`); hier steht sie nur, damit die Auswahlliste keine Ziele
+   * anbietet, die ohnehin abgelehnt würden.
+   */
+  protected mergeCandidates(fleet: Fleet): Fleet[] {
+    return this.fleets().filter(f => f.id !== fleet.id
+      && f.status === 'Stationed'
+      && f.systemId === fleet.systemId
+      && f.locationType === fleet.locationType
+      && f.locationColonyId === fleet.locationColonyId
+      && f.locationPlanetId === fleet.locationPlanetId);
+  }
+
+  protected readonly mergeSource: Partial<Record<Id, Id>> = {};
+
+  protected async submitMerge(fleet: Fleet): Promise<void> {
+    const sourceFleetId = this.mergeSource[fleet.id];
+    if (!sourceFleetId) return;
+    await this.run('merge:' + fleet.id, async () => {
+      await this.api.mergeFleets(fleet.id, sourceFleetId);
+      this.mergeSource[fleet.id] = undefined;
+      this.openPanel.set(null);
+    });
+  }
+
+  /** Eingaben des Aufteilen-Formulars, Schlüssel `fleetId|produktId` – eine flache Map reicht, das Formular ist je Flotte nur einmal offen. */
+  protected readonly splitShipQty: Partial<Record<string, number>> = {};
+  protected readonly splitCargoQty: Partial<Record<string, number>> = {};
+  protected readonly splitSoldiers: Partial<Record<Id, number>> = {};
+  protected readonly splitName: Partial<Record<Id, string>> = {};
+
+  protected splitKey(fleetId: Id, productTypeId: Id): string {
+    return fleetId + '|' + productTypeId;
+  }
+
+  /**
+   * Sammelt die Eingaben und schickt sie als ein Kommando. Ob die Aufteilung
+   * zulässig ist (Fracht und Soldaten müssen auf BEIDEN Seiten in die Schiffe
+   * passen), entscheidet ausschließlich der Server – die Regel wird hier nicht
+   * nachgebaut (Umsetzungskonzept/15_...md, Auftrag 3); seine Fehlermeldung
+   * landet in `error()`.
+   */
+  protected async submitSplit(fleet: Fleet): Promise<void> {
+    const ships: Record<Id, number> = {};
+    for (const g of fleet.ships) {
+      const qty = Math.floor(this.splitShipQty[this.splitKey(fleet.id, g.shipProductTypeId)] ?? 0);
+      if (qty > 0) ships[g.shipProductTypeId] = qty;
+    }
+    const cargo: Record<Id, number> = {};
+    for (const c of fleet.cargo) {
+      const qty = Math.floor(this.splitCargoQty[this.splitKey(fleet.id, c.productTypeId)] ?? 0);
+      if (qty > 0) cargo[c.productTypeId] = qty;
+    }
+    const soldiers = Math.floor(this.splitSoldiers[fleet.id] ?? 0);
+    if (Object.keys(ships).length === 0) {
+      this.error.set('Für eine neue Flotte muss mindestens ein Schiff abgespalten werden.');
+      return;
+    }
+    await this.run('split:' + fleet.id, async () => {
+      await this.api.splitFleet(fleet.id, ships, cargo, soldiers, this.splitName[fleet.id] ?? '');
+      for (const g of fleet.ships) this.splitShipQty[this.splitKey(fleet.id, g.shipProductTypeId)] = undefined;
+      for (const c of fleet.cargo) this.splitCargoQty[this.splitKey(fleet.id, c.productTypeId)] = undefined;
+      this.splitSoldiers[fleet.id] = undefined;
+      this.splitName[fleet.id] = undefined;
+      this.openPanel.set(null);
+    });
   }
 
   // --- Kampf --------------------------------------------------------------

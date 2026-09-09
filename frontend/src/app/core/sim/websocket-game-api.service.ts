@@ -406,6 +406,14 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   fleetCargoCapacity(fleetId: Id, productTypeId: Id | null): Signal<FleetCargoCapacity | null> {
     return this.poll('fleetCargoCapacity', () => ({ fleetId, productTypeId }), null);
   }
+  mergeFleets(targetFleetId: Id, sourceFleetId: Id): Promise<void> {
+    return this.send('mergeFleets', { targetFleetId, sourceFleetId });
+  }
+
+  splitFleet(fleetId: Id, ships: Record<Id, number>, cargo: Record<Id, number>, soldiers: number, name: string): Promise<void> {
+    return this.send('splitFleet', { fleetId, ships, cargo, soldiers, name });
+  }
+
   moveFleetWithinSystem(fleetId: Id, target: FleetSystemTarget): Promise<void> {
     return this.send('moveFleetWithinSystem', { fleetId, target });
   }

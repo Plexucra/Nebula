@@ -22,6 +22,7 @@ import de.nebula.state.BlockadeCommands;
 import de.nebula.state.DiplomacyCommands;
 import de.nebula.state.EconomyTick;
 import de.nebula.state.FleetCommands;
+import de.nebula.state.FleetCompositionCommands;
 import de.nebula.state.GatewayCommands;
 import de.nebula.state.GroundBattleCommands;
 import de.nebula.state.HubMarketCommands;
@@ -404,6 +405,16 @@ public class GameSocket {
       }
       case "routePreview" -> FleetCommands.routePreview(state, text(payload, "fleetId"), text(payload, "destinationSystemId"));
       case "fleetCargoCapacity" -> FleetCommands.fleetCargoCapacity(state, text(payload, "fleetId"), text(payload, "productTypeId"));
+      // Flottenzusammenstellung (Umsetzungskonzept/33_...md)
+      case "mergeFleets" -> {
+        FleetCompositionCommands.mergeFleets(state, requirePlayerId(), text(payload, "targetFleetId"), text(payload, "sourceFleetId"));
+        yield null;
+      }
+      // body: { fleetId, ships: { shipProductTypeId: quantity }, cargo: { productTypeId: quantity }, soldiers, name }
+      case "splitFleet" -> FleetCompositionCommands.splitFleet(state, ids, requirePlayerId(), text(payload, "fleetId"),
+          productMap(payload.path("ships")), productMap(payload.path("cargo")),
+          payload.path("soldiers").asDouble(0), text(payload, "name"));
+
       case "moveFleetWithinSystem" -> {
         FleetCommands.moveFleetWithinSystem(state, requirePlayerId(), text(payload, "fleetId"), parseFleetSystemTarget(payload.path("target")));
         yield null;
