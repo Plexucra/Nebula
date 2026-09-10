@@ -38,10 +38,40 @@ public class GameConnection implements WebSocket.Listener {
   }
 
   public void connect() throws Exception {
+    URI target = URI.create(url);
+    requireLocalOrLan(target);
     webSocket = HttpClient.newHttpClient()
         .newWebSocketBuilder()
-        .buildAsync(URI.create(url), this)
+        .buildAsync(target, this)
         .get(15, TimeUnit.SECONDS);
+  }
+
+  /**
+   * Vorgabe: <b>Die NPC-Bots gehen nicht ins Internet.</b> Sie sprechen
+   * ausschließlich mit dem Spielserver, und der steht auf demselben Rechner
+   * oder im selben LAN (Umsetzungskonzept/14, Teil 3 – "NICHT für
+   * Internet-Veröffentlichung gedacht"). Diese Prüfung macht das verbindlich,
+   * statt es der Aufrufzeile zu überlassen: eine öffentliche Adresse in
+   * {@code --server} wird abgewiesen, nicht stillschweigend kontaktiert.
+   *
+   * <p>Es ist die EINZIGE Netzwerkverbindung, die der Bot überhaupt aufbaut –
+   * es gibt keinen weiteren HTTP-Aufruf im gesamten Modul.</p>
+   */
+  static void requireLocalOrLan(URI uri) throws java.net.UnknownHostException {
+    String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
+    if (!scheme.equals("ws") && !scheme.equals("wss")) {
+      throw new IllegalArgumentException("Nur ws:// bzw. wss:// erlaubt, nicht: " + uri);
+    }
+    String host = uri.getHost();
+    if (host == null) throw new IllegalArgumentException("Adresse ohne Rechnernamen: " + uri);
+    for (java.net.InetAddress address : java.net.InetAddress.getAllByName(host)) {
+      boolean local = address.isLoopbackAddress() || address.isSiteLocalAddress()
+          || address.isLinkLocalAddress() || address.isAnyLocalAddress();
+      if (!local) {
+        throw new IllegalArgumentException("Der Bot verbindet sich nur mit einem Server im eigenen Netz. "
+            + "Adresse " + address.getHostAddress() + " (" + host + ") liegt außerhalb – Verbindung abgelehnt.");
+      }
+    }
   }
 
   public void close() {

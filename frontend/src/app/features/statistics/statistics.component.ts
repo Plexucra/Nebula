@@ -34,6 +34,8 @@ export class StatisticsComponent {
   protected readonly api = inject(GAME_API);
 
   protected readonly history = this.api.universeStats();
+  /** Ausgang des Krieges – null, solange mehrere Parteien Kolonien besitzen. */
+  protected readonly victory = this.api.victory();
   protected readonly latest = computed(() => {
     const h = this.history();
     return h.length ? h[h.length - 1] : undefined;

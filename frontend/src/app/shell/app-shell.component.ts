@@ -27,6 +27,18 @@ export class AppShellComponent {
   protected readonly player = this.api.player;
   protected readonly wallet = this.api.wallet;
 
+  /**
+   * Der entschiedene Krieg (Siegbedingung: eine Partei besitzt als Einzige noch
+   * Kolonien). Steht als Band über der ganzen Oberfläche – ohne das wäre das
+   * Ende des Spiels nur an einer Benachrichtigung zu erkennen.
+   */
+  protected readonly victory = this.api.victory();
+  protected readonly victoryIsMine = computed(() => {
+    const v = this.victory();
+    const name = this.player()?.name;
+    return !!v && !!name && v.members.includes(name);
+  });
+
   /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
   private readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
   protected readonly gateway = computed(() => this.api.gateway(this.homeSystemId())());

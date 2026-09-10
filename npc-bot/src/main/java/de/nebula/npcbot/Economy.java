@@ -50,6 +50,12 @@ final class Economy {
   /** Lagerreserve je Grundbedarf: so viele Spielstunden Verbrauch der Bevölkerung. */
   private static final double CONSUMER_RESERVE_HOURS = 120;
   private static final int MAX_WARSHIPS = 30;
+  /** Höchstzahl gleicher Schiffe in EINEM Werftauftrag – 38 Transporter einzeln zu bestellen dauert zu lange. */
+  private static final int MAX_SHIPS_PER_ORDER = 10;
+  /** Höchstmenge Sprungtreibstoff je Auftrag – die Warteschlange ist sequentiell, ein Riesenlos blockiert alles andere. */
+  private static final double JUMP_FUEL_MAX_BATCH = 1500;
+  /** Höchstmenge Soldaten bzw. Drohnen je Ausbildungsauftrag. */
+  private static final int RECRUIT_MAX_BATCH = 250;
   private static final double ELECTRONICS_IMPORT_MIN_WALLET = 20000;
   /** Preis der Start-Nahrungsorder (WorldSeed.STARTER_SELL_ORDER_PRICE), falls keine mehr existiert. */
   private static final double DEFAULT_CONSUMER_PRICE = 450;
@@ -73,6 +79,10 @@ final class Economy {
   private final Map<String, Integer> lastPriceChangeTick = new HashMap<>();
   private static final int PRICE_COOLDOWN_TICKS = 8;
   private static final double MIN_CONSUMER_PRICE = 15;
+  /** Ab diesem Guthaben der Bevölkerung gilt sie als kaufkräftig genug für höhere Preise. */
+  private static final double RICH_POPULATION_WALLET = 20000;
+  /** Obergrenze der Preisspirale, gemessen am Startpreis (450 Cr). */
+  private static final double MAX_PRICE_FACTOR = 6;
   /** Reserve (Spielstunden Verbrauch), die nach Abzug des Kettenbedarfs im Lager bleiben muss. */
   private static final double GUARD_RESERVE_HOURS = 240;
 
@@ -230,6 +240,7 @@ final class Economy {
       shopping.merge(Catalog.ELERIUM, 20.0, Double::sum);
     }
     manageBuildings(h, plan);
+    activateDefenseIfBuilt(h);
     manageShipyard(h, plan);
     manageAcademy(h, plan);
   }
@@ -267,9 +278,22 @@ final class Economy {
     if (h.eleriumHours() < ELERIUM_SHOPPING_BELOW_HOURS) {
       shopping.merge(Catalog.ELERIUM, Math.max(5, Math.ceil(perHour * 240 - bot.world.stock(id, Catalog.ELERIUM))), Double::sum);
     }
-    if (h.home() && bot.world.stock(id, Catalog.JUMP_FUEL) < 10 && !queuedProducts.contains(Catalog.JUMP_FUEL)) {
-      queueProduction(id, Catalog.JUMP_FUEL, 10, false);
-      bot.monitor.log(h.name() + ": Sprungtreibstoff nachbestellt (x10)");
+    // Sprungtreibstoff nach der GRÖSSTEN eigenen Flotte bevorraten, nicht mit zehn
+    // Kapseln pauschal: Der Verbrauch hängt an der Masse (Umsetzungskonzept/34) –
+    // eine Kampfflotte mit zwei Kreuzern braucht für zwölf Sprünge über 3000
+    // Kapseln. Mit dem alten Festwert stand jede Flotte nach dem ersten Sprung.
+    if (h.home() && !queuedProducts.contains(Catalog.JUMP_FUEL)) {
+      double perHopBiggestFleet = 0;
+      for (JsonNode f : bot.world.ownFleets()) {
+        perHopBiggestFleet = Math.max(perHopBiggestFleet, bot.world.fleetTankCapacity(f) / Catalog.FUEL_TANK_RANGE_HOPS);
+      }
+      double target = Math.max(10, Math.ceil(perHopBiggestFleet * Catalog.DEFAULT_TRIP_HOPS));
+      double stock = bot.world.stock(id, Catalog.JUMP_FUEL);
+      if (stock < target * 0.5) {
+        double qty = Math.min(JUMP_FUEL_MAX_BATCH, Math.ceil(target - stock));
+        queueProduction(id, Catalog.JUMP_FUEL, qty, false);
+        bot.monitor.log(h.name() + ": Sprungtreibstoff nachbestellt (x" + (long) qty + ", Ziel " + (long) target + ")");
+      }
     }
   }
 
@@ -425,8 +449,21 @@ final class Economy {
       if (cov < 0 || h.population() < 20) continue;
       double price = Json.dbl(o, "pricePerUnit");
       double newPrice = price;
-      if (cov < 0.85 && Json.dbl(o, "remainingQuantity") > 0) newPrice = Math.max(MIN_CONSUMER_PRICE, Math.round(price * 0.7));
+      if (cov < 0.9 && Json.dbl(o, "remainingQuantity") > 0) newPrice = Math.max(MIN_CONSUMER_PRICE, Math.round(price * 0.7));
       else if (cov >= 1.45 && price < DEFAULT_CONSUMER_PRICE) newPrice = Math.min(DEFAULT_CONSUMER_PRICE, Math.round(price * 1.15));
+      else if (cov >= 1.05 && bot.world.populationWallet(id) > RICH_POPULATION_WALLET && price < DEFAULT_CONSUMER_PRICE * MAX_PRICE_FACTOR) {
+        // Gut versorgte (Deckung über 105 %) und kaufkräftige Bevölkerung: Der
+        // Kommandant verkauft zu billig. Im Testlauf lagen 151 000 Cr im
+        // Bevölkerungs-Wallet, während der Bot selbst mit 765 Cr auf der Stelle
+        // trat und deshalb nie die 16 000 Cr Kolonistenprämie für ein
+        // Kolonisationsschiff zusammenbekam.
+        //
+        // Angehoben wird nur aus dem Überfluss heraus, gesenkt schon unter 90 %:
+        // Ein zu hoher Preis würde die eigene Kolonie aushungern (mit einem
+        // schärferen Band standen 19 von 20 Bots in FAMINE, während ihre Konten
+        // auf 200 000 Cr wuchsen).
+        newPrice = Math.min(DEFAULT_CONSUMER_PRICE * MAX_PRICE_FACTOR, Math.round(price * 1.2));
+      }
       if (newPrice == price) continue;
       try {
         bot.call("cancelSellOrder", Map.of("orderId", text(o, "id")));
@@ -551,14 +588,35 @@ final class Economy {
     String id = h.colonyId();
     List<JsonNode> yard = bot.world.shipyardQueue(id);
     if (!yard.isEmpty()) return;
-    if (plan.wantTransport && bot.military.transportsOwned() == 0) {
-      orderShip(h, Catalog.TROOP_TRANSPORT, "TRANSPORT_ORDERED");
+    // Transporter haben Vorrang vor Kriegsschiffen, solange die Landungsoperation
+    // noch nicht genug Platz hat (Military.prepare rechnet den Bedarf aus dem
+    // Soldatenbedarf und der Katalogkapazität von 27 Plätzen je Schiff aus).
+    if (plan.wantTransports > bot.military.transportsOwned()) {
+      int missing = plan.wantTransports - bot.military.transportsOwned();
+      orderShip(h, Catalog.TROOP_TRANSPORT, "TRANSPORT_ORDERED", Math.min(missing, MAX_SHIPS_PER_ORDER));
+      return;
+    }
+    // Frachter tragen die Drohnen der Landung. Einer reicht dafür nicht: 48 schwere
+    // Drohnen je Frachter gegen eine Garnison, die selbst 87 aktive Drohnen stellt.
+    if (plan.wantFreighters > freightersOwned()) {
+      int missing = plan.wantFreighters - freightersOwned();
+      orderShip(h, Catalog.FREIGHTER, "FREIGHTER_ORDERED", Math.min(missing, MAX_SHIPS_PER_ORDER));
       return;
     }
     if (plan.wantWarships && bot.military.warshipCount() < MAX_WARSHIPS) {
       String type = warshipRotation++ % 3 == 2 ? Catalog.WARSHIP_TYPES.get(1) : Catalog.WARSHIP_TYPES.get(0);
-      orderShip(h, type, "WARSHIP_ORDERED");
+      orderShip(h, type, "WARSHIP_ORDERED", 1);
     }
+  }
+
+  /** Frachter im Lager, in Flotten und in der Werft-Warteschlange. */
+  private int freightersOwned() {
+    int n = (int) bot.world.stock(bot.homeColonyId, Catalog.FREIGHTER);
+    for (JsonNode f : bot.world.ownFleets()) n += (int) World.shipCount(f, Catalog.FREIGHTER);
+    for (JsonNode q : bot.world.shipyardQueue(bot.homeColonyId)) {
+      if (Json.eq(text(q, "shipProductTypeId"), Catalog.FREIGHTER)) n += (int) Math.max(1, Json.dbl(q, "quantity"));
+    }
+    return n;
   }
 
   /**
@@ -569,16 +627,17 @@ final class Economy {
    * bleibt für Nahrung, Medizin und Elerium. Die Energie-/Versorgungs-Wache
    * gilt trotzdem: die Kette zieht Elerium aus dem Lager.
    */
-  private void orderShip(Health h, String shipType, String eventType) {
+  private void orderShip(Health h, String shipType, String eventType, int quantity) {
     String id = h.colonyId();
-    if (!energyGuard(h, Map.of(shipType, 1.0), "Werftauftrag " + shipType)) return;
-    JsonNode preview = bot.world.previewChain(id, shipType, 1);
+    double qty = Math.max(1, quantity);
+    if (!energyGuard(h, Map.of(shipType, qty), "Werftauftrag " + shipType)) return;
+    JsonNode preview = bot.world.previewChain(id, shipType, qty);
     double eta = Json.dbl(preview, "totalHours");
     try {
-      bot.call("queueShip", Map.of("colonyId", id, "shipProductTypeId", shipType, "quantity", 1.0,
+      bot.call("queueShip", Map.of("colonyId", id, "shipProductTypeId", shipType, "quantity", qty,
           "autoProduceMissing", true, "requeueOnComplete", false));
-      bot.monitor.event(eventType, h.name() + ": Werftauftrag " + shipType + " (Kettenvorschau " + fmtHours(eta) + ")",
-          "colonyId", id, "ship", shipType, "etaGameHours", eta);
+      bot.monitor.event(eventType, h.name() + ": Werftauftrag " + (long) qty + "x " + shipType + " (Kettenvorschau " + fmtHours(eta) + ")",
+          "colonyId", id, "ship", shipType, "qty", qty, "etaGameHours", eta);
       bot.world.invalidate("shipyardQueue");
     } catch (CommandException e) {
       bot.monitor.log(h.name() + ": Werftauftrag " + shipType + " abgelehnt: " + e.getMessage());
@@ -586,6 +645,27 @@ final class Economy {
   }
 
   // --- Ausbildungszentrum -------------------------------------------------------------
+
+  /**
+   * Eine gebaute Verteidigungsanlage wirkt erst, wenn sie AKTIVIERT ist
+   * (BuildingCommands.activateDefense, 12 Spielstunden Vorlauf). Die Bots
+   * bauten sie und ließen sie dann kalt stehen – die Anlage kostete Unterhalt,
+   * ohne je eine Landung abzuwehren.
+   */
+  private void activateDefenseIfBuilt(Health h) {
+    for (JsonNode b : bot.world.buildings(h.colonyId())) {
+      if (!Json.eq(text(b, "typeId"), Catalog.DEFENSE) || Json.integer(b, "level") < 1) continue;
+      String state = text(b, "activationState");
+      if ("Active".equals(state) || "Activating".equals(state)) continue;
+      try {
+        bot.call("activateDefense", Map.of("colonyId", h.colonyId(), "buildingId", text(b, "id")));
+        bot.monitor.event("DEFENSE_ACTIVATED", h.name() + ": Verteidigungsanlage wird aktiviert", "colonyId", h.colonyId());
+        bot.world.invalidate("buildings");
+      } catch (CommandException e) {
+        bot.monitor.log(h.name() + ": Aktivierung der Verteidigungsanlage abgelehnt: " + e.getMessage());
+      }
+    }
+  }
 
   private void manageAcademy(Health h, Strategy.Plan plan) {
     if (h.academy() < 1 || !h.home()) return;
@@ -595,10 +675,15 @@ final class Economy {
     JsonNode garrison = bot.world.garrison(id);
     int soldiers = World.unitCount(garrison, Catalog.SOLDIER);
     int drones = World.unitCount(garrison, plan.wantDroneType);
+    // Loskrößen in der Größenordnung des BEDARFS: Die Belagerung einer Kolonie
+    // mit 20 000 Einwohnern braucht 1000 Soldaten (Loyalitätsverlust je Tick =
+    // Soldaten/Bevölkerung). In Zehnerlosen, von denen immer nur EINES in der
+    // Warteschlange steht, sind das hundert aufeinanderfolgende Aufträge – die
+    // Landungsoperation kam so nie zustande.
     if (soldiers < plan.wantSoldiers) {
-      recruit(h, Catalog.SOLDIER, Math.min(10, plan.wantSoldiers - soldiers));
+      recruit(h, Catalog.SOLDIER, Math.min(RECRUIT_MAX_BATCH, plan.wantSoldiers - soldiers));
     } else if (drones < plan.wantDrones) {
-      recruit(h, plan.wantDroneType, Math.min(20, plan.wantDrones - drones));
+      recruit(h, plan.wantDroneType, Math.min(RECRUIT_MAX_BATCH, plan.wantDrones - drones));
     }
   }
 

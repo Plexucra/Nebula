@@ -4,7 +4,7 @@ import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, CarrierJumpPreview, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
 
@@ -508,4 +508,10 @@ export interface GameApi {
   // --- Universums-Statistik ------------------------------------------
   /** Zeitreihe aggregierter Stabilitätskennzahlen über die gesamte Galaxie. */
   universeStats(): Signal<UniverseStatSnapshot[]>;
+  /**
+   * Der entschiedene Krieg – `null`, solange mehr als eine Partei Kolonien
+   * besitzt. Steht der Wert, hat eine Partei alle gegnerischen Kolonien
+   * genommen (Siegbedingung, `VictoryCommands`).
+   */
+  victory(): Signal<GameVictory | null>;
 }

@@ -1,4 +1,18 @@
 <div class="shell">
+  @if (victory(); as v) {
+    <!-- Siegbedingung (VictoryCommands): eine Partei hält als Einzige noch Kolonien. -->
+    <div class="victory-banner" [class.mine]="victoryIsMine()">
+      <span class="victory-mark">★</span>
+      <span>
+        <strong>{{ v.camp ? 'Lager ' + v.partyName : v.partyName }}</strong>
+        hat den Krieg entschieden – alle gegnerischen Kolonien sind gefallen.
+        <span class="victory-detail">
+          {{ victoryIsMine() ? 'Sie gehören zur siegreichen Partei.' : 'Ihre Partei ist unterlegen.' }}
+          Siegerpartei: {{ v.members.join(', ') }}.
+        </span>
+      </span>
+    </div>
+  }
   <header class="topbar">
     <button class="ghost small nav-toggle" type="button" (click)="toggleMobileNav()"
             [attr.aria-expanded]="mobileNavOpen()" aria-label="Navigation ein-/ausblenden">☰</button>

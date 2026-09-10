@@ -293,6 +293,8 @@ public class GameSocket {
 
       // --- Universums-Statistik --------------------------------------------
       case "universeStats" -> EconomyTick.universeStats(state);
+      // Der entschiedene Krieg (VictoryCommands) – null, solange mehrere Parteien Kolonien haben.
+      case "victory" -> state.victory;
 
       // --- Benachrichtigungen ------------------------------------------------
       case "notifications" -> NotificationCommands.notifications(state, requirePlayerId());
@@ -726,6 +728,8 @@ public class GameSocket {
       state.populationHistory.clear();
       state.consumptionBudget.clear();
       state.lastProducedAt.clear();
+      state.victory = null;
+      state.partiesEverWithColonies.clear();
     }
     connections.logout(connection);
     connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.of()));

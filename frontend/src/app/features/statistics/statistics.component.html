@@ -3,6 +3,27 @@
   <h1>Statistiken</h1>
 </div>
 
+@if (victory(); as v) {
+  <!-- Der entschiedene Krieg (VictoryCommands). Die Benachrichtigung zum Sieg
+       verweist hierher – deshalb steht der Ausgang hier ausführlich, nicht nur
+       als Band in der Kopfzeile. -->
+  <div class="panel corner-frame">
+    <div class="panel-header"><h2>Der Krieg ist entschieden</h2></div>
+    <div class="panel-body">
+      <p>
+        <strong>{{ v.camp ? 'Lager ' + v.partyName : v.partyName }}</strong> besitzt als einzige Partei
+        noch Kolonien ({{ v.colonies }}) – alle gegnerischen Kolonien sind gefallen.
+      </p>
+      <p class="meta-line">Siegerpartei: {{ v.members.join(', ') }}</p>
+      <p class="meta-line">Ohne Kolonie: {{ v.defeated.join(', ') }}</p>
+      <p class="meta-line">
+        Die Galaxie läuft weiter: Wer keine Kolonie mehr hat, behält seine Flotten und kann mit
+        einem Kolonisationsschiff neu anfangen.
+      </p>
+    </div>
+  </div>
+}
+
 @if (!latest()) {
   <div class="panel corner-frame">
     <div class="panel-body empty-state">
@@ -47,7 +68,11 @@
 
   <h2 class="section-title">Durchschnittliche Planetenwerte</h2>
   <div class="tile-grid">
-    <app-sparkline-tile title="Infrastruktur" [value]="((latest()?.avgInfrastructurePct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="infraSeries()" />
+    <!-- Derselbe Wert heißt in der Kolonieansicht "Wohnraum" (Wohnkapazität je Einwohner,
+         `Formulas.infrastructurePct`). "Infrastruktur" hieß hier dasselbe wie das GEBÄUDE
+         Infrastruktur – zwei verschiedene Dinge unter einem Namen, und der Wert über 100 %
+         ergab so keinen Sinn. -->
+    <app-sparkline-tile title="Wohnraum" [value]="((latest()?.avgInfrastructurePct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="infraSeries()" />
     <app-sparkline-tile title="Sicherheit" [value]="((latest()?.avgSecurityPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="securitySeries()" />
     <app-sparkline-tile title="Lebensstandard" [value]="((latest()?.avgStandardOfLivingPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="standardSeries()" />
     <app-sparkline-tile title="Loyalität" [value]="((latest()?.avgLoyaltyPct ?? 0) | number:'1.0-1') ?? ''" unit="%" [series]="loyaltySeries()" />

@@ -113,6 +113,19 @@ public class GameState {
   /** Deckung (0..1,5) je Grundkonsumgut und Kolonie – Java-Gegenstück zu {@code _consumptionCoverage}. colonyId -> (productTypeId -> coverage). */
   public final Map<String, Map<String, Double>> consumptionCoverage = new ConcurrentHashMap<>();
 
+  /**
+   * Der entschiedene Krieg (siehe {@code VictoryCommands}) – {@code null},
+   * solange mehr als eine Partei Kolonien besitzt.
+   */
+  public volatile de.nebula.model.GameVictory victory;
+  /**
+   * Parteien, die im Lauf dieser Galaxie jemals Kolonien besaßen. Nur mit
+   * diesem Gedächtnis lässt sich "als Einzige übrig" von "als Erste da" unter-
+   * scheiden – siehe {@code VictoryCommands.evaluate}.
+   */
+  public final java.util.Set<String> partiesEverWithColonies =
+      java.util.concurrent.ConcurrentHashMap.newKeySet();
+
   /** Tick-Intervall-Zeitstempel, siehe TS {@code lastWealthRedistributionAt}/{@code lastStatsSnapshotAt}. */
   public volatile long lastWealthRedistributionAt = 0;
   public volatile long lastStatsSnapshotAt = 0;

@@ -98,6 +98,10 @@
 /* Linksbündig wie jede andere Seite – dieser Seitenkopf war als einziger zentriert. */
 .page-head-row {
   display: flex;
+  /* MUSS gesetzt sein: `.page-head` (styles.scss) stellt die Achse auf `column`.
+     Ohne dieses Zurücksetzen wirkt `align-items: flex-end` in der Spaltenachse –
+     Überschrift und Knopf standen dann als einzige Seite rechtsbündig. */
+  flex-direction: row;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;

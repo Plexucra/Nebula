@@ -39,6 +39,8 @@ public final class Notifications {
   public static final int CODE_TREATY_ENDED = 115;
   /** Neue Kolonie gegründet. */
   public static final int CODE_COLONY_FOUNDED = 120;
+  /** Der Krieg ist entschieden – eine Partei besitzt als Einzige noch Kolonien ({@code VictoryCommands}). */
+  public static final int CODE_VICTORY = 121;
 
   // --- Warnung (4xx) ------------------------------------------------------
   public static final int CODE_WAR_DECLARED = 401;
@@ -80,6 +82,7 @@ public final class Notifications {
       case CODE_FLEET_ARRIVED -> "Flotte öffnen";
       case CODE_SELL_ORDER_SOLD_OUT -> "Handel öffnen";
       case CODE_TREASURY_LOW, CODE_TREASURY_EMPTY -> "Konto öffnen";
+      case CODE_VICTORY -> "Statistiken öffnen";
       case CODE_HOMEWORLD_LOST -> "Flotten öffnen";
       default -> "Kolonie öffnen";
     };

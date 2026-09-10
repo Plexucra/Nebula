@@ -126,7 +126,13 @@ export class PopulationChartComponent {
     if (!t || !t.limitingFactor) return null;
     return t.limitingFactor === 'Housing'
       ? 'Der Wohnraum ist nahezu ausgeschöpft – ein größerer Wohnkomplex schafft wieder Platz zum Wachsen.'
-      : 'Die Versorgung hält nicht mit – solange Nahrung und Medizin knapp bleiben, wächst hier niemand mehr. Mehr davon produzieren oder am Markt zukaufen.';
+      // Der PREIS gehört ausdrücklich dazu: Die Bevölkerung kauft nur, was ihr
+      // Budget hergibt. Die Start-Verkaufsorder steht bei 450 Cr – das ist der
+      // Gleichgewichtspreis einer kleinen Kolonie, nicht der von 2000
+      // Startbewohnern; ohne Preissenkung deckt die Order deren Bedarf nie.
+      : 'Die Versorgung hält nicht mit – solange Nahrung und Medizin knapp bleiben, wächst hier niemand mehr. '
+        + 'Mehr davon produzieren, am Markt zukaufen – oder den Verkaufspreis der eigenen Order senken, '
+        + 'damit die Bevölkerung sich die volle Menge leisten kann (Tab „Handel").';
   });
 
   protected readonly explanation = computed(() => {

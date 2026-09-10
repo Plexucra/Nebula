@@ -16,3 +16,19 @@ export interface UniverseStatSnapshot {
   avgLoyaltyPct: number;
   openSellOrderCount: number;
 }
+
+/**
+ * Der entschiedene Krieg (`VictoryCommands` im Backend): Eine Partei besitzt
+ * als EINZIGE noch Kolonien – alle gegnerischen Kolonien sind gefallen.
+ * `null`, solange das Spiel offen ist.
+ */
+export interface GameVictory {
+  partyId: string;
+  partyName: string;
+  /** true = Lager (mehrere Kommandanten), false = einzelner Kommandant. */
+  camp: boolean;
+  members: string[];
+  defeated: string[];
+  declaredAt: number;
+  colonies: number;
+}

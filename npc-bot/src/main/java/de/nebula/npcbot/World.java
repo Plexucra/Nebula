@@ -199,6 +199,79 @@ final class World {
     return sum;
   }
 
+  private Double troopCapacityPerTransport;
+
+  /**
+   * Wie viele Soldaten EIN Mannschaftstransporter fasst – aus dem Katalog des
+   * Servers ({@code shipTypes}), nicht aus einer Bot-Konstante. Der frühere
+   * Richtwert im {@code Catalog} stand auf 1000, während das Schiff seit der
+   * Massenskala (Umsetzungskonzept/27) 27 Soldaten trägt: die Landungsoperation
+   * forderte deshalb dauerhaft mehr Soldaten an, als an Bord passten, und blieb
+   * endlos in der Verladung stehen.
+   */
+  double troopCapacityPerTransport() {
+    if (troopCapacityPerTransport == null) {
+      double found = 0;
+      for (JsonNode d : list(c.call("shipTypes", Map.of()))) {
+        if (Json.eq(text(d, "productTypeId"), Catalog.TROOP_TRANSPORT)) found = Json.dbl(d, "troopCapacity");
+      }
+      troopCapacityPerTransport = found > 0 ? found : 1;
+    }
+    return troopCapacityPerTransport;
+  }
+
+  private Map<String, double[]> productSizes;
+
+  /**
+   * Masse (kg) und Volumen (m³) EINES Stücks aus dem Produktkatalog des Servers.
+   * Der Bot braucht beides, um vor dem Beladen auszurechnen, wie viel überhaupt
+   * in seinen Frachter passt: Eine schwere Drohne wiegt 583 t, ein Frachter
+   * trägt 28,4 kt – also 48 Stück. Ohne die Rechnung lief die Landungsoperation
+   * in „Massekapazität der Flotte reicht nicht aus" und blieb hängen.
+   */
+  double[] productSize(String productTypeId) {
+    if (productSizes == null) {
+      Map<String, double[]> all = new HashMap<>();
+      for (JsonNode p : list(c.call("productTypes", Map.of()))) {
+        all.put(text(p, "id"), new double[]{Json.dbl(p, "massKg"), Json.dbl(p, "volumeM3")});
+      }
+      productSizes = all;
+    }
+    return productSizes.getOrDefault(productTypeId, new double[]{0, 0});
+  }
+
+  private Map<String, double[]> shipCargo;
+
+  /** Frachtkapazität (kg, m³) EINES Schiffs dieses Typs aus dem Schiffskatalog des Servers. */
+  double[] shipCargoCapacity(String shipProductTypeId) {
+    if (shipCargo == null) {
+      Map<String, double[]> all = new HashMap<>();
+      for (JsonNode d : list(c.call("shipTypes", Map.of()))) {
+        all.put(text(d, "productTypeId"), new double[]{Json.dbl(d, "cargoMassKg"), Json.dbl(d, "cargoVolumeM3")});
+      }
+      shipCargo = all;
+    }
+    return shipCargo.getOrDefault(shipProductTypeId, new double[]{0, 0});
+  }
+
+  /** Hat dieser Kommandant das System schon erforscht (Rohstoffkonzentrationen aufgedeckt)? */
+  boolean hasExploredSystem(String systemId) {
+    return q("hasExploredSystem", Map.of("systemId", systemId)).asBoolean(false);
+  }
+
+  /**
+   * Frachtkapazität einer Flotte samt Auslastung (fleetCargoCapacity, ohne
+   * Produktbezug). Wie {@link #troopCapacity} gegen eine verschwundene Flotte
+   * abgesichert – die Abfrage läuft im Takt vor den abgesicherten Modulen.
+   */
+  JsonNode cargoCapacity(String fleetId) {
+    try {
+      return q("fleetCargoCapacity", Map.of("fleetId", fleetId));
+    } catch (de.nebula.npcbot.ws.CommandException e) {
+      return com.fasterxml.jackson.databind.node.NullNode.getInstance();
+    }
+  }
+
   private Map<String, Map<String, Double>> recipes;
 
   /** Rezept eines Produkts aus dem statischen Katalog ({@code productTypes}) – einmal geladen, gilt für den ganzen Lauf. */
@@ -241,6 +314,16 @@ final class World {
 
   double wallet() {
     return Json.dbl(q("wallet"), "balance");
+  }
+
+  /**
+   * Guthaben der KOLONIALBEVÖLKERUNG. Es ist die Kaufkraft, aus der die
+   * Konsumeinnahmen des Kommandanten kommen – liegt hier viel Geld, während die
+   * Versorgung zu 100 % gedeckt ist, verkauft der Bot zu billig (siehe
+   * {@code Economy.adjustPrices}).
+   */
+  double populationWallet(String colonyId) {
+    return Json.dbl(q("populationWallet", Map.of("colonyId", colonyId)), "balance");
   }
 
   // --- Flotten ------------------------------------------------------------------
@@ -286,8 +369,20 @@ final class World {
     return Json.dbl(q("fleetCargoCapacity", Map.of("fleetId", fleetId, "productTypeId", productTypeId)), "maxLoadableQuantity");
   }
 
+  /**
+   * Truppenkapazität einer Flotte. Eine verschwundene Flotte (gefallen,
+   * zusammengelegt, aufgelöst) beantwortet der Server mit „Unbekannte Flotte" –
+   * und weil diese Abfrage im Takt VOR den abgesicherten Modulen steht, riss
+   * die Ausnahme den ganzen Bot-Takt mit: Im Testlauf stand ein Kommandant
+   * dadurch über zwanzig Minuten still ("Takt: Befehl abgelehnt: Unbekannte
+   * Flotte", jede Sekunde). Hier wird sie deshalb zu einem leeren Ergebnis.
+   */
   JsonNode troopCapacity(String fleetId) {
-    return q("fleetTroopCapacity", Map.of("fleetId", fleetId));
+    try {
+      return q("fleetTroopCapacity", Map.of("fleetId", fleetId));
+    } catch (de.nebula.npcbot.ws.CommandException e) {
+      return com.fasterxml.jackson.databind.node.NullNode.getInstance();
+    }
   }
 
   // --- Diplomatie / Nachrichten -------------------------------------------------

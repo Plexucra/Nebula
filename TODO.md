@@ -6,11 +6,6 @@
   Ausführung ohne Rückkehr, Konsumgüter zu 1,4 % des lokalen Preises. Offen:
   Driftrate zum Basispreis je Spieltag – und ob die Gilde überhaupt eine
   Geldquelle sein soll (Konzept 22 sagt: kleine Lose).
-- [ ] **Fehlende Benachrichtigungen** (Testergebnis F19): „Bauauftrag fertig",
-  „Schiff fertig", „Flotte angekommen", „Order ausverkauft", „Blackout",
-  „Bevölkerung schrumpft". Die Codes stehen teils schon in `Notifications`,
-  die Auslöser fehlen. Das sind genau die Ereignisse, wegen derer man in ein
-  Aufbauspiel zurückkehrt.
 - [ ] **Kennwortschutz und Reset-Knopf** (F14/F15): die Anmeldung ist
   kennwortlos, der Reset-Knopf für jeden sichtbar. Für einen LAN-Abend mit
   mehreren Personen riskant. Eigenes Thema, bewusst nicht Teil von Konzept 34.
@@ -18,12 +13,41 @@
   Backends vernichtet ein laufendes LAN-Spiel. Eigenes Vorhaben mit eigenem
   Konzept; die Sitzung selbst übersteht das Neuladen inzwischen
   (Konzept 34 §L).
+- [ ] **Startpreis der Konsumgüter wächst nicht mit der Startbevölkerung**
+  (Gesamttest 9.9.2026, B1): `WorldSeed.STARTER_SELL_ORDER_PRICE` = 450 Cr ist
+  für rund 200 Einwohner hergeleitet, die Kolonie startet aber mit 2000. Ein
+  frischer Kommandant fällt deshalb sofort auf Lebensstandard 27 % und verliert
+  Bevölkerung, bis er den Preis selbst senkt (mit 60 Cr: Deckung 100 %,
+  Lebensstandard 50 %, Wachstum). Bewusst NICHT geändert – Konzept 34 §D hat
+  die Konsumpreise entschieden („Kaufkraft-Lücke ist Sache des Spielers");
+  wenn der Startpreis mitwachsen soll, gehört er an `START_POPULATION`
+  gekoppelt. Der Hinweistext im Bevölkerungs-Tab nennt den Hebel inzwischen.
 - [ ] **Anzeigefragen aus dem Testergebnis**: F8 (Spezialisierungsschwellen
   stehen nirgends), F9 (politisches Gewicht – woraus berechnet, wofür gut?),
   F11 (mehrere Kommandanten auf einem Planeten sind gewollt, aber in der
   Systemansicht nicht erkennbar), F12 (doppelte Planetennamen).
 
 ## Erledigt
+
+- [x] ~~Gesamttest Oberfläche + Backend + NPCs, Siegbedingung~~ – durchgeführt am
+  9.9.2026, siehe
+  `Konzeption/Testergebnis_2026-09-09_Gesamttest_Oberflaeche_Backend_NPC.md`.
+  Kurz: sechs Fehler behoben (globale Benachrichtigungen fremder Flotten,
+  Sitzungsübernahme eines fremden Kommandanten nach dem Neuladen, rechtsbündiger
+  Nachrichten-Kopf, Tankanzeige, „Infrastruktur"-Kachel = Wohnraum, unbrauchbare
+  Einschiffungsmeldung); **Siegbedingung implementiert** (`VictoryCommands`,
+  Band in der Oberfläche, `VictoryTest`); NPC-Landungsoperation und
+  NPC-Kolonisierung waren tot und laufen jetzt (falsche Transporter-Kapazität,
+  Treibstoff nach Fahrt statt Festwert, Preispolitik, Zielaufklärung über alle
+  Systeme, größere Ausbildungslose, mehr Invasoren je Lager); Bots verbinden
+  sich nachweislich nur mit dem Spielserver im eigenen Netz.
+
+- [x] ~~Fehlende Benachrichtigungen (Testergebnis F19)~~ – beim Gesamttest
+  9.9.2026 nachgeprüft: jeder Code in `Notifications` hat inzwischen einen
+  Auslöser (Bauauftrag, Schiff, Flottenankunft, Order ausverkauft, Blackout und
+  Wiederkehr, Bevölkerung schrumpft, Guthaben leer, Kolonie gegründet,
+  Versorgungslücke, Landung abgefangen). Die Flottenankunft ging dabei bis
+  zuletzt an ALLE Kommandanten – das ist mit demselben Test behoben.
 
 - [x] ~~Dreizehn offene Entscheidungen aus Konzept 31 §J und Testergebnis §7~~ –
   entschieden am 9.9.2026 und umgesetzt, siehe

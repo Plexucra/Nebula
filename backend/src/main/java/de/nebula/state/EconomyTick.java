@@ -475,7 +475,16 @@ public final class EconomyTick {
       if (population == null) continue;
       // Gemeldet wird erst ein DEUTLICHER Rückgang, nicht jedes Zucken um Null:
       // die Rate ist eine geglättete Größe je Spielstunde.
-      boolean shrinking = population.growthRatePerInterval < -0.001 && population.currentCount > 0;
+      //
+      // MIT HYSTERESE: Eine Kolonie, die genau an der Schwelle steht (im Test
+      // Lebensstandard um die 28 %), wechselt sonst im Sekundentakt zwischen
+      // "schrumpft" und "schrumpft nicht" – und weil jede Flanke meldet, lagen
+      // binnen Minuten acht identische Warnungen in der Glocke. Gemeldet wird
+      // deshalb ab -0,01 Einwohner je Spielstunde, entwarnt aber erst bei
+      // echtem Wachstum.
+      boolean wasShrinking = Boolean.TRUE.equals(state.notificationEdgeState.get("shrinking:" + colony.id));
+      boolean shrinking = population.currentCount > 0
+          && (wasShrinking ? population.growthRatePerInterval <= 0 : population.growthRatePerInterval < -0.01);
       if (Notifications.edgeTriggered(state, "shrinking:" + colony.id, shrinking) && shrinking) {
         Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_POPULATION_SHRINKING,
             "Die Bevölkerung von \"" + colony.name + "\" schrumpft. Lebensstandard und Sicherheit prüfen – "
@@ -493,16 +502,18 @@ public final class EconomyTick {
       boolean draining = !empty && perHour < 0 && wallet.balance < Math.abs(perHour) * 24;
 
       if (Notifications.edgeTriggered(state, "treasuryEmpty:" + player.id, empty) && empty) {
-        Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_TREASURY_EMPTY,
+        // An den Kommandanten adressiert – ohne Adresse wäre die Meldung global
+        // und stünde in JEDER fremden Glocke (siehe Notifications.notifyPlayer).
+        Notifications.notifyPlayer(state, ids, NotificationType.Problem, Notifications.CODE_TREASURY_EMPTY,
             "Ihr Guthaben ist aufgebraucht. Gebäude- und Flottenunterhalt laufen weiter – "
                 + "Einnahmen schaffen Verkaufsorders für Konsumgüter, entlasten tut ein Rückbau.",
-            null, "/konto");
+            player.id, "/konto");
       }
       if (Notifications.edgeTriggered(state, "treasuryLow:" + player.id, draining) && draining) {
-        Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_TREASURY_LOW,
+        Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_TREASURY_LOW,
             "Ihre laufenden Kosten übersteigen die Einnahmen (" + Math.round(perHour)
                 + " Cr je Spielstunde). Das Guthaben reicht noch keinen Spieltag.",
-            null, "/konto");
+            player.id, "/konto");
       }
     }
   }

@@ -103,7 +103,12 @@ public final class TroopTransportCommands {
     if (capacity <= 0) throw new CommandException("Diese Flotte hat keinen Mannschaftstransporter – nur er nimmt Soldaten auf.");
     double free = capacity - soldiersAboard(state, fleetId);
     if (quantity > free + 1e-6) {
-      throw new CommandException("Nicht genug Platz: " + (long) free + " von " + (long) capacity + " Plätzen frei.");
+      // Die angeforderte Menge gehört in die Meldung: "27 von 27 Plätzen frei" las sich
+      // wie eine Zustimmung, obwohl der Befehl gerade abgelehnt wurde (der Bot forderte
+      // 1000 Soldaten für EINEN Transporter an und stand deshalb endlos in der Verladung).
+      throw new CommandException("Nicht genug Platz: " + (long) quantity + " Soldaten angefordert, frei sind "
+          + (long) free + " von " + (long) capacity + " Plätzen – für mehr Soldaten gehören weitere "
+          + "Mannschaftstransporter in diese Flotte.");
     }
 
     requireNoGroundBattle(state, fleet.locationColonyId);

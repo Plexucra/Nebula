@@ -69,6 +69,8 @@ public class GameTick {
       EconomyTick.runWealthRedistributionIfDue(state, ids, t);
       EconomyTick.recordStatsSnapshotIfDue(state, t);
       EconomyTick.notifyColonyAndTreasuryStates(state, ids);
+      // Nach allen Eroberungen dieses Ticks: hat eine Partei als Einzige Kolonien?
+      VictoryCommands.evaluate(state, ids);
       RetentionCleanup.purgeExpired(state, t);
     }
   }

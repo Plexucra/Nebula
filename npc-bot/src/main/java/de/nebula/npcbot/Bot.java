@@ -191,7 +191,29 @@ public class Bot {
     safe("Handel", () -> trade.tick(plan, a.specialty, economy.shoppingList()));
     safe("Militär", () -> military.act(plan, s, a, strategy));
     safe("Expansion", () -> expansion.tick(plan, s, a, strategy));
+    safe("Aufklärung", this::exploreWhereWeStand);
     metrics(s, a);
+  }
+
+  /**
+   * Jedes System, in dem eine eigene Flotte gerade steht, einmal erforschen –
+   * das deckt die Rohstoffkonzentrationen auf (`FleetCommands.exploreSystem`)
+   * und kostet nichts als den Befehl. Ohne das blieb die Erkundung als einzige
+   * Mechanik von den Bots unberührt.
+   */
+  private void exploreWhereWeStand() {
+    for (JsonNode f : world.ownFleets()) {
+      if (!World.stationed(f)) continue;
+      String systemId = text(f, "systemId");
+      if (systemId == null || world.hasExploredSystem(systemId)) continue;
+      try {
+        call("exploreSystem", Map.of("fleetId", text(f, "id")));
+        monitor.event("SYSTEM_EXPLORED", "System " + world.systemName(systemId) + " erforscht", "systemId", systemId);
+        world.invalidate("hasExploredSystem");
+      } catch (CommandException e) {
+        // bereits erforscht o. ä. – unkritisch
+      }
+    }
   }
 
   private boolean eliminatedLogged;

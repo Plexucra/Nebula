@@ -52,7 +52,10 @@ final class Catalog {
   static final String FREIGHTER = "p_freighter";
   static final String TROOP_TRANSPORT = "p_trooptransport";
   static final String COLONY_SHIP = "p_colonyship";
-  static final double TROOP_CAPACITY_PER_TRANSPORT = 1000;
+  // Die Truppenkapazität eines Transporters steht NICHT mehr hier: sie hing mit
+  // 1000 Soldaten um den Faktor 37 neben dem Katalog (27) und ließ jede
+  // Landungsoperation in der Verladung hängen. Sie kommt jetzt zur Laufzeit vom
+  // Server – World.troopCapacityPerTransport().
   /**
    * Militärische Gewichtung je Schiffstyp = {@code carrierSlotUsage} (1:10:100),
    * seit Umsetzungskonzept/27_...md zugleich das Verhältnis von Masse und
@@ -89,4 +92,8 @@ final class Catalog {
   static final double SIEGE_SURRENDER_LOYALTY_PCT = 2;
   static final int COMBAT_TICK_HOURS = 8;
   static final double FUEL_TOP_UP_QTY = 5;
+  /** shared/game-constants.json: jumpFuelTankRangeHops – ein voller Tank trägt jede Flotte so viele Sprünge. */
+  static final int FUEL_TANK_RANGE_HOPS = 50;
+  /** Richtwert für eine Fahrt, wenn das Ziel (noch) nicht feststeht. */
+  static final int DEFAULT_TRIP_HOPS = 12;
 }

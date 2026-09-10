@@ -26,7 +26,7 @@ import static de.nebula.npcbot.Json.text;
  * Zielkolonie, entlang der Regeln aus Umsetzungskonzept/28 und /30:</p>
  * <ol>
  *   <li>Bedarf aus der (öffentlich abfragbaren) Garnison des Ziels ableiten:
- *       Drohnenklasse nach Kontermatrix, Drohnenzahl nach Kampfwert × 1,5,
+ *       Drohnenklasse nach Kontermatrix, Drohnenzahl nach Kampfwert × 3,
  *       Soldaten für Kommando (5 Drohnen je Soldat) UND Belagerung (der
  *       Loyalitätsverlust je Tick ist Soldaten/Bevölkerung – zu wenige
  *       Soldaten gewinnen nie, Umsetzungskonzept/30 §B).</li>
@@ -52,11 +52,34 @@ final class Military {
   private static final double RAID_SUPERIORITY = 1.2;
   private static final double ESCORT_SUPERIORITY = 0.8;
   private static final double RETREAT_BELOW_SHARE = 0.4;
-  private static final double DRONE_SUPERIORITY = 1.5;
-  /** Soldaten als Anteil der Zielbevölkerung – 5 % senken die Loyalität um 5 Punkte je Tick, deutlich über der Regeneration. */
-  private static final double SIEGE_SOLDIER_SHARE = 0.05;
+  /**
+   * Sicherheitsfaktor der Drohnenzahl gegenüber dem AKTUELL gesichteten
+   * Gegnerbestand. Deutlich über 1, weil zwischen der Bedarfsrechnung und der
+   * Landung Spieltage liegen: Die Zielkolonie rekrutiert in der Zwischenzeit
+   * weiter und aktiviert im Gefecht nachrückende Reserven (Mechanik/05 §4).
+   * Mit dem alten Wert 1,5 gingen im Testlauf drei von vier Bodengefechten
+   * verloren, obwohl die Rechnung beim Aufbruch aufging.
+   */
+  private static final double DRONE_SUPERIORITY = 3.0;
+  /**
+   * Soldaten als Anteil der Zielbevölkerung. 5 % senken die Loyalität zwar
+   * schneller, als sie sich erholt – aber in der Belagerung kämpfen 10 % der
+   * Bevölkerung als Aufständische zurück (Mechanik/05 §2): Gegen 18 000
+   * Einwohner starben im Testlauf 44 der 1000 Soldaten JE TICK, und weil der
+   * Loyalitätsverlust an der Soldatenzahl hängt, wurde die Belagerung immer
+   * langsamer, während sie schmolz – bei Loyalität 35 war der Verband alle.
+   * Mit 10 % hält die Landung die 18 bis 20 Ticks bis zur Übergabe durch.
+   */
+  private static final double SIEGE_SOLDIER_SHARE = 0.10;
   private static final int MIN_SOLDIERS = 12;
-  private static final int MIN_DRONES = 15;
+  /**
+   * Untergrenze der Drohnenzahl je Landung. Sie muss den ÜBLICHEN Bestand einer
+   * verteidigten Kolonie schlagen, nicht den zufällig gerade gesichteten: Beim
+   * Aufbruch steht die Zielgarnison oft bei null, bis zur Landung vergehen aber
+   * Spieltage, in denen jede Kolonie ihre Standardgarnison (8 Soldaten, 40
+   * Drohnen) aufbaut. Mit 30 Drohnen gingen fünf von sechs Landungen verloren.
+   */
+  private static final int MIN_DRONES = 120;
   private static final int HOME_SOLDIER_RESERVE = 2;
   private static final int HOME_DRONE_RESERVE = 10;
   private static final int SIEGE_STALL_TICKS = 6;
@@ -85,6 +108,8 @@ final class Military {
   private String groundBattleId;
   private int neededSoldiers;
   private int neededDrones;
+  /** Bedarf VOR der Frachtraum-Deckelung – daraus folgt, wie viele Frachter noch fehlen. */
+  private int neededDronesUncapped;
   private String droneType = Catalog.DRONE_MEDIUM;
   private int wave;
   private double lastLoyalty = -1;
@@ -209,7 +234,8 @@ final class Military {
     }
     if (phase == InvasionPhase.BUILDING) {
       sizeForce();
-      plan.wantTransport = true;
+      plan.wantTransports = neededTransports();
+      plan.wantFreighters = neededFreighters();
       plan.wantDroneType = droneType;
       int aboard = landingFleetId == null ? 0 : (int) Json.dbl(bot.world.troopCapacity(landingFleetId), "soldiersAboard");
       JsonNode freighterFleet = bot.trade.freighterFleetId() == null ? null : bot.world.ownFleet(bot.trade.freighterFleetId());
@@ -217,6 +243,52 @@ final class Military {
       plan.wantSoldiers = Math.max(0, neededSoldiers + HOME_SOLDIER_RESERVE - aboard);
       plan.wantDrones = Math.max(0, neededDrones + (droneType.equals(Catalog.DRONE_LIGHT) ? HOME_DRONE_RESERVE : 0) - loaded);
     }
+  }
+
+  /**
+   * Wie viele Drohnen des Typs in den (vom Handel geliehenen) Frachter passen –
+   * gerechnet aus Masse UND Volumen, beides aus dem Produktkatalog des Servers.
+   */
+  private int droneCargoCapacity(String type) {
+    String freighterId = bot.trade.freighterFleetId();
+    if (freighterId == null) return 0;
+    JsonNode capacity = bot.world.cargoCapacity(freighterId);
+    double freeMass = Json.dbl(capacity, "capacityMassKg") - Json.dbl(capacity, "usedMassKg");
+    double freeVolume = Json.dbl(capacity, "capacityVolumeM3") - Json.dbl(capacity, "usedVolumeM3");
+    double[] size = bot.world.productSize(type);
+    if (size[0] <= 0 && size[1] <= 0) return 0;
+    double byMass = size[0] > 0 ? Math.floor(freeMass / size[0]) : Double.MAX_VALUE;
+    double byVolume = size[1] > 0 ? Math.floor(freeVolume / size[1]) : Double.MAX_VALUE;
+    return (int) Math.max(0, Math.min(byMass, byVolume));
+  }
+
+  /**
+   * Zahl der Frachter, die {@link #neededDrones} Drohnen tragen. Der erste ist
+   * der Handelsfrachter; alles darüber muss die Werft bauen. Ohne diese Rechnung
+   * war die Landung auf eine Frachterladung gedeckelt (48 schwere Drohnen) und
+   * verlor gegen jede Kolonie, die selbst eine Invasion vorbereitet – deren
+   * Garnison stand im Testlauf bei 87 aktiven Drohnen.
+   */
+  private int neededFreighters() {
+    double perFreighter = dronesPerFreighter(droneType);
+    if (perFreighter <= 0) return 1;
+    return Math.max(1, (int) Math.ceil(neededDronesUncapped / perFreighter));
+  }
+
+  /** Wie viele Drohnen dieses Typs EIN Frachter trägt (Masse und Volumen, beide aus dem Katalog). */
+  private double dronesPerFreighter(String type) {
+    double[] ship = bot.world.shipCargoCapacity(Catalog.FREIGHTER);
+    double[] drone = bot.world.productSize(type);
+    if (drone[0] <= 0 && drone[1] <= 0) return 0;
+    double byMass = drone[0] > 0 ? Math.floor(ship[0] / drone[0]) : Double.MAX_VALUE;
+    double byVolume = drone[1] > 0 ? Math.floor(ship[1] / drone[1]) : Double.MAX_VALUE;
+    return Math.max(0, Math.min(byMass, byVolume));
+  }
+
+  /** Zahl der Mannschaftstransporter für {@link #neededSoldiers} – 27 Plätze je Schiff (Katalog). */
+  private int neededTransports() {
+    double perTransport = bot.world.troopCapacityPerTransport();
+    return (int) Math.ceil(neededSoldiers / Math.max(1, perTransport));
   }
 
   private void adoptTarget(Strategy.Assignment a) {
@@ -239,6 +311,14 @@ final class Military {
     // Konter wirkt ×2 auf den eigenen Schaden – die Hälfte des nominellen Werts genügt, plus Sicherheitsaufschlag.
     int drones = (int) Math.ceil(enemyValue * DRONE_SUPERIORITY / (myValue * 2));
     neededDrones = Math.max(MIN_DRONES, drones) * (1 + wave);
+    // Mehr, als in den Frachtraum passt, kann nicht mitkommen: Eine schwere
+    // Drohne wiegt 583 t, ein Frachter trägt 28,4 kt – also 48 Stück. Ohne
+    // diese Deckelung forderte der Aufbau Drohnen an, die anschließend beim
+    // Beladen abgelehnt wurden ("Massekapazität der Flotte reicht nicht aus"),
+    // und die Landungsoperation kam nie los.
+    neededDronesUncapped = neededDrones;
+    int fits = droneCargoCapacity(droneType);
+    if (fits > 0) neededDrones = Math.max(1, Math.min(neededDrones, fits));
     int forCommand = (int) Math.ceil(neededDrones / (double) Catalog.DRONES_PER_SOLDIER);
     int forSiege = (int) Math.ceil(population * SIEGE_SOLDIER_SHARE);
     neededSoldiers = Math.max(MIN_SOLDIERS, Math.max(forCommand, forSiege)) * (1 + wave);
@@ -360,7 +440,7 @@ final class Military {
       blockedReason = String.format("Feindflotte zu stark (%.0f vs. %.0f)", mine, theirs);
       return false;
     }
-    bot.trade.topUpFuel(combatFleetId);
+    bot.trade.topUpFuel(combatFleetId, bot.world.hops(bot.homeSystemId, systemId));
     moveFleet(combatFleetId, systemId);
     spaceTargetSystemId = systemId;
     startShipCount = World.shipCount(combatFleet());
@@ -479,24 +559,47 @@ final class Military {
       blockedReason = "Aufbau ruht (" + strategy + ")";
       return;
     }
-    // 1. Transporter als Landungsflotte
+    // 1. Transporter als Landungsflotte – ALLE fertigen Transporter aus dem Lager
+    //    kommen in dieselbe Flotte, bis ihre Truppenkapazität den Bedarf deckt.
     if (landingFleetId == null || bot.world.ownFleet(landingFleetId) == null) {
       landingFleetId = null;
       for (JsonNode f : bot.world.ownFleets()) if (World.hasShip(f, Catalog.TROOP_TRANSPORT)) landingFleetId = text(f, "id");
-      if (landingFleetId == null && bot.world.stock(bot.homeColonyId, Catalog.TROOP_TRANSPORT) >= 1) {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("colonyId", bot.homeColonyId);
-        payload.put("shipProductTypeId", Catalog.TROOP_TRANSPORT);
-        payload.put("quantity", 1.0);
-        payload.put("targetFleetId", null);
+    }
+    double inStock = Math.floor(bot.world.stock(bot.homeColonyId, Catalog.TROOP_TRANSPORT));
+    if (inStock >= 1) {
+      // Neue Schiffe nehmen NUR Flotten auf, die gerade bei dieser Kolonie liegen
+      // (FleetCommands.transferShipsToFleet). Liegt die Landungsflotte woanders,
+      // wird sie zuerst herangeholt; klappt auch das nicht, entsteht eine neue
+      // Flotte, statt den ganzen Takt an einer Ablehnung scheitern zu lassen.
+      dockAtHome(landingFleetId);
+      JsonNode landing = landingFleetId == null ? null : bot.world.ownFleet(landingFleetId);
+      boolean landingAtHome = landing != null && World.stationed(landing)
+          && Json.eq(text(landing, "locationColonyId"), bot.homeColonyId);
+      Map<String, Object> payload = new HashMap<>();
+      payload.put("colonyId", bot.homeColonyId);
+      payload.put("shipProductTypeId", Catalog.TROOP_TRANSPORT);
+      payload.put("quantity", inStock);
+      payload.put("targetFleetId", landingAtHome ? landingFleetId : null);
+      try {
         bot.call("transferShipsToFleet", payload);
-        bot.world.invalidate("fleets", "warehouse");
-        for (JsonNode f : bot.world.ownFleets()) if (World.hasShip(f, Catalog.TROOP_TRANSPORT)) landingFleetId = text(f, "id");
-        bot.monitor.event("TRANSPORT_READY", "Mannschaftstransporter in Dienst gestellt (Flotte " + landingFleetId + ")", "fleetId", landingFleetId);
+        bot.world.invalidate("fleets", "warehouse", "fleetTroopCapacity");
+        if (!landingAtHome) {
+          for (JsonNode f : bot.world.ownFleets()) if (World.hasShip(f, Catalog.TROOP_TRANSPORT)) landingFleetId = text(f, "id");
+        }
+        bot.monitor.event("TRANSPORT_READY", (long) inStock + " Mannschaftstransporter in Dienst gestellt (Flotte " + landingFleetId + ")",
+            "fleetId", landingFleetId, "qty", inStock);
+      } catch (CommandException e) {
+        bot.monitor.log("Transporter einreihen abgelehnt: " + e.getMessage());
       }
     }
     if (landingFleetId == null) {
       blockedReason = "kein Mannschaftstransporter (" + transportEta() + ")";
+      return;
+    }
+    collectFreighters();
+    double landingCapacity = Json.dbl(bot.world.troopCapacity(landingFleetId), "capacitySoldiers");
+    if (landingCapacity < neededSoldiers) {
+      blockedReason = "Transportraum " + (long) landingCapacity + "/" + neededSoldiers + " Soldaten (" + transportEta() + ")";
       return;
     }
     // 2. Truppen – bereits eingeschiffte Soldaten und bereits verladene Drohnen zählen mit
@@ -518,6 +621,47 @@ final class Military {
     blockedReason = "";
     phase = InvasionPhase.LOADING;
     phaseSince = System.currentTimeMillis();
+  }
+
+  /** Fertige Frachter aus dem Lager in die Frachtflotte stellen – sie tragen die Drohnen der Landung. */
+  private void collectFreighters() {
+    String freighterId = bot.trade.freighterFleetId();
+    double inStock = Math.floor(bot.world.stock(bot.homeColonyId, Catalog.FREIGHTER));
+    if (inStock < 1) return;
+    dockAtHome(freighterId);
+    JsonNode freighter = freighterId == null ? null : bot.world.ownFleet(freighterId);
+    boolean atHome = freighter != null && World.stationed(freighter)
+        && Json.eq(text(freighter, "locationColonyId"), bot.homeColonyId);
+    if (!atHome) return;
+    try {
+      bot.call("transferShipsToFleet", Map.of("colonyId", bot.homeColonyId, "shipProductTypeId", Catalog.FREIGHTER,
+          "quantity", inStock, "targetFleetId", freighterId));
+      bot.world.invalidate("fleets", "warehouse", "fleetCargoCapacity");
+      bot.monitor.event("FREIGHTER_READY", (long) inStock + " Frachter in die Frachtflotte gestellt (Drohnentransport)",
+          "fleetId", freighterId, "qty", inStock);
+    } catch (CommandException e) {
+      bot.monitor.log("Frachter einreihen abgelehnt: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Holt eine Flotte an die Heimatkolonie, sofern sie im Heimatsystem steht und
+   * nicht unterwegs ist. Ohne das schlägt jeder Befehl fehl, der die Flotte
+   * "bei dieser Kolonie" verlangt (Schiffe übernehmen, Soldaten einschiffen).
+   */
+  private void dockAtHome(String fleetId) {
+    if (fleetId == null) return;
+    JsonNode fleet = bot.world.ownFleet(fleetId);
+    if (fleet == null || !World.stationed(fleet)) return;
+    if (!Json.eq(text(fleet, "systemId"), bot.homeSystemId)) return;
+    if (Json.eq(text(fleet, "locationColonyId"), bot.homeColonyId)) return;
+    try {
+      bot.call("moveFleetWithinSystem", Map.of("fleetId", fleetId,
+          "target", Map.of("kind", "ColonyOrbit", "colonyId", bot.homeColonyId)));
+      bot.world.invalidate("fleets", "fleetTroopCapacity");
+    } catch (CommandException e) {
+      bot.monitor.log("Andocken der Flotte " + fleetId + " abgelehnt: " + e.getMessage());
+    }
   }
 
   private String transportEta() {
@@ -542,14 +686,36 @@ final class Military {
       abort("Landungs- oder Frachtflotte verschwunden");
       return;
     }
-    if (!World.stationed(landing) || !Json.eq(text(landing, "locationColonyId"), bot.homeColonyId)) {
-      bot.call("moveFleetWithinSystem", Map.of("fleetId", landingFleetId, "target", Map.of("kind", "ColonyOrbit", "colonyId", bot.homeColonyId)));
-      bot.world.invalidate("fleets");
+    dockAtHome(landingFleetId);
+    landing = bot.world.ownFleet(landingFleetId);
+    if (landing == null || !World.stationed(landing) || !Json.eq(text(landing, "locationColonyId"), bot.homeColonyId)) {
+      // Erst andocken, dann einschiffen – ein Einschiffungsbefehl an eine Flotte,
+      // die nicht bei der Kolonie liegt, wird abgelehnt und kostet nur einen Takt.
+      blockedReason = "Landungsflotte legt an der Heimatkolonie an";
+      return;
     }
-    double aboard = Json.dbl(bot.world.troopCapacity(landingFleetId), "soldiersAboard");
+    JsonNode capacityView = bot.world.troopCapacity(landingFleetId);
+    double aboard = Json.dbl(capacityView, "soldiersAboard");
+    double free = Json.dbl(capacityView, "capacitySoldiers") - aboard;
     if (aboard < neededSoldiers) {
-      bot.call("embarkSoldiers", Map.of("fleetId", landingFleetId, "quantity", (double) (neededSoldiers - (int) aboard)));
-      bot.world.invalidate("fleetTroopCapacity", "groundForces");
+      // Nie mehr anfordern, als an Bord passt UND in der Garnison steht – sonst
+      // lehnt der Server jeden Takt ab und die Operation kommt nie in Fahrt.
+      int inGarrison = World.unitCount(bot.world.garrison(bot.homeColonyId), Catalog.SOLDIER);
+      int wanted = (int) Math.min(Math.min(neededSoldiers - aboard, free), inGarrison);
+      if (wanted > 0) {
+        bot.call("embarkSoldiers", Map.of("fleetId", landingFleetId, "quantity", (double) wanted));
+        bot.world.invalidate("fleetTroopCapacity", "groundForces");
+        aboard += wanted;
+      }
+      if (aboard < neededSoldiers) {
+        // Zurück in den Aufbau. WICHTIG: Nur dort schreibt Military.prepare den
+        // Soldatenbedarf in den Plan – bliebe der Bot in der Verladung stehen,
+        // hörte das Ausbildungszentrum auf zu rekrutieren und die Operation
+        // wartete ewig auf Soldaten, die niemand mehr ausbildet.
+        blockedReason = "Soldaten an Bord " + (long) aboard + "/" + neededSoldiers + " (Garnison " + inGarrison + ")";
+        phase = InvasionPhase.BUILDING;
+        return;
+      }
     }
     if (!World.stationed(freighter) || !Json.eq(text(freighter, "locationColonyId"), bot.homeColonyId)) {
       blockedReason = "Frachter noch nicht an der Heimatkolonie";
@@ -557,13 +723,29 @@ final class Military {
     }
     double loaded = World.cargoQty(freighter, droneType);
     if (loaded < neededDrones) {
-      double missing = neededDrones - loaded;
-      bot.call("storeDrones", Map.of("colonyId", bot.homeColonyId, "unitProductTypeId", droneType, "quantity", missing));
-      bot.call("loadCargo", Map.of("fleetId", freighterId, "productTypeId", droneType, "quantity", missing));
-      bot.world.invalidate("fleets", "warehouse", "groundForces");
+      // Nur einlagern und verladen, was die Garnison HAT und was in den Frachter
+      // passt – sonst lehnt der Server jeden Takt ab ("Die Garnison hat nur N
+      // davon"), die Soldaten stehen an Bord und die Operation kommt nie los.
+      int inGarrison = World.unitCount(bot.world.garrison(bot.homeColonyId), droneType);
+      double missing = Math.min(neededDrones - loaded, inGarrison);
+      if (missing >= 1) {
+        bot.call("storeDrones", Map.of("colonyId", bot.homeColonyId, "unitProductTypeId", droneType, "quantity", missing));
+        bot.call("loadCargo", Map.of("fleetId", freighterId, "productTypeId", droneType, "quantity", missing));
+        bot.world.invalidate("fleets", "warehouse", "groundForces", "fleetCargoCapacity");
+        loaded += missing;
+      }
+      if (loaded < neededDrones) {
+        // Zurück in den Aufbau: die Wirtschaft bekommt den Drohnenbedarf über
+        // den Plan erneut vorgelegt (Military.prepare).
+        blockedReason = "Drohnen an Bord " + (long) loaded + "/" + neededDrones + " " + droneType
+            + " (Garnison " + inGarrison + ")";
+        phase = InvasionPhase.BUILDING;
+        return;
+      }
     }
-    bot.trade.topUpFuel(landingFleetId);
-    bot.trade.topUpFuel(freighterId);
+    int hops = bot.world.hops(bot.homeSystemId, targetSystemId);
+    bot.trade.topUpFuel(landingFleetId, hops);
+    bot.trade.topUpFuel(freighterId, hops);
     if (!moveFleet(landingFleetId, targetSystemId)) {
       blockedReason = "Landungsflotte kann nicht ablegen (Treibstoff?) – neuer Versuch im nächsten Takt";
       return;
@@ -571,7 +753,7 @@ final class Military {
     moveFleet(freighterId, targetSystemId);
     boolean escort = false;
     if (space == SpaceState.IDLE && combatFleet() != null && World.stationed(combatFleet())) {
-      bot.trade.topUpFuel(combatFleetId);
+      bot.trade.topUpFuel(combatFleetId, hops);
       moveFleet(combatFleetId, targetSystemId);
       spaceTargetSystemId = targetSystemId;
       startShipCount = World.shipCount(combatFleet());
@@ -596,7 +778,7 @@ final class Military {
     for (String fleetId : List.of(landingFleetId, bot.trade.freighterFleetId())) {
       JsonNode f = bot.world.ownFleet(fleetId);
       if (f != null && World.stationed(f) && Json.eq(text(f, "systemId"), bot.homeSystemId) && !targetSystemId.equals(bot.homeSystemId)) {
-        bot.trade.topUpFuel(fleetId);
+        bot.trade.topUpFuel(fleetId, bot.world.hops(bot.homeSystemId, targetSystemId));
         moveFleet(fleetId, targetSystemId);
       }
     }

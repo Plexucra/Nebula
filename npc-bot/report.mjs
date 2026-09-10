@@ -103,6 +103,10 @@ if (existsSync(obs)) {
   if (snaps.length) {
     const s = snaps.at(-1);
     out.push(`Letzte Momentaufnahme ${rel(s.t)}: ${s.totals.colonies} Kolonien (gegründet ${s.totals.founded}, erobert ${s.totals.conquered}), Bevölkerung ${s.totals.pop}, Blackouts ${s.totals.blackout}, Verträge ${s.totals.treaties / 2}, Kriege ${s.totals.wars / 2}, NPC-Nachrichten in Postfächern ${s.totals.messages}.\n`);
+    // Ausgang des Krieges (VictoryCommands): steht nur, wenn eine Partei als einzige Kolonien hält.
+    out.push(s.victory
+      ? `**Der Krieg ist entschieden:** ${s.victory.camp ? 'Lager ' : ''}${s.victory.partyName} hält als einzige Partei noch Kolonien (${s.victory.members.join(', ')}).\n`
+      : 'Der Krieg ist offen – mehr als eine Partei besitzt noch Kolonien.\n');
   }
   for (const e of events.slice(0, 80)) out.push(`- ${rel(e.t)}: ${e.text}`);
 }

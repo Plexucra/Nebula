@@ -6,12 +6,14 @@ import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, CarrierJumpPreview, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
   PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
-  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet,
+  ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
 
 /** Schlüssel der gemerkten Anmeldung, siehe `rememberSession`. */
 const SESSION_STORAGE_KEY = 'nebula_player_id';
+/** Name des gemerkten Kommandanten – Gegenprobe zur ID, siehe `restoreSession`. */
+const SESSION_NAME_STORAGE_KEY = 'nebula_player_name';
 
 interface ServerMessage {
   type: string;
@@ -171,8 +173,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
 
   async login(playerId: Id): Promise<void> {
-    this.player.set(await this.send<Player>('login', { playerId }));
-    this.rememberSession(playerId);
+    const player = await this.send<Player>('login', { playerId });
+    this.player.set(player);
+    this.rememberSession(player.id, player.name);
   }
 
   async logout(): Promise<void> {
@@ -184,7 +187,7 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   async registerPlayer(commanderName: string, homeworldName: string, role: PlayerRole, campId?: string): Promise<void> {
     const player = await this.send<Player>('registerPlayer', { commanderName, homeworldName, role, campId });
     this.player.set(player);
-    this.rememberSession(player.id);
+    this.rememberSession(player.id, player.name);
   }
 
   async resetGame(): Promise<void> {
@@ -202,10 +205,17 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
    * <p>Das ist bewusst KEINE Authentifizierung – es ersetzt nur die verlorene
    * Sitzung, mehr nicht. Wer sich als jemand anderes anmelden kann, konnte das
    * vorher genauso; Kennwortschutz ist ein eigenes Thema.</p>
+   *
+   * <p>Gemerkt wird ID UND Name. Die IDs sind fortlaufend vergeben
+   * (`p_1`, `p_2`, ...) und beginnen nach jedem Serverneustart wieder von
+   * vorn: Ohne den Namensabgleich landete ein Neuladen deshalb still in
+   * einem FREMDEN Kommandanten – im Test übernahm die Oberfläche nach einem
+   * Neustart der Instanz ungefragt `NPC-Nord-01`.</p>
    */
-  private rememberSession(playerId: Id): void {
+  private rememberSession(playerId: Id, commanderName: string): void {
     try {
       localStorage.setItem(SESSION_STORAGE_KEY, playerId);
+      localStorage.setItem(SESSION_NAME_STORAGE_KEY, commanderName);
     } catch {
       // Privater Modus o. ä. – dann bleibt es beim bisherigen Verhalten.
     }
@@ -214,22 +224,41 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   private forgetSession(): void {
     try {
       localStorage.removeItem(SESSION_STORAGE_KEY);
+      localStorage.removeItem(SESSION_NAME_STORAGE_KEY);
     } catch {
       // siehe rememberSession
     }
   }
 
-  /** Meldet nach einem Neuladen automatisch wieder an, falls der Kommandant noch existiert. */
+  /**
+   * Meldet nach einem Neuladen automatisch wieder an – aber nur, wenn hinter
+   * der gemerkten ID noch DERSELBE Kommandant steht (siehe `rememberSession`).
+   * Passt der Name nicht, wird die Sitzung verworfen und der Startbildschirm
+   * gezeigt, statt einen fremden Spielstand zu übernehmen.
+   */
   private async restoreSession(): Promise<void> {
     let playerId: string | null = null;
+    let commanderName: string | null = null;
     try {
       playerId = localStorage.getItem(SESSION_STORAGE_KEY);
+      commanderName = localStorage.getItem(SESSION_NAME_STORAGE_KEY);
     } catch {
       return;
     }
-    if (!playerId) return;
+    // Ohne gemerkten Namen ist die ID nicht überprüfbar (Eintrag einer älteren
+    // Fassung) – dann lieber neu anmelden als vielleicht fremd.
+    if (!playerId || !commanderName) {
+      if (playerId) this.forgetSession();
+      return;
+    }
     try {
-      this.player.set(await this.send<Player>('login', { playerId }));
+      const player = await this.send<Player>('login', { playerId });
+      if (player.name !== commanderName) {
+        await this.send<void>('logout', {}).catch(() => undefined);
+        this.forgetSession();
+        return;
+      }
+      this.player.set(player);
     } catch {
       // Kommandant gelöscht (z. B. Inaktivität oder Reset) – Eintrag verwerfen.
       this.forgetSession();
@@ -753,5 +782,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
 
   universeStats(): Signal<UniverseStatSnapshot[]> {
     return this.poll('universeStats', () => ({}), []);
+  }
+
+  victory(): Signal<GameVictory | null> {
+    return this.poll('victory', () => ({}), null);
   }
 }

@@ -91,7 +91,20 @@ enum Strategy {
     final List<Integer> buildCaps = new ArrayList<>();
     boolean exportAllowed = true;
     boolean allowInfrastructureGrowth = true;
-    boolean wantTransport;
+    /**
+     * Wie viele Mannschaftstransporter die Landungsoperation braucht (0 = keiner).
+     * Vorher ein {@code boolean}: die Werft baute genau EINEN Transporter, während
+     * die Belagerung eines 20 000-Einwohner-Ziels 1000 Soldaten verlangt – bei 27
+     * Plätzen je Schiff sind das 38 Transporter.
+     */
+    int wantTransports;
+    /**
+     * Wie viele Frachter die Landungsoperation braucht, um ihre Drohnen zu
+     * transportieren (0 = keine zusätzlichen). Ein Frachter trägt 28,4 kt, eine
+     * schwere Drohne wiegt 583 t – also 48 Stück. Gegen eine verteidigte Kolonie
+     * reicht eine Frachterladung nicht.
+     */
+    int wantFreighters;
     boolean wantColonyShip;
     boolean wantWarships;
     int wantSoldiers;
@@ -173,7 +186,8 @@ enum Strategy {
         // Jedes neue Gebäude kostet eine Infrastrukturstufe (Bebauungsplätze) – Werft und
         // Ausbildungszentrum zuerst auf Stufe 1, erst dann die teureren Ausbauten.
         p.build(Catalog.SHIPYARD, 1).build(Catalog.ACADEMY, 1).build(Catalog.INDUSTRY, 8).build(Catalog.HABITAT, 3).build(Catalog.SHIPYARD, 3).build(Catalog.ACADEMY, 3).build(Catalog.INDUSTRY, 12).build(Catalog.HABITAT, 4);
-        p.wantTransport = true;
+        // Mindestens einer; die echte Zahl setzt Military.prepare aus dem Soldatenbedarf.
+        p.wantTransports = 1;
         p.wantWarships = s.shipyardLevel >= 2;
         // Soldaten-/Drohnenbedarf setzt Military anhand des konkreten Ziels.
         p.hubImports.add(Catalog.ELERIUM);

@@ -350,6 +350,20 @@ final class Coordination {
           bot.monitor.event("TARGET_REASSIGNED", text(inv, "name") + ": Ziel " + previous + " -> " + keep.name, "member", text(inv, "name"));
         }
       }
+      if (keep == null && !enemies.isEmpty()) {
+        // Weniger gegnerische Kolonien als Invasoren: die letzten Ziele werden
+        // GEMEINSAM angegriffen, statt fünf Invasoren untätig stehen zu lassen.
+        // Genau daran hing im Testlauf das Kriegsende – bei 19:1 Kolonien saß
+        // nur noch ein einziger Angreifer an der letzten feindlichen Welt.
+        double bestScore = Double.MAX_VALUE;
+        for (EnemyColony e : enemies) {
+          double score = e.score(bot.world.hops(home, e.systemId));
+          if (score < bestScore) {
+            bestScore = score;
+            keep = e;
+          }
+        }
+      }
       if (keep != null) {
         taken.add(keep.colonyId);
         targetColonyOf.put(id, keep.colonyId);
@@ -472,12 +486,20 @@ final class Coordination {
     return rank % 2 == 0 ? Catalog.FOOD : Catalog.MEDICINE;
   }
 
+  /**
+   * Rollenverteilung im Lager. Das Lagerziel ist der SIEG, und der hängt an
+   * eroberten Kolonien (siehe {@code VictoryCommands} im Backend): Die Mehrheit
+   * greift an, dazu Eskorten, ein Siedler und ein Verteidiger. Bei zehn
+   * Mitgliedern ergibt das 6 Invasoren, 2 Raider, 1 Siedler, 1 Verteidiger –
+   * vorher war es je ein Viertel, und mit zwei bis drei Invasoren je Lager kam
+   * kein Krieg je zum Abschluss. Wer angegriffen wird, wird ohnehin
+   * vorübergehend Verteidiger ({@link #effectiveRole}).
+   */
   static Strategy.MilitaryRole defaultRole(int rank) {
-    return switch (rank % 4) {
-      case 0 -> Strategy.MilitaryRole.INVADER;
-      case 1 -> Strategy.MilitaryRole.RAIDER;
-      case 2 -> Strategy.MilitaryRole.SETTLER;
-      default -> Strategy.MilitaryRole.DEFENDER;
+    return switch (rank % 5) {
+      case 0, 1, 2 -> Strategy.MilitaryRole.INVADER;
+      case 3 -> Strategy.MilitaryRole.RAIDER;
+      default -> rank < 5 ? Strategy.MilitaryRole.SETTLER : Strategy.MilitaryRole.DEFENDER;
     };
   }
 
@@ -498,12 +520,16 @@ final class Coordination {
       if (owner == null || !bot.isEnemyCampName(text(owner, "name")) || !World.hasWarships(f)) continue;
       enemyFleetBySystem.merge(text(f, "systemId"), World.strength(f), Double::sum);
     }
+    // Durchsucht die Heimatsysteme ALLER Kommandanten, nicht nur die der Gegner:
+    // gegründete Kolonien liegen im Heimatsystem ihres Gründers, und eroberte
+    // Kolonien liegen im Heimatsystem des VERLIERERS – also im eigenen Lager.
+    // Wer nur die gegnerischen Heimatsysteme absucht, verliert genau die
+    // Kolonien aus den Augen, die zum Abschluss des Krieges noch fehlen.
     Set<String> systems = new HashSet<>();
     List<EnemyColony> out = new ArrayList<>();
     for (JsonNode p : bot.world.players()) {
-      if (!bot.isEnemyCampName(text(p, "name"))) continue;
       String sys = text(p, "homeSystemId");
-      if (sys == null || !systems.add(sys)) continue;
+      if (sys == null || sys.isBlank() || !systems.add(sys)) continue;
       for (JsonNode c : bot.world.coloniesInSystem(sys)) {
         JsonNode owner = bot.world.player(text(c, "ownerId"));
         if (owner == null || !bot.isEnemyCampName(text(owner, "name"))) continue;

@@ -832,9 +832,13 @@ public final class FleetCommands {
         fleet.departedAt = null;
         fleet.arrivesAt = null;
         StarSystem arrived = findSystem(state, reachedSystemId);
-        Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_FLEET_ARRIVED,
+        // An den EIGENTÜMER der Flotte, nicht global: eine Meldung ohne Adresse
+        // (colonyId und playerId beide null) ist für JEDEN Kommandanten sichtbar –
+        // ein frisch registrierter Spieler fand so in seiner Glocke hunderte
+        // Ankunftsmeldungen fremder NPC-Flotten.
+        Notifications.notifyPlayer(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_FLEET_ARRIVED,
             "\"" + fleet.name + "\" ist in " + (arrived != null ? arrived.name : reachedSystemId) + " angekommen.",
-            null, "/flotten");
+            fleet.ownerId, "/flotten");
       }
       Set<String> known = state.knownSystemIdsByPlayer.computeIfAbsent(fleet.ownerId, k -> new LinkedHashSet<>());
       known.add(reachedSystemId);

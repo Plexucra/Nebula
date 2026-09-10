@@ -45,6 +45,7 @@ function event(t, text) { const key = text; if (seenEvents.has(key)) return; see
 async function snapshot(ws) {
   const t = Date.now();
   const players = await call(ws, 'players');
+  const victory = await call(ws, 'victory').catch(() => null);
   const systems = await call(ws, 'visibleSystems');
   const bySys = Object.fromEntries(systems.map(s => [s.id, s]));
   const fleets = await call(ws, 'allFleets');
@@ -113,6 +114,8 @@ async function snapshot(ws) {
   }
   await call(ws, 'logout').catch(() => {});
   snap.totals = totals;
+  snap.victory = victory ?? null;
+  if (victory) event(t, `SIEG: ${victory.camp ? 'Lager ' : ''}${victory.partyName} hält als einzige Partei noch Kolonien (${victory.members.join(', ')})`);
   appendFileSync(OUT, JSON.stringify(snap) + '\n');
   console.log(`\n=== ${new Date(t).toLocaleTimeString()} | Spieler ${players.length}, Bots ${bots.length}, Kolonien ${totals.colonies} (gegründet ${totals.founded}, erobert ${totals.conquered}), Bevölkerung ${totals.pop}, Blackouts ${totals.blackout}, Raumgefechte ${totals.battlesActive}, Bodengefechte ${totals.groundBattlesActive}, Gründungen ${totals.colonizations}, Verträge ${totals.treaties / 2}, Kriege ${totals.wars / 2}, NPC-Nachrichten ${totals.messages}`);
   for (const l of lines) console.log(l);

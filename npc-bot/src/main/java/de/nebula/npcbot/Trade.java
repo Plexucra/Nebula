@@ -34,6 +34,8 @@ final class Trade {
   private static final double CREDIT_RESERVE_BASE = 800;
   private static final double IMPORT_BATCH = 20;
   private static final double TRIP_BUDGET_SHARE = 0.15;
+  /** Sicherheitsaufschlag beim Betanken: Hin- und Rückweg plus Umwege. */
+  private static final double FUEL_TRIP_MARGIN = 2.5;
   private final Map<String, Double> referenceAsk = new LinkedHashMap<>();
 
   private final Bot bot;
@@ -157,7 +159,7 @@ final class Trade {
     if (loadQty < MIN_EXPORT_BATCH && !(urgentImport && bot.world.wallet() > creditReserve() + 50)) return;
     try {
       if (loadQty >= 1) bot.call("loadCargo", Map.of("fleetId", text(fleet, "id"), "productTypeId", specialty, "quantity", loadQty));
-      topUpFuel(text(fleet, "id"));
+      topUpFuel(text(fleet, "id"), bot.world.hops(bot.homeSystemId, hubSystemId));
       bot.call("moveFleet", Map.of("fleetId", text(fleet, "id"), "destinationSystemId", hubSystemId));
       state = State.TO_HUB;
       bot.monitor.log("Handelsfahrt: " + (long) loadQty + "x " + specialty + " -> " + bot.world.systemName(hubSystemId)
@@ -192,8 +194,8 @@ final class Trade {
     if (loaded == 0) return false;
     deliveryColonyId = colonyId;
     pendingDeliveries.remove(colonyId);
-    topUpFuel(text(fleet, "id"));
     String targetSystem = text(colony, "systemId");
+    topUpFuel(text(fleet, "id"), bot.world.hops(bot.homeSystemId, targetSystem));
     try {
       if (!targetSystem.equals(bot.homeSystemId)) {
         bot.call("moveFleet", Map.of("fleetId", text(fleet, "id"), "destinationSystemId", targetSystem));
@@ -395,18 +397,28 @@ final class Trade {
    * Drohnenfrachter allein ins Zielsystem flogen).
    */
   void topUpFuel(String fleetId) {
+    topUpFuel(fleetId, Catalog.DEFAULT_TRIP_HOPS);
+  }
+
+  /**
+   * Betankt für eine Fahrt über {@code hops} Sprünge. Ein voller Tank reicht für
+   * {@code jumpFuelTankRangeHops} (50) Sprünge – der Verbrauch je Sprung ist
+   * also {@code Fassungsvermögen / 50}. Vorher wurde immer auf VOLL getankt und
+   * erst unter der Hälfte nachgelegt: Eine Kampfflotte mit zwei Kreuzern fasst
+   * 12 600 Kapseln, der Bot hielt aber nur zehn im Lager vor – die Flotte kam
+   * nie über den ersten Sprung hinaus ("Nicht genug Treibstoff im Tank
+   * (benötigt 1610, im Tank 56)" im Testlauf).
+   */
+  void topUpFuel(String fleetId, int hops) {
     JsonNode fleet = bot.world.ownFleet(fleetId);
     if (fleet == null) return;
-    // Seit Umsetzungskonzept/34_...md hängt der Sprungverbrauch an der MASSE:
-    // ein voller Tank sind immer gleich viele Sprünge, egal wie schwer die
-    // Flotte ist. Nachgetankt wird deshalb gegen das Fassungsvermögen und erst
-    // unter der Hälfte – sonst zieht ein Frachter mit jeder Handelsfahrt
-    // Kapseln, die der schwere Transporter dringender braucht.
     double capacity = bot.world.fleetTankCapacity(fleet);
     double tank = Json.dbl(fleet, "fuelCapsules");
-    if (capacity <= 0 || tank >= capacity * 0.5) return;
+    if (capacity <= 0) return;
+    double needed = Math.min(capacity, Math.ceil(capacity / Catalog.FUEL_TANK_RANGE_HOPS * Math.max(1, hops) * FUEL_TRIP_MARGIN));
+    if (tank >= needed) return;
     double stock = Math.floor(bot.world.stock(bot.homeColonyId, Catalog.JUMP_FUEL));
-    double qty = Math.min(Math.floor(capacity - tank), stock);
+    double qty = Math.min(Math.ceil(needed - tank), stock);
     if (qty < 1) return;
     try {
       bot.call("refuelFleet", Map.of("fleetId", fleetId, "quantity", qty));
