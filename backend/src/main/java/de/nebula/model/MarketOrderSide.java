@@ -1,5 +1,5 @@
 package de.nebula.model;
 
-public enum HubOrderSide {
+public enum MarketOrderSide {
   Buy, Sell
 }

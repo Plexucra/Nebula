@@ -247,11 +247,15 @@ public final class FleetCommands {
     if (productTypeId == null) return result;
     double stock;
     if (fleet.locationColonyId != null) {
-      stock = Warehouse.qty(state, fleet.locationColonyId, productTypeId);
+      Colony here = ColonyCommands.colony(state, fleet.locationColonyId);
+      // Eigene Kolonie: aus dem Lager. Fremde Kolonie: aus dem eigenen Depot am Handelsposten des Planeten.
+      stock = here != null && here.ownerId.equals(fleet.ownerId)
+          ? Warehouse.qty(state, fleet.locationColonyId, productTypeId)
+          : (here != null ? Depot.qty(state, here.systemId, here.planetId, fleet.ownerId, productTypeId) : 0);
     } else {
       StarSystem sys = findSystem(state, fleet.systemId);
       if (sys == null || !sys.isTradeHub) return result; // außerhalb einer Kolonie oder Station gibt es nichts zu laden
-      stock = HubDepot.qty(state, fleet.systemId, fleet.ownerId, productTypeId);
+      stock = Depot.qty(state, fleet.systemId, null, fleet.ownerId, productTypeId);
     }
     ProductType product = ProductCatalog.find(productTypeId);
     double remainingMass = capacity.massKg() - used.massKg();
@@ -299,7 +303,7 @@ public final class FleetCommands {
 
   /**
    * Lädt Fracht aus dem unbegrenzten Stations-Depot des Kommandanten in die
-   * Flotte ({@code HubDepot}, Umsetzungskonzept/22_...md) – das Gegenstück zu
+   * Flotte ({@code Depot}, Umsetzungskonzept/22 und 37) – das Gegenstück zu
    * {@link #loadCargo}, nur an einer Handelsgilde-Station statt einer
    * Kolonie. Dieselbe Massen-/Volumengrenze wie dort gilt unverändert:
    * NUR Flotten mit Frachtern (die einzigen Schiffe mit Cargo-Kapazität &gt; 0)
@@ -311,37 +315,49 @@ public final class FleetCommands {
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     TroopTransportCommands.requireNotASoldier(productTypeId);
-    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
-      throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
-    }
-    StarSystem sys = findSystem(state, fleet.systemId);
-    if (sys == null || !sys.isTradeHub) throw new CommandException("Kein Depot außerhalb einer Handelsgilde-Station.");
-    double stock = HubDepot.qty(state, fleet.systemId, playerId, productTypeId);
+    DepotPort port = depotPort(state, fleet);
+    double stock = Depot.qty(state, port.systemId(), port.planetId(), playerId, productTypeId);
     if (stock < quantity) throw new CommandException("Nicht genug Bestand im Depot.");
     ProductType product = ProductCatalog.find(productTypeId);
     Capacity capacity = fleetCargoCapacity(fleet);
     Capacity used = fleetCargoUsed(fleet);
     if (used.massKg() + product.massKg * quantity > capacity.massKg() + 1e-6) throw new CommandException("Massekapazität der Flotte reicht nicht aus.");
     if (used.volumeM3() + product.volumeM3 * quantity > capacity.volumeM3() + 1e-6) throw new CommandException("Volumenkapazität der Flotte reicht nicht aus.");
-    HubDepot.add(state, fleet.systemId, playerId, productTypeId, -quantity);
+    Depot.add(state, port.systemId(), port.planetId(), playerId, productTypeId, -quantity);
     FleetCargo.add(fleet, productTypeId, quantity);
   }
 
-  /** Entlädt Fracht der Flotte in das Stations-Depot des Kommandanten – Gegenstück zu {@link #unloadCargo}. */
+  /** Entlädt Fracht der Flotte in das eigene Depot am Handelsort – Gegenstück zu {@link #unloadCargo}. */
   public static void unloadCargoToHubDepot(GameState state, String playerId, String fleetId, String productTypeId, double quantity) {
     Fleet fleet = requireOwnFleet(state, playerId, fleetId);
     quantity = Math.floor(quantity); // Fracht bewegt sich nur in ganzen Stücken (Umsetzungskonzept/25_...md)
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     TroopTransportCommands.requireNotASoldier(productTypeId);
-    if (fleet.status != FleetStatus.Stationed || fleet.locationColonyId != null) {
-      throw new CommandException("Die Flotte muss an einer Handelsgilde-Station stationiert sein.");
-    }
-    StarSystem sys = findSystem(state, fleet.systemId);
-    if (sys == null || !sys.isTradeHub) throw new CommandException("Kein Depot außerhalb einer Handelsgilde-Station.");
+    DepotPort port = depotPort(state, fleet);
     double have = FleetCargo.qty(fleet, productTypeId);
     if (have < quantity) throw new CommandException("Nicht genug Fracht an Bord.");
     FleetCargo.add(fleet, productTypeId, -quantity);
-    HubDepot.add(state, fleet.systemId, playerId, productTypeId, quantity);
+    Depot.add(state, port.systemId(), port.planetId(), playerId, productTypeId, quantity);
+  }
+
+  private record DepotPort(String systemId, String planetId) {
+  }
+
+  /**
+   * Wo das Depot der Flotte liegt: an einer Handelsgilde-Station (ohne Landung)
+   * oder am Planetaren Handelsposten der Kolonie, bei der sie gelandet ist –
+   * auch bei einer fremden, der Posten ist neutral (Umsetzungskonzept/37).
+   */
+  private static DepotPort depotPort(GameState state, Fleet fleet) {
+    if (fleet.status != FleetStatus.Stationed) throw new CommandException("Die Flotte ist unterwegs.");
+    if (fleet.locationColonyId != null) {
+      Colony here = ColonyCommands.colony(state, fleet.locationColonyId);
+      if (here == null) throw new CommandException("Unbekannte Kolonie.");
+      return new DepotPort(here.systemId, here.planetId);
+    }
+    StarSystem sys = findSystem(state, fleet.systemId);
+    if (sys == null || !sys.isTradeHub) throw new CommandException("Ein Depot gibt es nur an einer Handelsgilde-Station oder am Handelsposten einer Kolonie, bei der die Flotte gelandet ist.");
+    return new DepotPort(fleet.systemId, null);
   }
 
   /**
@@ -626,12 +642,12 @@ public final class FleetCommands {
   private static double portStock(GameState state, String playerId, FuelPort port) {
     return port.colonyId() != null
         ? Warehouse.qty(state, port.colonyId(), GameConstants.JUMP_FUEL_PRODUCT_ID)
-        : HubDepot.qty(state, port.hubSystemId(), playerId, GameConstants.JUMP_FUEL_PRODUCT_ID);
+        : Depot.qty(state, port.hubSystemId(), null, playerId, GameConstants.JUMP_FUEL_PRODUCT_ID);
   }
 
   private static void portAdd(GameState state, String playerId, FuelPort port, double delta) {
     if (port.colonyId() != null) Warehouse.add(state, port.colonyId(), GameConstants.JUMP_FUEL_PRODUCT_ID, delta);
-    else HubDepot.add(state, port.hubSystemId(), playerId, GameConstants.JUMP_FUEL_PRODUCT_ID, delta);
+    else Depot.add(state, port.hubSystemId(), null, playerId, GameConstants.JUMP_FUEL_PRODUCT_ID, delta);
   }
 
   private static void addToTank(Fleet fleet, double quantity) {

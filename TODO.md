@@ -28,6 +28,13 @@
 
 ## Erledigt
 
+- [x] ~~Planetarer Handelsposten als Orderbuch wie die Station~~ – 10.9.2026,
+  Konzept 37. Ein Ordermodell für Station und Posten (`MarketOrder`,
+  `MarketCommands`), Depot je Kommandant und Ort, Zugang über Kolonie oder
+  gelandete Flotte, Handelsvertrag im Matching, keine Gilde-Orders am Posten,
+  Lager = Depot für Kolonien auf dem Planeten. Kolonie-Handel-Tab zeigt das
+  Orderbuch des Postens; Flotten entladen bei fremden Kolonien ins Depot.
+
 - [x] ~~Tageseinkauf und Bevölkerungsvorrat, Kolonietag statt Sekundentakt~~ –
   10.9.2026, Konzept 36. Die Bevölkerung kauft nur noch am eigenen
   Handelsposten, einmal je Spieltag, mit sieben Tagesbedarfen Vorrat;

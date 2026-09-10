@@ -87,13 +87,12 @@ public class GameState {
   public final List<ShipyardQueueEntry> shipyardQueue = new CopyOnWriteArrayList<>();
   public final List<GroundForceGroup> groundForceGroups = new CopyOnWriteArrayList<>();
   public final List<RecruitmentQueueEntry> recruitmentQueue = new CopyOnWriteArrayList<>();
-  public final List<SellOrder> sellOrders = new CopyOnWriteArrayList<>();
-  /** Orderbuch (Kauf UND Verkauf) der Handelsgilde-Stationen, siehe Umsetzungskonzept/22_...md. */
-  public final List<HubOrder> hubOrders = new CopyOnWriteArrayList<>();
-  /** Unbegrenztes Depot je Kommandant und Handelsgilde-Station, siehe {@code HubDepot}. */
-  public final List<HubDepotEntry> hubDepot = new CopyOnWriteArrayList<>();
-  /** Monotoner Zähler für Preis-Zeit-Priorität im Orderbuch (Millisekunden-Zeitstempel allein reichen bei zwei Orders im selben Tick nicht). */
-  public final java.util.concurrent.atomic.AtomicLong hubOrderSeq = new java.util.concurrent.atomic.AtomicLong();
+  /** EIN Orderbuch (Kauf UND Verkauf) für Handelsgilde-Stationen und Planetare Handelsposten, siehe Umsetzungskonzept/22 und 37. */
+  public final List<MarketOrder> marketOrders = new CopyOnWriteArrayList<>();
+  /** Unbegrenztes Depot je Kommandant und Handelsort, siehe {@code Depot}. */
+  public final List<DepotEntry> depot = new CopyOnWriteArrayList<>();
+  /** Monotoner Zähler für Preis-Zeit-Priorität im Orderbuch (Millisekunden-Zeitstempel allein reichen bei zwei Orders in derselben Millisekunde nicht). */
+  public final java.util.concurrent.atomic.AtomicLong marketOrderSeq = new java.util.concurrent.atomic.AtomicLong();
   public final List<UniverseStatSnapshot> universeStats = new CopyOnWriteArrayList<>();
   public final List<GameNotification> notifications = new CopyOnWriteArrayList<>();
   public final List<DiplomaticRelation> diplomaticRelations = new CopyOnWriteArrayList<>();
@@ -204,9 +203,8 @@ public class GameState {
     shipyardQueue.clear();
     groundForceGroups.clear();
     recruitmentQueue.clear();
-    sellOrders.clear();
-    hubOrders.clear();
-    hubDepot.clear();
+    marketOrders.clear();
+    depot.clear();
     universeStats.clear();
     notifications.clear();
     diplomaticRelations.clear();

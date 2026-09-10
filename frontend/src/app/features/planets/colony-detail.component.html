@@ -666,21 +666,36 @@
 
     @case ('handel') {
       <div class="grid-2">
-        <div class="panel corner-frame">
+        <div class="panel corner-frame span-2">
           <div class="panel-header">
-            <h2>Planetarer Handel</h2>
-            <span class="hint">Nur Orders dieser Kolonie. Neue Orders legen Sie über „Anbieten" im Lager an (Tab <a (click)="setTab('produktion')" class="link-like">Produktion</a>); Preise ändern Sie hier.</span>
+            <h2>Handelsposten {{ planet()?.name ?? '' }}</h2>
+            <span class="hint">Die Einrichtung des Planeten – genutzt von allen Kolonien darauf und von allen hier gelandeten Flotten, wie an einer Handelsgilde-Station: Kauf- und Verkaufs-Orders kreuzen sich sofort, auch teilweise, zum Preis der älteren Order. Zwischen zwei Kommandanten nur mit <a routerLink="/diplomatie">Handelsvertrag</a>; die Bevölkerung der Kolonien kauft ohne Vertrag aus der Verkaufsseite. Eigene Kolonie auf dem Planeten: Verkauf aus dem Lager, Käufe landen im Lager. Sonst läuft alles über das eigene Depot am Posten (Flotte: „Ins Depot entladen"). Neue Verkaufs-Orders aus dem Lager über „Anbieten" (Tab <a (click)="setTab('produktion')" class="link-like">Produktion</a>).</span>
           </div>
           <div class="panel-body wh-list">
-            @for (o of planetOrders(); track o.id) {
+            @if (error(); as e) { <div class="error">{{ e }}</div> }
+            @if (postDepot().length > 0) {
+              <span class="eyebrow">Mein Depot an diesem Posten</span>
+              @for (d of postDepot(); track d.productTypeId) {
+                <div class="order-row">
+                  <span>{{ productName(d.productTypeId) }}</span>
+                  <span class="mono">{{ d.quantity }} Einh.</span>
+                  <span class="hint">im Depot – per Flotte abholbar („Aus Depot laden")</span>
+                  <div class="buy-controls">
+                    <input type="number" min="1" [max]="d.quantity" [ngModel]="depotSellQty[d.productTypeId] ?? d.quantity" (ngModelChange)="depotSellQty[d.productTypeId] = $event" title="Menge" />
+                    <input type="number" min="0" step="0.01" [ngModel]="depotSellPrice[d.productTypeId] ?? 0" (ngModelChange)="depotSellPrice[d.productTypeId] = $event" title="Preis je Einheit" />
+                    <button class="primary small" (click)="sellFromPostDepot(d.productTypeId, d.quantity)" [disabled]="busy() === ('sell-depot:' + d.productTypeId)">Verkaufen</button>
+                  </div>
+                </div>
+              }
+            }
+
+            <span class="eyebrow">Verkaufs-Orders (Briefe)</span>
+            @for (o of postAsks(); track o.id) {
               <div class="order-row">
                 <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
-                <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
-                <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }}</span>
-                @if (o.sellerId === playerId()) {
-                  <!-- Preis direkt änderbar: vorher musste man die Order zurückziehen
-                       und im Produktions-Tab neu anlegen – und ein zu hoher Preis ist
-                       beim ersten Versuch der Normalfall. -->
+                <span class="mono">{{ o.remainingQuantity }} × {{ o.limitPrice | number:'1.0-2' }} Cr</span>
+                <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }}@if (o.sourceColonyId === colonyId) { · aus dem Lager dieser Kolonie }</span>
+                @if (o.ownerId === playerId()) {
                   @if (priceDraft[o.id] !== undefined) {
                     <span class="price-edit">
                       <input type="number" min="0" step="0.5" [(ngModel)]="priceDraft[o.id]" (keyup.enter)="submitPrice(o.id)" />
@@ -688,10 +703,10 @@
                       <button class="ghost small" (click)="cancelPriceEdit(o.id)">Abbrechen</button>
                     </span>
                   } @else {
-                    <button class="ghost small" (click)="startPriceEdit(o.id, o.pricePerUnit)">Preis ändern</button>
+                    <button class="ghost small" (click)="startPriceEdit(o.id, o.limitPrice)">Preis ändern</button>
                   }
                   <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
-                } @else if (canBuyFrom(o.sellerId)) {
+                } @else if (canTradeWith(o.ownerId)) {
                   <div class="buy-controls">
                     <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
                     <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
@@ -700,45 +715,66 @@
                   <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
                 }
               </div>
-            } @empty { <p class="empty-hint">Diese Kolonie hat nichts im Angebot.</p> }
+            } @empty { <p class="empty-hint">Keine Verkaufs-Orders an diesem Posten.</p> }
+
+            <span class="eyebrow">Kauf-Orders (Gebote)</span>
+            @for (o of postBids(); track o.id) {
+              <div class="order-row">
+                <span>{{ productName(o.productTypeId) }}</span>
+                <span class="mono">{{ o.remainingQuantity }} × {{ o.limitPrice | number:'1.0-2' }} Cr</span>
+                <span class="hint">{{ o.ownerId === playerId() ? 'eigenes Gebot' : o.ownerName }}</span>
+                @if (o.ownerId === playerId()) {
+                  @if (priceDraft[o.id] !== undefined) {
+                    <span class="price-edit">
+                      <input type="number" min="0" step="0.5" [(ngModel)]="priceDraft[o.id]" (keyup.enter)="submitPrice(o.id)" />
+                      <button class="small" (click)="submitPrice(o.id)" [disabled]="busy() === ('price:' + o.id)">Preis übernehmen</button>
+                      <button class="ghost small" (click)="cancelPriceEdit(o.id)">Abbrechen</button>
+                    </span>
+                  } @else {
+                    <button class="ghost small" (click)="startPriceEdit(o.id, o.limitPrice)">Preis ändern</button>
+                  }
+                  <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
+                } @else if (isOwnColony() && canTradeWith(o.ownerId)) {
+                  <div class="buy-controls">
+                    <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="sellQtyFor(o)" (ngModelChange)="sellDraftQty[o.id] = $event" title="Menge aus dem Lager" />
+                    <button class="primary small" (click)="sellIntoBid(o)" [disabled]="busy() === ('sell:' + o.id) || sellQtyFor(o) <= 0">Verkaufen</button>
+                  </div>
+                } @else if (!canTradeWith(o.ownerId)) {
+                  <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
+                }
+              </div>
+            } @empty { <p class="empty-hint">Keine Kauf-Orders an diesem Posten.</p> }
+
+            <span class="eyebrow">Kauf-Order aufgeben</span>
+            <div class="form-row">
+              <select [(ngModel)]="newBuyProductId">
+                <option value="">Ware wählen…</option>
+                @for (p of productTypes; track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+              </select>
+              <input type="number" min="1" [(ngModel)]="newBuyQty" title="Menge" />
+              <input type="number" min="0" step="0.01" [(ngModel)]="newBuyPrice" title="Preis je Einheit" />
+              <button class="primary small" (click)="submitBuyOrder()" [disabled]="busy() === 'buy-order' || !newBuyProductId">Order aufgeben</button>
+            </div>
+            <p class="hint">Menge × Preis wird sofort als Escrow aus dem Guthaben gebucht und beim Zurückziehen erstattet. Gelieferte Ware landet {{ isOwnColony() ? 'im Lager dieser Kolonie' : 'im eigenen Depot am Posten' }}.</p>
           </div>
         </div>
 
-        <div class="panel corner-frame">
+        <div class="panel corner-frame span-2">
           <div class="panel-header">
-            <h2>Handel mit anderen Kolonien im System</h2>
-            <span class="hint">Orders anderer Kolonien in diesem Sternsystem, Lieferung direkt in diese Kolonie. Kauf nur mit Kommandanten möglich, mit denen ein Handelsvertrag besteht – Systemhandelsposten-Orders ohne Kolonie-Landung gibt es außerhalb einer Handelsgilde-Station nicht mehr.</span>
+            <h2>Andere Handelsposten im System</h2>
+            <span class="hint">Verkaufs-Orders an den Posten der übrigen Planeten dieses Sternsystems. Handeln kann dort nur, wer auf dem Planeten eine Kolonie hat oder mit einer Flotte bei einer Kolonie dort gelandet ist.</span>
           </div>
           <div class="panel-body wh-list">
-            @for (o of systemOrders(); track o.id) {
+            @for (o of otherPostOrders(); track o.id) {
               <div class="order-row">
                 <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
-                <span class="mono">{{ o.remainingQuantity }} × {{ o.pricePerUnit | number:'1.0-2' }} Cr</span>
-                <span class="hint">{{ o.sellerId === playerId() ? 'eigene Order' : o.sellerName }} · {{ depotColonyName(o.depotColonyId) }}</span>
-                @if (o.sellerId === playerId()) {
-                  <!-- Preis direkt änderbar: vorher musste man die Order zurückziehen
-                       und im Produktions-Tab neu anlegen – und ein zu hoher Preis ist
-                       beim ersten Versuch der Normalfall. -->
-                  @if (priceDraft[o.id] !== undefined) {
-                    <span class="price-edit">
-                      <input type="number" min="0" step="0.5" [(ngModel)]="priceDraft[o.id]" (keyup.enter)="submitPrice(o.id)" />
-                      <button class="small" (click)="submitPrice(o.id)" [disabled]="busy() === ('price:' + o.id)">Preis übernehmen</button>
-                      <button class="ghost small" (click)="cancelPriceEdit(o.id)">Abbrechen</button>
-                    </span>
-                  } @else {
-                    <button class="ghost small" (click)="startPriceEdit(o.id, o.pricePerUnit)">Preis ändern</button>
-                  }
-                  <button class="ghost small danger" (click)="cancelSellOrder(o.id)">Zurückziehen</button>
-                } @else if (canBuyFrom(o.sellerId)) {
-                  <div class="buy-controls">
-                    <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="buyQtyFor(o.id, o.remainingQuantity)" (ngModelChange)="buyDraftQty[o.id] = $event" />
-                    <button class="primary small" (click)="buyFromOrder(o.id, o.remainingQuantity)" [disabled]="busy() === ('buy:' + o.id)">Kaufen</button>
-                  </div>
-                } @else {
-                  <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
+                <span class="mono">{{ o.remainingQuantity }} × {{ o.limitPrice | number:'1.0-2' }} Cr</span>
+                <span class="hint">{{ o.ownerId === playerId() ? 'eigene Order' : o.ownerName }} · {{ planetName(o.planetId) }}</span>
+                @if (o.sourceColonyId) {
+                  <a class="ghost small" [routerLink]="['/planeten', o.sourceColonyId]" [queryParams]="{ tab: 'handel' }">Posten öffnen</a>
                 }
               </div>
-            } @empty { <p class="empty-hint">Keine offenen Orders anderer Kolonien in diesem System.</p> }
+            } @empty { <p class="empty-hint">Keine offenen Verkaufs-Orders an anderen Posten in diesem System.</p> }
           </div>
         </div>
       </div>

@@ -35,29 +35,34 @@ gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 > einen gültigen Handelsvertrag (nicht für die Bevölkerung, siehe §4/§12).
 > An einer Handelsstation gilt keine dieser beiden Einschränkungen.
 
-## 3. Planetare Handelsdepots
+## 3. Planetarer Handelsposten und Depots (Umsetzungskonzept/37)
 
-- Reale Lagerorte der Handelsgilde, kein virtueller Verweis auf das
-  Kolonielager.
-- Für Depotverkauf muss der Verkäufer die Ware ins Depot übertragen.
-- Ein fremder Spieler kann aus einem Depot nur kaufen, wenn eigene
-  Frachter dort gelandet sind (Depotkauf ersetzt keinen interplanetaren
-  Transport).
-- Kolonien auf demselben Planeten wie das Depot handeln unmittelbar
-  damit (kein eigener ausgespielter lokaler Frachtertransport nötig).
-- Nach lokalem Kauf ist die Ware sofort wirtschaftlich verfügbar, auch
-  wenn der interne Transport ins eigene Kolonielager technisch noch
-  läuft.
+- Je Planet mit mindestens einer Kolonie EIN Handelsposten mit einem
+  **Orderbuch wie an einer Handelsgilde-Station**: Kauf- und Verkaufs-Orders
+  kreuzen sich sofort, auch teilweise, zum Preis der älteren Order; Credits
+  von Kauf-Orders sind sofort gebunden (Escrow).
+- Zugang: eine eigene Kolonie auf dem Planeten oder eine bei einer Kolonie
+  dort gelandete eigene Flotte. Der Posten ist neutral – landen und das
+  eigene Depot nutzen darf man auch bei einer fremden Kolonie.
+- **Depot je Kommandant am Posten** (unbegrenzt, per Frachter beliefert und
+  abgeholt). Wer eine Kolonie auf dem Planeten hat, braucht keines: sein
+  Lager ist sein Depot – Verkaufs-Orders speisen sich aus dem Lager, Käufe
+  landen im Lager. Fremde verkaufen aus dem Depot und bekommen Käufe ins
+  Depot.
+- Handel zwischen zwei Kommandanten nur mit Handelsvertrag (Konzept 05
+  §14): das Matching überspringt Paare ohne Vertrag. Keine Handelsgilde-
+  Orders am Posten (kein Notanker, siehe §5 der Handelsgilde).
+- Abbruch einer Order: Ware zurück in ihre Quelle (Lager oder Depot),
+  Credits zurück ins Wallet.
 
 ## 4. Bevölkerung und Handelsorte
 
 - Bevölkerung kauft zu denselben tatsächlichen Sell-Order-Preisen wie
   Spieler (kein künstlicher Bevölkerungspreis).
-- Sie kauft **ausschließlich am eigenen Planetaren Handelsposten ihrer
-  Kolonie** (Orders mit Depot = diese Kolonie: eigene Lagerorders und von
-  Vertragspartnern dort abgesetzte Fracht). Nicht an der
-  System-Handelsstation, nicht aus Depots anderer Kolonien – auch nicht auf
-  demselben Planeten (Umsetzungskonzept/36, ersetzt die frühere
+- Sie kauft **ausschließlich am Planetaren Handelsposten ihres Planeten**
+  (§3) – aus der Verkaufsseite des Orderbuchs, egal wer verkauft, ohne
+  Handelsvertrag. Nicht an der System-Handelsstation, nicht an den Posten
+  anderer Planeten (Umsetzungskonzept/36 und 37, ersetzt die frühere
   Systemmarkt-Regel).
 - Der Kauf ist sofort wirksam: die Ware wandert in den **Vorrat der
   Bevölkerung** (getrennt vom Kolonielager, vom Kommandanten nicht
@@ -254,9 +259,12 @@ Stufe 4+: zunehmend luxuriöse Güter
 - Lagerung für den Spieler kostenlos (Infrastrukturkosten erzählerisch
   indirekt durch die Gilde finanziert).
 - Sell Orders: keine feste Laufzeit, bestehen bis vollständig
-  ausgeführt oder abgebrochen; Teilausführungen möglich.
-- Abbruch einer Sell Order: nicht verkaufte Ware zurück ins persönliche
-  Lager am selben Handelsort (nicht automatisch weitertransportiert).
+  ausgeführt oder abgebrochen; Teilausführungen möglich. Dauerorders
+  (`autoRelist`) legen nach dem Leerkauf sofort aus ihrer Quelle nach und
+  bleiben sonst schlafend stehen, bis Nachschub kommt.
+- Abbruch einer Sell Order: nicht verkaufte Ware zurück in ihre Quelle am
+  selben Handelsort – Kolonielager oder Depot (nicht automatisch
+  weitertransportiert).
 
 ## 14. Arbitrage-Formel (Referenz)
 

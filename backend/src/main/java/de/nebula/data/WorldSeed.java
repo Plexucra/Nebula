@@ -26,9 +26,9 @@ import de.nebula.model.Population;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.ProductionQueueEntry;
 import de.nebula.model.ProductionQueueStatus;
-import de.nebula.model.SellOrder;
+import de.nebula.model.MarketOrder;
+import de.nebula.model.MarketOrderSide;
 import de.nebula.model.StarSystem;
-import de.nebula.model.TradeLocationType;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 import de.nebula.model.WarehouseEntry;
@@ -336,24 +336,26 @@ public final class WorldSeed {
    * jedem Lagerzugang aus dem nachproduzierten Bestand wieder auf
    * ({@code MarketCommands.replenishDormantSellOrders}).
    */
-  private static List<SellOrder> starterSellOrders(String colonyId, String systemId, String sellerId,
-                                                     String sellerName, long t, IdGenerator ids) {
-    List<SellOrder> orders = new ArrayList<>();
+  private static List<MarketOrder> starterSellOrders(String colonyId, String systemId, String planetId, String sellerId,
+                                                       String sellerName, long t, IdGenerator ids) {
+    List<MarketOrder> orders = new ArrayList<>();
     for (String productTypeId : STARTER_CONSUMER_GOODS) {
-      SellOrder o = new SellOrder();
-      o.id = ids.next("so");
+      MarketOrder o = new MarketOrder();
+      o.id = ids.next("mo");
       o.systemId = systemId;
-      o.locationType = TradeLocationType.Depot;
-      o.depotColonyId = colonyId;
-      o.sellerId = sellerId;
-      o.sellerName = sellerName;
+      o.planetId = planetId;
       o.productTypeId = productTypeId;
+      o.side = MarketOrderSide.Sell;
+      o.ownerId = sellerId;
+      o.ownerName = sellerName;
+      o.limitPrice = STARTER_SELL_ORDER_PRICE;
       o.quantity = STARTER_SELL_ORDER_QUANTITY;
       o.remainingQuantity = STARTER_SELL_ORDER_QUANTITY;
-      o.pricePerUnit = STARTER_SELL_ORDER_PRICE;
+      o.escrowedCredits = 0;
       o.createdAt = t;
+      o.seq = 0; // vor jeder Spieler-Order, siehe GameState.marketOrderSeq
       o.autoRelist = true;
-      o.sourceFleetId = null;
+      o.sourceColonyId = colonyId;
       orders.add(o);
     }
     return orders;
@@ -621,7 +623,7 @@ public final class WorldSeed {
                                   Population population, PopulationMoneySupplyState moneySupplyState,
                                   List<Wallet> wallets, List<Building> buildings, List<WarehouseEntry> warehouse,
                                   List<ProductionQueueEntry> productionQueue, List<Fleet> fleets,
-                                  GroundForceGroup groundForceGroup, List<SellOrder> sellOrders) {
+                                  GroundForceGroup groundForceGroup, List<MarketOrder> sellOrders) {
   }
 
   /**
@@ -791,7 +793,7 @@ public final class WorldSeed {
     return new HomeworldBundle(player, planets, colony, planetStats, population, moneySupplyState,
         List.of(playerWallet, popWallet), buildings, warehouse, starterProductionQueue(colony.id, ids),
         List.of(freighter, combat), groundForceGroup,
-        starterSellOrders(colony.id, homeSystemId, player.id, player.name, t, ids));
+        starterSellOrders(colony.id, homeSystemId, colony.planetId, player.id, player.name, t, ids));
   }
 
   /** Ergebnis von {@link #createWorldSeed}: eine komplett neu generierte Galaxie samt erstem Kommandanten. */
@@ -810,8 +812,8 @@ public final class WorldSeed {
     public List<Gateway> gateways;
     public List<Fleet> fleets;
     public List<GroundForceGroup> groundForceGroups;
-    /** Start-Verkaufsorders für Grundkonsumgüter, siehe {@link #starterSellOrders}. */
-    public List<SellOrder> sellOrders;
+    /** Start-Verkaufsorders für Grundkonsumgüter am Handelsposten der Heimatwelt, siehe {@link #starterSellOrders}. */
+    public List<MarketOrder> sellOrders;
   }
 
   public static Seed createWorldSeed(String commanderName, String homeworldName, IdGenerator ids) {
@@ -930,8 +932,8 @@ public final class WorldSeed {
     public List<ProductionQueueEntry> productionQueue;
     public List<Fleet> fleets;
     public GroundForceGroup groundForceGroup;
-    /** Start-Verkaufsorders für Grundkonsumgüter, siehe {@link #starterSellOrders}. */
-    public List<SellOrder> sellOrders;
+    /** Start-Verkaufsorders für Grundkonsumgüter am Handelsposten der Heimatwelt, siehe {@link #starterSellOrders}. */
+    public List<MarketOrder> sellOrders;
   }
 
   /**

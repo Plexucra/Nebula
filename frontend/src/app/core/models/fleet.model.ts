@@ -62,8 +62,7 @@ export interface ShipTypeDef {
  *   Landungs-/Invasionsmechanik (noch nicht umgesetzt), aktuell ohne
  *   Handelszugriff.
  * - `'System'` = am Systemhandelsposten, keinem Planeten zugeordnet
- *   (`locationPlanetId` NICHT gesetzt) – entspricht `SellOrder.locationType:
- *   'Station'`.
+ *   (`locationPlanetId` NICHT gesetzt).
  */
 export type FleetLocationType = 'ColonyOrbit' | 'PlanetOrbit' | 'System';
 export type FleetStatus = 'Stationed' | 'InTransit';

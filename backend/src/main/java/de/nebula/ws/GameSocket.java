@@ -25,7 +25,6 @@ import de.nebula.state.FleetCommands;
 import de.nebula.state.FleetCompositionCommands;
 import de.nebula.state.GatewayCommands;
 import de.nebula.state.GroundBattleCommands;
-import de.nebula.state.HubMarketCommands;
 import de.nebula.state.LandingCommands;
 import de.nebula.state.MarketCommands;
 import de.nebula.state.MessageCommands;
@@ -273,24 +272,24 @@ public class GameSocket {
 
       // --- Handel ------------------------------------------------------------
       case "wallet" -> GameQueries.findWallet(state, WalletOwnerType.Player, requirePlayerId());
-      case "sellOrders" -> MarketCommands.sellOrdersInSystem(state, text(payload, "systemId"));
+      case "sellOrders" -> MarketCommands.postSellOrdersInSystem(state, text(payload, "systemId"));
       case "createSellOrder" -> {
-        MarketCommands.createSellOrder(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "productTypeId"),
+        MarketCommands.createSellOrderFromColony(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "productTypeId"),
             payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble(), payload.path("autoRelist").asBoolean(false));
         yield null;
       }
       case "updateSellOrderPrice" -> {
-        MarketCommands.updateSellOrderPrice(state, ids, requirePlayerId(), text(payload, "orderId"),
-            payload.path("pricePerUnit").asDouble());
+        MarketCommands.updateOrderPrice(state, ids, requirePlayerId(), text(payload, "orderId"), payload.path("pricePerUnit").asDouble());
         yield null;
       }
-      case "cancelSellOrder" -> {
-        MarketCommands.cancelSellOrder(state, requirePlayerId(), text(payload, "orderId"));
+      case "cancelSellOrder", "cancelHubOrder" -> {
+        MarketCommands.cancelOrder(state, requirePlayerId(), text(payload, "orderId"));
         yield null;
       }
+      // deliverToColonyId wird nicht mehr gebraucht: geliefert wird ins Lager der eigenen Kolonie auf dem
+      // Planeten des Postens, sonst ins Depot dort (Umsetzungskonzept/37).
       case "buyFromOrder" -> {
-        MarketCommands.buyFromOrder(state, ids, requirePlayerId(), text(payload, "orderId"),
-            payload.path("quantity").asDouble(), text(payload, "deliverToColonyId"));
+        MarketCommands.buyFromOrder(state, ids, requirePlayerId(), text(payload, "orderId"), payload.path("quantity").asDouble());
         yield null;
       }
       case "createSellOrderFromFleet" -> {
@@ -299,21 +298,18 @@ public class GameSocket {
         yield null;
       }
 
-      // --- Handelsgilde-Station: Depot & Orderbuch (Umsetzungskonzept/22_...md) ---
-      case "hubDepot" -> HubMarketCommands.hubDepotOf(state, text(payload, "systemId"), requirePlayerId());
-      case "hubOrders" -> HubMarketCommands.ordersInSystem(state, text(payload, "systemId"));
+      // --- Orderbuch an Station (ohne planetId) oder Planetarem Handelsposten (Umsetzungskonzept/22 und 37) ---
+      case "hubDepot" -> MarketCommands.depotOf(state, text(payload, "systemId"), text(payload, "planetId"), requirePlayerId());
+      case "hubOrders" -> MarketCommands.ordersAt(state, text(payload, "systemId"), text(payload, "planetId"));
       case "createHubSellOrder" -> {
-        HubMarketCommands.createSellOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "productTypeId"),
-            payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble());
+        MarketCommands.createSellOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "planetId"),
+            text(payload, "productTypeId"), payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble(),
+            payload.path("autoRelist").asBoolean(false));
         yield null;
       }
       case "createHubBuyOrder" -> {
-        HubMarketCommands.createBuyOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "productTypeId"),
-            payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble());
-        yield null;
-      }
-      case "cancelHubOrder" -> {
-        HubMarketCommands.cancelOrder(state, requirePlayerId(), text(payload, "orderId"));
+        MarketCommands.createBuyOrder(state, ids, requirePlayerId(), text(payload, "systemId"), text(payload, "planetId"),
+            text(payload, "productTypeId"), payload.path("quantity").asDouble(), payload.path("pricePerUnit").asDouble());
         yield null;
       }
       case "unloadCargoToHubDepot" -> {

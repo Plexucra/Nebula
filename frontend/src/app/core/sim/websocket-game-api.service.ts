@@ -6,8 +6,8 @@ import { webSocketBackendUrl } from './backend-config';
 import { UiClockService } from '../ui/ui-clock.service';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, CarrierJumpPreview, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
-  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
-  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, DepotEntry, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
+  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, MarketOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
@@ -656,7 +656,7 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   // Handel
   // ==========================================================================
 
-  sellOrders(systemId: Id): Signal<SellOrder[]> {
+  sellOrders(systemId: Id): Signal<MarketOrder[]> {
     return this.poll('sellOrders', () => ({ systemId }), []);
   }
   createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist = false): Promise<void> {
@@ -671,21 +671,21 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   cancelSellOrder(orderId: Id): Promise<void> {
     return this.send('cancelSellOrder', { orderId });
   }
-  buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void> {
-    return this.send('buyFromOrder', { orderId, quantity, deliverToColonyId });
+  buyFromOrder(orderId: Id, quantity: number): Promise<void> {
+    return this.send('buyFromOrder', { orderId, quantity });
   }
 
-  hubDepot(systemId: Id): Signal<HubDepotEntry[]> {
-    return this.poll('hubDepot', () => ({ systemId }), []);
+  hubDepot(systemId: Id, planetId: Id | null = null): Signal<DepotEntry[]> {
+    return this.poll('hubDepot', () => ({ systemId, planetId }), []);
   }
-  hubOrders(systemId: Id): Signal<HubOrder[]> {
-    return this.poll('hubOrders', () => ({ systemId }), []);
+  hubOrders(systemId: Id, planetId: Id | null = null): Signal<MarketOrder[]> {
+    return this.poll('hubOrders', () => ({ systemId, planetId }), []);
   }
-  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void> {
-    return this.send('createHubSellOrder', { systemId, productTypeId, quantity, pricePerUnit });
+  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, planetId: Id | null = null, autoRelist = false): Promise<void> {
+    return this.send('createHubSellOrder', { systemId, planetId, productTypeId, quantity, pricePerUnit, autoRelist });
   }
-  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void> {
-    return this.send('createHubBuyOrder', { systemId, productTypeId, quantity, pricePerUnit });
+  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, planetId: Id | null = null): Promise<void> {
+    return this.send('createHubBuyOrder', { systemId, planetId, productTypeId, quantity, pricePerUnit });
   }
   cancelHubOrder(orderId: Id): Promise<void> {
     return this.send('cancelHubOrder', { orderId });

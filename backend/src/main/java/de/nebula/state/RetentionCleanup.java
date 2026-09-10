@@ -137,9 +137,8 @@ public final class RetentionCleanup {
     state.groundForceGroups.removeIf(g -> playerId.equals(g.ownerId));
 
     // Handel und Geld
-    state.sellOrders.removeIf(o -> playerId.equals(o.sellerId));
-    state.hubOrders.removeIf(o -> playerId.equals(o.ownerId));
-    state.hubDepot.removeIf(d -> playerId.equals(d.ownerId));
+    state.marketOrders.removeIf(o -> playerId.equals(o.ownerId));
+    state.depot.removeIf(d -> playerId.equals(d.ownerId));
     Set<String> walletIds = state.wallets.stream()
         .filter(w -> w.ownerId.equals(playerId) || colonyIds.contains(w.ownerId)).map(w -> w.id).collect(Collectors.toSet());
     state.transactions.removeIf(tx -> walletIds.contains(tx.fromWalletId) || walletIds.contains(tx.toWalletId));

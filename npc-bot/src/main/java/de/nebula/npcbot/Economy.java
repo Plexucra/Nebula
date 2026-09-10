@@ -425,9 +425,9 @@ final class Economy {
     Set<String> covered = new HashSet<>();
     double referencePrice = 0;
     for (JsonNode o : bot.world.sellOrders(systemId)) {
-      if (!Json.eq(text(o, "depotColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
+      if (!Json.eq(text(o, "sourceColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
       covered.add(text(o, "productTypeId"));
-      if (Json.eq(text(o, "productTypeId"), Catalog.FOOD)) referencePrice = Json.dbl(o, "pricePerUnit");
+      if (Json.eq(text(o, "productTypeId"), Catalog.FOOD)) referencePrice = Json.dbl(o, "limitPrice");
     }
     if (referencePrice <= 0) referencePrice = DEFAULT_CONSUMER_PRICE;
     adjustPrices(h, systemId);
@@ -464,14 +464,14 @@ final class Economy {
     String id = h.colonyId();
     JsonNode coverage = bot.world.consumptionCoverage(id);
     for (JsonNode o : bot.world.sellOrders(systemId)) {
-      if (!Json.eq(text(o, "depotColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
+      if (!Json.eq(text(o, "sourceColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
       String good = text(o, "productTypeId");
       if (!Catalog.CONSUMER_NEED_PER_CAPITA_PER_HOUR.containsKey(good)) continue;
       String key = id + ":" + good;
       if (bot.tickNo - lastPriceChangeTick.getOrDefault(key, -1000) < PRICE_COOLDOWN_TICKS) continue;
       double cov = Json.dbl(coverage, good, -1);
       if (cov < 0 || h.population() < 20) continue;
-      double price = Json.dbl(o, "pricePerUnit");
+      double price = Json.dbl(o, "limitPrice");
       double newPrice = price;
       if (cov < 0.9 && Json.dbl(o, "remainingQuantity") > 0) newPrice = Math.max(MIN_CONSUMER_PRICE, Math.round(price * 0.7));
       else if (cov >= 1.45 && price < DEFAULT_CONSUMER_PRICE) newPrice = Math.min(DEFAULT_CONSUMER_PRICE, Math.round(price * 1.15));

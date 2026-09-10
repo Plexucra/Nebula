@@ -2,8 +2,8 @@ import { EnergyStorage } from '../models/building.model';
 import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, CarrierJumpPreview, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
-  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
-  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, DepotEntry, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
+  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, MarketOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
@@ -357,47 +357,49 @@ export interface GameApi {
    */
   exploreSystem(fleetId: Id): Promise<void>;
 
-  // --- Handel ---------------------------------------------------------------
-  sellOrders(systemId: Id): Signal<SellOrder[]>;
+  // --- Handel: EIN Orderbuch je Handelsort (Umsetzungskonzept/22 und 37) ---
+  /** Offene Verkaufs-Orders aller Planetaren Handelsposten eines Systems – "was gibt es hier zu kaufen". */
+  sellOrders(systemId: Id): Signal<MarketOrder[]>;
   /**
-   * Verkauf ab Kolonie-Lager (Planetarer Handelsposten der EIGENEN Kolonie).
-   * `autoRelist: true` ("Anbieten" im Lagerbestand) legt beim vollständigen
-   * Verkauf im selben Vorgang automatisch eine neue Order mit identischer
-   * Menge/Preis an, siehe Dokument §6.
+   * "Anbieten" im Lager einer eigenen Kolonie: Verkaufs-Order am Handelsposten
+   * ihres Planeten, gespeist aus dem Lager. `autoRelist: true` legt beim
+   * vollständigen Verkauf sofort aus dem Lager nach (Dauerorder).
    */
   createSellOrder(colonyId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
   /**
-   * Verkauf direkt aus der Fracht einer eigenen, gerade dort befindlichen
-   * Flotte – gelandet bei einer Kolonie (auch fremder!) entsteht eine
-   * `'Depot'`-Order an deren Planetarem Handelsposten, im System ohne
-   * Landung eine `'Station'`-Order am Systemhandelsposten.
+   * Verkauf aus der Fracht einer bei einer Kolonie (auch fremder) gelandeten
+   * Flotte: die Ware geht ins eigene Depot am Handelsposten des Planeten (bzw.
+   * ins Lager der eigenen Kolonie dort) und wird von da angeboten.
    */
   createSellOrderFromFleet(fleetId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, autoRelist?: boolean): Promise<void>;
   cancelSellOrder(orderId: Id): Promise<void>;
-  /** Ändert den Preis einer eigenen, offenen Verkaufsorder – vorher ging das nur über Zurückziehen und Neuanlegen. */
+  /** Ändert den Preis einer eigenen, offenen Order; bei Kauf-Orders wird das Escrow angepasst. */
   updateSellOrderPrice(orderId: Id, pricePerUnit: number): Promise<void>;
-  buyFromOrder(orderId: Id, quantity: number, deliverToColonyId: Id): Promise<void>;
-
-  // --- Handelsgilde-Station: Depot & Orderbuch (Umsetzungskonzept/22_...md) ---
-  /** Das unbegrenzte Depot des angemeldeten Kommandanten an EINER Handelsgilde-Station. */
-  hubDepot(systemId: Id): Signal<HubDepotEntry[]>;
-  /** Das gesamte Orderbuch (Kauf UND Verkauf, alle Kommandanten sowie die Handelsgilde selbst) an einer Station. */
-  hubOrders(systemId: Id): Signal<HubOrder[]>;
   /**
-   * Verkauf ab dem eigenen Stationsdepot – bucht die Ware sofort aus dem
-   * Depot aus. Kreuzt die Order sofort bestehende Kauf-Orders (auch die der
-   * Handelsgilde), wird SOFORT ausgeführt, auch in Teilausführung, zum Preis
-   * der jeweils älteren (ruhenden) Gegenseite.
+   * Sofortkauf gegen EINE Verkaufs-Order zu deren Preis. Lieferung ins Lager
+   * der eigenen Kolonie auf dem Planeten des Postens, sonst ins eigene Depot
+   * dort. Am Posten nur mit Handelsvertrag zum Verkäufer.
    */
-  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void>;
+  buyFromOrder(orderId: Id, quantity: number): Promise<void>;
+
+  /** Das unbegrenzte Depot des angemeldeten Kommandanten an einem Handelsort: Station (`planetId` weglassen) oder Handelsposten eines Planeten. */
+  hubDepot(systemId: Id, planetId?: Id | null): Signal<DepotEntry[]>;
+  /** Das gesamte Orderbuch (Kauf UND Verkauf, alle Kommandanten, an Stationen auch die Handelsgilde) eines Handelsorts. */
+  hubOrders(systemId: Id, planetId?: Id | null): Signal<MarketOrder[]>;
+  /**
+   * Verkaufs-Order an einem Handelsort – aus dem Depot dort, am Posten mit
+   * eigener Kolonie aus deren Lager. Kreuzt sie bestehende Kauf-Orders, wird
+   * SOFORT ausgeführt, auch teilweise, zum Preis der älteren Gegenseite.
+   */
+  createHubSellOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, planetId?: Id | null, autoRelist?: boolean): Promise<void>;
   /**
    * Kauf-Order – bucht Menge × Preis SOFORT als Escrow aus dem Wallet aus
-   * (Rückerstattung nur durch Zurückziehen der Order). Kreuzt sie sofort
-   * bestehende Verkaufs-Orders, wird SOFORT ausgeführt, auch in
-   * Teilausführung; gekaufte Ware fließt ins eigene Stationsdepot.
+   * (Rückerstattung nur durch Zurückziehen). Kreuzt sie bestehende
+   * Verkaufs-Orders, wird sofort ausgeführt; gekaufte Ware fließt ins Depot,
+   * am Posten mit eigener Kolonie in deren Lager.
    */
-  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number): Promise<void>;
-  /** Zieht eine eigene Kauf- oder Verkaufs-Order zurück und erstattet den nicht ausgeführten Rest (Credits bzw. Ware) zurück. Orders der Handelsgilde lassen sich nicht zurückziehen. */
+  createHubBuyOrder(systemId: Id, productTypeId: Id, quantity: number, pricePerUnit: number, planetId?: Id | null): Promise<void>;
+  /** Zieht eine eigene Kauf- oder Verkaufs-Order zurück und erstattet den nicht ausgeführten Rest (Credits bzw. Ware). Orders der Handelsgilde lassen sich nicht zurückziehen. */
   cancelHubOrder(orderId: Id): Promise<void>;
 
   // --- Diplomatie (Mechanik/06_..., vereinfacht, siehe DiplomacyCommands im Backend) ---

@@ -518,7 +518,7 @@ class GroundBattleTest {
     assertTrue(build.getMessage().contains("Bodengefecht"), build.getMessage());
 
     Warehouse.add(a.state(), a.defenderColonyId(), "p_stahl", 10);
-    var trade = assertThrows(CommandException.class, () -> MarketCommands.createSellOrder(
+    var trade = assertThrows(CommandException.class, () -> MarketCommands.createSellOrderFromColony(
         a.state(), a.ids(), a.defenderId(), a.defenderColonyId(), "p_stahl", 5, 10, false));
     assertTrue(trade.getMessage().contains("Bodengefecht"), trade.getMessage());
   }

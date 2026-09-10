@@ -22,7 +22,7 @@ Flotten und Orders der Galaxie, je Kolonie, je Sekunde.
 
 | Größe | Regel |
 |---|---|
-| Markt der Bevölkerung | nur Orders mit `depotColonyId` = eigene Kolonie (eigene Lagerorders, von Vertragspartnern angelieferte Fracht) |
+| Markt der Bevölkerung | die Verkaufsseite des Handelspostens ihres Planeten (seit Umsetzungskonzept/37 ein Orderbuch je Planet; ursprünglich: Orders mit `depotColonyId` = eigene Kolonie) |
 | Takt | ein **Kolonietag** je Kolonie und Spieltag, Ereignis `COLONY_DAY`, Tageszeit = Gründungszeit + n Tage |
 | Tagesbedarf | `Bevölkerung × Bedarf je Kopf und Stunde × 24` |
 | Vorratsziel | `⌈Tagesbedarf × 7⌉` je Grundkonsumgut (`populationStockTargetDays`) |

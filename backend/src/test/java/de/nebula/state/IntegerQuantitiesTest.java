@@ -52,7 +52,7 @@ class IntegerQuantitiesTest {
     assertEquals(Math.rint(count), count, 1e-9, "Einwohner sind ganze Menschen, war " + count);
     population(b).stock.forEach((good, qty) -> assertEquals(Math.rint(qty), qty, 1e-9,
         "Der Vorrat der Bevölkerung muss ganzzahlig bleiben: " + good + " = " + qty));
-    b.state().sellOrders.forEach(o -> assertEquals(Math.rint(o.remainingQuantity), o.remainingQuantity, 1e-9,
+    b.state().marketOrders.forEach(o -> assertEquals(Math.rint(o.remainingQuantity), o.remainingQuantity, 1e-9,
         "Order-Restmenge muss ganzzahlig bleiben: " + o.productTypeId + " = " + o.remainingQuantity));
   }
 
@@ -128,7 +128,7 @@ class IntegerQuantitiesTest {
   @Test
   void withoutOrdersTheStockCarriesTheColonyForDays() {
     Bootstrapped b = newWorld();
-    b.state().sellOrders.clear();
+    b.state().marketOrders.removeIf(o -> o.planetId != null);
     double eatenTotal = 0;
     int fedDays = 0;
     for (int i = 0; i < GameConstants.POPULATION_STOCK_TARGET_DAYS + 3; i++) {
@@ -150,10 +150,10 @@ class IntegerQuantitiesTest {
   void aNewOrderTriggersAnEmergencyPurchaseWhenTheStockIsLow() {
     Bootstrapped b = newWorld();
     Colony home = ColonyCommands.colony(b.state(), b.colonyId());
-    b.state().sellOrders.clear();
+    b.state().marketOrders.removeIf(o -> o.planetId != null);
     population(b).stock.clear();
     Warehouse.add(b.state(), b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 500);
-    MarketCommands.createSellOrder(b.state(), b.ids(), home.ownerId, b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 200, 60, true);
+    MarketCommands.createSellOrderFromColony(b.state(), b.ids(), home.ownerId, b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 200, 60, true);
     double food = population(b).stock.getOrDefault(GameConstants.FOOD_PRODUCT_ID, 0.0);
     assertTrue(food > 0, "Die Order am eigenen Posten löst den Notkauf aus, Vorrat war " + food);
   }

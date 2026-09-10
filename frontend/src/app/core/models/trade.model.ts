@@ -1,59 +1,27 @@
 import { Id } from './common.model';
 
-export type TradeLocationType = 'Station' | 'Depot';
-
-export interface SellOrder {
-  id: Id;
-  systemId: Id;
-  /**
-   * `'Depot'` = am Planetaren Handelsposten einer konkreten Kolonie
-   * (`depotColonyId` gesetzt) eingestellt – entweder von deren Besitzer
-   * (über "Anbieten" im Lagerbestand) oder von einer dort gelandeten
-   * fremden Flotte (`sourceFleetId` gesetzt, siehe `createSellOrderFromFleet`).
-   * `'Station'` = am Systemhandelsposten (keine Landung nötig), `depotColonyId`
-   * ist dann `null`.
-   */
-  locationType: TradeLocationType;
-  depotColonyId: Id | null;
-  sellerId: Id;
-  sellerName: string;
-  productTypeId: Id;
-  quantity: number;
-  remainingQuantity: number;
-  pricePerUnit: number;
-  createdAt: number;
-  /**
-   * true = sobald diese Order durch einen Kauf vollständig verkauft ist
-   * (`remainingQuantity` erreicht 0), wird im selben Vorgang eine neue Order
-   * mit identischer `quantity`/`pricePerUnit` angelegt (siehe "Anbieten" im
-   * Lagerbestand, Konzeption/Umsetzungskonzept/10_...md, §6). Von Hand über
-   * `createSellOrder` erzeugte Einzel-Orders lassen dieses Feld `false`.
-   */
-  autoRelist: boolean;
-  /**
-   * Gesetzt, wenn die Order aus der Fracht einer Flotte heraus eingestellt
-   * wurde (`createSellOrderFromFleet`, siehe Klassendoku `locationType`) –
-   * ein Abbruch erstattet dann in die Fracht dieser Flotte zurück (falls sie
-   * noch existiert) statt in ein Kolonielager, da die Ware nie dort lag.
-   */
-  sourceFleetId: Id | null;
-}
-
-export type HubOrderSide = 'Buy' | 'Sell';
+export type MarketOrderSide = 'Buy' | 'Sell';
 
 /**
- * Kauf- oder Verkaufs-Order im Orderbuch einer Handelsgilde-Station
- * (Konzeption/Umsetzungskonzept/22_...md) – anders als {@link SellOrder} ist
- * das hier ein echtes zweiseitiges Orderbuch mit sofortiger (Teil-)Ausführung
- * beim Kreuzen. `ownerId === null` kennzeichnet eine Order der Handelsgilde
- * selbst (Market-Maker) statt eines Spielers – solche Orders lassen sich
- * nicht zurückziehen.
+ * Kauf- oder Verkaufs-Order in EINEM Orderbuch je Handelsort
+ * (Konzeption/Umsetzungskonzept/37): an einer Handelsgilde-Station
+ * (`planetId === null`, Umsetzungskonzept/22) oder am Planetaren Handelsposten
+ * eines Planeten (`planetId` gesetzt). Kauf- und Verkaufs-Orders kreuzen sich
+ * sofort, auch teilweise, zum Preis der älteren Order. `ownerId === null`
+ * kennzeichnet eine Order der Handelsgilde selbst (Market-Maker, nur an
+ * Stationen) – solche Orders lassen sich nicht zurückziehen.
+ *
+ * Am Posten handeln zwei Kommandanten nur mit Handelsvertrag (das Matching
+ * überspringt Paare ohne Vertrag); die Bevölkerung der Kolonien kauft ohne
+ * Vertrag aus der Verkaufsseite.
  */
-export interface HubOrder {
+export interface MarketOrder {
   id: Id;
   systemId: Id;
+  /** `null` = Handelsgilde-Station im System, sonst der Planet des Handelspostens. */
+  planetId: Id | null;
   productTypeId: Id;
-  side: HubOrderSide;
+  side: MarketOrderSide;
   ownerId: Id | null;
   ownerName: string;
   limitPrice: number;
@@ -61,19 +29,25 @@ export interface HubOrder {
   remainingQuantity: number;
   escrowedCredits: number;
   createdAt: number;
+  /**
+   * Dauerorder (nur Verkauf): leer gekauft füllt sie sich sofort aus ihrer
+   * Quelle nach (Kolonielager bzw. Depot); reicht die nicht, bleibt sie mit
+   * Restmenge 0 stehen, bis wieder Nachschub kommt.
+   */
+  autoRelist: boolean;
+  /** Kolonie auf dem Planeten, aus deren Lager diese Verkaufs-Order gespeist ist; `null` = aus dem Depot. */
+  sourceColonyId: Id | null;
 }
 
-/** Eine Warenposition im unbegrenzten Depot eines Kommandanten an einer Handelsgilde-Station. */
-export interface HubDepotEntry {
+/**
+ * Eine Warenposition im unbegrenzten Depot eines Kommandanten an einem
+ * Handelsort. Wer eine Kolonie auf dem Planeten hat, braucht am Posten kein
+ * Depot – sein Lager ist sein Depot.
+ */
+export interface DepotEntry {
   systemId: Id;
+  planetId: Id | null;
   ownerId: Id;
   productTypeId: Id;
   quantity: number;
-}
-
-export interface ConsumptionState {
-  colonyId: Id;
-  previousN: number;
-  currentBudget: number;
-  perGoodDemand: { productTypeId: Id; need: number; boughtSmoothed: number }[];
 }

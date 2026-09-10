@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { HubOrder, HubOrderSide, Id, System } from '../../core/models';
+import { MarketOrder, MarketOrderSide, Id, System } from '../../core/models';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import { nearestByHops } from '../../core/util/graph';
 
@@ -57,7 +57,7 @@ export class TradeOverviewComponent {
   }
 
   protected readonly depot = computed(() => this.api.hubDepot(this.selectedHubId())());
-  private readonly allHubOrders = computed(() => this.api.hubOrders(this.selectedHubId())());
+  private readonly allMarketOrders = computed(() => this.api.hubOrders(this.selectedHubId())());
 
   protected readonly productPickerOpen = signal(false);
   private readonly selectedProductIdOverride = signal<Id | null>(null);
@@ -72,10 +72,10 @@ export class TradeOverviewComponent {
   }
 
   protected readonly bids = computed(() =>
-    this.allHubOrders().filter(o => o.productTypeId === this.selectedProductId() && o.side === 'Buy')
+    this.allMarketOrders().filter(o => o.productTypeId === this.selectedProductId() && o.side === 'Buy')
       .sort((a, b) => b.limitPrice - a.limitPrice));
   protected readonly asks = computed(() =>
-    this.allHubOrders().filter(o => o.productTypeId === this.selectedProductId() && o.side === 'Sell')
+    this.allMarketOrders().filter(o => o.productTypeId === this.selectedProductId() && o.side === 'Sell')
       .sort((a, b) => a.limitPrice - b.limitPrice));
 
   /**
@@ -123,7 +123,7 @@ export class TradeOverviewComponent {
   }
 
   // --- Order aufgeben (für die aktuell gewählte Ware) -----------------------
-  protected newOrderSide: HubOrderSide = 'Buy';
+  protected newOrderSide: MarketOrderSide = 'Buy';
   protected newOrderQty = 1;
   protected newOrderPrice = 0;
 
@@ -138,7 +138,7 @@ export class TradeOverviewComponent {
    * "Kaufen" (man würde genau dieser Order entgegenkommen), ein Klick auf eine Kauf-Order als
    * "Verkaufen".
    */
-  protected pickOrder(o: HubOrder): void {
+  protected pickOrder(o: MarketOrder): void {
     this.newOrderSide = o.side === 'Sell' ? 'Buy' : 'Sell';
     this.newOrderQty = o.remainingQuantity;
     this.newOrderPrice = o.limitPrice;
@@ -168,15 +168,17 @@ export class TradeOverviewComponent {
     void this.run(`sell-depot:${productTypeId}`, () => this.api.createHubSellOrder(systemId, productTypeId, qty, price));
   }
 
-  protected cancelHubOrder(order: HubOrder): void {
+  protected cancelHubOrder(order: MarketOrder): void {
     void this.run(order.id, () => this.api.cancelHubOrder(order.id));
   }
 
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;
   }
-  protected sellerColony(depotColonyId: Id | null): string {
-    if (!depotColonyId) return '—';
-    return this.api.colony(depotColonyId)()?.name ?? '—';
+  /** Wo eine Posten-Order liegt: Planet, und bei einer Lagerorder die Kolonie dahinter. */
+  protected postLabel(o: MarketOrder): string {
+    const planet = o.planetId ? (this.api.planet(o.planetId)()?.name ?? '—') : '—';
+    const colony = o.sourceColonyId ? this.api.colony(o.sourceColonyId)()?.name : null;
+    return colony ? `${planet} · ${colony}` : planet;
   }
 }

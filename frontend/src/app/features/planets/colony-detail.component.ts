@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { BuildingType, ChainPlan, Id, MaterialRequirement, PlanetType, ProductionQueueEntry } from '../../core/models';
+import { BuildingType, ChainPlan, Id, MarketOrder, MaterialRequirement, PlanetType, ProductionQueueEntry } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
@@ -174,10 +174,25 @@ export class ColonyDetailComponent {
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
   protected readonly groundForces = this.api.groundForces(this.colonyId);
   protected readonly recruitmentQueue = this.api.recruitmentQueue(this.colonyId);
-  /** Reaktiv aus demselben Grund wie `planet` – siehe dort. */
-  protected readonly sellOrdersAll = computed(() => {
-    const systemId = this.colony()?.systemId;
-    return systemId ? this.api.sellOrders(systemId)() : [];
+  // --- Handelsposten des Planeten (Umsetzungskonzept/37): EIN Orderbuch je Planet ---
+  /** Alle offenen Orders am Posten dieses Planeten – von allen Kolonien darauf und allen gelandeten Flotten. */
+  protected readonly postOrders = computed(() => {
+    const c = this.colony();
+    return c ? this.api.hubOrders(c.systemId, c.planetId)() : [];
+  });
+  protected readonly postAsks = computed(() => this.postOrders().filter(o => o.side === 'Sell')
+    .sort((a, b) => a.productTypeId.localeCompare(b.productTypeId) || a.limitPrice - b.limitPrice));
+  protected readonly postBids = computed(() => this.postOrders().filter(o => o.side === 'Buy')
+    .sort((a, b) => a.productTypeId.localeCompare(b.productTypeId) || b.limitPrice - a.limitPrice));
+  /** Eigenes Depot am Posten – nur gefüllt, wenn man hier KEINE Kolonie hat (sonst ist das Lager das Depot). */
+  protected readonly postDepot = computed(() => {
+    const c = this.colony();
+    return c ? this.api.hubDepot(c.systemId, c.planetId)() : [];
+  });
+  /** Verkaufs-Orders an den Posten der ANDEREN Planeten dieses Systems – reine Übersicht. */
+  protected readonly otherPostOrders = computed(() => {
+    const c = this.colony();
+    return c ? this.api.sellOrders(c.systemId)().filter(o => o.planetId !== c.planetId) : [];
   });
   protected readonly system = computed(() => {
     const systemId = this.colony()?.systemId;
@@ -234,21 +249,14 @@ export class ColonyDetailComponent {
   protected get productTypes() { return this.api.productTypes().filter(p => p.category !== 'Ship' && p.category !== 'GroundUnit'); }
   protected get groundUnitTypes() { return this.api.productTypes().filter(p => p.category === 'GroundUnit'); }
 
-  /** Nur Orders, die diese Kolonie selbst eingestellt hat – "Planetarer Handel", siehe Handel-Tab. */
-  protected readonly planetOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId === this.colonyId);
-  /** Übrige Depot-Orders anderer Kolonien im selben System – die dieser Kolonie selbst stehen schon unter "Planetarer Handel", eine Dopplung dort wäre verwirrend. Systemhandelsposten-Orders (`depotColonyId === null`) sind außerhalb einer Handelsgilde-Station nicht mehr möglich, siehe `canBuyFrom`. */
-  protected readonly systemOrders = () => this.sellOrdersAll().filter(o => o.depotColonyId !== this.colonyId);
-
   /**
-   * Planetarer Handel ist außerhalb einer neutralen Handelsgilde-Station
-   * (`system().isTradeHub`) nur zwischen Kommandanten mit gültigem
-   * Handelsvertrag möglich (Umsetzungskonzept/21_...md) – die eigene Order
-   * ist davon unbenommen (dafür gibt es „Zurückziehen").
+   * Handel am Posten ist nur zwischen Kommandanten mit Handelsvertrag möglich
+   * (Konzept 05 §14) – die eigene Order ist davon unbenommen (dafür gibt es
+   * „Zurückziehen"). Die Bevölkerung kauft ohne Vertrag.
    */
-  protected canBuyFrom(sellerId: Id): boolean {
-    if (sellerId === this.playerId()) return true;
-    if (this.system()?.isTradeHub) return true;
-    return this.api.hasTradeAgreement(sellerId)();
+  protected canTradeWith(ownerId: Id | null): boolean {
+    if (!ownerId || ownerId === this.playerId()) return true;
+    return this.api.hasTradeAgreement(ownerId)();
   }
 
   protected newProductionProductId = this.productTypes[0]?.id ?? '';
@@ -687,22 +695,53 @@ export class ColonyDetailComponent {
     void this.run(`cancelorder:${orderId}`, () => this.api.cancelSellOrder(orderId));
   }
 
-  protected depotColonyName(depotColonyId: Id | null): string {
-    if (!depotColonyId) return '—';
-    if (depotColonyId === this.colonyId) return 'diese Kolonie';
-    return this.api.colony(depotColonyId)()?.name ?? '—';
+  protected planetName(planetId: Id | null): string {
+    if (!planetId) return '—';
+    return this.api.planet(planetId)()?.name ?? '—';
   }
 
   protected buyQtyFor(orderId: Id, max: number): number {
     return Math.min(this.buyDraftQty[orderId] ?? max, max);
   }
+  /** Sofortkauf gegen eine Verkaufs-Order: Lieferung ins Lager der eigenen Kolonie auf diesem Planeten, sonst ins Depot am Posten (Backend). */
   protected buyFromOrder(orderId: Id, remaining: number): void {
     const qty = this.buyQtyFor(orderId, remaining);
     if (qty <= 0) return;
-    // Lieferziel muss eine EIGENE Kolonie sein (siehe `GameApi.buyFromOrder`): auf der eigenen
-    // Kolonieseite direkt hierher, auf einer fremden (System Handel/„Öffnen" von einer anderen
-    // Kolonie aus) in die eigene Heimatkolonie – Ware ließe sich sonst nicht sinnvoll zustellen.
-    const deliverToColonyId = this.isOwnColony() ? this.colonyId : (this.api.player()?.homeworldColonyId ?? this.colonyId);
-    void this.run(`buy:${orderId}`, () => this.api.buyFromOrder(orderId, qty, deliverToColonyId));
+    void this.run(`buy:${orderId}`, () => this.api.buyFromOrder(orderId, qty));
+  }
+
+  /** Verkauf aus dem Lager DIESER Kolonie gegen eine Kauf-Order am Posten – eine Verkaufs-Order zum Gebotspreis, die sofort kreuzt. */
+  protected readonly sellDraftQty: Partial<Record<Id, number>> = {};
+  protected sellQtyFor(bid: MarketOrder): number {
+    const max = Math.min(bid.remainingQuantity, Math.floor(this.stockOf(bid.productTypeId)));
+    return Math.max(0, Math.min(this.sellDraftQty[bid.id] ?? max, max));
+  }
+  protected sellIntoBid(bid: MarketOrder): void {
+    const c = this.colony();
+    const qty = this.sellQtyFor(bid);
+    if (!c || qty <= 0) return;
+    void this.run(`sell:${bid.id}`, () => this.api.createHubSellOrder(c.systemId, bid.productTypeId, qty, bid.limitPrice, c.planetId, false));
+  }
+
+  /** Verkauf aus dem eigenen Depot am Posten (nur ohne eigene Kolonie hier). */
+  protected readonly depotSellQty: Partial<Record<Id, number>> = {};
+  protected readonly depotSellPrice: Partial<Record<Id, number>> = {};
+  protected sellFromPostDepot(productTypeId: Id, maxQty: number): void {
+    const c = this.colony();
+    const qty = Math.min(Math.floor(this.depotSellQty[productTypeId] ?? maxQty), maxQty);
+    const price = this.depotSellPrice[productTypeId] ?? 0;
+    if (!c || qty < 1 || price <= 0) return;
+    void this.run(`sell-depot:${productTypeId}`, () => this.api.createHubSellOrder(c.systemId, productTypeId, qty, price, c.planetId, false));
+  }
+
+  /** Kauf-Order am Posten: Credits sofort im Escrow, Lieferung ins Lager der eigenen Kolonie hier bzw. ins Depot. */
+  protected newBuyProductId: Id = '';
+  protected newBuyQty = 1;
+  protected newBuyPrice = 0;
+  protected submitBuyOrder(): void {
+    const c = this.colony();
+    const qty = Math.floor(this.newBuyQty);
+    if (!c || !this.newBuyProductId || qty < 1 || this.newBuyPrice <= 0) return;
+    void this.run('buy-order', () => this.api.createHubBuyOrder(c.systemId, this.newBuyProductId, qty, this.newBuyPrice, c.planetId));
   }
 }

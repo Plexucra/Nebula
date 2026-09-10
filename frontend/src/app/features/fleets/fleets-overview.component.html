@@ -194,10 +194,10 @@
               <div class="cargo-row">
                 <span>{{ productName(c.productTypeId) }}</span>
                 <span class="mono">{{ c.quantity }}</span>
-                @if ((fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) || isAtTradeHub(fleet)) {
+                @if (fleet.locationType === 'ColonyOrbit' || isAtTradeHub(fleet)) {
                   <input type="number" min="1" [max]="c.quantity" [(ngModel)]="unloadQty[fleet.id + ':' + c.productTypeId]" placeholder="Menge" />
                   <button class="ghost small" (click)="submitUnload(fleet, c.productTypeId)" [disabled]="busy() === ('unload:' + fleet.id)">
-                    {{ isAtTradeHub(fleet) ? 'Ins Depot entladen' : 'Entladen' }}
+                    {{ isAtTradeHub(fleet) || atForeignColony(fleet) ? 'Ins Depot entladen' : 'Entladen' }}
                   </button>
                 }
               </div>
@@ -231,6 +231,8 @@
               <button class="ghost small" (click)="undock(fleet)" [disabled]="busy() === ('undock:' + fleet.id)">Ablegen</button>
               @if (colonyOwnedByMe(fleet.locationColonyId)) {
                 <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Laden</button>
+              } @else {
+                <button class="ghost small" (click)="togglePanel(fleet.id, 'load')">Aus Depot laden</button>
               }
               <button class="ghost small" (click)="togglePanel(fleet.id, 'sell')">Verkaufen</button>
             } @else {

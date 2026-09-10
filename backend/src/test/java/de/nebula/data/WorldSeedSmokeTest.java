@@ -90,11 +90,11 @@ class WorldSeedSmokeTest {
     assertEquals(2, seed.productionQueue.stream().filter(q -> q.productTypeId.equals("p_grundnahrung")).count());
 
     // Start-Verkaufsorder für Grundnahrung: ohne sie hätte die Bevölkerung nichts zu
-    // kaufen (runConsumption kauft NUR aus sellOrders), siehe Umsetzungskonzept/15_...md,
+    // kaufen (der Tageseinkauf kauft NUR aus Orders am Handelsposten), siehe Umsetzungskonzept/15_...md,
     // Auftrag 1. Seit Umsetzungskonzept/20_...md bootstrappt das Spiel nur noch dieses
     // eine Grundkonsumgut, Grundmedizin baut der Spieler selbst auf.
     assertEquals(1, seed.sellOrders.size());
-    assertTrue(seed.sellOrders.stream().allMatch(o -> o.autoRelist && o.remainingQuantity > 0 && o.pricePerUnit > 0),
+    assertTrue(seed.sellOrders.stream().allMatch(o -> o.autoRelist && o.remainingQuantity > 0 && o.limitPrice > 0 && o.planetId != null),
         "Start-Verkaufsorders müssen wiederkehrend, bestückt und bepreist sein");
     assertTrue(seed.sellOrders.stream().anyMatch(o -> o.productTypeId.equals("p_grundnahrung")),
         "Es muss eine Verkaufsorder für Grundnahrung geben");

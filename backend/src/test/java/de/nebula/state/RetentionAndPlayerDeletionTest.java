@@ -141,7 +141,7 @@ class RetentionAndPlayerDeletionTest {
     assertTrue(a.state().warehouse.isEmpty(), "Kein Lager mehr.");
     assertTrue(a.state().populations.isEmpty(), "Keine Bevölkerung mehr.");
     assertTrue(a.state().wallets.stream().noneMatch(w -> w.ownerId.equals(playerId)), "Kein Konto mehr.");
-    assertTrue(a.state().sellOrders.stream().noneMatch(o -> playerId.equals(o.sellerId)), "Keine Orders mehr.");
+    assertTrue(a.state().marketOrders.stream().noneMatch(o -> playerId.equals(o.ownerId)), "Keine Orders mehr.");
     assertFalse(a.state().knownSystemIdsByPlayer.containsKey(playerId), "Keine Sichtbarkeitsdaten mehr.");
 
     // Die Planeten selbst bleiben stehen – sie sind danach wieder unbesiedelt.

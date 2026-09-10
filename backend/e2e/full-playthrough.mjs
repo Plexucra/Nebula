@@ -240,7 +240,7 @@ async function main() {
 
   // --- Startverkaufsorders für die Grundkonsumgüter ------------------------
   // Umsetzungskonzept/15_...md, Auftrag 1: ohne sie kann die Bevölkerung gar
-  // nichts kaufen (EconomyTick.runConsumption kauft NUR aus sellOrders, nicht
+  // nichts kaufen (der Tageseinkauf kauft NUR aus Orders am Handelsposten, nicht
   // aus dem Kolonielager) – Lebensstandard bliebe dauerhaft 0 %.
   // Seit Umsetzungskonzept/20_...md ist Grundnahrung das EINZIGE mitgelieferte
   // Startkonsumgut (WorldSeed.STARTER_CONSUMER_GOODS) – Grundmedizin und
@@ -252,7 +252,7 @@ async function main() {
   assert.ok(starterFood.autoRelist, 'Die Start-Verkaufsorder muss wiederkehrend sein (autoRelist)');
   assert.ok(!starterOrders.some(o => o.productTypeId === 'p_grundmedizin'),
     'Grundmedizin darf laut Umsetzungskonzept/20_...md KEINE Start-Verkaufsorder mehr haben');
-  log(`Start-Verkaufsorder vorhanden: ${starterFood.productTypeId} ${starterFood.remainingQuantity}× à ${starterFood.pricePerUnit} Cr (autoRelist), `
+  log(`Start-Verkaufsorder vorhanden: ${starterFood.productTypeId} ${starterFood.remainingQuantity}× à ${starterFood.limitPrice} Cr (autoRelist), `
     + `Grundmedizin bewusst nicht (Konzept 20).`);
 
   // Der Lebensstandard muss tickgetrieben über 0 steigen – der eigentliche

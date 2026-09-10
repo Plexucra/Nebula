@@ -17,13 +17,12 @@ import de.nebula.model.Population;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.PopulationSupply;
 import de.nebula.model.ProductType;
-import de.nebula.model.SellOrder;
+import de.nebula.model.MarketOrder;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.UniverseStatSnapshot;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -232,17 +231,14 @@ public final class Economy {
     double bought = 0;
     for (int pass = 0; pass < MAX_PURCHASE_PASSES && bought < quantity; pass++) {
       boolean progress = false;
-      for (SellOrder order : ownPostOrders(state, colony.id, goodId)) {
+      for (MarketOrder order : ownPostOrders(state, colony, goodId)) {
         if (spent >= budget - 1e-9 || bought >= quantity) break;
-        double affordable = Math.floor((budget - spent) / order.pricePerUnit);
+        double affordable = Math.floor((budget - spent) / order.limitPrice);
         double qty = Math.min(Math.min(affordable, Math.floor(order.remainingQuantity)), quantity - bought);
         if (qty < 1) continue;
-        double cost = qty * order.pricePerUnit;
-        Wallet sellerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, order.sellerId);
-        MarketCommands.settleSellOrderPurchase(state, ids, order, qty);
-        if (sellerWallet != null) {
-          Ledger.recordTx(state, ids, popWallet.id, sellerWallet.id, cost, TransactionReason.Consumption, "Konsum " + goodId);
-        }
+        double cost = Math.round(qty * order.limitPrice * 100) / 100.0;
+        // Ohne Käufer-Id: die Ware geht in den Vorrat, nicht in ein Lager oder Depot.
+        MarketCommands.settleAsk(state, ids, order, qty, cost, popWallet.id, null);
         spent += cost;
         bought += qty;
         progress = true;
@@ -255,14 +251,9 @@ public final class Economy {
 
   private static final int MAX_PURCHASE_PASSES = 10;
 
-  /** Kaufbare Orders am eigenen Handelsposten dieser Kolonie für ein Gut, günstigste zuerst. */
-  static List<SellOrder> ownPostOrders(GameState state, String colonyId, String goodId) {
-    List<SellOrder> orders = new ArrayList<>();
-    for (SellOrder o : state.sellOrders) {
-      if (colonyId.equals(o.depotColonyId) && o.productTypeId.equals(goodId) && o.remainingQuantity > 0) orders.add(o);
-    }
-    orders.sort((a, b) -> Double.compare(a.pricePerUnit, b.pricePerUnit));
-    return orders;
+  /** Kaufbare Verkaufs-Orders am Handelsposten des Planeten dieser Kolonie, günstigste zuerst – egal, wer verkauft (keine Vertragspflicht für die Bevölkerung). */
+  static List<MarketOrder> ownPostOrders(GameState state, Colony colony, String goodId) {
+    return MarketCommands.sellOrdersAtPost(state, colony.systemId, colony.planetId, goodId);
   }
 
   // --- Verbrauch und Lebensstandard ----------------------------------------
@@ -337,7 +328,7 @@ public final class Economy {
       Long last = state.lastSupplyWarningAt.get(key);
       if (last != null && now - last < cooldownMs) continue;
       state.lastSupplyWarningAt.put(key, now);
-      boolean anyOrder = !ownPostOrders(state, colony.id, e.getKey()).isEmpty();
+      boolean anyOrder = !ownPostOrders(state, colony, e.getKey()).isEmpty();
       String goodName = ProductCatalog.find(e.getKey()).name;
       String message = anyOrder
           ? "Die Bevölkerung von \"" + colony.name + "\" kann sich " + goodName + " nicht leisten (Deckung "
@@ -491,6 +482,8 @@ public final class Economy {
     result.emergencyBelowDays = GameConstants.POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS;
     Population population = ColonyCommands.population(state, colonyId);
     if (population == null) return result;
+    Colony colony = ColonyCommands.colony(state, colonyId);
+    if (colony == null) return result;
     Long next = GameEvents.scheduledAt(state, GameEventType.COLONY_DAY, colonyId);
     result.nextPurchaseAt = next != null ? next : 0;
     Map<String, Double> coverage = state.consumptionCoverage.getOrDefault(colonyId, Map.of());
@@ -502,7 +495,7 @@ public final class Economy {
       good.dailyNeed = dailyNeed(population.currentCount, goodId);
       good.daysLeft = good.dailyNeed > 0 ? good.stock / good.dailyNeed : 0;
       good.coverage = coverage.get(goodId);
-      good.orderAvailable = !ownPostOrders(state, colonyId, goodId).isEmpty();
+      good.orderAvailable = !ownPostOrders(state, colony, goodId).isEmpty();
       result.goods.add(good);
     }
     return result;
@@ -577,7 +570,9 @@ public final class Economy {
     double totalCredits = 0;
     for (Wallet w : state.wallets) totalCredits += w.balance;
     int openSellOrders = 0;
-    for (SellOrder o : state.sellOrders) if (o.remainingQuantity > 0) openSellOrders++;
+    for (MarketOrder o : state.marketOrders) {
+      if (o.planetId != null && o.side == de.nebula.model.MarketOrderSide.Sell && o.remainingQuantity > 0) openSellOrders++;
+    }
 
     UniverseStatSnapshot snapshot = new UniverseStatSnapshot();
     snapshot.at = t;
@@ -644,9 +639,9 @@ public final class Economy {
       // Nur eigene Orders zahlen auf das eigene Konto ein – fremde Orders am
       // eigenen Posten liefern zwar Waren, das Geld geht aber woandershin.
       double bestOwnPrice = Double.NaN;
-      for (SellOrder o : ownPostOrders(state, colony.id, goodId)) {
-        if (!colony.ownerId.equals(o.sellerId)) continue;
-        if (Double.isNaN(bestOwnPrice) || o.pricePerUnit < bestOwnPrice) bestOwnPrice = o.pricePerUnit;
+      for (MarketOrder o : ownPostOrders(state, colony, goodId)) {
+        if (!colony.ownerId.equals(o.ownerId)) continue;
+        if (Double.isNaN(bestOwnPrice) || o.limitPrice < bestOwnPrice) bestOwnPrice = o.limitPrice;
       }
       if (Double.isNaN(bestOwnPrice)) continue;
       spend += need * Math.min(covered, 1.0) * bestOwnPrice;

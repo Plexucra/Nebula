@@ -5,19 +5,20 @@
 
 <div class="panel corner-frame">
   <div class="panel-header">
-    <h2>Planetare Handelsposten — Aurelia-System</h2>
-    <span class="hint">Neue Orders über "Anbieten" im Lagerbestand einer Kolonie (Tab „Produktion"). Grundnahrung, Grundmedizin und Unterhaltungselektronik kauft die Bevölkerung des Systems von selbst – das ist Ihre verlässlichste Einnahmequelle. Kauf bei einer fremden Kolonie ist nur mit Kommandanten möglich, mit denen ein <a routerLink="/diplomatie">Handelsvertrag</a> besteht – Systemhandelsposten ohne Kolonie-Landung gibt es außerhalb einer Handelsgilde-Station nicht mehr.</span>
+    <h2>Planetare Handelsposten — Heimatsystem</h2>
+    <span class="hint">Verkaufs-Orders an den Posten der Planeten Ihres Heimatsystems. Jeder Posten hat ein eigenes Orderbuch (Kauf und Verkauf) im Handel-Tab der Kolonie. Grundnahrung, Grundmedizin und Unterhaltungselektronik kauft die Bevölkerung jeder Kolonie am Posten ihres Planeten von selbst – das ist Ihre verlässlichste Einnahmequelle. Handel mit anderen Kommandanten nur mit <a routerLink="/diplomatie">Handelsvertrag</a>.</span>
   </div>
   <div class="panel-body order-list">
     @for (o of orders(); track o.id) {
       <div class="order-row">
         <span>{{ productName(o.productTypeId) }} @if (o.autoRelist) { <span class="tag good small-tag">Wiederkehrend</span> }</span>
         <span class="mono">{{ o.remainingQuantity }} Einh.</span>
-        <span class="mono">{{ o.pricePerUnit | number:'1.0-2' }} Cr/Einh.</span>
-        <span class="hint">{{ sellerColony(o.depotColonyId) }}</span>
-        <!-- Führt jetzt in den HANDEL-Tab der Kolonie statt in deren Übersicht:
-             dort liegt die Order, um die es geht. -->
-        <a class="ghost small" [routerLink]="['/planeten', o.depotColonyId]" [queryParams]="{ tab: 'handel' }">Order öffnen</a>
+        <span class="mono">{{ o.limitPrice | number:'1.0-2' }} Cr/Einh.</span>
+        <span class="hint">{{ postLabel(o) }}</span>
+        <!-- Führt in den HANDEL-Tab der Kolonie hinter der Order: dort liegt das Orderbuch des Postens. -->
+        @if (o.sourceColonyId) {
+          <a class="ghost small" [routerLink]="['/planeten', o.sourceColonyId]" [queryParams]="{ tab: 'handel' }">Posten öffnen</a>
+        }
       </div>
     } @empty {
       <p class="empty-hint">Noch keine Verkaufsorders im System. Im Handel-Tab einer Kolonie das

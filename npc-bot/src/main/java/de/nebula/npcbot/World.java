@@ -170,7 +170,7 @@ final class World {
     return isNull(g) ? null : g;
   }
 
-  /** Verkaufsorders im System – die Bevölkerung einer Kolonie kauft nur aus denen an ihrem eigenen Handelsposten (depotColonyId, Umsetzungskonzept/36). */
+  /** Verkaufs-Orders an den Planetaren Handelsposten des Systems (MarketOrder: planetId, limitPrice, ownerId, sourceColonyId) – die Bevölkerung einer Kolonie kauft am Posten ihres Planeten (Umsetzungskonzept/36, 37). */
   List<JsonNode> sellOrders(String systemId) {
     return list(q("sellOrders", Map.of("systemId", systemId)));
   }

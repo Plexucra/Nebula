@@ -132,16 +132,15 @@ Kolonien auf demselben Planeten wie ein Handelsdepot können unmittelbar
 mit diesem Depot handeln, ohne einen eigenen ausgespielten lokalen
 Frachtertransport.
 
-> **Präzisierung (10.9.2026, Umsetzungskonzept/36):** Die **Bevölkerung**
-> einer Kolonie kauft ausschließlich am **eigenen Planetaren Handelsposten**
-> dieser Kolonie – aus Orders, die dort liegen (eigene Lagerorders und von
-> Vertragspartnern per Flotte angelieferte Fracht). Sie kauft zu denselben
+> **Präzisierung (10.9.2026, Umsetzungskonzept/36 und 37):** Die
+> **Bevölkerung** einer Kolonie kauft ausschließlich am **Planetaren
+> Handelsposten ihres Planeten** – aus der Verkaufsseite des dortigen
+> Orderbuchs, egal wer verkauft (§14). Sie kauft zu denselben
 > tatsächlichen Preisen wie Spieler, ohne Sonderpreis und ohne
 > Handelsvertrag-Pflicht (Bevölkerung ist keine Vertragspartei). Sie kauft
 > **einmal je Spieltag** und hält einen **Vorrat von sieben Tagesbedarfen**
-> je Grundkonsumgut; gegessen wird aus dem Vorrat. Damit gibt es genau einen
-> Käufer je Posten, und die Wirtschaft einer Kolonie ist ein Ereignis je
-> Spieltag statt eines Sekundentakts.
+> je Grundkonsumgut; gegessen wird aus dem Vorrat. Die Wirtschaft einer
+> Kolonie ist damit ein Ereignis je Spieltag statt eines Sekundentakts.
 
 ## 8. Geografischer Wert und wichtige Verkehrsknoten
 
@@ -216,6 +215,16 @@ Handelsstation dauerhaft blockieren und damit einen ganzen regionalen
 Markt faktisch privatisieren kann.
 
 ## 14. Handelsverträge und Vertragspflicht am Planetaren Handelsposten
+
+> **Präzisierung (10.9.2026, Umsetzungskonzept/37):** Der Planetare
+> Handelsposten ist die Einrichtung des **Planeten** und funktioniert wie
+> eine Handelsgilde-Station: ein Orderbuch mit Kauf- und Verkaufs-Orders,
+> ein Depot je Kommandant, Zugang für alle Kolonien des Planeten und alle
+> dort gelandeten Flotten. Zwei Unterschiede bleiben: keine Orders der
+> Handelsgilde, und zwei Kommandanten handeln nur mit Handelsvertrag – das
+> Orderbuch führt Gebot und Brief zweier Kommandanten ohne Vertrag nicht
+> zusammen. Wer eine Kolonie auf dem Planeten hat, handelt aus ihrem Lager
+> und bekommt Käufe ins Lager; alle anderen über ihr Depot am Posten.
 
 Planetarer Handel (Kauf- oder Verkaufsvorgang an einem Planetaren
 Handelsposten, §4) ist nur noch zwischen Kommandanten möglich, die

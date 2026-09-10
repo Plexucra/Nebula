@@ -269,12 +269,22 @@ export class FleetsOverviewComponent {
   protected readonly loadProductId: Partial<Record<Id, Id>> = {};
   protected readonly loadQty: Partial<Record<Id, number>> = {};
 
-  /** Ladbare Waren: aus dem Kolonielager beim Landen, aus dem Stations-Depot an einer Handelsgilde-Station. */
+  /** Bei einer FREMDEN Kolonie gelandet: dort läuft alles über das eigene Depot am Handelsposten des Planeten (Umsetzungskonzept/37). */
+  protected atForeignColony(fleet: Fleet): boolean {
+    return !!fleet.locationColonyId && !this.colonyOwnedByMe(fleet.locationColonyId);
+  }
+
+  /** Ladbare Waren: aus dem Kolonielager bei der eigenen Kolonie, sonst aus dem eigenen Depot am Handelsort. */
   protected loadableProducts(fleet: Fleet): { productTypeId: Id; stock: number }[] {
-    if (fleet.locationColonyId) {
+    if (fleet.locationColonyId && this.colonyOwnedByMe(fleet.locationColonyId)) {
       return this.api.warehouse(fleet.locationColonyId)()
         .filter(w => !this.shipTypes.some(s => s.id === w.productTypeId))
         .map(w => ({ productTypeId: w.productTypeId, stock: w.quantity }));
+    }
+    if (fleet.locationColonyId) {
+      const planetId = this.api.colony(fleet.locationColonyId)()?.planetId;
+      if (!planetId) return [];
+      return this.api.hubDepot(fleet.systemId, planetId)().map(d => ({ productTypeId: d.productTypeId, stock: d.quantity }));
     }
     if (this.isAtTradeHub(fleet)) {
       return this.api.hubDepot(fleet.systemId)().map(d => ({ productTypeId: d.productTypeId, stock: d.quantity }));
@@ -286,7 +296,7 @@ export class FleetsOverviewComponent {
     const productTypeId = this.loadProductId[fleet.id];
     const qty = this.loadQty[fleet.id] ?? 0;
     if (!productTypeId || qty <= 0) return;
-    const action = fleet.locationColonyId
+    const action = fleet.locationColonyId && !this.atForeignColony(fleet)
       ? () => this.api.loadCargo(fleet.id, productTypeId, qty)
       : () => this.api.loadCargoFromHubDepot(fleet.id, productTypeId, qty);
     await this.run('load:' + fleet.id, action);
@@ -394,7 +404,7 @@ export class FleetsOverviewComponent {
   protected async submitUnload(fleet: Fleet, productTypeId: Id): Promise<void> {
     const qty = this.unloadQty[fleet.id + ':' + productTypeId] ?? 0;
     if (qty <= 0) return;
-    const action = fleet.locationColonyId
+    const action = fleet.locationColonyId && !this.atForeignColony(fleet)
       ? () => this.api.unloadCargo(fleet.id, productTypeId, qty)
       : () => this.api.unloadCargoToHubDepot(fleet.id, productTypeId, qty);
     await this.run('unload:' + fleet.id, action);

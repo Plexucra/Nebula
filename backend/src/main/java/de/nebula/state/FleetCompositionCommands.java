@@ -8,7 +8,6 @@ import de.nebula.model.FleetShipGroup;
 import de.nebula.model.FleetStatus;
 import de.nebula.model.GroundForceGroup;
 import de.nebula.model.ProductType;
-import de.nebula.model.SellOrder;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -91,10 +90,6 @@ public final class FleetCompositionCommands {
       }
     }
 
-    // Verkaufsorders, die aus der Fracht der Quellflotte entstanden sind, hängen
-    // jetzt an der Zielflotte – sonst verlöre ihr Auto-Relist seine Quelle
-    // (MarketCommands.reserveForRelist prüft Flotte, System und Landeort).
-    for (SellOrder o : state.sellOrders) if (source.id.equals(o.sourceFleetId)) o.sourceFleetId = target.id;
     state.blockades.removeIf(b -> b.fleetId.equals(source.id));
     state.fleets.remove(source);
   }
