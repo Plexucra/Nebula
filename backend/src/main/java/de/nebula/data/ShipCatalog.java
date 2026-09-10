@@ -5,6 +5,8 @@ import de.nebula.engine.GameConstants;
 import de.nebula.model.ShipTypeDef;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Schiffskatalog – die Daten liegen in {@code shared/catalog/ships.json}
@@ -40,8 +42,13 @@ public final class ShipCatalog {
     return defs;
   }
 
+  /** Index nach Produkt-Id – siehe {@code ProductCatalog.BY_ID}: {@link #find} läuft in jedem Tick für jede Schiffsgruppe. */
+  private static final Map<String, ShipTypeDef> BY_ID = CATALOG.stream()
+      .collect(Collectors.toUnmodifiableMap(s -> s.productTypeId, s -> s));
+
   public static ShipTypeDef find(String productTypeId) {
-    return CATALOG.stream().filter(s -> s.productTypeId.equals(productTypeId)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Unbekannter ShipType: " + productTypeId));
+    ShipTypeDef def = BY_ID.get(productTypeId);
+    if (def == null) throw new IllegalArgumentException("Unbekannter ShipType: " + productTypeId);
+    return def;
   }
 }

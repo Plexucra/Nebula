@@ -53,43 +53,7 @@ public final class ChainPlanner {
         break;
       }
     }
-    int level = GameQueries.getBuildingLevel(state, colonyId, facilityTypeId);
-    // Soldaten sind laut Mechanik/05_..., §5 "nicht durch Produktspezialisierung
-    // effizienter machbar" – im Unterschied zu allen anderen Produkten.
-    boolean isSoldier = product.id.equals("p_soldier");
-    double spec = 0;
-    if (!isSoldier) {
-      for (Specialization s : state.specializations) {
-        if (s.colonyId.equals(colonyId) && s.productTypeId.equals(product.id)) {
-          spec = s.currentLevel;
-          break;
-        }
-      }
-    }
-    double concFactor = 1;
-    if (product.tier == 0 && !product.resourceProfile.isEmpty()) {
-      Colony colony = null;
-      for (Colony c : state.colonies) if (c.id.equals(colonyId)) colony = c;
-      Planet planet = null;
-      if (colony != null) for (Planet p : state.planets) if (p.id.equals(colony.planetId)) planet = p;
-      String resId = product.resourceProfile.get(0).resourceTypeId;
-      double conc = 50;
-      if (planet != null) {
-        for (PlanetResourceConcentration c : planet.resourceConcentration) {
-          if (c.resourceTypeId.equals(resId)) {
-            conc = c.concentration;
-            break;
-          }
-        }
-      }
-      concFactor = Formulas.resourceConcentrationFactor(conc);
-    }
-    double blackoutFactor = PowerGrid.isBlackout(state, colonyId) ? Formulas.BLACKOUT_PRODUCTION_FACTOR : 1;
-    // Alle Boni AUSSER Arbeitskraft – daraus ergibt sich, wie viele Arbeitskräfte
-    // die Fertigung je Stunde binden würde (Umsetzungskonzept/19_...md).
-    double speed = Formulas.buildingLevelSpeedFactor(level)
-        * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
-    double hoursWithBonuses = product.baseProductionHours / Math.max(speed, 0.05);
+    double hoursWithBonuses = hoursWithBonuses(state, colonyId, product, facilityTypeId);
     // Der Tempo-Regler teilt die GESAMTE Dauer – auch die Arbeitskraft-Bremse –,
     // sonst bliebe bei kleiner Bevölkerung genau die Bremse als Untergrenze
     // stehen und der Regler wäre für die langen Schiffsketten wirkungslos.
@@ -103,10 +67,22 @@ public final class ChainPlanner {
   /** Dauer OHNE Arbeitskraft-Bremse – Bezugsgröße für die Transparenz-Anzeige. */
   public static double computeProductionHoursWithoutWorkforce(GameState state, String colonyId, ProductType product, String facilityTypeId) {
     if (hasFixedBuildTime(product)) return GameConstants.COLONY_SHIP_BUILD_HOURS;
+    return hoursWithBonuses(state, colonyId, product, facilityTypeId) / GameConstants.PRODUCTION_SPEED_MULTIPLIER;
+  }
+
+  /**
+   * Dauer EINER Einheit nach allen Boni AUSSER der Arbeitskraft (Anlagenstufe,
+   * Spezialisierung, Fördergüte, Blackout) – daraus ergibt sich, wie viele
+   * Arbeitskräfte die Fertigung je Stunde binden würde (Umsetzungskonzept/19_...md).
+   * Gemeinsamer Kern der beiden Zeitfunktionen; vorher stand diese Rechnung
+   * zweimal in Kopie da.
+   */
+  private static double hoursWithBonuses(GameState state, String colonyId, ProductType product, String facilityTypeId) {
     int level = GameQueries.getBuildingLevel(state, colonyId, facilityTypeId);
-    boolean isSoldier = product.id.equals("p_soldier");
+    // Soldaten sind laut Mechanik/05_..., §5 "nicht durch Produktspezialisierung
+    // effizienter machbar" – im Unterschied zu allen anderen Produkten.
     double spec = 0;
-    if (!isSoldier) {
+    if (!product.id.equals("p_soldier")) {
       for (Specialization s : state.specializations) {
         if (s.colonyId.equals(colonyId) && s.productTypeId.equals(product.id)) {
           spec = s.currentLevel;
@@ -116,10 +92,8 @@ public final class ChainPlanner {
     }
     double concFactor = 1;
     if (product.tier == 0 && !product.resourceProfile.isEmpty()) {
-      Colony colony = null;
-      for (Colony c : state.colonies) if (c.id.equals(colonyId)) colony = c;
-      Planet planet = null;
-      if (colony != null) for (Planet p : state.planets) if (p.id.equals(colony.planetId)) planet = p;
+      Colony colony = ColonyCommands.colony(state, colonyId);
+      Planet planet = colony == null ? null : ColonyCommands.planet(state, colony.planetId);
       String resId = product.resourceProfile.get(0).resourceTypeId;
       double conc = 50;
       if (planet != null) {
@@ -135,7 +109,7 @@ public final class ChainPlanner {
     double blackoutFactor = PowerGrid.isBlackout(state, colonyId) ? Formulas.BLACKOUT_PRODUCTION_FACTOR : 1;
     double speed = Formulas.buildingLevelSpeedFactor(level)
         * Formulas.specializationSpeedFactor((int) spec) * concFactor * blackoutFactor;
-    return product.baseProductionHours / Math.max(speed, 0.05) / GameConstants.PRODUCTION_SPEED_MULTIPLIER;
+    return product.baseProductionHours / Math.max(speed, 0.05);
   }
 
   /**

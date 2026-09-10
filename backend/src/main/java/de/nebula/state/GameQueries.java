@@ -82,13 +82,6 @@ public final class GameQueries {
     return w != null ? w.id : null;
   }
 
-  public static String homeworldPopulationWalletId(GameState state, String playerId) {
-    Player player = null;
-    for (Player p : state.players) if (p.id.equals(playerId)) player = p;
-    if (player == null) return null;
-    return popWalletIdForColony(state, player.homeworldColonyId);
-  }
-
   /** Letzte 200 Transaktionen des angemeldeten Kommandanten (als Spieler-Wallet-Besitzer), neueste zuerst. */
   public static List<Transaction> transactionsForPlayer(GameState state, String playerId) {
     Set<String> walletIds = new LinkedHashSet<>();

@@ -23,6 +23,9 @@ public class ChainPlan {
    */
   public double workersBoundPerHour;
 
+  /** Platzhalter für Aufträge, die noch nicht gestartet sind – der verbindliche Plan entsteht erst beim Start. */
+  public static final ChainPlan EMPTY = new ChainPlan(0, List.of(), true);
+
   public ChainPlan() {
   }
 

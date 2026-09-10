@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import de.nebula.model.BuildingType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Gebäudekatalog – die Daten liegen in {@code shared/catalog/buildings.json}
@@ -18,8 +20,13 @@ public final class BuildingCatalog {
       List.copyOf(CatalogJson.load("buildings.json", new TypeReference<List<BuildingType>>() {
       }));
 
+  /** Index nach Id – siehe {@code ProductCatalog.BY_ID}: {@link #find} läuft in jedem Tick für jedes Gebäude jeder Kolonie. */
+  private static final Map<String, BuildingType> BY_ID = CATALOG.stream()
+      .collect(Collectors.toUnmodifiableMap(bt -> bt.id, bt -> bt));
+
   public static BuildingType find(String id) {
-    return CATALOG.stream().filter(bt -> bt.id.equals(id)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Unbekannter BuildingType: " + id));
+    BuildingType type = BY_ID.get(id);
+    if (type == null) throw new IllegalArgumentException("Unbekannter BuildingType: " + id);
+    return type;
   }
 }

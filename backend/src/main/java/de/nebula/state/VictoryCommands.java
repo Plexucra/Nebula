@@ -52,12 +52,8 @@ public final class VictoryCommands {
     // zweite Partei Kolonien HATTE, ist "als Einzige Kolonien" kein Sieg, sondern
     // der Normalzustand einer jungen Galaxie.
     if (allParties.size() < 2) return;
-    if (state.partiesEverWithColonies.size() < 2) {
-      state.partiesEverWithColonies.addAll(partiesWithColonies.keySet());
-      return;
-    }
     state.partiesEverWithColonies.addAll(partiesWithColonies.keySet());
-    if (partiesWithColonies.size() != 1) return;
+    if (state.partiesEverWithColonies.size() < 2 || partiesWithColonies.size() != 1) return;
 
     Map.Entry<String, List<Player>> winner = partiesWithColonies.entrySet().iterator().next();
     GameVictory victory = new GameVictory();

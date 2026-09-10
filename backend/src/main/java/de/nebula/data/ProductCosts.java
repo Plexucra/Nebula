@@ -21,9 +21,8 @@ import java.util.Map;
  *
  * <p>{@code kosten(p) = workHoursPerUnit(p) × 0,02 + Σ Rezeptmenge × kosten(Eingang)},
  * rekursiv bis zu den Rohstoffen (leeres Rezept). Ergebnisse werden
- * einmalig gecacht, da das Rezept-Netz statisch ist (kein erneutes Rechnen
- * je Aufruf nötig – {@link ProductCatalog#find} ist eine lineare Suche über
- * den gesamten Katalog).</p>
+ * einmalig gecacht, da das Rezept-Netz statisch ist und die Rekursion sonst
+ * bei jedem Aufruf die ganze Kette neu durchliefe.</p>
  */
 public final class ProductCosts {
   private ProductCosts() {

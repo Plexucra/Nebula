@@ -419,10 +419,24 @@ final class World {
 
   // --- Galaxie ------------------------------------------------------------------------
 
+  private JsonNode systemsSource;
+  private Map<String, JsonNode> systemsById = Map.of();
+
+  /**
+   * Systeme nach Id. Die Antwort auf {@code visibleSystems} ist je Takt gecacht;
+   * die Map dazu wird nur neu gebaut, wenn die Antwort eine andere ist –
+   * {@link #systemName} läuft in Schleifen über Flotten und Ziele und baute
+   * die Map aus 200 Systemen vorher bei jedem Aufruf neu.
+   */
   Map<String, JsonNode> systems() {
-    Map<String, JsonNode> out = new LinkedHashMap<>();
-    for (JsonNode s : list(q("visibleSystems"))) out.put(text(s, "id"), s);
-    return out;
+    JsonNode source = q("visibleSystems");
+    if (source != systemsSource) {
+      Map<String, JsonNode> out = new LinkedHashMap<>();
+      for (JsonNode s : list(source)) out.put(text(s, "id"), s);
+      systemsSource = source;
+      systemsById = out;
+    }
+    return systemsById;
   }
 
   String systemName(String systemId) {

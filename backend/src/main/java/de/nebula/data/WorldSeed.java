@@ -52,8 +52,6 @@ public final class WorldSeed {
   private WorldSeed() {
   }
 
-  private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
-
   /**
    * Grundkonsumgüter, die eine frische Heimatkolonie von Anfang an SELBST
    * produziert (Dauerauftrag mit {@code requeueOnComplete}) UND per
@@ -284,7 +282,7 @@ public final class WorldSeed {
       q.requeueOnComplete = true;
       q.status = ProductionQueueStatus.queued;
       q.stoppedReasonCode = null;
-      q.plan = EMPTY_CHAIN_PLAN;
+      q.plan = ChainPlan.EMPTY;
       q.startedAt = null;
       q.endsAt = null;
       result.add(q);

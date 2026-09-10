@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import de.nebula.model.GroundUnitTypeDef;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Bodeneinheiten-Katalog – die Daten liegen in
@@ -28,8 +30,13 @@ public final class GroundUnitCatalog {
       List.copyOf(CatalogJson.load("ground-units.json", new TypeReference<List<GroundUnitTypeDef>>() {
       }));
 
+  /** Index nach Produkt-Id – siehe {@code ProductCatalog.BY_ID}: {@link #find} läuft je Bodenkampf-Tick für jede Einheit. */
+  private static final Map<String, GroundUnitTypeDef> BY_ID = CATALOG.stream()
+      .collect(Collectors.toUnmodifiableMap(u -> u.productTypeId, u -> u));
+
   public static GroundUnitTypeDef find(String productTypeId) {
-    return CATALOG.stream().filter(u -> u.productTypeId.equals(productTypeId)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Unbekannter GroundUnitType: " + productTypeId));
+    GroundUnitTypeDef def = BY_ID.get(productTypeId);
+    if (def == null) throw new IllegalArgumentException("Unbekannter GroundUnitType: " + productTypeId);
+    return def;
   }
 }

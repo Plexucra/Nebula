@@ -5,6 +5,8 @@ import de.nebula.model.ProductCategory;
 import de.nebula.model.ProductType;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Produktkatalog – die Daten selbst liegen in {@code shared/catalog/products.json}
@@ -25,9 +27,19 @@ public final class ProductCatalog {
       List.copyOf(CatalogJson.load("products.json", new TypeReference<List<ProductType>>() {
       }));
 
+  /**
+   * Index nach Id. {@link #find} ist die meistgerufene Methode des Backends –
+   * jeder Tick schlägt sie für jedes Gebäude, jede Schiffsgruppe, jeden
+   * Kettenschritt und jeden Kampfwurf nach. Vorher ein Stream über alle 214
+   * Einträge samt Lambda-Allokation je Aufruf; jetzt ein Hash-Lookup.
+   */
+  private static final Map<String, ProductType> BY_ID = CATALOG.stream()
+      .collect(Collectors.toUnmodifiableMap(pt -> pt.id, pt -> pt));
+
   public static ProductType find(String id) {
-    return CATALOG.stream().filter(pt -> pt.id.equals(id)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Unbekannter ProductType: " + id));
+    ProductType product = BY_ID.get(id);
+    if (product == null) throw new IllegalArgumentException("Unbekannter ProductType: " + id);
+    return product;
   }
 
   private static List<ProductType> byCategory(ProductCategory category) {
