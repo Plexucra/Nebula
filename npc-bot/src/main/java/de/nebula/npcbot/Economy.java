@@ -102,7 +102,7 @@ final class Economy {
     double perHour = Catalog.eleriumPerHour(h.infrastructure());
     double hours = 0;
     for (Map.Entry<String, Double> e : products.entrySet()) {
-      hours += Json.dbl(bot.world.previewChain(id, e.getKey(), e.getValue()), "totalHours");
+      hours += chainHours(id, e.getKey(), e.getValue());
     }
     // Energie: die Vorhaltemenge des Energiespeichers (Konzept 32) auf den Verbrauch über die
     // Laufzeit des Auftrags plus Reserve setzen und warten, bis er voll ist. Der Kettenbedarf
@@ -143,6 +143,29 @@ final class Economy {
     }
     return false;
   }
+  /** Kettenlaufzeiten je "Kolonie|Produkt|Menge": {Takt der Abfrage, Stunden} – siehe {@link #chainHours}. */
+  private final Map<String, double[]> chainHoursCache = new HashMap<>();
+  /** So viele Takte gilt eine abgefragte Kettenlaufzeit für die Energie-Wache. */
+  private static final int CHAIN_HOURS_CACHE_TICKS = 10;
+
+  /**
+   * Laufzeit einer Produktionskette für die Energie-Wache, höchstens alle
+   * {@link #CHAIN_HOURS_CACHE_TICKS} Takte frisch vom Server. Jede Vorschau ist
+   * dort eine komplette Kettenplanung; die Wache fragte sie vorher bei jedem
+   * Takt für jeden Werft-, Ausbildungs- und Baustoffwunsch neu ab – bei
+   * zwanzig Bots dutzende Planungen je Sekunde für eine Zahl, die sich nur mit
+   * Lager, Bevölkerung und Gebäudestufen langsam verschiebt. Wo es auf die
+   * genaue Zahl ankommt (Bestellung, Meldung), wird weiter direkt abgefragt.
+   */
+  private double chainHours(String colonyId, String productTypeId, double quantity) {
+    String key = colonyId + "|" + productTypeId + "|" + quantity;
+    double[] cached = chainHoursCache.get(key);
+    if (cached != null && bot.tickNo - cached[0] < CHAIN_HOURS_CACHE_TICKS) return cached[1];
+    double hours = Json.dbl(bot.world.previewChain(colonyId, productTypeId, quantity), "totalHours");
+    chainHoursCache.put(key, new double[]{bot.tickNo, hours});
+    return hours;
+  }
+
   private int warshipRotation;
   private int reorders;
 

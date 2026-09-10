@@ -18,10 +18,14 @@ import de.nebula.model.Planet;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
+import de.nebula.model.WarehouseEntry;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Bebauung (Umsetzungskonzept/17_...md): Bebauungsplätze statt
@@ -95,13 +99,38 @@ public final class BuildingCommands {
     Colony colony = ColonyCommands.colony(state, colonyId);
     if (colony == null) throw new CommandException("Unbekannte Kolonie.");
     int fromLevel = GameQueries.getBuildingLevel(state, colonyId, type.id);
+    int planetTotal = isInfrastructure(type) ? planetInfrastructureTotal(state, colony.planetId) : 0;
+    return preview(type, fromLevel, planetTotal, productTypeId -> Warehouse.qty(state, colonyId, productTypeId));
+  }
+
+  /**
+   * Vorschauen für ALLE Gebäudetypen einer Kolonie in einem Rutsch – für die
+   * Transparenz-Aufschlüsselung ({@code ColonyCommands.colonySpeedBreakdown}),
+   * die jede Sekunde je offener Kolonieseite abgefragt wird. Gebäudestufen und
+   * Lagerbestand werden EINMAL eingesammelt statt je Typ und Baustoff die
+   * Listen abzulaufen; die Planetensumme kommt aus den bereits berechneten
+   * {@link BuildSlots}.
+   */
+  public static Map<String, UpgradePreview> upgradePreviews(GameState state, Colony colony, BuildSlots slots) {
+    Map<String, Integer> levels = new HashMap<>();
+    for (Building b : state.buildings) if (b.colonyId.equals(colony.id)) levels.put(b.typeId, b.level);
+    Map<String, Double> stock = new HashMap<>();
+    for (WarehouseEntry w : state.warehouse) if (w.colonyId.equals(colony.id)) stock.put(w.productTypeId, w.quantity);
+    Map<String, UpgradePreview> out = new LinkedHashMap<>();
+    for (BuildingType type : BuildingCatalog.CATALOG) {
+      out.put(type.id, preview(type, levels.getOrDefault(type.id, 0), slots.planetInfrastructureTotal,
+          productTypeId -> stock.getOrDefault(productTypeId, 0.0)));
+    }
+    return out;
+  }
+
+  private static UpgradePreview preview(BuildingType type, int fromLevel, int planetTotal, Function<String, Double> stockOf) {
     int targetLevel = fromLevel + 1;
     double credits;
     double hours;
     int materialLevel;
     if (isInfrastructure(type)) {
       // Planetweite Summe T bestimmt Preis, Dauer UND Baustoffmenge – dicht besiedelte Planeten werden für alle teurer.
-      int planetTotal = planetInfrastructureTotal(state, colony.planetId);
       credits = Formulas.infrastructureUpgradeCost(type.baseCostPerLevel, planetTotal);
       hours = Formulas.infrastructureUpgradeHours(type.baseHoursPerLevel, planetTotal);
       materialLevel = planetTotal + 1;
@@ -121,7 +150,7 @@ public final class BuildingCommands {
       req.required = type.category == BuildingCategory.Housing
           ? Formulas.housingMaterialQuantity(m.baseQuantity, materialLevel)
           : Formulas.buildingMaterialQuantity(m.baseQuantity, materialLevel);
-      req.available = Warehouse.qty(state, colonyId, m.productTypeId);
+      req.available = stockOf.apply(m.productTypeId);
       materials.add(req);
     }
     return new UpgradePreview(fromLevel, targetLevel, credits, hours, materials, !isInfrastructure(type));

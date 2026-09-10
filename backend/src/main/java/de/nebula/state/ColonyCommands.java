@@ -107,8 +107,9 @@ public final class ColonyCommands {
     Wallet ownerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId);
     double balance = ownerWallet != null ? ownerWallet.balance : 0;
     List<ColonySpeedBreakdown.BuildingUpgradePreview> upgrades = new ArrayList<>();
+    Map<String, BuildingCommands.UpgradePreview> previews = BuildingCommands.upgradePreviews(state, colony, slots);
     for (BuildingType type : BuildingCatalog.CATALOG) {
-      BuildingCommands.UpgradePreview up = BuildingCommands.upgradePreview(state, colonyId, type);
+      BuildingCommands.UpgradePreview up = previews.get(type.id);
       ColonySpeedBreakdown.BuildingUpgradePreview preview = new ColonySpeedBreakdown.BuildingUpgradePreview();
       preview.typeId = type.id;
       preview.currentLevel = up.currentLevel();
