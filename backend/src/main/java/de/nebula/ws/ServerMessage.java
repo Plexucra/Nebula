@@ -24,6 +24,14 @@ public class ServerMessage {
   public String type;
   public String requestId;
   public Object payload;
+  /**
+   * Die SPIELUHR des Servers beim Absenden ({@code Clock.now()}). Sie kann
+   * gegen die Wanduhr der Empfänger verschoben sein (siehe {@code Clock});
+   * Oberfläche und Bots stellen ihre eigene Spieluhr an jeder Nachricht
+   * danach und rechnen Countdowns, Alter und Fortschritt damit – nie mit
+   * {@code Date.now()} bzw. {@code System.currentTimeMillis()}.
+   */
+  public long gameNow;
 
   public ServerMessage() {
   }
@@ -32,6 +40,7 @@ public class ServerMessage {
     this.type = type;
     this.requestId = requestId;
     this.payload = payload;
+    this.gameNow = de.nebula.engine.Clock.now();
   }
 
   public static ServerMessage ack(String requestId, Object payload) {

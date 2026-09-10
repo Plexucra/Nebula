@@ -669,7 +669,8 @@ final class Military {
       if (Json.eq(text(q, "shipProductTypeId"), Catalog.TROOP_TRANSPORT)) {
         JsonNode ends = q.path("endsAt");
         if (!Json.isNull(ends)) {
-          long remainingMs = ends.asLong() - System.currentTimeMillis();
+          // endsAt ist Spielzeit des Servers – gegen seine Spieluhr rechnen, nicht gegen die eigene Wanduhr.
+          long remainingMs = ends.asLong() - bot.gameNow();
           return "Werft: noch " + Economy.fmtHours(remainingMs / GameSpeed.REAL_MS_PER_GAME_HOUR);
         }
         return "Werft: " + text(q, "status");

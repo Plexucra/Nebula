@@ -247,10 +247,10 @@ class LandingCommandsTest {
 
     LandingCommands.moveGroundForces(a.state(), a.attackerId(), surface.id, a.attackerColonyId());
     // Vor Ablauf des Kampftakts ist noch nichts angekommen.
-    LandingCommands.processGroundForceMovements(a.state(), a.ids(), surface.moveCompletesAt - 1);
+    GameEvents.runDue(a.state(), a.ids(), surface.moveCompletesAt - 1);
     assertTrue(a.state().groundForceGroups.contains(surface), "Vor Fälligkeit darf der Verband noch nicht ankommen");
 
-    LandingCommands.processGroundForceMovements(a.state(), a.ids(), surface.moveCompletesAt);
+    GameEvents.runDue(a.state(), a.ids(), surface.moveCompletesAt);
     assertTrue(a.state().groundForceGroups.stream().noneMatch(g -> g.id.equals(surface.id)),
         "Der gelandete Verband muss nach Ankunft verschwinden");
     assertEquals(garrisonSoldiersBefore + 150, garrisonCount(a, a.attackerColonyId(), GameConstants.SOLDIER_PRODUCT_ID), 0.001);

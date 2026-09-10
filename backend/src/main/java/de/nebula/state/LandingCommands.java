@@ -234,25 +234,23 @@ public final class LandingCommands {
 
     group.pendingMoveColonyId = targetColonyId;
     group.moveCompletesAt = Clock.now() + (long) Clock.hoursToMs(Formulas.COMBAT_TICK_HOURS);
+    GameEvents.schedule(state, GameEventType.GROUND_FORCE_MOVED, group.id, group.moveCompletesAt);
   }
 
-  /** Aufgerufen aus {@code GameTick}: schließt fällige Verlegungen ab und löst die Boden-Gruppe dabei auf. */
-  public static void processGroundForceMovements(GameState state, IdGenerator ids, long t) {
-    List<GroundForceGroup> due = state.groundForceGroups.stream()
-        .filter(g -> g.moveCompletesAt != null && g.moveCompletesAt <= t)
-        .toList();
-    for (GroundForceGroup group : due) {
-      String targetColonyId = group.pendingMoveColonyId;
-      for (GroundForceUnitStack u : group.units) {
-        int total = u.activeCount + u.reserveCount;
-        if (total <= 0) continue;
-        if (GameConstants.SOLDIER_PRODUCT_ID.equals(u.unitProductTypeId)) {
-          RecruitmentCommands.addSoldiersToGarrison(state, ids, targetColonyId, total);
-        } else {
-          RecruitmentCommands.addDronesToGarrison(state, ids, targetColonyId, u.unitProductTypeId, total);
-        }
+  /** Ereignis {@code GROUND_FORCE_MOVED}: die Verlegung ist um, der Verband geht in der Garnison auf. Veraltet, wenn der Verband verschwunden ist. */
+  static void completeGroundForceMove(GameState state, IdGenerator ids, String groupId, long at) {
+    GroundForceGroup group = GroundBattleCommands.group(state, groupId);
+    if (group == null || group.moveCompletesAt == null || group.moveCompletesAt != at) return;
+    String targetColonyId = group.pendingMoveColonyId;
+    for (GroundForceUnitStack u : group.units) {
+      int total = u.activeCount + u.reserveCount;
+      if (total <= 0) continue;
+      if (GameConstants.SOLDIER_PRODUCT_ID.equals(u.unitProductTypeId)) {
+        RecruitmentCommands.addSoldiersToGarrison(state, ids, targetColonyId, total);
+      } else {
+        RecruitmentCommands.addDronesToGarrison(state, ids, targetColonyId, u.unitProductTypeId, total);
       }
-      state.groundForceGroups.remove(group);
     }
+    state.groundForceGroups.remove(group);
   }
 }

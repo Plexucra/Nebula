@@ -290,6 +290,7 @@ public final class ColonyCommands {
     colonization.startedAt = t;
     colonization.endsAt = t + (long) Clock.hoursToMs(GameConstants.COLONIZATION_HOURS);
     state.colonizations.add(colonization);
+    GameEvents.schedule(state, GameEventType.COLONIZATION_COMPLETED, colonization.id, colonization.endsAt);
     return colonization;
   }
 
@@ -347,22 +348,23 @@ public final class ColonyCommands {
     return null;
   }
 
-  /** Schließt fällige Koloniegründungen ab – aufgerufen aus {@code GameTick}. */
-  public static void processColonizations(GameState state, IdGenerator ids, long t) {
-    for (Colonization c : state.colonizations.stream().filter(x -> x.endsAt <= t).toList()) {
-      state.colonizations.remove(c);
-      Planet planet = planet(state, c.planetId);
-      if (planet == null) continue;
-      Colony colony = foundColony(state, ids, c, t);
-      Notifications.notify(state, ids, NotificationType.Info, Notifications.CODE_COLONY_FOUNDED,
-          "Kolonie \"" + colony.name + "\" gegründet – " + (long) GameConstants.START_POPULATION
-              + " Kolonisten sind gelandet.", colony.id, null);
-    }
+  /** Ereignis {@code COLONIZATION_COMPLETED}: die Landung ist um, die Kolonie entsteht. Veraltet, wenn der Vorgang verschwunden ist. */
+  static void completeColonization(GameState state, IdGenerator ids, String colonizationId, long at) {
+    Colonization c = state.colonizations.stream().filter(x -> x.id.equals(colonizationId)).findFirst().orElse(null);
+    if (c == null || c.endsAt != at) return;
+    state.colonizations.remove(c);
+    if (planet(state, c.planetId) == null) return;
+    Colony colony = foundColony(state, ids, c, at);
+    Notifications.notify(state, ids, NotificationType.Info, Notifications.CODE_COLONY_FOUNDED,
+        "Kolonie \"" + colony.name + "\" gegründet – " + (long) GameConstants.START_POPULATION
+            + " Kolonisten sind gelandet.", colony.id, null);
+    // Eine neue Partei mit Kolonien kann den Krieg nicht entscheiden, aber sie
+    // zählt ab jetzt zu den Parteien, die je Kolonien hatten.
+    VictoryCommands.evaluate(state, ids);
   }
 
 
   private static Colony foundColony(GameState state, IdGenerator ids, Colonization request, long t) {
-    Planet planet = planet(state, request.planetId);
     Colony colony = new Colony();
     colony.id = ids.next("col");
     colony.planetId = request.planetId;
@@ -425,7 +427,6 @@ public final class ColonyCommands {
       b.level = Integer.parseInt(start[1]);
       state.buildings.add(b);
     }
-    if (planet != null && colony.name == null) colony.name = planet.name + "-Kolonie";
     return colony;
   }
 }

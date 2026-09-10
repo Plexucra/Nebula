@@ -182,6 +182,7 @@ public final class GroundBattleCommands {
     battle.endedAt = null;
     battle.outcome = null;
     state.groundBattles.add(battle);
+    GameEvents.schedule(state, GameEventType.GROUND_BATTLE_ROUND, battle.id, battle.nextTickAt);
 
     String reportLink = "/bodenkampfbericht/" + battle.reportToken;
     Player defender = GameQueries.requirePlayer(state, target.ownerId);
@@ -214,14 +215,18 @@ public final class GroundBattleCommands {
       throw new CommandException("Aus der Verteidigung der eigenen Kolonie gibt es keinen Rückzug.");
     }
     if (!battle.attackerId.equals(playerId)) throw new CommandException("Dieses Gefecht betrifft Sie nicht.");
-    resolveTick(state, ids, battle, battle.attackerId);
+    resolveTick(state, ids, battle, battle.attackerId, Clock.now());
   }
 
-  /** Aufgerufen aus {@code GameTick}. */
-  public static void processGroundBattles(GameState state, IdGenerator ids, long t) {
-    List<GroundBattle> due = state.groundBattles.stream()
-        .filter(b -> b.status == BattleStatus.Active && b.nextTickAt <= t).toList();
-    for (GroundBattle battle : due) resolveTick(state, ids, battle, null);
+  /**
+   * Ereignis {@code GROUND_BATTLE_ROUND}: die nächste Runde ist fällig. Veraltet,
+   * wenn das Gefecht beendet ist oder eine andere Rundenzeit trägt; die
+   * Folgerunde wird in {@link #recordTick} ab {@code at} geplant.
+   */
+  static void round(GameState state, IdGenerator ids, String battleId, long at) {
+    GroundBattle battle = groundBattle(state, battleId);
+    if (battle == null || battle.status != BattleStatus.Active || battle.nextTickAt != at) return;
+    resolveTick(state, ids, battle, null, at);
   }
 
   // --- Gefechtsauflösung ---------------------------------------------------
@@ -234,24 +239,24 @@ public final class GroundBattleCommands {
    * Belagerung wieder eine kampffähige Verteidigung ein, wird derselbe Tick
    * wieder ein Kampftick.
    */
-  private static void resolveTick(GameState state, IdGenerator ids, GroundBattle battle, String retreatingPlayerId) {
+  private static void resolveTick(GameState state, IdGenerator ids, GroundBattle battle, String retreatingPlayerId, long t) {
     GroundForceGroup attacker = group(state, battle.attackerGroupId);
     GroundForceGroup defender = RecruitmentCommands.groundForces(state, battle.colonyId);
     Colony colony = ColonyCommands.colony(state, battle.colonyId);
     if (attacker == null || colony == null) {
       // Verband oder Kolonie sind zwischenzeitlich verschwunden – das Gefecht
       // hat kein Objekt mehr und endet ergebnislos (wie im Raum).
-      endBattle(state, ids, battle, null, null);
+      endBattle(state, ids, battle, null, null, t);
       return;
     }
     RecruitmentCommands.recalcCrewing(defender);
-    if (activeDroneCount(defender) > 0) resolveCombatTick(state, ids, battle, attacker, defender, retreatingPlayerId);
-    else resolveSiegeTick(state, ids, battle, attacker, retreatingPlayerId);
+    if (activeDroneCount(defender) > 0) resolveCombatTick(state, ids, battle, attacker, defender, retreatingPlayerId, t);
+    else resolveSiegeTick(state, ids, battle, attacker, retreatingPlayerId, t);
   }
 
   /** Drohne gegen Drohne, Mechanik/04_..., §2-5 – Soldaten sind hier nur Bediener und kämpfen nicht selbst. */
   private static void resolveCombatTick(GameState state, IdGenerator ids, GroundBattle battle, GroundForceGroup attacker,
-                                         GroundForceGroup defender, String retreatingPlayerId) {
+                                         GroundForceGroup defender, String retreatingPlayerId, long t) {
     battle.phase = GroundBattlePhase.Combat;
     List<GroundForceUnitStack> attackerBefore = snapshot(attacker);
     List<GroundForceUnitStack> defenderBefore = snapshot(defender);
@@ -277,8 +282,8 @@ public final class GroundBattleCommands {
     double civiliansLost = killCivilians(state, battle.colonyId, battle.populationAtStart * civilianFraction);
     battle.civilianLossRatio = Formulas.clamp(battle.civilianLossRatio + civilianFraction, 0, 1);
 
-    GroundBattleTickResult tick = recordTick(battle, GroundBattlePhase.Combat, attackerBefore, defenderBefore,
-        attackerLosses, defenderLosses, civiliansLost);
+    GroundBattleTickResult tick = recordTick(state, battle, GroundBattlePhase.Combat, attackerBefore, defenderBefore,
+        attackerLosses, defenderLosses, civiliansLost, t);
     PlanetStats stats = ColonyCommands.colonyStats(state, battle.colonyId);
     tick.loyaltyPctBefore = stats != null ? stats.loyaltyPct : 0;
     tick.loyaltyPctAfter = tick.loyaltyPctBefore;
@@ -289,7 +294,7 @@ public final class GroundBattleCommands {
     if (attackerRetreats) {
       // §11: erfolgreicher Rückzug führt den Verband zurück auf die
       // Planetenoberfläche – dort steht er ohnehin, er löst sich nur vom Feind.
-      endBattle(state, ids, battle, BattleOutcome.Retreat, null);
+      endBattle(state, ids, battle, BattleOutcome.Retreat, null, t);
       return;
     }
     if (attackerBeaten) {
@@ -298,7 +303,7 @@ public final class GroundBattleCommands {
       // VERTEIDIGERS: ohne Soldaten kann der Angreifer die anschließende
       // Belagerung gar nicht führen, sein Sieg wäre folgenlos.
       state.groundForceGroups.remove(attacker);
-      endBattle(state, ids, battle, BattleOutcome.DefenderVictory, null);
+      endBattle(state, ids, battle, BattleOutcome.DefenderVictory, null, t);
       return;
     }
     if (defenderBeaten) {
@@ -325,7 +330,7 @@ public final class GroundBattleCommands {
    * </ol>
    */
   private static void resolveSiegeTick(GameState state, IdGenerator ids, GroundBattle battle,
-                                        GroundForceGroup attacker, String retreatingPlayerId) {
+                                        GroundForceGroup attacker, String retreatingPlayerId, long t) {
     battle.phase = GroundBattlePhase.Siege;
     List<GroundForceUnitStack> attackerBefore = snapshot(attacker);
     PlanetStats stats = ColonyCommands.colonyStats(state, battle.colonyId);
@@ -335,11 +340,11 @@ public final class GroundBattleCommands {
       // Ein Rückzug aus der Belagerung kostet nichts weiter: es steht keine
       // Streitmacht mehr da, die einen Abzug bestrafen könnte – der einseitige
       // Schlusstick aus §11 hat nur im Kampftick ein Gegenüber.
-      GroundBattleTickResult tick = recordTick(battle, GroundBattlePhase.Siege, attackerBefore, List.of(),
-          Map.of(), Map.of(), 0);
+      GroundBattleTickResult tick = recordTick(state, battle, GroundBattlePhase.Siege, attackerBefore, List.of(),
+          Map.of(), Map.of(), 0, t);
       tick.loyaltyPctBefore = loyaltyBefore;
       tick.loyaltyPctAfter = loyaltyBefore;
-      endBattle(state, ids, battle, BattleOutcome.Retreat, null);
+      endBattle(state, ids, battle, BattleOutcome.Retreat, null, t);
       return;
     }
 
@@ -370,8 +375,8 @@ public final class GroundBattleCommands {
       stats.loyaltyPct = loyaltyAfter;
     }
 
-    GroundBattleTickResult tick = recordTick(battle, GroundBattlePhase.Siege, attackerBefore, List.of(),
-        attackerLosses, Map.of(), civiliansLost);
+    GroundBattleTickResult tick = recordTick(state, battle, GroundBattlePhase.Siege, attackerBefore, List.of(),
+        attackerLosses, Map.of(), civiliansLost, t);
     tick.attackerSoldiers = soldiers;
     tick.rebels = rebels;
     tick.loyaltyPctBefore = loyaltyBefore;
@@ -381,21 +386,20 @@ public final class GroundBattleCommands {
       // Ohne Soldaten ist die Belagerung gebrochen – und mit ihnen ist auch
       // keine Drohne mehr kommandierbar, der Verband ist als Ganzes erledigt.
       state.groundForceGroups.remove(attacker);
-      endBattle(state, ids, battle, BattleOutcome.DefenderVictory, null);
+      endBattle(state, ids, battle, BattleOutcome.DefenderVictory, null, t);
       return;
     }
     if (loyaltyAfter < Formulas.SIEGE_SURRENDER_LOYALTY_PCT) {
       String summary = ColonyConquest.conquer(state, ids, battle, attacker);
-      endBattle(state, ids, battle, BattleOutcome.AttackerVictory, summary);
+      endBattle(state, ids, battle, BattleOutcome.AttackerVictory, summary, t);
     }
   }
 
-  private static GroundBattleTickResult recordTick(GroundBattle battle, GroundBattlePhase phase,
+  private static GroundBattleTickResult recordTick(GameState state, GroundBattle battle, GroundBattlePhase phase,
                                                     List<GroundForceUnitStack> attackerBefore,
                                                     List<GroundForceUnitStack> defenderBefore,
                                                     Map<String, Integer> attackerLosses,
-                                                    Map<String, Integer> defenderLosses, double civiliansLost) {
-    long t = Clock.now();
+                                                    Map<String, Integer> defenderLosses, double civiliansLost, long t) {
     GroundBattleTickResult tick = new GroundBattleTickResult();
     tick.tick = battle.ticksResolved + 1;
     tick.atTime = t;
@@ -408,6 +412,8 @@ public final class GroundBattleCommands {
     battle.ticks.add(tick);
     battle.ticksResolved += 1;
     battle.nextTickAt = t + (long) Clock.hoursToMs(Formulas.COMBAT_TICK_HOURS);
+    // Vorläufig die nächste Runde planen – endet das Gefecht in diesem Tick noch, nimmt endBattle sie zurück.
+    GameEvents.schedule(state, GameEventType.GROUND_BATTLE_ROUND, battle.id, battle.nextTickAt);
     return tick;
   }
 
@@ -504,8 +510,9 @@ public final class GroundBattleCommands {
     return 0;
   }
 
-  private static void endBattle(GameState state, IdGenerator ids, GroundBattle battle, BattleOutcome outcome, String conquestSummary) {
-    long t = Clock.now();
+  private static void endBattle(GameState state, IdGenerator ids, GroundBattle battle, BattleOutcome outcome,
+                                String conquestSummary, long t) {
+    GameEvents.cancel(state, GameEventType.GROUND_BATTLE_ROUND, battle.id);
     battle.status = BattleStatus.Ended;
     battle.endedAt = t;
     battle.outcome = outcome;

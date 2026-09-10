@@ -431,10 +431,13 @@ export class FleetsOverviewComponent {
    * blind aus Namen.
    */
   protected moveTargets(fleet: Fleet): { id: Id; label: string }[] {
+    // EINE Abfrage für alle Ziele (`routePreviews`) statt einer je System:
+    // vorher liefen hier 200 Routenabfragen je Sekunde, solange das Feld offen war.
+    const routes = this.api.routePreviews(fleet.id)();
     return this.allSystems()
       .filter(s => s.id !== fleet.systemId)
       .map(s => {
-        const route = this.api.routePreview(fleet.id, s.id)();
+        const route = routes[s.id];
         return {
           id: s.id,
           hops: route?.hops ?? Number.POSITIVE_INFINITY,
@@ -450,7 +453,7 @@ export class FleetsOverviewComponent {
   /** Gateway-Routenvorschau für das gewählte Ziel – am Ort der Entscheidung, nicht erst nach dem Start. */
   protected movePreview(fleet: Fleet): { hops: number; ms: number } | null {
     const destination = this.moveDestination[fleet.id];
-    return destination ? this.api.routePreview(fleet.id, destination)() : null;
+    return destination ? (this.api.routePreviews(fleet.id)()[destination] ?? null) : null;
   }
 
   /** Vorschau des Trägersprungs – Slot-Bilanz, Dauer, Treibstoff. */

@@ -1,6 +1,12 @@
 <div class="page-head">
   <span class="eyebrow">Kommandokonto</span>
   <h1>{{ player()?.name }}</h1>
+  @if (clockOffsetMinutes() !== 0) {
+    <!-- Die Spieluhr des Servers kann der Wanduhr nachgehen (Spielstand geladen,
+         Server war aus). Alle Restzeiten rechnen mit ihr – hier zur Einordnung. -->
+    <p class="hint">Spieluhr des Servers: {{ clock.now() | date:'dd.MM.yyyy HH:mm:ss' }}
+      ({{ clockOffsetMinutes() < 0 ? 'geht der Realzeit ' + (-clockOffsetMinutes()) + ' Minuten nach' : 'geht der Realzeit ' + clockOffsetMinutes() + ' Minuten vor' }}).</p>
+  }
 </div>
 
 <div class="panel corner-frame balance-panel">

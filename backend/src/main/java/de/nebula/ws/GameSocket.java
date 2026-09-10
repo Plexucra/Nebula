@@ -131,6 +131,10 @@ public class GameSocket {
     return switch (type) {
       // --- Konto/Anmeldung ---------------------------------------------------
       case "players" -> List.copyOf(state.players);
+      // Spieluhr, Realuhr und ihr Versatz (siehe Clock) – für Werkzeuge; die Oberfläche
+      // bekommt die Spielzeit ohnehin mit jeder Nachricht (ServerMessage.gameNow).
+      case "serverTime" -> java.util.Map.of("gameNow", de.nebula.engine.Clock.now(),
+          "realNow", de.nebula.engine.Clock.realNow(), "offsetMs", de.nebula.engine.Clock.offsetMs());
       case "login" -> handleLogin(payload);
       case "logout" -> handleLogout();
       case "registerPlayer" -> handleRegisterPlayer(payload);
@@ -426,6 +430,7 @@ public class GameSocket {
         yield null;
       }
       case "routePreview" -> FleetCommands.routePreview(state, text(payload, "fleetId"), text(payload, "destinationSystemId"));
+      case "routePreviews" -> FleetCommands.routePreviewsFrom(state, text(payload, "fleetId"));
       case "fleetCargoCapacity" -> FleetCommands.fleetCargoCapacity(state, text(payload, "fleetId"), text(payload, "productTypeId"));
       // Flottenzusammenstellung (Umsetzungskonzept/33_...md)
       case "mergeFleets" -> {
@@ -626,7 +631,7 @@ public class GameSocket {
     connections.login(playerId, connection);
     // REALZEIT-AUSNAHME: echter Zeitstempel für die Inaktivitäts-Löschfrist
     // (siehe RetentionCleanup) – bewusst keine Spielzeit.
-    player.get().lastSeenAt = System.currentTimeMillis();
+    player.get().lastSeenAt = de.nebula.engine.Clock.realNow();
     return player.get();
   }
 
@@ -670,67 +675,32 @@ public class GameSocket {
     String campId = payload.hasNonNull("campId") ? payload.path("campId").asText().trim() : null;
     if (campId != null && campId.isEmpty()) campId = null;
 
+    // Die Sperre auf state hält bereits onMessage – hier keine zweite.
     Player player;
-    synchronized (state) {
-      if (state.systems.isEmpty()) {
-        WorldSeed.Seed seed = WorldSeed.createWorldSeed(commanderName, homeworldName, ids, role, campId);
-        GameStateSeeder.bootstrap(state, seed, ids);
-        player = seed.player;
-      } else {
-        WorldSeed.AdditionalSeed seed = WorldSeed.createAdditionalPlayerSeed(
-            state.systems, state.players, commanderName, homeworldName, ids, role, campId);
-        GameStateSeeder.appendPlayer(state, seed, ids);
-        player = seed.player;
-      }
+    if (state.systems.isEmpty()) {
+      WorldSeed.Seed seed = WorldSeed.createWorldSeed(commanderName, homeworldName, ids, role, campId);
+      GameStateSeeder.bootstrap(state, seed, ids);
+      player = seed.player;
+    } else {
+      WorldSeed.AdditionalSeed seed = WorldSeed.createAdditionalPlayerSeed(
+          state.systems, state.players, commanderName, homeworldName, ids, role, campId);
+      GameStateSeeder.appendPlayer(state, seed, ids);
+      player = seed.player;
     }
     connections.login(player.id, connection);
     // REALZEIT-AUSNAHME, siehe handleLogin.
-    player.lastSeenAt = System.currentTimeMillis();
+    player.lastSeenAt = de.nebula.engine.Clock.realNow();
     connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.copyOf(state.players)));
     return player;
   }
 
-  /** Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) – danach leere Galaxie, kein Auto-Kommandant (siehe {@link #handleRegisterPlayer}). */
+  /**
+   * Kompletter Fabrik-Reset der GESAMTEN gemeinsamen Galaxie (alle Kommandanten!) –
+   * danach leere Galaxie, kein Auto-Kommandant (siehe {@link #handleRegisterPlayer}).
+   * Die Sperre auf {@code state} hält bereits {@link #onMessage}.
+   */
   private Object handleResetGame() {
-    synchronized (state) {
-      state.players.clear();
-      state.systems.clear();
-      state.knownSystemIdsByPlayer.clear();
-      state.exploredSystemIdsByPlayer.clear();
-      state.planets.clear();
-      state.colonies.clear();
-      state.planetStats.clear();
-      state.powerStates.clear();
-      state.populations.clear();
-      state.moneySupplyStates.clear();
-      state.wallets.clear();
-      state.transactions.clear();
-      state.buildings.clear();
-      state.specializations.clear();
-      state.productionQueue.clear();
-      state.warehouse.clear();
-      state.gateways.clear();
-      state.fleets.clear();
-      state.shipyardQueue.clear();
-      state.groundForceGroups.clear();
-      state.recruitmentQueue.clear();
-      state.sellOrders.clear();
-      state.hubOrders.clear();
-      state.hubDepot.clear();
-      state.universeStats.clear();
-      state.notifications.clear();
-      state.diplomaticRelations.clear();
-      state.peaceOffers.clear();
-      state.battles.clear();
-      state.groundBattles.clear();
-      state.blockades.clear();
-      state.messages.clear();
-      state.populationHistory.clear();
-      state.consumptionBudget.clear();
-      state.lastProducedAt.clear();
-      state.victory = null;
-      state.partiesEverWithColonies.clear();
-    }
+    state.reset();
     connections.logout(connection);
     connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.of()));
     return null;

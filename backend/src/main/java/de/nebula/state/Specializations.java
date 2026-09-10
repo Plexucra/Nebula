@@ -22,7 +22,12 @@ public final class Specializations {
   public static void registerProduced(GameState state, String colonyId, String productTypeId, double hours) {
     // Soldaten sind laut Mechanik/05_..., §5 nicht spezialisierbar.
     if (productTypeId.equals("p_soldier") || hours <= 0) return;
-    state.lastProducedAt.put(colonyId + ":" + productTypeId, Clock.now());
+    long now = Clock.now();
+    String key = colonyId + ":" + productTypeId;
+    state.lastProducedAt.put(key, now);
+    // Jede Produktion schiebt den Verfall um die Gnadenfrist hinaus – als EIN
+    // Ereignis je Kolonie und Produkt, das die vorige Planung ersetzt.
+    GameEvents.schedule(state, GameEventType.SPECIALIZATION_DECAY, key, now + graceMs());
 
     Specialization existing = null;
     for (Specialization s : state.specializations) {
@@ -64,17 +69,31 @@ public final class Specializations {
     for (ChainPlanStep step : plan.steps) registerProduced(state, colonyId, step.productTypeId, step.hours);
   }
 
-  /** Ohne neue Produktion sinkt eine Spezialisierung nach {@code SPECIALIZATION_DECAY_GRACE_GAME_HOURS} um eine Stufe. */
-  public static void decaySpecializations(GameState state, long t) {
-    long graceMs = (long) de.nebula.engine.Clock.hoursToMs(GameConstants.SPECIALIZATION_DECAY_GRACE_GAME_HOURS);
+  private static long graceMs() {
+    return (long) Clock.hoursToMs(GameConstants.SPECIALIZATION_DECAY_GRACE_GAME_HOURS);
+  }
+
+  /**
+   * Ereignis {@code SPECIALIZATION_DECAY}: ohne neue Produktion sinkt die
+   * Spezialisierung nach {@code SPECIALIZATION_DECAY_GRACE_GAME_HOURS} um eine
+   * Stufe, und die nächste Frist beginnt. Das Ziel ist {@code colonyId:productTypeId}.
+   * Veraltet, wenn seither produziert wurde (dann liegt die letzte Produktion
+   * nicht mehr genau eine Gnadenfrist zurück) oder die Spezialisierung mit
+   * ihrer Kolonie verschwunden ist.
+   */
+  static void decay(GameState state, String key, long at) {
+    Long last = state.lastProducedAt.get(key);
+    if (last == null || last + graceMs() != at) return;
+    int sep = key.indexOf(':');
+    String colonyId = key.substring(0, sep);
+    String productTypeId = key.substring(sep + 1);
     for (Specialization s : state.specializations) {
-      if (s.currentLevel <= 0) continue;
-      String key = s.colonyId + ":" + s.productTypeId;
-      long last = state.lastProducedAt.getOrDefault(key, 0L);
-      if (t - last > graceMs) {
-        state.lastProducedAt.put(key, t);
-        s.currentLevel -= 1;
-      }
+      if (!s.colonyId.equals(colonyId) || !s.productTypeId.equals(productTypeId)) continue;
+      if (s.currentLevel <= 0) return;
+      s.currentLevel -= 1;
+      state.lastProducedAt.put(key, at);
+      if (s.currentLevel > 0) GameEvents.schedule(state, GameEventType.SPECIALIZATION_DECAY, key, at + graceMs());
+      return;
     }
   }
 }

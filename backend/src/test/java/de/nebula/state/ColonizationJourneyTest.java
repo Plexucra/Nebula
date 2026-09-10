@@ -80,7 +80,7 @@ class ColonizationJourneyTest {
     ShipyardCommands.queueShip(b.state(), b.ids(), b.playerId(), b.colonyId(),
         GameConstants.COLONY_SHIP_PRODUCT_ID, 1, false, false);
     ShipyardQueueEntry entry = b.state().shipyardQueue.get(0);
-    ShipyardCommands.processShipyardCompletions(b.state(), b.ids(), entry.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.SHIP_COMPLETED, entry.id);
     assertEquals(1, Warehouse.qty(b.state(), b.colonyId(), GameConstants.COLONY_SHIP_PRODUCT_ID), 0.001,
         "Vorbedingung: das Schiff muss im Lager der Bau-Kolonie liegen");
     return entry.endsAt;
@@ -130,7 +130,7 @@ class ColonizationJourneyTest {
     assertEquals(target.id, fleet.locationPlanetId);
 
     Colonization running = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), target.id);
-    ColonyCommands.processColonizations(b.state(), b.ids(), running.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.COLONIZATION_COMPLETED, running.id);
 
     Colony colony = b.state().colonies.stream()
         .filter(c -> c.planetId.equals(target.id)).findFirst().orElse(null);
@@ -174,7 +174,7 @@ class ColonizationJourneyTest {
 
     FleetCommands.moveFleet(b.state(), b.playerId(), fleet.id, neighbour);
     assertEquals(FleetStatus.InTransit, fleet.status);
-    FleetCommands.processFleetArrivals(b.state(), b.ids(), fleet.arrivesAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.FLEET_ARRIVED, fleet.id);
     assertEquals(FleetStatus.Stationed, fleet.status, "Nach dem Sprung muss die Flotte stationiert sein");
     assertEquals(neighbour, fleet.systemId);
 
@@ -184,7 +184,7 @@ class ColonizationJourneyTest {
 
     Colonization running = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), target.id);
     assertEquals(neighbour, running.systemId);
-    ColonyCommands.processColonizations(b.state(), b.ids(), running.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.COLONIZATION_COMPLETED, running.id);
 
     Colony colony = b.state().colonies.stream()
         .filter(c -> c.planetId.equals(target.id)).findFirst().orElse(null);

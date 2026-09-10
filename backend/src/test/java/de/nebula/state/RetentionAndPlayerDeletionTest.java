@@ -39,7 +39,7 @@ class RetentionAndPlayerDeletionTest {
    */
   private static void purgeWithActivePlayers(GameState state, long t) {
     for (Player p : state.players) p.lastSeenAt = t;
-    RetentionCleanup.purgeExpired(state, t);
+    RetentionCleanup.purgeExpired(state, new IdGenerator(), t);
   }
 
   private static Arena newArena() {
@@ -127,12 +127,12 @@ class RetentionAndPlayerDeletionTest {
 
     // Kurz vor der Frist passiert nichts.
     a.player().lastSeenAt = now - GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS + ONE_DAY_MS;
-    RetentionCleanup.purgeExpired(a.state(), now);
+    RetentionCleanup.purgeExpired(a.state(), a.ids(), now);
     assertEquals(1, a.state().players.size(), "Wer kürzlich da war, bleibt.");
 
     // Danach verschwindet das Reich restlos.
     a.player().lastSeenAt = now - GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS - 1000;
-    RetentionCleanup.purgeExpired(a.state(), now);
+    RetentionCleanup.purgeExpired(a.state(), a.ids(), now);
 
     assertTrue(a.state().players.isEmpty(), "Der Kommandant selbst ist weg.");
     assertTrue(a.state().colonies.stream().noneMatch(c -> c.ownerId.equals(playerId)), "Keine Kolonien mehr.");
@@ -157,7 +157,7 @@ class RetentionAndPlayerDeletionTest {
     Player bot = state.players.get(0);
     bot.lastSeenAt = Clock.now() - 10 * GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS;
 
-    RetentionCleanup.purgeExpired(state, Clock.now());
+    RetentionCleanup.purgeExpired(state, ids, Clock.now());
     assertEquals(1, state.players.size(),
         "Ein abgeschalteter Bot-Testlauf soll seine Lager nicht selbst entsorgen.");
   }
@@ -168,7 +168,7 @@ class RetentionAndPlayerDeletionTest {
     a.player().lastSeenAt = 0;
     a.player().createdAt = Clock.now() - GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS - 1000;
 
-    RetentionCleanup.purgeExpired(a.state(), Clock.now());
+    RetentionCleanup.purgeExpired(a.state(), a.ids(), Clock.now());
     assertTrue(a.state().players.isEmpty(),
         "Ältere Spielstände ohne lastSeenAt zählen ab ihrer Erstellung – kein unsterblicher Rest.");
   }

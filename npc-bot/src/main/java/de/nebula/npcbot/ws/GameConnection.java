@@ -32,6 +32,9 @@ public class GameConnection implements WebSocket.Listener {
   private final AtomicLong requestCounter = new AtomicLong();
   private final String url;
   private WebSocket webSocket;
+  /** Spieluhr des Servers aus der letzten Nachricht plus der Wanduhr-Zeitpunkt ihres Eintreffens. */
+  private volatile long lastGameNow;
+  private volatile long lastGameNowReceivedAt;
 
   public GameConnection(String url) {
     this.url = url;
@@ -109,6 +112,18 @@ public class GameConnection implements WebSocket.Listener {
     return pushCache.get(channel);
   }
 
+  /**
+   * Die SPIELUHR des Servers, fortgeschrieben seit der letzten Nachricht. Jeder
+   * Zeitstempel, den der Server liefert ({@code endsAt}, {@code arrivesAt}, ...),
+   * steht in dieser Zeit – sie kann gegen die Wanduhr verschoben sein
+   * ({@code Clock} im Backend). Restzeiten deshalb nie gegen
+   * {@code System.currentTimeMillis()} rechnen, sondern hiergegen.
+   */
+  public long gameNow() {
+    if (lastGameNowReceivedAt == 0) return System.currentTimeMillis();
+    return lastGameNow + (System.currentTimeMillis() - lastGameNowReceivedAt);
+  }
+
   private void handleMessage(String raw) {
     JsonNode node;
     try {
@@ -118,6 +133,11 @@ public class GameConnection implements WebSocket.Listener {
       return;
     }
     String type = node.path("type").asText(null);
+    JsonNode gameNow = node.get("gameNow");
+    if (gameNow != null && gameNow.isNumber()) {
+      lastGameNow = gameNow.asLong();
+      lastGameNowReceivedAt = System.currentTimeMillis();
+    }
     JsonNode requestIdNode = node.get("requestId");
     String requestId = requestIdNode != null && !requestIdNode.isNull() ? requestIdNode.asText() : null;
     JsonNode payload = node.has("payload") ? node.get("payload") : MissingNode.getInstance();

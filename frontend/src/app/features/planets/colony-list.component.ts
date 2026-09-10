@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Colonization, Colony, Id, PlanetType } from '../../core/models';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
+import { UiClockService } from '../../core/ui/ui-clock.service';
 import { COLONIZATION_GAME_HOURS, START_POPULATION } from '../../core/shared-constants';
 
 @Component({
@@ -16,6 +17,7 @@ import { COLONIZATION_GAME_HOURS, START_POPULATION } from '../../core/shared-con
 })
 export class ColonyListComponent {
   protected readonly api = inject(GAME_API);
+  private readonly clock = inject(UiClockService);
   protected readonly colonies = this.api.colonies();
   /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
   protected readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
@@ -67,7 +69,8 @@ export class ColonyListComponent {
   }
 
   protected remainingMinutes(running: Colonization): number {
-    return Math.max(0, Math.ceil((running.endsAt - Date.now()) / 60000));
+    // Spieluhr, nicht Date.now(): `endsAt` ist Serverzeit (siehe UiClockService).
+    return Math.max(0, Math.ceil((running.endsAt - this.clock.now()) / 60000));
   }
 
   protected async colonize(planetId: Id): Promise<void> {

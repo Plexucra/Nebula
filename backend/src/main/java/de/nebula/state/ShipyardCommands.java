@@ -27,8 +27,6 @@ public final class ShipyardCommands {
   private ShipyardCommands() {
   }
 
-  private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
-
   public static List<ShipyardQueueEntry> shipyardQueueFor(GameState state, String colonyId) {
     return state.shipyardQueue.stream().filter(q -> q.colonyId.equals(colonyId)).toList();
   }
@@ -53,7 +51,7 @@ public final class ShipyardCommands {
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
     entry.stoppedReasonCode = null;
-    entry.plan = EMPTY_CHAIN_PLAN;
+    entry.plan = ChainPlan.EMPTY;
     entry.startedAt = null;
     entry.endsAt = null;
     state.shipyardQueue.add(entry);
@@ -73,11 +71,13 @@ public final class ShipyardCommands {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     ShipyardQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null) return;
-    creditPartialChainProgress(state, colonyId, entry, qty -> Warehouse.add(state, colonyId, entry.shipProductTypeId, qty));
+    ProductionCommands.creditPartialChainProgress(state, colonyId, entry.status, entry.startedAt, entry.endsAt, entry.plan,
+        (pid, qty) -> Warehouse.add(state, colonyId, pid, qty));
     if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(entry.shipProductTypeId)) {
       releaseColonists(state, ids, playerId, colonyId, entry.quantity);
     }
     state.shipyardQueue.remove(entry);
+    GameEvents.cancel(state, GameEventType.SHIP_COMPLETED, entry.id);
     tryStartNextShipyardEntry(state, ids, colonyId);
   }
 
@@ -153,24 +153,6 @@ public final class ShipyardCommands {
     return null;
   }
 
-  private static void creditPartialChainProgress(GameState state, String colonyId, ShipyardQueueEntry entry, java.util.function.DoubleConsumer creditRoot) {
-    if (entry.status != ProductionQueueStatus.running || entry.startedAt == null || entry.endsAt == null) return;
-    double elapsedFraction = de.nebula.engine.Formulas.clamp(
-        (double) (Clock.now() - entry.startedAt) / Math.max(entry.endsAt - entry.startedAt, 1), 0, 1);
-    List<ChainPlanStep> steps = entry.plan.steps;
-    for (int i = 0; i < steps.size(); i++) {
-      ChainPlanStep step = steps.get(i);
-      boolean isRoot = i == steps.size() - 1;
-      double refund = Math.floor(step.quantityFromWarehouse * (1 - elapsedFraction));
-      if (refund > 0) Warehouse.add(state, colonyId, step.productTypeId, refund);
-      double credited = Math.floor(step.quantityToProduce * elapsedFraction);
-      if (credited > 0) {
-        if (isRoot) creditRoot.accept(credited); else Warehouse.add(state, colonyId, step.productTypeId, credited);
-      }
-      Specializations.registerProduced(state, colonyId, step.productTypeId, step.hours * elapsedFraction);
-    }
-  }
-
   public static void tryStartNextShipyardEntry(GameState state, IdGenerator ids, String colonyId) {
     List<ShipyardQueueEntry> queue = shipyardQueueFor(state, colonyId);
     for (ShipyardQueueEntry e : queue) if (e.status == ProductionQueueStatus.running) return;
@@ -202,6 +184,17 @@ public final class ShipyardCommands {
     entry.status = ProductionQueueStatus.running;
     entry.startedAt = startedAt;
     entry.endsAt = endsAt;
+    GameEvents.schedule(state, GameEventType.SHIP_COMPLETED, entry.id, endsAt);
+  }
+
+  /** Ereignis {@code SHIP_COMPLETED} – veraltet, wenn der Auftrag nicht mehr läuft oder ein anderes Ende trägt. */
+  static void completeIfDue(GameState state, IdGenerator ids, String entryId, long at) {
+    for (ShipyardQueueEntry e : state.shipyardQueue) {
+      if (e.id.equals(entryId)) {
+        if (e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt == at) completeShipyardEntry(state, ids, e);
+        return;
+      }
+    }
   }
 
   private static void completeShipyardEntry(GameState state, IdGenerator ids, ShipyardQueueEntry entry) {
@@ -221,7 +214,7 @@ public final class ShipyardCommands {
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;
       fresh.stoppedReasonCode = null;
-      fresh.plan = EMPTY_CHAIN_PLAN;
+      fresh.plan = ChainPlan.EMPTY;
       fresh.startedAt = null;
       fresh.endsAt = null;
       state.shipyardQueue.add(fresh);
@@ -243,10 +236,4 @@ public final class ShipyardCommands {
         colony.id, Notifications.colonyLink(colony.id));
   }
 
-  public static void processShipyardCompletions(GameState state, IdGenerator ids, long t) {
-    List<ShipyardQueueEntry> due = state.shipyardQueue.stream()
-        .filter(e -> e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt <= t)
-        .toList();
-    for (ShipyardQueueEntry entry : due) completeShipyardEntry(state, ids, entry);
-  }
 }

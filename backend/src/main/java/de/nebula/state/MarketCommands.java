@@ -220,11 +220,6 @@ public final class MarketCommands {
   }
 
   /**
-   * Versucht jeden Tick, "schlafende" Auto-Relist-Orders wiederzubefüllen,
-   * sobald ihre Kolonie wieder Lagerbestand hat. NUR kolonie-basierte Orders
-   * werden schlafend gehalten (siehe {@link #settleSellOrderPurchase}).
-   */
-  /**
    * Ändert den Preis einer eigenen, offenen Verkaufsorder.
    *
    * <p>Vorher ging das nur über Zurückziehen und Neuanlegen – an einer anderen
@@ -253,9 +248,24 @@ public final class MarketCommands {
         text, order.depotColonyId, "/handel");
   }
 
+  /**
+   * Füllt "schlafende" Auto-Relist-Orders wieder auf, sobald ihre Kolonie
+   * wieder Lagerbestand hat. NUR kolonie-basierte Orders werden schlafend
+   * gehalten (siehe {@link #settleSellOrderPurchase}). Reaktion statt Takt:
+   * {@link Warehouse#addRaw} ruft die eingeschränkte Fassung bei jedem
+   * Lagerzugang – genau dem Moment, in dem eine schlafende Order wieder etwas
+   * anzubieten hätte. Die Fassung über alles bleibt für Tests und Seeds.
+   */
   public static void replenishDormantSellOrders(GameState state) {
+    replenishDormantSellOrders(state, null, null);
+  }
+
+  /** Wie oben, nur für die Orders EINER Kolonie und EINES Produkts ({@code null} = alle). */
+  public static void replenishDormantSellOrders(GameState state, String colonyId, String productTypeId) {
     List<SellOrder> dormant = state.sellOrders.stream()
         .filter(o -> o.remainingQuantity == 0 && o.autoRelist && o.depotColonyId != null && o.sourceFleetId == null)
+        .filter(o -> colonyId == null || o.depotColonyId.equals(colonyId))
+        .filter(o -> productTypeId == null || o.productTypeId.equals(productTypeId))
         .toList();
     for (SellOrder order : dormant) {
       double relistQty = reserveForRelist(state, order);

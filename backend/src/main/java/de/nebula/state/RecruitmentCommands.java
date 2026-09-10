@@ -28,8 +28,6 @@ public final class RecruitmentCommands {
   private RecruitmentCommands() {
   }
 
-  private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
-
   /** Der Verband IN einer Kolonie – Verbände an Bord einer Flotte haben {@code colonyId == null} (siehe {@link GroundForceGroup}). */
   public static GroundForceGroup groundForces(GameState state, String colonyId) {
     return state.groundForceGroups.stream()
@@ -60,7 +58,7 @@ public final class RecruitmentCommands {
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
     entry.stoppedReasonCode = null;
-    entry.plan = EMPTY_CHAIN_PLAN;
+    entry.plan = ChainPlan.EMPTY;
     entry.startedAt = null;
     entry.endsAt = null;
     state.recruitmentQueue.add(entry);
@@ -80,8 +78,10 @@ public final class RecruitmentCommands {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     RecruitmentQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null) return;
-    creditPartialChainProgress(state, colonyId, entry, qty -> addUnitToGarrison(state, ids, colonyId, entry.unitProductTypeId, (int) qty));
+    ProductionCommands.creditPartialChainProgress(state, colonyId, entry.status, entry.startedAt, entry.endsAt, entry.plan,
+        (pid, qty) -> addUnitToGarrison(state, ids, colonyId, pid, (int) (double) qty));
     state.recruitmentQueue.remove(entry);
+    GameEvents.cancel(state, GameEventType.RECRUITMENT_COMPLETED, entry.id);
     tryStartNextRecruitmentEntry(state, ids, colonyId);
   }
 
@@ -90,24 +90,6 @@ public final class RecruitmentCommands {
       if (e.id.equals(entryId) && e.colonyId.equals(colonyId)) return e;
     }
     return null;
-  }
-
-  private static void creditPartialChainProgress(GameState state, String colonyId, RecruitmentQueueEntry entry, java.util.function.DoubleConsumer creditRoot) {
-    if (entry.status != ProductionQueueStatus.running || entry.startedAt == null || entry.endsAt == null) return;
-    double elapsedFraction = de.nebula.engine.Formulas.clamp(
-        (double) (Clock.now() - entry.startedAt) / Math.max(entry.endsAt - entry.startedAt, 1), 0, 1);
-    List<ChainPlanStep> steps = entry.plan.steps;
-    for (int i = 0; i < steps.size(); i++) {
-      ChainPlanStep step = steps.get(i);
-      boolean isRoot = i == steps.size() - 1;
-      double refund = Math.floor(step.quantityFromWarehouse * (1 - elapsedFraction));
-      if (refund > 0) Warehouse.add(state, colonyId, step.productTypeId, refund);
-      double credited = Math.floor(step.quantityToProduce * elapsedFraction);
-      if (credited > 0) {
-        if (isRoot) creditRoot.accept(credited); else Warehouse.add(state, colonyId, step.productTypeId, credited);
-      }
-      Specializations.registerProduced(state, colonyId, step.productTypeId, step.hours * elapsedFraction);
-    }
   }
 
   public static void tryStartNextRecruitmentEntry(GameState state, IdGenerator ids, String colonyId) {
@@ -141,6 +123,17 @@ public final class RecruitmentCommands {
     entry.status = ProductionQueueStatus.running;
     entry.startedAt = startedAt;
     entry.endsAt = endsAt;
+    GameEvents.schedule(state, GameEventType.RECRUITMENT_COMPLETED, entry.id, endsAt);
+  }
+
+  /** Ereignis {@code RECRUITMENT_COMPLETED} – veraltet, wenn der Auftrag nicht mehr läuft oder ein anderes Ende trägt. */
+  static void completeIfDue(GameState state, IdGenerator ids, String entryId, long at) {
+    for (RecruitmentQueueEntry e : state.recruitmentQueue) {
+      if (e.id.equals(entryId)) {
+        if (e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt == at) completeRecruitmentEntry(state, ids, e);
+        return;
+      }
+    }
   }
 
   private static void completeRecruitmentEntry(GameState state, IdGenerator ids, RecruitmentQueueEntry entry) {
@@ -157,19 +150,12 @@ public final class RecruitmentCommands {
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;
       fresh.stoppedReasonCode = null;
-      fresh.plan = EMPTY_CHAIN_PLAN;
+      fresh.plan = ChainPlan.EMPTY;
       fresh.startedAt = null;
       fresh.endsAt = null;
       state.recruitmentQueue.add(fresh);
     }
     tryStartNextRecruitmentEntry(state, ids, entry.colonyId);
-  }
-
-  public static void processRecruitmentCompletions(GameState state, IdGenerator ids, long t) {
-    List<RecruitmentQueueEntry> due = state.recruitmentQueue.stream()
-        .filter(e -> e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt <= t)
-        .toList();
-    for (RecruitmentQueueEntry entry : due) completeRecruitmentEntry(state, ids, entry);
   }
 
   /** Soldaten aus einem Mannschaftstransporter in die Garnison übernehmen ({@code TroopTransportCommands.disembarkSoldiers}). */

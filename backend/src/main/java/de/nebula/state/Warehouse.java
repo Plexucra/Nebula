@@ -38,19 +38,30 @@ public final class Warehouse {
     addRaw(state, colonyId, productTypeId, delta);
   }
 
-  /** Lagerbuchung OHNE Umweg über den Energiespeicher – für Entnahmen und für Überschuss, der aus dem Speicher zurückfließt. */
+  /**
+   * Lagerbuchung OHNE Umweg über den Energiespeicher – für Entnahmen und für
+   * Überschuss, der aus dem Speicher zurückfließt. Ein ZUGANG weckt schlafende
+   * Auto-Relist-Orders dieses Produkts ({@code MarketCommands}): das ist die
+   * Reaktion, die früher jeder Tick für alle Orders der Galaxie nachprüfte.
+   * Der Relist entnimmt dem Lager wieder (negatives Delta), also keine Rekursion.
+   */
   static void addRaw(GameState state, String colonyId, String productTypeId, double delta) {
+    boolean found = false;
     for (WarehouseEntry w : state.warehouse) {
       if (w.colonyId.equals(colonyId) && w.productTypeId.equals(productTypeId)) {
         w.quantity = Math.max(0, w.quantity + delta);
-        return;
+        found = true;
+        break;
       }
     }
     if (delta <= 0) return;
-    WarehouseEntry w = new WarehouseEntry();
-    w.colonyId = colonyId;
-    w.productTypeId = productTypeId;
-    w.quantity = delta;
-    state.warehouse.add(w);
+    if (!found) {
+      WarehouseEntry w = new WarehouseEntry();
+      w.colonyId = colonyId;
+      w.productTypeId = productTypeId;
+      w.quantity = delta;
+      state.warehouse.add(w);
+    }
+    MarketCommands.replenishDormantSellOrders(state, colonyId, productTypeId);
   }
 }

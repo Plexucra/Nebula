@@ -12,7 +12,14 @@
 - [ ] **Persistenz des Weltzustands** (Konzept 31 §J 11): ein Neustart des
   Backends vernichtet ein laufendes LAN-Spiel. Eigenes Vorhaben mit eigenem
   Konzept; die Sitzung selbst übersteht das Neuladen inzwischen
-  (Konzept 34 §L).
+  (Konzept 34 §L). Vorarbeit seit 10.9.2026: Spieluhr mit Versatz (`Clock`,
+  `-Dnebula.game-clock.start`), Ereigniswarteschlange als reine Daten
+  (`ScheduledEvent`). Empfohlener Weg: Schnappschuss des ganzen `GameState`
+  als JSON (atomar, alle 30–60 s und beim Herunterfahren) plus `IdGenerator`-
+  Zähler, Spieluhr und Ereignisse; danach optional Kommando-Journal. Vorher
+  `Math.random` in `LandingCommands` durch einen Generator im Zustand ersetzen.
+  Keine relationale Datenbank für den heißen Spielzustand (siehe Sitzung
+  10.9.2026: Zeilen-Updates je Sekunde in jedem Wallet/Lager).
 - [ ] **Startpreis der Konsumgüter wächst nicht mit der Startbevölkerung**
   (Gesamttest 9.9.2026, B1): `WorldSeed.STARTER_SELL_ORDER_PRICE` = 450 Cr ist
   für rund 200 Einwohner hergeleitet, die Kolonie startet aber mit 2000. Ein
@@ -28,6 +35,21 @@
   Systemansicht nicht erkennbar), F12 (doppelte Planetennamen).
 
 ## Erledigt
+
+- [x] ~~Tick-Schleife durch Ereignisplaner ersetzen, Spieluhr mit Versatz~~ –
+  10.9.2026. `GameTick` arbeitet nur noch fällige Ereignisse ab
+  (`GameEvents`): zwölf Fälligkeiten je Objekt, zwei Reaktionen (Orders
+  nachfüllen, Sieg prüfen), vier wiederkehrende Aufgaben, der Wirtschaftsschritt
+  als ein Block. `Clock.now()` ist eine Spieluhr; jede `ServerMessage` trägt
+  `gameNow`, Oberfläche (`UiClockService`) und Bots rechnen damit. Geprüft mit
+  160 Tests, e2e-Durchlauf und Browser gegen eine Instanz mit 8 h Versatz.
+
+- [x] ~~Code-Review Gesamtprojekt~~ – 10.9.2026. Frontend pollt nur noch
+  gelesene Signale (vorher hunderte Anfragen je Sekunde für zerstörte
+  Ansichten), Routenvorschau als Sammelabfrage, Katalog-Indizes statt Streams,
+  vollständiger Reset, Teilstring-Fehler beim Aufräumen der Übertragskonten,
+  dreifach kopierte Abbruch-Gutschrift vereinigt, WebSocket-Port folgt der
+  aufgerufenen Adresse.
 
 - [x] ~~Gesamttest Oberfläche + Backend + NPCs, Siegbedingung~~ – durchgeführt am
   9.9.2026, siehe

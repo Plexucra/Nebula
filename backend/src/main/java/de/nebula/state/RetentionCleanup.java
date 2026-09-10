@@ -1,9 +1,12 @@
 package de.nebula.state;
 
+import de.nebula.engine.Clock;
 import de.nebula.engine.GameConstants;
 import de.nebula.model.Player;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Automatisches Aufräumen von Benachrichtigungen und Nachrichten nach Ablauf
@@ -32,11 +35,19 @@ public final class RetentionCleanup {
   private RetentionCleanup() {
   }
 
-  public static void purgeExpired(GameState state, long t) {
+  /**
+   * Ereignis {@code RETENTION_CLEANUP} (stündlich in Spielzeit). {@code t} ist
+   * die Spielzeit. Meldungen und Nachrichten tragen Spielzeit-Stempel und
+   * werden deshalb gegen {@code t} gemessen: die Frist ist in echten Tagen
+   * gemeint, und solange der Server läuft, laufen beide Uhren gleich schnell.
+   * Steht die Spieluhr, weil der Server aus ist, verlängert das die Frist um
+   * genau diese Zeit – in der niemand etwas hätte lesen können.
+   */
+  public static void purgeExpired(GameState state, IdGenerator ids, long t) {
     // REALZEIT-AUSNAHME: bereits Realzeit-Millisekunden, NICHT über Clock.hoursToMs umrechnen.
     state.notifications.removeIf(n -> !n.keep && t - n.createdAt > GameConstants.NOTIFICATION_RETENTION_REAL_MS);
     state.messages.removeIf(m -> !m.keep && t - m.sentAt > GameConstants.MESSAGE_RETENTION_REAL_MS);
-    deleteInactivePlayers(state, t);
+    deleteInactivePlayers(state, ids, t);
   }
 
   /**
@@ -47,25 +58,28 @@ public final class RetentionCleanup {
    * und sind danach wieder unbesiedelt – aus Sicht der Mitspieler verschwindet
    * das Reich also spurlos.
    *
-   * <p>REALZEIT-AUSNAHME wie oben: {@code lastSeenAt} ist ein echter
-   * Zeitstempel (Anmeldung bzw. Registrierung), die Frist eine echte Dauer.</p>
+   * <p>REALZEIT-AUSNAHME: {@code lastSeenAt} ist ein Stempel der REALUHR
+   * (Anmeldung bzw. Registrierung) und wird gegen {@code Clock.realNow()}
+   * gemessen – nie gegen die Spielzeit {@code t}, die gegen sie verschoben
+   * sein kann (siehe {@code Clock}).</p>
    *
    * <p>NPC-Kommandanten ({@code PlayerRole.Npc}) sind ausgenommen – ihre Bots
    * melden sich zwar an, aber ein abgeschalteter Testlauf soll seine Lager
    * nicht nach einem Monat selbst entsorgen, sondern beim Neustart des Spiels
    * per Reset verschwinden.</p>
    */
-  private static void deleteInactivePlayers(GameState state, long t) {
+  private static void deleteInactivePlayers(GameState state, IdGenerator ids, long t) {
+    long realNow = Clock.realNow();
     List<Player> expired = state.players.stream()
         .filter(p -> p.role != de.nebula.model.PlayerRole.Npc)
-        .filter(p -> t - lastSeenOf(p) > GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS)
+        .filter(p -> inactiveMs(p, t, realNow) > GameConstants.INACTIVE_PLAYER_DELETION_REAL_MS)
         .toList();
-    for (Player player : expired) deletePlayer(state, player);
+    for (Player player : expired) deletePlayer(state, ids, player);
   }
 
-  /** Ältere Spielstände ohne {@code lastSeenAt} zählen ab ihrer Erstellung. */
-  private static long lastSeenOf(Player player) {
-    return player.lastSeenAt > 0 ? player.lastSeenAt : player.createdAt;
+  /** Ältere Spielstände ohne {@code lastSeenAt} zählen ab ihrer Erstellung – die steht in Spielzeit. */
+  private static long inactiveMs(Player player, long gameNow, long realNow) {
+    return player.lastSeenAt > 0 ? realNow - player.lastSeenAt : gameNow - player.createdAt;
   }
 
   /**
@@ -75,11 +89,14 @@ public final class RetentionCleanup {
    * das Problem, das {@code FleetCommands.removeDestroyedFleets} für Flotten
    * schon einmal lösen musste.
    */
-  public static void deletePlayer(GameState state, Player player) {
+  public static void deletePlayer(GameState state, IdGenerator ids, Player player) {
     String playerId = player.id;
 
-    List<String> colonyIds = state.colonies.stream()
-        .filter(c -> c.ownerId.equals(playerId)).map(c -> c.id).toList();
+    // Sets statt Listen: jedes removeIf unten fragt je Eintrag "gehört zu einer
+    // seiner Kolonien?" – bei einem Reich mit vielen Kolonien und tausenden
+    // Lager-/Gebäudeeinträgen wäre das mit contains auf einer Liste quadratisch.
+    Set<String> colonyIds = state.colonies.stream()
+        .filter(c -> c.ownerId.equals(playerId)).map(c -> c.id).collect(Collectors.toSet());
 
     // Kolonieabhängiges zuerst, damit nichts ohne Kolonie zurückbleibt.
     state.buildings.removeIf(b -> colonyIds.contains(b.colonyId));
@@ -95,8 +112,8 @@ public final class RetentionCleanup {
     // moneySupplyStates haengen am PLANETEN, nicht an der Kolonie – und ein Planet
     // kann von mehreren Kommandanten besiedelt sein (bewusste Regel, siehe TODO.md).
     // Der Eintrag bleibt deshalb stehen, wenn dort noch jemand anderes siedelt.
-    List<String> planetIds = state.colonies.stream()
-        .filter(c -> c.ownerId.equals(playerId)).map(c -> c.planetId).toList();
+    Set<String> planetIds = state.colonies.stream()
+        .filter(c -> c.ownerId.equals(playerId)).map(c -> c.planetId).collect(Collectors.toSet());
     state.moneySupplyStates.removeIf(m -> planetIds.contains(m.planetId)
         && state.colonies.stream().noneMatch(c -> c.planetId.equals(m.planetId) && !c.ownerId.equals(playerId)));
     for (String colonyId : colonyIds) {
@@ -104,14 +121,15 @@ public final class RetentionCleanup {
       state.consumptionCoverage.remove(colonyId);
       state.consumptionBudget.remove(colonyId);
       state.rawStandardOfLiving.remove(colonyId);
+      state.forgetColonyBookkeeping(colonyId);
     }
-    state.lastSupplyWarningAt.keySet().removeIf(k -> colonyIds.contains(k.split(":")[0]));
+    state.notificationEdgeState.keySet().removeIf(k -> k.endsWith(":" + playerId));
     state.colonies.removeIf(c -> c.ownerId.equals(playerId));
     state.colonizations.removeIf(c -> c.ownerId.equals(playerId));
 
     // Militär und Bewegung
-    List<String> fleetIds = state.fleets.stream()
-        .filter(f -> f.ownerId.equals(playerId)).map(f -> f.id).toList();
+    Set<String> fleetIds = state.fleets.stream()
+        .filter(f -> f.ownerId.equals(playerId)).map(f -> f.id).collect(Collectors.toSet());
     state.blockades.removeIf(b -> fleetIds.contains(b.fleetId) || b.ownerId.equals(playerId));
     state.battles.removeIf(b -> fleetIds.contains(b.attackerFleetId) || fleetIds.contains(b.defenderFleetId)
         || playerId.equals(b.attackerId) || playerId.equals(b.defenderId));
@@ -123,8 +141,8 @@ public final class RetentionCleanup {
     state.sellOrders.removeIf(o -> playerId.equals(o.sellerId));
     state.hubOrders.removeIf(o -> playerId.equals(o.ownerId));
     state.hubDepot.removeIf(d -> playerId.equals(d.ownerId));
-    List<String> walletIds = state.wallets.stream()
-        .filter(w -> w.ownerId.equals(playerId) || colonyIds.contains(w.ownerId)).map(w -> w.id).toList();
+    Set<String> walletIds = state.wallets.stream()
+        .filter(w -> w.ownerId.equals(playerId) || colonyIds.contains(w.ownerId)).map(w -> w.id).collect(Collectors.toSet());
     state.transactions.removeIf(tx -> walletIds.contains(tx.fromWalletId) || walletIds.contains(tx.toWalletId));
     state.wallets.removeIf(w -> walletIds.contains(w.id));
 
@@ -142,5 +160,9 @@ public final class RetentionCleanup {
     state.knownSystemIdsByPlayer.remove(playerId);
     state.exploredSystemIdsByPlayer.remove(playerId);
     state.players.removeIf(p -> p.id.equals(playerId));
+    // Geplante Ereignisse seiner Objekte laufen ins Leere (die Behandler prüfen
+    // die Existenz); nur der Sieg muss sofort neu bewertet werden – vielleicht
+    // war er die letzte Gegenpartei.
+    VictoryCommands.evaluate(state, ids);
   }
 }

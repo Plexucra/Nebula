@@ -136,8 +136,7 @@ class FleetLifecycleTest {
     BattleCommands.engageBattle(a.state(), a.ids(), a.attackerId(), attacker.id, defender.id);
     Battle battle = a.state().battles.get(0);
     for (int i = 0; i < 20 && battle.status == BattleStatus.Active; i++) {
-      battle.nextTickAt = 0;
-      BattleCommands.processBattles(a.state(), a.ids(), System.currentTimeMillis());
+      GameEvents.fireNow(a.state(), a.ids(), GameEventType.BATTLE_ROUND, battle.id);
     }
     assertEquals(BattleStatus.Ended, battle.status);
 

@@ -107,10 +107,9 @@ class GroundBattleTest {
     if (stats != null) stats.loyaltyPct = pct;
   }
 
-  /** Stellt den nächsten Kampftick sofort fällig und lässt ihn laufen – wie GameTick, nur ohne Warten. */
+  /** Spult den Ereignisplaner bis zur nächsten fälligen Runde – wie GameTick, nur ohne Warten. */
   private static void runTick(Arena a, GroundBattle battle) {
-    battle.nextTickAt = 0;
-    GroundBattleCommands.processGroundBattles(a.state(), a.ids(), System.currentTimeMillis());
+    GameEvents.fireNow(a.state(), a.ids(), GameEventType.GROUND_BATTLE_ROUND, battle.id);
   }
 
   private static void runUntilEnded(Arena a, GroundBattle battle, int maxTicks) {

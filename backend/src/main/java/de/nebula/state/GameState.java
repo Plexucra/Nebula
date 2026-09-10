@@ -126,7 +126,95 @@ public class GameState {
   public final java.util.Set<String> partiesEverWithColonies =
       java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-  /** Tick-Intervall-Zeitstempel, siehe TS {@code lastWealthRedistributionAt}/{@code lastStatsSnapshotAt}. */
-  public volatile long lastWealthRedistributionAt = 0;
-  public volatile long lastStatsSnapshotAt = 0;
+  /**
+   * Die geplanten Ereignisse, nach Fälligkeit sortiert, plus Index je Typ und
+   * Ziel – siehe {@link GameEvents}. Beide nur unter der Sperre auf
+   * {@code this} anfassen; sie sind bewusst keine nebenläufigen Strukturen,
+   * weil jede Änderung zwei Container konsistent halten muss.
+   */
+  public final java.util.TreeSet<de.nebula.model.ScheduledEvent> events = new java.util.TreeSet<>();
+  public final Map<String, de.nebula.model.ScheduledEvent> eventByKey = new java.util.HashMap<>();
+  public final java.util.concurrent.atomic.AtomicLong eventSeq = new java.util.concurrent.atomic.AtomicLong();
+
+  /**
+   * Räumt die schlüsselbasierten Nebenbücher einer Kolonie auf, die verschwindet
+   * (Eingliederung nach Eroberung, Löschung ihres Kommandanten): Übertragskonten
+   * ({@code "purpose:colonyId[:product]"}), Spezialisierungs-Zeitstempel
+   * ({@code "colonyId:product"}), Versorgungswarnungen ({@code "colonyId:product"})
+   * und Flankenzustände der Benachrichtigungen ({@code "lage:colonyId"}).
+   *
+   * <p>Vorher stand hier {@code k.contains(id)} – und weil die Ids fortlaufend
+   * vergeben sind ({@code col_1}, {@code col_1a}, ...), räumte der Fall von
+   * {@code col_1} auch die Übertragskonten von {@code col_1a} ab. Deshalb wird
+   * hier exakt auf das Schlüsselsegment geprüft.</p>
+   */
+  public void forgetColonyBookkeeping(String colonyId) {
+    fractionPots.keySet().removeIf(k -> {
+      String[] parts = k.split(":");
+      return parts.length >= 2 && parts[1].equals(colonyId);
+    });
+    lastProducedAt.keySet().removeIf(k -> k.startsWith(colonyId + ":"));
+    lastSupplyWarningAt.keySet().removeIf(k -> k.startsWith(colonyId + ":"));
+    notificationEdgeState.keySet().removeIf(k -> k.endsWith(":" + colonyId));
+  }
+
+  /**
+   * Fabrik-Reset: leert JEDES Feld dieser Klasse. Bewusst hier und nicht im
+   * {@code GameSocket}: Wer dort ein Feld vergaß, hinterließ Reste aus der
+   * alten Galaxie – so blieben Verträge, Koloniegründungen, Energiespeicher,
+   * Übertragskonten und die Flankenzustände der Benachrichtigungen über einen
+   * Reset hinweg stehen (die Flanke "blackout:col_1" war dann für die nächste
+   * Galaxie schon "gesetzt" und die erste Meldung blieb aus).
+   * Aufrufer hält die Sperre auf {@code this}.
+   */
+  public void reset() {
+    players.clear();
+    systems.clear();
+    knownSystemIdsByPlayer.clear();
+    exploredSystemIdsByPlayer.clear();
+    planets.clear();
+    colonies.clear();
+    colonizations.clear();
+    planetStats.clear();
+    powerStates.clear();
+    energyStorages.clear();
+    lastSupplyWarningAt.clear();
+    notificationEdgeState.clear();
+    populations.clear();
+    moneySupplyStates.clear();
+    wallets.clear();
+    transactions.clear();
+    buildings.clear();
+    specializations.clear();
+    productionQueue.clear();
+    warehouse.clear();
+    gateways.clear();
+    fleets.clear();
+    shipyardQueue.clear();
+    groundForceGroups.clear();
+    recruitmentQueue.clear();
+    sellOrders.clear();
+    hubOrders.clear();
+    hubDepot.clear();
+    universeStats.clear();
+    notifications.clear();
+    diplomaticRelations.clear();
+    peaceOffers.clear();
+    treaties.clear();
+    treatyOffers.clear();
+    battles.clear();
+    groundBattles.clear();
+    blockades.clear();
+    messages.clear();
+    populationHistory.clear();
+    fractionPots.clear();
+    consumptionBudget.clear();
+    lastProducedAt.clear();
+    rawStandardOfLiving.clear();
+    consumptionCoverage.clear();
+    victory = null;
+    partiesEverWithColonies.clear();
+    events.clear();
+    eventByKey.clear();
+  }
 }

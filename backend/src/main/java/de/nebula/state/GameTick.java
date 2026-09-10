@@ -1,24 +1,28 @@
 package de.nebula.state;
 
 import de.nebula.engine.Clock;
-import de.nebula.model.Building;
-import de.nebula.model.DefenseActivationState;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * 1:1-Portierung von {@code runTick}/{@code TICK_MS} aus
- * {@code simulated-game-api.service.ts} (Umsetzungskonzept/13_...md, Phase 12
- * – hier vorgezogen auf "sobald eine frühere Phase erstmals etwas zum
- * Anwenden hat", siehe Bebauung in Phase 5). NICHT an einen eingeloggten
- * Nutzer gebunden: die gemeinsame Galaxie simuliert immer weiter, unabhängig
- * davon, wer gerade verbunden ist.
+ * Der Realzeit-Takt der Galaxie. NICHT an einen eingeloggten Nutzer gebunden:
+ * die gemeinsame Galaxie simuliert immer weiter, unabhängig davon, wer gerade
+ * verbunden ist.
  *
- * <p>Wächst mit jeder weiteren portierten Phase um die entsprechende
- * {@code processXxx}-Methode (siehe TS {@code runTick} für die vollständige,
- * noch zu portierende Reihenfolge). Solange eine Phase fehlt, führt dieser
- * Tick für sie schlicht nichts aus – kein Platzhalterverhalten, das die
- * spätere echte Logik verdecken könnte.</p>
+ * <p>Der Takt selbst tut nur noch eines: er lässt den Ereignisplaner alles
+ * abarbeiten, was bis zur aktuellen SPIELZEIT fällig ist ({@link GameEvents#runDue}).
+ * Die frühere Schleife aus zwanzig {@code processXxx}-Schritten in fester
+ * Reihenfolge ist aufgelöst: Fälligkeiten (Bau, Flug, Gefechtsrunde, Auftrag,
+ * Vertrag, Spezialisierungsverfall) werden dort geplant, wo sie entstehen,
+ * und feuern zu ihrer Zeit; Reaktionen (Order nachfüllen, Sieg prüfen) hängen
+ * an der Zustandsänderung, die sie auslöst; nur die Ratenprozesse der
+ * Wirtschaft laufen weiter als ein Block in fester Reihenfolge
+ * ({@link EconomyTick#economyStep}), als wiederkehrendes Ereignis.</p>
+ *
+ * <p>Warum trotzdem ein Sekundentakt und kein schlafender Planer: Quarkus
+ * liefert den Takt ohne eigenen Thread, die Auflösung von einer Sekunde ist
+ * die kleinste sinnvolle für ein Spiel mit 2,5 s je Spielstunde, und der
+ * Wirtschaftsschritt ist ohnehin jede Sekunde fällig.</p>
  */
 @ApplicationScoped
 public class GameTick {
@@ -34,7 +38,7 @@ public class GameTick {
   /**
    * Realzeit-Takt, BEWUSST unabhängig vom Tempo-Regler
    * ({@code Clock.GAME_SPEED_MULTIPLIER}): schnelleres Spiel heißt nicht mehr
-   * Ticks je Sekunde, sondern mehr Spielstunden je Tick
+   * Ticks je Sekunde, sondern mehr Spielstunden je Wirtschaftsschritt
    * ({@code GameConstants.TICK_GAME_HOURS}). Der Wert muss zu
    * {@code GameConstants.TICK_MS} passen – hier ein Textliteral, weil
    * Annotationswerte Konstanten sein müssen.
@@ -42,71 +46,8 @@ public class GameTick {
   @Scheduled(every = "1s")
   void tick() {
     if (state.players.isEmpty()) return;
-    long t = Clock.now();
     synchronized (state) {
-      // Reihenfolge 1:1 wie TS runTick – NICHT umstellen, spätere Schritte
-      // verlassen sich auf bereits aktualisierte Werte früherer Schritte
-      // (z. B. recalcCoreStats auf den in consumePowerUpkeep gesetzten
-      // coverageRatio, growPopulationAndMoneySupply auf recalcCoreStats).
-      processBuildingCompletions(t);
-      EconomyTick.consumePowerUpkeep(state);
-      processDefenseActivations(t);
-      FleetCommands.processFleetArrivals(state, ids, t);
-      BattleCommands.processBattles(state, ids, t);
-      GroundBattleCommands.processGroundBattles(state, ids, t);
-      ProductionCommands.processProductionQueue(state, ids, t);
-      ShipyardCommands.processShipyardCompletions(state, ids, t);
-      ColonyCommands.processColonizations(state, ids, t);
-      RecruitmentCommands.processRecruitmentCompletions(state, ids, t);
-      LandingCommands.processGroundForceMovements(state, ids, t);
-      Specializations.decaySpecializations(state, t);
-      EconomyTick.payUpkeepAndWages(state, ids);
-      EconomyTick.runConsumption(state, ids);
-      MarketCommands.replenishDormantSellOrders(state);
-      TreatyCommands.processExpiredTerminations(state, ids, t);
-      EconomyTick.recalcCoreStats(state, t);
-      EconomyTick.growPopulationAndMoneySupply(state, ids);
-      EconomyTick.runWealthRedistributionIfDue(state, ids, t);
-      EconomyTick.recordStatsSnapshotIfDue(state, t);
-      EconomyTick.notifyColonyAndTreasuryStates(state, ids);
-      // Nach allen Eroberungen dieses Ticks: hat eine Partei als Einzige Kolonien?
-      VictoryCommands.evaluate(state, ids);
-      RetentionCleanup.purgeExpired(state, t);
-    }
-  }
-
-  private void processBuildingCompletions(long t) {
-    for (Building b : state.buildings) {
-      if (b.pendingOrder != null && b.pendingOrder.completesAt <= t) {
-        b.level = b.pendingOrder.targetLevel;
-        b.pendingOrder = null;
-        notifyBuildingDone(b);
-        // Ein fertiger Industriekomplex weckt wartende Produktionsaufträge (Minimalstart, Umsetzungskonzept/17_...md).
-        ProductionCommands.tryStartNextProductionEntry(state, ids, b.colonyId);
-      }
-    }
-  }
-
-  /**
-   * Ein fertiges Gebäude war bisher nur an der veränderten Stufe zu erkennen –
-   * wer nicht gerade auf dem Bebauungs-Tab stand, erfuhr nichts davon.
-   */
-  private void notifyBuildingDone(Building building) {
-    var colony = ColonyCommands.colony(state, building.colonyId);
-    if (colony == null) return;
-    var type = de.nebula.data.BuildingCatalog.find(building.typeId);
-    Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_BUILDING_DONE,
-        type.name + " in \"" + colony.name + "\" ist auf Stufe " + building.level + " fertig.",
-        colony.id, Notifications.colonyLink(colony.id));
-  }
-
-  private void processDefenseActivations(long t) {
-    for (Building b : state.buildings) {
-      if (b.activationState == DefenseActivationState.Activating
-          && b.activationCompletesAt != null && b.activationCompletesAt <= t) {
-        b.activationState = DefenseActivationState.Active;
-        b.activationCompletesAt = null;
-      }
+      GameEvents.runDue(state, ids, Clock.now());
     }
   }
 }

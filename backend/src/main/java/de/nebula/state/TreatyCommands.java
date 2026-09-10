@@ -137,6 +137,7 @@ public final class TreatyCommands {
       // Erneute Annahme (z. B. nach eigener Kündigung) hebt eine laufende Kündigungsfrist wieder auf.
       existing.terminationEffectiveAt = null;
       existing.since = t;
+      GameEvents.cancel(state, GameEventType.TREATY_ENDED, existing.id);
     } else {
       Treaty treaty = new Treaty();
       treaty.id = ids.next("trty");
@@ -164,6 +165,7 @@ public final class TreatyCommands {
         ? GameConstants.PEACE_TREATY_TERMINATION_NOTICE_GAME_HOURS
         : GameConstants.TRADE_AGREEMENT_TERMINATION_NOTICE_GAME_HOURS;
     treaty.terminationEffectiveAt = Clock.now() + (long) Clock.hoursToMs(noticeHours);
+    GameEvents.schedule(state, GameEventType.TREATY_ENDED, treaty.id, treaty.terminationEffectiveAt);
     Player other = state.players.stream().filter(p -> p.id.equals(otherPlayerId)).findFirst().orElse(null);
     if (other != null) {
       Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_TREATY_TERMINATION_REQUESTED,
@@ -176,18 +178,18 @@ public final class TreatyCommands {
     state.treatyOffers.removeIf(o ->
         (o.fromPlayerId.equals(a) && o.toPlayerId.equals(b)) || (o.fromPlayerId.equals(b) && o.toPlayerId.equals(a)));
     String[] k = key(a, b);
+    for (Treaty t : state.treaties) {
+      if (t.playerAId.equals(k[0]) && t.playerBId.equals(k[1])) GameEvents.cancel(state, GameEventType.TREATY_ENDED, t.id);
+    }
     state.treaties.removeIf(t -> t.playerAId.equals(k[0]) && t.playerBId.equals(k[1]));
   }
 
-  /** Tick-Hook ({@link GameTick}): beendet Verträge, deren Kündigungsfrist abgelaufen ist, und benachrichtigt beide Seiten. */
-  public static void processExpiredTerminations(GameState state, IdGenerator ids, long t) {
-    List<Treaty> ended = state.treaties.stream()
-        .filter(tr -> tr.terminationEffectiveAt != null && tr.terminationEffectiveAt <= t)
-        .toList();
-    for (Treaty tr : ended) {
-      state.treaties.remove(tr);
-      notifyEnded(state, ids, tr);
-    }
+  /** Ereignis {@code TREATY_ENDED}: die Kündigungsfrist ist abgelaufen. Veraltet, wenn der Vertrag erneut angenommen oder anders beendet wurde. */
+  static void endTreaty(GameState state, IdGenerator ids, String treatyId, long at) {
+    Treaty treaty = state.treaties.stream().filter(t -> t.id.equals(treatyId)).findFirst().orElse(null);
+    if (treaty == null || treaty.terminationEffectiveAt == null || treaty.terminationEffectiveAt != at) return;
+    state.treaties.remove(treaty);
+    notifyEnded(state, ids, treaty);
   }
 
   private static void notifyEnded(GameState state, IdGenerator ids, Treaty tr) {

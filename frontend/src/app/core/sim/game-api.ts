@@ -258,6 +258,12 @@ export interface GameApi {
   /** Reine Vorschau (keine Bewegung) für "Bewegen" auf der Galaxiekarte: Sprunganzahl + geschätzte Reisezeit (ms) zu einem Zielsystem – `null`, wenn kein Gateway-Pfad bekannt ist. Dieselbe Berechnung wie `moveFleet`, damit Vorschau und tatsächliche Ankunft nie auseinanderlaufen. */
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null>;
   /**
+   * Routenvorschau zu ALLEN erreichbaren Systemen in einer Abfrage (Schlüssel =
+   * System-Id) – für Ziellisten. Je Ziel einzeln `routePreview` zu rufen hieße
+   * bei 200 Systemen 200 Abfragen je Sekunde.
+   */
+  routePreviews(fleetId: Id): Signal<Record<Id, { hops: number; ms: number }>>;
+  /**
    * Vorschau des Trägersprungs OHNE Gateway (Umsetzungskonzept/06_...md):
    * Slot-Bilanz, Dauer und Treibstoffbedarf. `possible: false` heißt, dass die
    * Träger die übrigen Schiffe nicht fassen – `reason` nennt den Grund und ist

@@ -28,8 +28,6 @@ public final class ProductionCommands {
   private ProductionCommands() {
   }
 
-  private static final ChainPlan EMPTY_CHAIN_PLAN = new ChainPlan(0, List.of(), true);
-
   public static List<WarehouseEntry> warehouseFor(GameState state, String colonyId) {
     return state.warehouse.stream().filter(w -> w.colonyId.equals(colonyId) && w.quantity > 0).toList();
   }
@@ -138,7 +136,7 @@ public final class ProductionCommands {
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
     entry.stoppedReasonCode = null;
-    entry.plan = EMPTY_CHAIN_PLAN;
+    entry.plan = ChainPlan.EMPTY;
     entry.startedAt = null;
     entry.endsAt = null;
     state.productionQueue.add(entry);
@@ -151,7 +149,7 @@ public final class ProductionCommands {
    * einen Auftrag anzulegen.
    */
   public static ChainPlan previewProductionChain(GameState state, String colonyId, String productTypeId, double quantity) {
-    if (quantity <= 0) return EMPTY_CHAIN_PLAN;
+    if (quantity <= 0) return ChainPlan.EMPTY;
     return ChainPlanner.planChain(state, colonyId, productTypeId, quantity, "b_industry");
   }
 
@@ -169,8 +167,10 @@ public final class ProductionCommands {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     ProductionQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null) return;
-    creditPartialChainProgress(state, colonyId, entry, (pid, qty) -> Warehouse.add(state, colonyId, pid, qty));
+    creditPartialChainProgress(state, colonyId, entry.status, entry.startedAt, entry.endsAt, entry.plan,
+        (pid, qty) -> Warehouse.add(state, colonyId, pid, qty));
     state.productionQueue.remove(entry);
+    GameEvents.cancel(state, GameEventType.PRODUCTION_COMPLETED, entry.id);
     tryStartNextProductionEntry(state, ids, colonyId);
   }
 
@@ -188,17 +188,21 @@ public final class ProductionCommands {
    * fertiges Einzelmodul zählt als 0, nicht als 0,9), der bereits aus dem
    * Lager entnommene, aber nicht mehr benötigte Anteil wird zurückerstattet.
    * {@code creditRoot} bestimmt, wohin ein Wurzelschritt-Anteil gebucht wird (Produkt-Id
-   * mitgegeben, da ein Auftrag inzwischen mehrere Wurzelprodukte bündeln kann, siehe
-   * {@link ProductionQueueEntry#bundledProducts}; Lager bei Produktion, künftig Flotte bei
-   * Schiffen, Garnison bei Rekrutierung) – alle anderen Schritte landen immer im Lager. Kein
-   * Effekt bei {@code queued}/{@code stopped} (dort wurde noch nichts entnommen).
+   * mitgegeben, da ein Auftrag mehrere Wurzelprodukte bündeln kann, siehe
+   * {@link ProductionQueueEntry#bundledProducts}; Lager bei Produktion und Werft, Garnison
+   * bei Rekrutierung) – alle anderen Schritte landen immer im Lager. Kein Effekt bei
+   * {@code queued}/{@code stopped} (dort wurde noch nichts entnommen).
+   *
+   * <p>EINE Fassung für alle drei Warteschlangen (Produktion, Werft, Ausbildung) –
+   * vorher stand dieselbe Rechnung dreimal da, mit zwei verschiedenen Arten, den
+   * Wurzelschritt zu erkennen.</p>
    */
-  public static void creditPartialChainProgress(GameState state, String colonyId, ProductionQueueEntry entry, BiConsumer<String, Double> creditRoot) {
-    if (entry.status != ProductionQueueStatus.running || entry.startedAt == null || entry.endsAt == null) return;
-    double elapsedFraction = Formulas.clamp(
-        (double) (Clock.now() - entry.startedAt) / Math.max(entry.endsAt - entry.startedAt, 1), 0, 1);
-    List<ChainPlanStep> steps = entry.plan.steps;
-    for (ChainPlanStep step : steps) {
+  static void creditPartialChainProgress(GameState state, String colonyId, ProductionQueueStatus status,
+                                         Long startedAt, Long endsAt, ChainPlan plan,
+                                         BiConsumer<String, Double> creditRoot) {
+    if (status != ProductionQueueStatus.running || startedAt == null || endsAt == null) return;
+    double elapsedFraction = Formulas.clamp((double) (Clock.now() - startedAt) / Math.max(endsAt - startedAt, 1), 0, 1);
+    for (ChainPlanStep step : plan.steps) {
       double refund = Math.floor(step.quantityFromWarehouse * (1 - elapsedFraction));
       if (refund > 0) Warehouse.add(state, colonyId, step.productTypeId, refund);
       double credited = Math.floor(step.quantityToProduce * elapsedFraction);
@@ -254,6 +258,17 @@ public final class ProductionCommands {
     entry.status = ProductionQueueStatus.running;
     entry.startedAt = startedAt;
     entry.endsAt = endsAt;
+    GameEvents.schedule(state, GameEventType.PRODUCTION_COMPLETED, entry.id, endsAt);
+  }
+
+  /** Ereignis {@code PRODUCTION_COMPLETED} – veraltet, wenn der Auftrag nicht mehr läuft oder ein anderes Ende trägt. */
+  static void completeIfDue(GameState state, IdGenerator ids, String entryId, long at) {
+    for (ProductionQueueEntry e : state.productionQueue) {
+      if (e.id.equals(entryId)) {
+        if (e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt == at) completeProductionEntry(state, ids, e);
+        return;
+      }
+    }
   }
 
   public static void completeProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
@@ -275,7 +290,7 @@ public final class ProductionCommands {
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;
       fresh.stoppedReasonCode = null;
-      fresh.plan = EMPTY_CHAIN_PLAN;
+      fresh.plan = ChainPlan.EMPTY;
       fresh.startedAt = null;
       fresh.endsAt = null;
       state.productionQueue.add(fresh);
@@ -283,11 +298,4 @@ public final class ProductionCommands {
     tryStartNextProductionEntry(state, ids, entry.colonyId);
   }
 
-  /** Ereignisbasiert: einziger Zeitvergleich je laufendem Auftrag statt einer Pro-Einheit-Schleife. */
-  public static void processProductionQueue(GameState state, IdGenerator ids, long t) {
-    List<ProductionQueueEntry> due = state.productionQueue.stream()
-        .filter(e -> e.status == ProductionQueueStatus.running && e.endsAt != null && e.endsAt <= t)
-        .toList();
-    for (ProductionQueueEntry entry : due) completeProductionEntry(state, ids, entry);
-  }
 }

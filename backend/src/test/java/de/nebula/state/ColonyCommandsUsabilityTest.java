@@ -117,7 +117,7 @@ class ColonyCommandsUsabilityTest {
     colonyShipInOrbit(b, usable);
     Colonization running = ColonyCommands.colonizePlanet(b.state(), b.ids(), b.playerId(), usable.id);
 
-    ColonyCommands.processColonizations(b.state(), b.ids(), running.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.COLONIZATION_COMPLETED, running.id);
 
     assertTrue(b.state().colonizations.isEmpty(), "Der Vorgang muss nach dem Abschluss verschwinden");
     Colony colony = b.state().colonies.stream().filter(c -> c.planetId.equals(usable.id)).findFirst().orElse(null);

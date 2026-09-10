@@ -90,6 +90,9 @@ final class ColonyConquest {
       moveGarrisonInto(state, victoriousGroup, colony.id);
     }
     releaseHomeworld(state, ids, previousOwnerId, battle.colonyId, colony.name);
+    // Die Siegprüfung hängt am Besitzwechsel – hier und bei der Löschung eines
+    // Kommandanten, nicht mehr an jedem Tick.
+    VictoryCommands.evaluate(state, ids);
     return summary;
   }
 
@@ -198,8 +201,7 @@ final class ColonyConquest {
     state.consumptionBudget.remove(id);
     state.rawStandardOfLiving.remove(id);
     state.consumptionCoverage.remove(id);
-    state.fractionPots.keySet().removeIf(k -> k.contains(id));
-    state.lastProducedAt.keySet().removeIf(k -> k.startsWith(id + ":"));
+    state.forgetColonyBookkeeping(id);
     // Flotten des bisherigen Eigentümers verlieren ihren Liegeplatz und stehen
     // ab jetzt im Orbit des Planeten – sie gehen nicht mit der Kolonie unter.
     for (var f : state.fleets) {

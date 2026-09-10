@@ -62,7 +62,7 @@ class ProductionBundleTest {
     assertNotNull(entry.endsAt);
 
     // Kein echtes Warten nötig: der Kettenplaner hat endsAt schon berechnet, wir spulen direkt dorthin.
-    ProductionCommands.processProductionQueue(b.state(), b.ids(), entry.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.PRODUCTION_COMPLETED, entry.id);
 
     assertTrue(b.state().productionQueue.isEmpty(), "Auftrag muss nach Fertigstellung entfernt sein");
     assertEquals(13.0, warehouseQty(b.state(), b.colonyId(), "p_leitermetall"), 1e-9,

@@ -1,7 +1,9 @@
 import { EnergyStorage } from '../models/building.model';
-import { Injectable, OnDestroy, Signal, signal } from '@angular/core';
+import { Injectable, OnDestroy, Signal, inject, signal } from '@angular/core';
+import { SIGNAL } from '@angular/core/primitives/signals';
 import { GameApi } from './game-api';
 import { webSocketBackendUrl } from './backend-config';
+import { UiClockService } from '../ui/ui-clock.service';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, CarrierJumpPreview, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
@@ -19,6 +21,29 @@ interface ServerMessage {
   type: string;
   requestId: string | null;
   payload: unknown;
+  /** Spieluhr des Servers beim Absenden – stellt die `UiClockService`-Spieluhr, siehe dort. */
+  gameNow?: number;
+}
+
+/** Takt des zentralen Poll-Zeitgebers – feiner als das Abfrageintervall, damit ein Intervall von 1 s auch etwa 1 s ist. */
+const POLL_SCHEDULER_MS = 250;
+/**
+ * Ein Poll-Signal, das so lange nicht gelesen wurde, gilt als verwaist und
+ * wird nicht mehr abgefragt – drei verpasste Takte, damit ein kurzer
+ * Change-Detection-Aussetzer keine lebende Ansicht einfrieren lässt.
+ */
+const POLL_IDLE_MS = 3000;
+
+interface PollEntry {
+  type: string;
+  params: unknown;
+  intervalMs: number;
+  /** Letztes Lesen des Signals – siehe Klassendoku ("gepollt wird nur, was gelesen wird"). */
+  lastReadAt: number;
+  lastFetchAt: number;
+  inFlight: boolean;
+  set: (v: unknown) => void;
+  signal: Signal<unknown>;
 }
 
 /**
@@ -36,15 +61,23 @@ interface ServerMessage {
  * ALLE ~90 Kanäle wäre die "saubere" Lösung, ist aber ein separates, großes
  * Vorhaben (serverseitiges Interessen-Tracking je Verbindung). Polling ist
  * für die Größenordnung dieses Prototyps (wenige gleichzeitige Nutzer,
- * 1s-Tick ohnehin die kleinste sinnvolle Auflösung) ausreichend reaktiv.
- * Ebenso bewusst NICHT umgesetzt: automatisches Aufräumen der Polling-
- * Intervalle, wenn eine Komponente (und mit ihr ihr `Signal`-Feld) zerstört
- * wird – für einen Rauchtest unproblematisch, für einen Dauerbetrieb wäre
- * das der erste Ausbauschritt (z. B. über `DestroyRef` je Aufrufer).</p>
+ * 1s-Tick ohnehin die kleinste sinnvolle Auflösung) ausreichend reaktiv.</p>
+ *
+ * <p><b>Gepollt wird nur, was gerade jemand LIEST.</b> Jedes Poll-Signal merkt
+ * sich beim Lesen den Zeitpunkt; der eine zentrale Zeitgeber (`schedulePolls`)
+ * fragt den Server nur für Signale, die binnen `POLL_IDLE_MS` gelesen wurden.
+ * Vorher lief je Abfrage ein eigenes `setInterval` bis zum Schließen des Tabs –
+ * nach dem Besuch einiger Kolonieseiten waren das hunderte Anfragen je Sekunde
+ * gegen die globale Sperre des Servers, für Ansichten, die längst zerstört
+ * waren. Eine Antwort, die noch aussteht, wird nicht überholt (kein Stau bei
+ * langsamer Verbindung). Das ersetzt das früher offen gelassene Aufräumen je
+ * `DestroyRef`: Abhängigkeiten aus `computed()` und Vorlagen brauchen keinen
+ * Aufrufer-Kontext, sie melden sich schlicht durch ihr Lesen an.</p>
  */
 @Injectable()
 export class WebSocketGameApiService implements GameApi, OnDestroy {
   private ws: WebSocket;
+  private readonly uiClock = inject(UiClockService);
   private requestCounter = 0;
   private readonly pending = new Map<string, { resolve: (value: unknown) => void; reject: (reason: unknown) => void }>();
   private readonly intervals: ReturnType<typeof setInterval>[] = [];
@@ -72,6 +105,7 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
     });
     this.ws.addEventListener('open', () => void this.restoreSession());
     this.intervals.push(setInterval(() => this.pollWallet(), 1000));
+    this.intervals.push(setInterval(() => this.schedulePolls(), POLL_SCHEDULER_MS));
   }
 
   ngOnDestroy(): void {
@@ -81,6 +115,8 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
 
   private handleMessage(raw: string): void {
     const msg = JSON.parse(raw) as ServerMessage;
+    // Jede Nachricht trägt die Spieluhr des Servers – daran hängt jede Restzeitanzeige.
+    if (typeof msg.gameNow === 'number') this.uiClock.syncFromServer(msg.gameNow);
     if (msg.requestId !== null) {
       const entry = this.pending.get(msg.requestId);
       if (!entry) return;
@@ -112,8 +148,8 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
     });
   }
 
-/** Memoisierte Polling-Signale, Schlüssel = `type` + serialisierte Payload-Parameter (siehe {@link #poll}). */
-  private readonly pollCache = new Map<string, Signal<unknown>>();
+  /** Memoisierte Polling-Signale, Schlüssel = `type` + serialisierte Payload-Parameter (siehe {@link #poll}). */
+  private readonly pollCache = new Map<string, PollEntry>();
   /** Setter-Gegenstück zu {@link #pollCache}, für Sofort-Updates aus einem Server-Push (siehe {@link #handleMessage}). */
   private readonly pollSetters = new Map<string, (v: unknown) => void>();
 
@@ -127,29 +163,58 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
    * (billig, kein eigener Zustand), bei einem Polling-Signal mit echtem
    * Netzwerk-Roundtrip aber fatal: das alte, gerade erst gestartete Signal
    * würde verworfen, bevor seine Antwort je gelesen werden kann – die
-   * betroffene UI-Stelle bliebe dauerhaft auf ihrem Startwert stehen. Die
-   * Memoisierung sorgt zusätzlich dafür, dass die Anzahl gleichzeitig
-   * laufender Intervalle durch die Anzahl UNTERSCHIEDLICHER Abfragen
-   * begrenzt ist, nicht durch die Häufigkeit ihres Aufrufs.
+   * betroffene UI-Stelle bliebe dauerhaft auf ihrem Startwert stehen.
+   *
+   * <p>Das zurückgegebene Signal ist eine LESE-VERFOLGTE Hülle um das eigentliche
+   * Signal: jeder Aufruf vermerkt `lastReadAt`, und nur so lange jemand liest,
+   * fragt {@link #schedulePolls} den Server. Beim Wiederauftauchen eines
+   * Aufrufers (Cache-Treffer nach Leerlauf) wird sofort nachgeholt, damit die
+   * Ansicht nicht bis zum nächsten Takt mit dem alten Stand steht.</p>
    */
   private poll<T>(type: string, payload: () => unknown, initial: T, intervalMs = 1000): Signal<T> {
     const params = payload();
     const key = type + ':' + JSON.stringify(params);
     const cached = this.pollCache.get(key);
-    if (cached) return cached as Signal<T>;
+    if (cached) {
+      cached.lastReadAt = Date.now();
+      if (cached.lastFetchAt < cached.lastReadAt - intervalMs) this.fetchPoll(cached);
+      return cached.signal as Signal<T>;
+    }
 
     const value = signal<T>(initial);
-    const tick = () => {
-      this.send<T>(type, params)
-        .then(v => value.set(v))
-        .catch(() => { /* z. B. noch nicht eingeloggt – Signal behält letzten Wert */ });
+    const entry: PollEntry = {
+      type, params, intervalMs, lastReadAt: Date.now(), lastFetchAt: 0, inFlight: false,
+      set: value.set.bind(value) as (v: unknown) => void, signal: undefined as unknown as Signal<unknown>,
     };
-    tick();
-    this.intervals.push(setInterval(tick, intervalMs));
-    const readonly = value.asReadonly();
-    this.pollCache.set(key, readonly);
-    this.pollSetters.set(key, value.set.bind(value) as (v: unknown) => void);
-    return readonly;
+    const inner = value.asReadonly();
+    const tracked = (() => { entry.lastReadAt = Date.now(); return inner(); }) as Signal<T>;
+    // Der Marker macht die Hülle für Angular zu einem echten Signal (`isSignal`);
+    // die Abhängigkeitsverfolgung läuft ohnehin über den inneren Aufruf.
+    (tracked as unknown as Record<symbol, unknown>)[SIGNAL] = (inner as unknown as Record<symbol, unknown>)[SIGNAL];
+    entry.signal = tracked;
+    this.pollCache.set(key, entry);
+    this.pollSetters.set(key, entry.set);
+    this.fetchPoll(entry);
+    return tracked;
+  }
+
+  /** Ein Zeitgeber für alle Poll-Signale: fragt nur die ab, die gerade gelesen werden und deren Intervall abgelaufen ist. */
+  private schedulePolls(): void {
+    const now = Date.now();
+    for (const entry of this.pollCache.values()) {
+      if (entry.inFlight || now - entry.lastReadAt > POLL_IDLE_MS || now - entry.lastFetchAt < entry.intervalMs) continue;
+      this.fetchPoll(entry);
+    }
+  }
+
+  private fetchPoll(entry: PollEntry): void {
+    if (entry.inFlight) return;
+    entry.inFlight = true;
+    entry.lastFetchAt = Date.now();
+    this.send<unknown>(entry.type, entry.params)
+      .then(v => entry.set(v))
+      .catch(() => { /* z. B. noch nicht eingeloggt – Signal behält letzten Wert */ })
+      .finally(() => { entry.inFlight = false; });
   }
 
   private async pollWallet(): Promise<void> {
@@ -494,6 +559,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   routePreview(fleetId: Id, destinationSystemId: Id): Signal<{ hops: number; ms: number } | null> {
     return this.poll('routePreview', () => ({ fleetId, destinationSystemId }), null);
+  }
+  routePreviews(fleetId: Id): Signal<Record<Id, { hops: number; ms: number }>> {
+    return this.poll('routePreviews', () => ({ fleetId }), {});
   }
   carrierJumpPreview(fleetId: Id, destinationSystemId: Id): Signal<CarrierJumpPreview | null> {
     return this.poll('carrierJumpPreview', () => ({ fleetId, destinationSystemId }), null);

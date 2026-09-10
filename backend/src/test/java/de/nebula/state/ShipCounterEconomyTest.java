@@ -139,10 +139,8 @@ class ShipCounterEconomyTest {
 
     var battle = BattleCommands.activeBattleForFleet(arena.state(), attacker.id);
     assertNotNull(battle, "Gefecht wurde nicht eröffnet");
-    long t = Clock.now();
     for (int tick = 0; tick < 1000 && battle.status == BattleStatus.Active; tick++) {
-      t += (long) Clock.hoursToMs(Formulas.COMBAT_TICK_HOURS);
-      BattleCommands.processBattles(arena.state(), arena.ids(), t);
+      GameEvents.fireNow(arena.state(), arena.ids(), GameEventType.BATTLE_ROUND, battle.id);
     }
     assertEquals(BattleStatus.Ended, battle.status, "Gefecht kam in 1000 Ticks zu keinem Ende");
     return battle.outcome;

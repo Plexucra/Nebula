@@ -204,6 +204,7 @@ public final class BattleCommands {
     battle.endedAt = null;
     battle.outcome = null;
     state.battles.add(battle);
+    GameEvents.schedule(state, GameEventType.BATTLE_ROUND, battle.id, battle.nextTickAt);
 
     String reportLink = "/kampfbericht/" + battle.reportToken;
     Notifications.notifyPlayer(state, ids, NotificationType.Warnung, Notifications.CODE_BATTLE_STARTED,
@@ -228,23 +229,31 @@ public final class BattleCommands {
     if (battle == null) throw new CommandException("Unbekanntes Gefecht.");
     if (battle.status != BattleStatus.Active) throw new CommandException("Dieses Gefecht ist bereits beendet.");
     if (!battle.attackerId.equals(me.id) && !battle.defenderId.equals(me.id)) throw new CommandException("Dieses Gefecht betrifft Sie nicht.");
-    resolveBattleTick(state, ids, battle, battle.attackerId.equals(me.id) ? "attacker" : "defender");
+    resolveBattleTick(state, ids, battle, battle.attackerId.equals(me.id) ? "attacker" : "defender", Clock.now());
   }
 
-  public static void processBattles(GameState state, IdGenerator ids, long t) {
-    List<Battle> due = state.battles.stream().filter(b -> b.status == BattleStatus.Active && b.nextTickAt <= t).toList();
-    for (Battle battle : due) resolveBattleTick(state, ids, battle, null);
+  /**
+   * Ereignis {@code BATTLE_ROUND}: die nächste Gefechtsrunde ist fällig. Veraltet,
+   * wenn das Gefecht beendet ist oder (nach einem Rückzug) eine andere Rundenzeit
+   * trägt. Die Folgerunde wird in {@link #resolveBattleTick} ab {@code at} geplant.
+   */
+  static void round(GameState state, IdGenerator ids, String battleId, long at) {
+    Battle battle = battle(state, battleId);
+    if (battle == null || battle.status != BattleStatus.Active || battle.nextTickAt != at) return;
+    resolveBattleTick(state, ids, battle, null, at);
   }
 
-  private static void resolveBattleTick(GameState state, IdGenerator ids, Battle battle, String retreatingSide) {
+  /** {@code t} ist die Zeit dieser Runde – die Ereigniszeit, nicht die Abarbeitungszeit (siehe {@link GameEvents}). */
+  private static void resolveBattleTick(GameState state, IdGenerator ids, Battle battle, String retreatingSide, long t) {
     Fleet attackerFleet = findFleet(state, battle.attackerFleetId);
     Fleet defenderFleet = findFleet(state, battle.defenderFleetId);
     if (attackerFleet == null || defenderFleet == null) {
       battle.status = BattleStatus.Ended;
-      battle.endedAt = Clock.now();
+      battle.endedAt = t;
       battle.outcome = null;
       battle.attackerResidualDamage = new HashMap<>();
       battle.defenderResidualDamage = new HashMap<>();
+      GameEvents.cancel(state, GameEventType.BATTLE_ROUND, battle.id);
       return;
     }
 
@@ -262,7 +271,6 @@ public final class BattleCommands {
     attackerFleet.ships = atkApplied.ships();
     defenderFleet.ships = defApplied.ships();
 
-    long t = Clock.now();
     BattleTickResult tickResult = new BattleTickResult();
     tickResult.tick = battle.ticksResolved + 1;
     tickResult.atTime = t;
@@ -299,6 +307,8 @@ public final class BattleCommands {
     battle.ticks.add(tickResult);
     battle.endedAt = status == BattleStatus.Ended ? t : null;
     battle.outcome = outcome;
+    if (status == BattleStatus.Active) GameEvents.schedule(state, GameEventType.BATTLE_ROUND, battle.id, battle.nextTickAt);
+    else GameEvents.cancel(state, GameEventType.BATTLE_ROUND, battle.id);
 
     if (status == BattleStatus.Ended) {
       String attackerName = state.players.stream().filter(p -> p.id.equals(battle.attackerId)).map(p -> p.name).findFirst().orElse("?");

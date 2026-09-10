@@ -141,7 +141,7 @@ class ShipyardColonyShipTest {
         Clock.msToHours(entry.endsAt - entry.startedAt), 0.001,
         "Auch mit allem im Lager bleibt es bei genau einer Spielwoche");
 
-    ShipyardCommands.processShipyardCompletions(b.state(), b.ids(), entry.endsAt);
+    GameEvents.fireNow(b.state(), b.ids(), GameEventType.SHIP_COMPLETED, entry.id);
     assertTrue(b.state().shipyardQueue.isEmpty());
     assertEquals(1, Warehouse.qty(b.state(), b.colonyId(), GameConstants.COLONY_SHIP_PRODUCT_ID), 0.001);
   }

@@ -172,7 +172,7 @@ class CarrierTransitTest {
     assertEquals(isolated.id, fleet.destinationSystemId);
     assertTrue(fleet.pendingHops.isEmpty(), "Ein Trägersprung ist EIN Sprung ohne Zwischenstationen.");
 
-    FleetCommands.processFleetArrivals(a.state(), a.ids(), fleet.arrivesAt);
+    GameEvents.runDue(a.state(), a.ids(), fleet.arrivesAt);
     assertEquals(FleetStatus.Stationed, fleet.status);
     assertEquals(isolated.id, fleet.systemId);
   }

@@ -231,8 +231,46 @@ public final class BuildingCommands {
       building.activationCompletesAt = null;
       state.buildings.add(building);
     }
+    GameEvents.schedule(state, GameEventType.BUILDING_COMPLETED, building.id, pendingOrder.completesAt);
     Ledger.recordTx(state, ids, wallet.id, GameQueries.popWalletIdForColony(state, colonyId), preview.credits(),
         TransactionReason.Construction, "Ausbau " + type.name + " → Stufe " + preview.targetLevel());
+  }
+
+  /**
+   * Ereignis {@code BUILDING_COMPLETED}: der Ausbau ist fertig. Veraltet, wenn
+   * der Auftrag inzwischen abgebrochen oder ersetzt wurde (dann trägt das
+   * Gebäude keine oder eine andere Fälligkeit).
+   */
+  static void completeBuilding(GameState state, IdGenerator ids, String buildingId, long at) {
+    Building building = find(state, buildingId);
+    if (building == null || building.pendingOrder == null || building.pendingOrder.completesAt != at) return;
+    building.level = building.pendingOrder.targetLevel;
+    building.pendingOrder = null;
+    Colony colony = ColonyCommands.colony(state, building.colonyId);
+    if (colony != null) {
+      // Ein fertiges Gebäude war bisher nur an der veränderten Stufe zu erkennen –
+      // wer nicht gerade auf dem Bebauungs-Tab stand, erfuhr nichts davon.
+      BuildingType type = BuildingCatalog.find(building.typeId);
+      Notifications.notify(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_BUILDING_DONE,
+          type.name + " in \"" + colony.name + "\" ist auf Stufe " + building.level + " fertig.",
+          colony.id, Notifications.colonyLink(colony.id));
+    }
+    // Ein fertiger Industriekomplex weckt wartende Produktionsaufträge (Minimalstart, Umsetzungskonzept/17_...md).
+    ProductionCommands.tryStartNextProductionEntry(state, ids, building.colonyId);
+  }
+
+  /** Ereignis {@code DEFENSE_ACTIVATED}: die Vorlaufzeit der Verteidigungsanlage ist um. */
+  static void completeDefenseActivation(GameState state, String buildingId, long at) {
+    Building building = find(state, buildingId);
+    if (building == null || building.activationState != DefenseActivationState.Activating
+        || building.activationCompletesAt == null || building.activationCompletesAt != at) return;
+    building.activationState = DefenseActivationState.Active;
+    building.activationCompletesAt = null;
+  }
+
+  private static Building find(GameState state, String buildingId) {
+    for (Building b : state.buildings) if (b.id.equals(buildingId)) return b;
+    return null;
   }
 
   /** Abbruch erstattet Credits UND Baustoffe vollständig – bezahlt wurde für die Zielstufe, die nicht entsteht. */
@@ -242,8 +280,9 @@ public final class BuildingCommands {
         .filter(b -> b.id.equals(buildingId) && b.colonyId.equals(colonyId)).findFirst().orElse(null);
     if (building == null || building.pendingOrder == null) throw new CommandException("Kein laufender Ausbauauftrag.");
     BuildingType type = BuildingCatalog.find(building.typeId);
-    // Vorschau VOR dem Zurücksetzen berechnen: sie beschreibt exakt den Schritt, der gerade läuft.
     building.pendingOrder = null;
+    GameEvents.cancel(state, GameEventType.BUILDING_COMPLETED, building.id);
+    // Die Vorschau beschreibt nach dem Zurücksetzen exakt den Schritt, der gerade lief.
     UpgradePreview preview = upgradePreview(state, colonyId, type);
     for (MaterialRequirement m : preview.materials()) Warehouse.add(state, colonyId, m.productTypeId, m.required);
     var player = GameQueries.requirePlayer(state, playerId);
@@ -295,6 +334,7 @@ public final class BuildingCommands {
     }
     building.activationState = DefenseActivationState.Activating;
     building.activationCompletesAt = Clock.now() + (long) Clock.hoursToMs(DEFENSE_ACTIVATION_HOURS);
+    GameEvents.schedule(state, GameEventType.DEFENSE_ACTIVATED, building.id, building.activationCompletesAt);
   }
 
   private static final int DEFENSE_ACTIVATION_HOURS = 12;
@@ -305,6 +345,7 @@ public final class BuildingCommands {
       if (b.id.equals(buildingId) && b.colonyId.equals(colonyId)) {
         b.activationState = DefenseActivationState.Inactive;
         b.activationCompletesAt = null;
+        GameEvents.cancel(state, GameEventType.DEFENSE_ACTIVATED, b.id);
       }
     }
   }

@@ -29,16 +29,36 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 1:1-Portierung der "Bevölkerung/Geld"-Tick-Sektion aus
- * {@code simulated-game-api.service.ts} (Umsetzungskonzept/13_...md, Phase 6).
- * Reine {@code processXxx}-Methoden, aufgerufen von {@link GameTick} in
- * exakt der TS-Reihenfolge (siehe {@code runTick}).
+ * Die RATENPROZESSE der Wirtschaft (ursprünglich die "Bevölkerung/Geld"-Tick-
+ * Sektion aus {@code simulated-game-api.service.ts}, Umsetzungskonzept/13_...md,
+ * Phase 6). Sie sind das, was von der alten Tick-Schleife als Takt übrig
+ * bleibt: keine Fälligkeiten, sondern Raten je Spielstunde mit Glättung, die in
+ * Schritten von {@code TICK_GAME_HOURS} entworfen sind – siehe
+ * {@link #economyStep}.
  */
 public final class EconomyTick {
   private EconomyTick() {
   }
 
-  /** Zeitreihe aggregierter Stabilitätskennzahlen über die gesamte Galaxie, siehe {@link #recordStatsSnapshotIfDue}. */
+  /**
+   * EIN Wirtschaftsschritt, als wiederkehrendes Ereignis alle {@code TICK_MS}
+   * ({@link GameEvents}). Die Reihenfolge ist tragend – NICHT umstellen:
+   * {@code recalcCoreStats} liest den in {@code consumePowerUpkeep} gesetzten
+   * Energiestand und den in {@code runConsumption} gesetzten Lebensstandard,
+   * {@code growPopulationAndMoneySupply} die Kernwerte und die Nahrungsdeckung
+   * desselben Schritts, und die Flankenmeldungen am Ende sehen den fertigen
+   * Zustand. {@code t} ist die Ereigniszeit.
+   */
+  public static void economyStep(GameState state, IdGenerator ids, long t) {
+    consumePowerUpkeep(state);
+    payUpkeepAndWages(state, ids);
+    runConsumption(state, ids);
+    recalcCoreStats(state, t);
+    growPopulationAndMoneySupply(state, ids);
+    notifyColonyAndTreasuryStates(state, ids);
+  }
+
+  /** Zeitreihe aggregierter Stabilitätskennzahlen über die gesamte Galaxie, siehe {@link #recordStatsSnapshot}. */
   public static List<UniverseStatSnapshot> universeStats(GameState state) {
     return List.copyOf(state.universeStats);
   }
@@ -69,9 +89,9 @@ public final class EconomyTick {
       for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p.currentCount;
       double wage = population * 0.02 * GameConstants.TICK_GAME_HOURS;
 
-      payFromOwnerWallet(state, ids, colony, ownerWallet, popWallet, buildingUpkeep, TransactionReason.BuildingUpkeep, "Gebäudeunterhalt");
-      payFromOwnerWallet(state, ids, colony, ownerWallet, popWallet, fleetUpkeep, TransactionReason.FleetUpkeep, "Flottenunterhalt");
-      payFromOwnerWallet(state, ids, colony, ownerWallet, popWallet, wage, TransactionReason.Wage, "Löhne");
+      payFromOwnerWallet(state, ids, ownerWallet, popWallet, buildingUpkeep, TransactionReason.BuildingUpkeep, "Gebäudeunterhalt");
+      payFromOwnerWallet(state, ids, ownerWallet, popWallet, fleetUpkeep, TransactionReason.FleetUpkeep, "Flottenunterhalt");
+      payFromOwnerWallet(state, ids, ownerWallet, popWallet, wage, TransactionReason.Wage, "Löhne");
     }
   }
 
@@ -95,11 +115,11 @@ public final class EconomyTick {
     return qty;
   }
 
-  private static void payFromOwnerWallet(GameState state, IdGenerator ids, Colony colony, Wallet ownerWallet,
+  private static void payFromOwnerWallet(GameState state, IdGenerator ids, Wallet ownerWallet,
                                           Wallet popWallet, double amount, TransactionReason reason, String note) {
-    double available = Math.max(GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId) != null
-        ? GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId).balance : 0, 0);
-    double affordable = Math.min(amount, available);
+    // ownerWallet ist das LIVE-Objekt aus state.wallets – vorherige Buchungen
+    // desselben Ticks sind in balance bereits enthalten.
+    double affordable = Math.min(amount, Math.max(ownerWallet.balance, 0));
     if (affordable > 0.001) Ledger.recordTx(state, ids, ownerWallet.id, popWallet.id, affordable, reason, note);
   }
 
@@ -176,7 +196,7 @@ public final class EconomyTick {
         weightSum += weight;
       }
       state.consumptionCoverage.put(colony.id, coverageByGood);
-      warnAboutSupplyGaps(state, ids, colony, coverageByGood);
+      warnAboutSupplyGaps(state, ids, colony, population, coverageByGood);
       double prevRaw = state.rawStandardOfLiving.getOrDefault(colony.id, stats.standardOfLivingPct);
       double newStandard = weightSum > 0 ? (coverageSum / weightSum) * 100 : prevRaw;
       double standardAlpha = Formulas.smoothingAlpha(Formulas.LIVING_STANDARD_SMOOTHING_TAU_HOURS);
@@ -306,21 +326,8 @@ public final class EconomyTick {
     state.powerStates.addAll(next);
   }
 
-  /** Problem-Code: ein Grundbedarfsgut ist für die Bevölkerung nicht (ausreichend) zu kaufen (Umsetzungskonzept/32_...md, Teil B). */
-  /** Unter dieser Deckung gilt ein Gut als unversorgt. */
+  /** Unter dieser Deckung gilt ein Gut als unversorgt (Problem-Code {@code CODE_SUPPLY_GAP}, Umsetzungskonzept/32_...md, Teil B). */
   private static final double SUPPLY_WARNING_BELOW = 0.5;
-  /** Höchstens eine Warnung je Gut und Kolonie je Spieltag. */
-  /**
-   * REALZEIT-AUSNAHME (siehe {@code GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS}):
-   * Mindestabstand zweier gleicher Versorgungswarnungen in ECHTEN Minuten.
-   *
-   * <p>Vorher stand hier eine Frist von 24 SPIELSTUNDEN. Bei
-   * {@code gameSpeedMultiplier = 4} sind das 15 Realsekunden – je Kolonie und
-   * je fehlendem Gut. Die Glocke enthielt dadurch praktisch nur noch
-   * Versorgungswarnungen und verdrängte alles andere, auch Kampfmeldungen.
-   * Wie oft ein Mensch dieselbe Warnung sehen will, hängt nicht am
-   * Tempo-Regler – deshalb Realzeit.</p>
-   */
 
   /**
    * Warnt den Kommandanten, wenn ein Grundbedarfsgut nicht zu kaufen ist – weil
@@ -328,13 +335,19 @@ public final class EconomyTick {
    * deshalb bei 50 %, Konzept 31 Befund 3) oder weil die Bevölkerung sich den Preis
    * nicht leisten kann (Befund 11). Die Entscheidung bleibt beim Kommandanten; die
    * Warnung nennt nur, was fehlt.
+   *
+   * <p>REALZEIT-AUSNAHME ({@code GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS}):
+   * der Mindestabstand zweier gleicher Warnungen zählt in ECHTEN Minuten. Vorher
+   * waren es 24 SPIELSTUNDEN – bei {@code gameSpeedMultiplier = 4} also 15
+   * Realsekunden je Kolonie und Gut; die Glocke enthielt praktisch nur noch
+   * Versorgungswarnungen. Wie oft ein Mensch dieselbe Warnung sehen will, hängt
+   * nicht am Tempo-Regler.</p>
    */
-  private static void warnAboutSupplyGaps(GameState state, IdGenerator ids, Colony colony, Map<String, Double> coverageByGood) {
-    Population population = null;
-    for (Population p : state.populations) if (p.colonyId.equals(colony.id)) population = p;
-    if (population == null || population.currentCount < 1) return;
-    long now = Clock.now();
-    // REALZEIT-AUSNAHME: bereits Realzeit-Millisekunden, NICHT über Clock.hoursToMs.
+  private static void warnAboutSupplyGaps(GameState state, IdGenerator ids, Colony colony, Population population,
+                                          Map<String, Double> coverageByGood) {
+    if (population.currentCount < 1) return;
+    // REALZEIT-AUSNAHME: Realuhr auf BEIDEN Seiten des Vergleichs (siehe Clock), NICHT über Clock.hoursToMs.
+    long now = Clock.realNow();
     long cooldownMs = GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS;
     for (Map.Entry<String, Double> e : coverageByGood.entrySet()) {
       if (e.getValue() >= SUPPLY_WARNING_BELOW) continue;
@@ -357,15 +370,13 @@ public final class EconomyTick {
 
   /**
    * Ausgleichsfonds gegen Geldhortung (Konzeption/Spieldesign/06_..., §8 und
-   * Mechanik/10_..., §7): einmal pro Spieltag zahlen große Spieler-/
-   * Kommandanten-Wallets 0,1% ihres Guthabens und jede Kolonie 1% ihres
-   * Bevölkerungs-Wallets in einen galaxieweiten Topf ein, der im selben Lauf
-   * komplett pro Kopf an alle Bevölkerungs-Wallets zurückverteilt wird.
+   * Mechanik/10_..., §7): einmal pro Spieltag (Ereignis {@code WEALTH_REDISTRIBUTION})
+   * zahlen große Spieler-/Kommandanten-Wallets 0,1% ihres Guthabens und jede
+   * Kolonie 1% ihres Bevölkerungs-Wallets in einen galaxieweiten Topf ein, der
+   * im selben Lauf komplett pro Kopf an alle Bevölkerungs-Wallets
+   * zurückverteilt wird.
    */
-  public static void runWealthRedistributionIfDue(GameState state, IdGenerator ids, long t) {
-    if (t - state.lastWealthRedistributionAt < GameConstants.GAME_DAY_MS) return;
-    state.lastWealthRedistributionAt = t;
-
+  public static void runWealthRedistribution(GameState state, IdGenerator ids) {
     double pot = 0;
     for (Wallet wallet : state.wallets) {
       if (wallet.ownerType != WalletOwnerType.Player || wallet.balance <= GameConstants.WEALTH_TAX_THRESHOLD) continue;
@@ -397,9 +408,8 @@ public final class EconomyTick {
     }
   }
 
-  public static void recordStatsSnapshotIfDue(GameState state, long t) {
-    if (t - state.lastStatsSnapshotAt < Clock.hoursToMs(GameConstants.STATS_SNAPSHOT_INTERVAL_GAME_HOURS)) return;
-    state.lastStatsSnapshotAt = t;
+  /** Ereignis {@code STATS_SNAPSHOT}, alle {@code STATS_SNAPSHOT_INTERVAL_GAME_HOURS}. */
+  public static void recordStatsSnapshot(GameState state, long t) {
     // Bevölkerungsverlauf je Kolonie im selben Takt mitschreiben (Umsetzungskonzept/18_...md).
     PopulationHistory.record(state, t);
     if (state.colonies.isEmpty()) return;

@@ -365,6 +365,11 @@ public class Bot {
     return result == null ? com.fasterxml.jackson.databind.node.NullNode.getInstance() : result;
   }
 
+  /** Spieluhr des Servers – für jeden Vergleich mit einem Serverzeitstempel (siehe {@code GameConnection.gameNow}). */
+  long gameNow() {
+    return connection.gameNow();
+  }
+
   boolean isOwnCampName(String name) {
     return name != null && name.startsWith("NPC-" + displayName(camp) + "-");
   }

@@ -20,9 +20,10 @@ import de.nebula.model.ShipTypeDef;
 import de.nebula.model.StarSystem;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -182,6 +183,7 @@ public final class FleetCommands {
 
   private static void removeFleet(GameState state, Fleet fleet) {
     state.fleets.remove(fleet);
+    GameEvents.cancel(state, GameEventType.FLEET_ARRIVED, fleet.id);
     // Ohne Flotte keine Blockade – dieselbe Regel wie beim Ortswechsel in moveFleetWithinSystem.
     state.blockades.removeIf(b -> b.fleetId.equals(fleet.id));
     state.groundForceGroups.removeIf(g -> fleet.id.equals(g.fleetId));
@@ -354,6 +356,7 @@ public final class FleetCommands {
     fleet.locationType = FleetLocationType.System;
     fleet.locationColonyId = null;
     fleet.locationPlanetId = null;
+    GameEvents.schedule(state, GameEventType.FLEET_ARRIVED, fleet.id, arrivesAt);
   }
 
   // ==========================================================================
@@ -521,6 +524,7 @@ public final class FleetCommands {
     fleet.locationType = FleetLocationType.System;
     fleet.locationColonyId = null;
     fleet.locationPlanetId = null;
+    GameEvents.schedule(state, GameEventType.FLEET_ARRIVED, fleet.id, fleet.arrivesAt);
   }
 
   /**
@@ -731,6 +735,25 @@ public final class FleetCommands {
   }
 
   /**
+   * Routenvorschau zu ALLEN erreichbaren Systemen in EINER Abfrage (eine
+   * Breitensuche). Die Zielauswahl der Flottenübersicht fragte vorher für
+   * jedes der rund 200 Systeme einzeln {@link #routePreview} ab – 200 Suchen je
+   * Sekunde und Flotte, solange das Bewegen-Feld offen war. Unerreichbare
+   * Systeme und das eigene fehlen im Ergebnis.
+   */
+  public static Map<String, RoutePreview> routePreviewsFrom(GameState state, String fleetId) {
+    Fleet fleet = find(state, fleetId);
+    if (fleet == null) return Map.of();
+    Map<String, RoutePreview> out = new HashMap<>();
+    for (Map.Entry<String, Integer> e : Graph.bfsHops(GatewayCommands.gatewayRoutes(state), fleet.systemId).entrySet()) {
+      int hops = e.getValue();
+      if (hops == 0) continue;
+      out.put(e.getKey(), new RoutePreview(hops, Clock.hoursToMs(hops * GameConstants.HOURS_PER_GATEWAY_HOP)));
+    }
+    return out;
+  }
+
+  /**
    * Instant-Bewegung (keine Flugzeit) zwischen den drei Orten desselben
    * Systems, siehe {@link FleetSystemTarget}/{@link FleetLocationType}.
    */
@@ -798,50 +821,48 @@ public final class FleetCommands {
   }
 
   /**
-   * Ereignisbasiert: einziger Zeitvergleich je unterwegs befindlicher
-   * Flotte. Ein mehrsprungiger Flug ({@code pendingHops}) wird
-   * hop-für-hop abgearbeitet – nach jedem Sprung entscheidet dieser Tick
-   * neu, ob es weiter zum nächsten Sprung geht oder die Flotte hier als
-   * {@code Stationed} stehen bleibt.
+   * Ereignis {@code FLEET_ARRIVED}: der laufende Sprung ist zu Ende. Ein
+   * mehrsprungiger Flug ({@code pendingHops}) wird hop-für-hop abgearbeitet –
+   * nach jedem Sprung entscheidet sich neu, ob es weiter zum nächsten geht
+   * (der dann ab {@code at} geplant wird) oder die Flotte hier als
+   * {@code Stationed} stehen bleibt. Veraltet, wenn die Flotte inzwischen
+   * verschwunden ist oder eine andere Ankunft trägt.
    */
-  public static void processFleetArrivals(GameState state, IdGenerator ids, long t) {
-    List<Fleet> due = state.fleets.stream()
-        .filter(f -> f.status == FleetStatus.InTransit && f.arrivesAt != null && f.arrivesAt <= t)
-        .toList();
-    for (Fleet fleet : due) {
-      String reachedSystemId = fleet.destinationSystemId;
-      List<String> hops = fleet.pendingHops;
-      if (!hops.isEmpty()) {
-        String nextHop = hops.get(0);
-        List<String> restHops = hops.subList(1, hops.size());
-        long departedAt = t;
-        long arrivesAt = departedAt + (long) Clock.hoursToMs(GameConstants.HOURS_PER_GATEWAY_HOP);
-        fleet.systemId = reachedSystemId;
-        fleet.destinationSystemId = nextHop;
-        fleet.pendingHops = new ArrayList<>(restHops);
-        fleet.departedAt = departedAt;
-        fleet.arrivesAt = arrivesAt;
-      } else {
-        fleet.status = FleetStatus.Stationed;
-        fleet.locationType = FleetLocationType.System;
-        fleet.locationColonyId = null;
-        fleet.locationPlanetId = null;
-        fleet.systemId = reachedSystemId;
-        fleet.destinationSystemId = null;
-        fleet.pendingHops = List.of();
-        fleet.departedAt = null;
-        fleet.arrivesAt = null;
-        StarSystem arrived = findSystem(state, reachedSystemId);
-        // An den EIGENTÜMER der Flotte, nicht global: eine Meldung ohne Adresse
-        // (colonyId und playerId beide null) ist für JEDEN Kommandanten sichtbar –
-        // ein frisch registrierter Spieler fand so in seiner Glocke hunderte
-        // Ankunftsmeldungen fremder NPC-Flotten.
-        Notifications.notifyPlayer(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_FLEET_ARRIVED,
-            "\"" + fleet.name + "\" ist in " + (arrived != null ? arrived.name : reachedSystemId) + " angekommen.",
-            fleet.ownerId, "/flotten");
-      }
-      Set<String> known = state.knownSystemIdsByPlayer.computeIfAbsent(fleet.ownerId, k -> new LinkedHashSet<>());
-      known.add(reachedSystemId);
+  static void arrive(GameState state, IdGenerator ids, String fleetId, long at) {
+    Fleet fleet = find(state, fleetId);
+    if (fleet == null || fleet.status != FleetStatus.InTransit || fleet.arrivesAt == null || fleet.arrivesAt != at) return;
+    String reachedSystemId = fleet.destinationSystemId;
+    List<String> hops = fleet.pendingHops;
+    if (!hops.isEmpty()) {
+      String nextHop = hops.get(0);
+      List<String> restHops = hops.subList(1, hops.size());
+      long arrivesAt = at + (long) Clock.hoursToMs(GameConstants.HOURS_PER_GATEWAY_HOP);
+      fleet.systemId = reachedSystemId;
+      fleet.destinationSystemId = nextHop;
+      fleet.pendingHops = new ArrayList<>(restHops);
+      fleet.departedAt = at;
+      fleet.arrivesAt = arrivesAt;
+      GameEvents.schedule(state, GameEventType.FLEET_ARRIVED, fleet.id, arrivesAt);
+    } else {
+      fleet.status = FleetStatus.Stationed;
+      fleet.locationType = FleetLocationType.System;
+      fleet.locationColonyId = null;
+      fleet.locationPlanetId = null;
+      fleet.systemId = reachedSystemId;
+      fleet.destinationSystemId = null;
+      fleet.pendingHops = List.of();
+      fleet.departedAt = null;
+      fleet.arrivesAt = null;
+      StarSystem arrived = findSystem(state, reachedSystemId);
+      // An den EIGENTÜMER der Flotte, nicht global: eine Meldung ohne Adresse
+      // (colonyId und playerId beide null) ist für JEDEN Kommandanten sichtbar –
+      // ein frisch registrierter Spieler fand so in seiner Glocke hunderte
+      // Ankunftsmeldungen fremder NPC-Flotten.
+      Notifications.notifyPlayer(state, ids, de.nebula.model.NotificationType.Info, Notifications.CODE_FLEET_ARRIVED,
+          "\"" + fleet.name + "\" ist in " + (arrived != null ? arrived.name : reachedSystemId) + " angekommen.",
+          fleet.ownerId, "/flotten");
     }
+    Set<String> known = state.knownSystemIdsByPlayer.computeIfAbsent(fleet.ownerId, k -> new LinkedHashSet<>());
+    known.add(reachedSystemId);
   }
 }

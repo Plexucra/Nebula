@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { GAME_API } from '../../core/sim/game-api.token';
+import { UiClockService } from '../../core/ui/ui-clock.service';
 import { TransactionReason } from '../../core/models';
 
 const REASON_LABEL: Record<TransactionReason, string> = {
@@ -30,9 +31,18 @@ interface ReasonBreakdown {
 })
 export class AccountComponent {
   protected readonly api = inject(GAME_API);
+  protected readonly clock = inject(UiClockService);
   protected readonly player = this.api.player;
   protected readonly wallet = this.api.wallet;
   protected readonly transactions = this.api.transactions();
+
+  /**
+   * Versatz der Spieluhr des Servers gegen die Wanduhr, in ganzen Minuten
+   * (negativ = die Spieluhr geht nach). Nach einem Serverneustart mit
+   * geladenem Spielstand läuft die Spieluhr dort weiter, wo sie stand – alle
+   * Restzeiten der Oberfläche rechnen damit, hier steht es zur Einordnung.
+   */
+  protected readonly clockOffsetMinutes = computed(() => Math.round(this.clock.offset() / 60000));
 
   protected readonly recentTransactions = computed(() => this.transactions().slice(0, RECENT_WINDOW));
 
