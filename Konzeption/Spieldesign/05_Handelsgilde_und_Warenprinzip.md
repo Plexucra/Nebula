@@ -130,10 +130,18 @@ einen Systemmarkt, auch wenn ihre Sichtbarkeit/Zugänglichkeit füreinander
 fremde Kommandanten inzwischen an einen Handelsvertrag geknüpft ist (§14).
 Kolonien auf demselben Planeten wie ein Handelsdepot können unmittelbar
 mit diesem Depot handeln, ohne einen eigenen ausgespielten lokalen
-Frachtertransport. Für die Bevölkerung gilt dasselbe: Sie kauft über
-denselben Systemmarkt und zu denselben tatsächlichen Preisen wie Spieler,
-ohne künstlichen Sonderpreis und ohne Handelsvertrag-Pflicht (Bevölkerung
-ist keine Vertragspartei).
+Frachtertransport.
+
+> **Präzisierung (10.9.2026, Umsetzungskonzept/36):** Die **Bevölkerung**
+> einer Kolonie kauft ausschließlich am **eigenen Planetaren Handelsposten**
+> dieser Kolonie – aus Orders, die dort liegen (eigene Lagerorders und von
+> Vertragspartnern per Flotte angelieferte Fracht). Sie kauft zu denselben
+> tatsächlichen Preisen wie Spieler, ohne Sonderpreis und ohne
+> Handelsvertrag-Pflicht (Bevölkerung ist keine Vertragspartei). Sie kauft
+> **einmal je Spieltag** und hält einen **Vorrat von sieben Tagesbedarfen**
+> je Grundkonsumgut; gegessen wird aus dem Vorrat. Damit gibt es genau einen
+> Käufer je Posten, und die Wirtschaft einer Kolonie ist ein Ereignis je
+> Spieltag statt eines Sekundentakts.
 
 ## 8. Geografischer Wert und wichtige Verkehrsknoten
 

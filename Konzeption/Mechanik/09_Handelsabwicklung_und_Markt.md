@@ -51,13 +51,17 @@ gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 
 ## 4. Bevölkerung und Handelsorte
 
-- Bevölkerung kauft über denselben Systemmarkt zu denselben tatsächlichen
-  Sell-Order-Preisen (kein künstlicher Bevölkerungspreis).
-- Kauf aus dem eigenen planetaren Depot: direkt, wenn passende Sell
-  Order vorhanden.
-- Kauf an der System-Handelsstation: letzter Transport zum Planeten ist
-  **rein buchhalterisch** – kein simulierter Frachter, Ware gilt nach
-  Kauf sofort als verfügbar für die Versorgung.
+- Bevölkerung kauft zu denselben tatsächlichen Sell-Order-Preisen wie
+  Spieler (kein künstlicher Bevölkerungspreis).
+- Sie kauft **ausschließlich am eigenen Planetaren Handelsposten ihrer
+  Kolonie** (Orders mit Depot = diese Kolonie: eigene Lagerorders und von
+  Vertragspartnern dort abgesetzte Fracht). Nicht an der
+  System-Handelsstation, nicht aus Depots anderer Kolonien – auch nicht auf
+  demselben Planeten (Umsetzungskonzept/36, ersetzt die frühere
+  Systemmarkt-Regel).
+- Der Kauf ist sofort wirksam: die Ware wandert in den **Vorrat der
+  Bevölkerung** (getrennt vom Kolonielager, vom Kommandanten nicht
+  verkaufbar).
 
 ## 5. Blockaden und laufende Transporte
 
@@ -76,23 +80,30 @@ KEINE Blockade möglich (Konzeption/Spieldesign/05_...md, §6/§13) – dieser
 gesamte Abschnitt betrifft also ausschließlich den Handel in normalen
 Sonnensystemen.
 
-## 6. Konsumbudget der Bevölkerung (geglättet)
+## 6. Tageseinkauf und Vorrat (ersetzt das geglättete Konsumbudget)
+
+Seit Umsetzungskonzept/36 kauft die Bevölkerung **einmal je Spieltag**
+(zur Tageszeit ihrer Kolonie = Gründungszeit + n Tage) und hält je
+Grundkonsumgut einen **Vorrat**:
 
 ```text
-N = 0,9 × vorherigesN + 0,1 × EinkommenImLetztenZeitintervall
+Tagesbedarf(Gut)  = Bevölkerung × BedarfProKopfUndStunde(Gut) × 24
+Vorratsziel(Gut)  = ⌈Tagesbedarf × populationStockTargetDays⌉   (7 Tage)
+Einkauf(Gut)      = Vorratsziel − Vorrat, begrenzt durch Budget und Angebot
 ```
 
-`N` ist das für das aktuelle Intervall vorgesehene Konsumbudget – nicht
-die gesamte Kaufkraft. `income` = sämtliche Geldzuflüsse der
-Koloniebevölkerung im letzten Intervall, unabhängig von der Herkunft.
+Budget ist das gesamte Bevölkerungs-Wallet, zu gleichen Teilen auf die
+Grundgüter verteilt; was ein Gut nicht ausgibt, fließt den folgenden
+Gütern zu. Es kann nie mehr ausgegeben werden als vorhanden. Gekauft wird
+in ganzen Stücken, günstigste Order zuerst.
 
-Zusätzlich Berücksichtigung aufgestauten Geldes:
+**Notkauf:** Liegt der Vorrat eines Guts unter
+`populationEmergencyPurchaseBelowDays` (1 Tag) und am eigenen Posten
+erscheint eine Order (neu, umgepreist, aus dem Lager nachgefüllt), kauft die
+Bevölkerung sofort nach, statt auf den nächsten Tag zu warten.
 
-```text
-budget = min(vorhandenesGeld, max(N, vorhandenesGeld / 10))
-```
-
-Es kann nie mehr ausgegeben werden als tatsächlich vorhanden.
+Die frühere Glättung des Budgets (`N = 0,9·N + 0,1·Einkommen`) entfällt:
+der Vorrat selbst glättet die Versorgung.
 
 ## 7. Konsumkategorien und Priorisierung
 
@@ -199,10 +210,13 @@ Bedarf = Bevölkerung × BasisbedarfProPerson
 
 Beispiel: `Deodorant: 0,1 kg pro Person und Monat`.
 
-- Ein Produkt kann höchstens zu 100 % seines Bedarfs gedeckt werden –
-  **keine** Überversorgung desselben Produkts.
-- Nicht das Einzelintervall, sondern die über **zehn Intervalle
-  geglättete** Bedarfsdeckung beeinflusst Lebensstandard & Co.
+- Gegessen wird je Spieltag der Tagesbedarf aus dem Vorrat (ganze Stücke,
+  Rest im Übertragskonto). Die **Deckung** eines Guts am Kolonietag ist
+  `gedeckt × (1 + 0,5 × min(1, Vorratsreichweite / Vorratsziel))`: 1,0 wenn
+  der Tag gedeckt war, bis 1,5 mit vollem Vorrat, 0 ohne Essen – ein leerer
+  Vorrat bekommt keinen Bonus.
+- Der Lebensstandard ist das gewichtete Mittel der Deckungen (Grundnahrung
+  doppelt), geglättet mit einer Zeitkonstante von einem Spieltag.
 
 ## 11. Erweiterbare Konsumstufen
 
@@ -221,17 +235,18 @@ Stufe 4+: zunehmend luxuriöse Güter
 
 ## 12. Erreichbare Angebote für Bevölkerung
 
-- Bevölkerung darf kaufen aus: Handelsdepots **aller** Spieler auf
-  demselben Planeten, Sell Orders an der System-Handelsstation.
-- **Nicht** direkt aus Handelsdepots anderer Planeten.
+- Bevölkerung darf kaufen aus: Sell Orders am **eigenen** Planetaren
+  Handelsposten ihrer Kolonie (siehe §4) – egal, wer der Verkäufer ist.
+- **Nicht** an der System-Handelsstation, **nicht** aus Depots anderer
+  Kolonien, auch nicht auf demselben Planeten.
 - Bevölkerungen bleiben nach Kolonie getrennt (eigene Kaufkraft,
-  Bedürfnisse, Konsumabwicklung je Kolonie, auch bei mehreren Kolonien
-  auf demselben Planeten).
+  Bedürfnisse, Vorrat und Konsumabwicklung je Kolonie, auch bei mehreren
+  Kolonien auf demselben Planeten).
 - Bevölkerung erzeugt **keine** Buy Orders – nur Käufer bestehender
   Sell Orders.
 - Die Handelsvertrag-Pflicht (§2-Kasten) gilt NUR zwischen Spieler-
-  Kommandanten. Bevölkerung ist keine Vertragspartei und kauft
-  unverändert aus jedem erreichbaren Depot/jeder Station.
+  Kommandanten. Bevölkerung ist keine Vertragspartei und kauft aus jeder
+  Order an ihrem Posten.
 
 ## 13. Handelsdepots, Lager und Orders – Regeln
 

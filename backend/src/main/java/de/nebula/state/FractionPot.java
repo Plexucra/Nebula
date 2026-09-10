@@ -1,18 +1,18 @@
 package de.nebula.state;
 
 /**
- * Übertragskonten ("Töpfe") für wiederkehrende Raten, die pro Tick UNTER einem
+ * Übertragskonten ("Töpfe") für wiederkehrende Raten, die je Schritt UNTER einem
  * ganzen Stück liegen (Umsetzungskonzept/25_...md).
  *
  * <p>Alle Warenbewegungen im Spiel sollen in ganzen Stücken stattfinden. Bei
  * einmaligen Resten (anteilige Gutschrift beim Abbruch, ladbare Restmenge) ist
  * Abschneiden unproblematisch – der Rest verfällt und niemand vermisst ihn.
  * Bei wiederkehrenden RATEN ist das anders: der Bevölkerungsbedarf liegt bei
- * 120 Einwohnern bei 0,0096 Stück Grundnahrung je Tick, der Elerium-Verbrauch
- * der Infrastruktur bei 0,0188. Würde man das je Tick abschneiden, fände der
+ * 120 Einwohnern bei 0,0096 Stück Grundnahrung je Sekundentakt (heute je Kolonietag: 0,58), der Elerium-Verbrauch
+ * der Infrastruktur bei 0,0188. Würde man das je Schritt abschneiden, fände der
  * Vorgang NIE statt – die Bevölkerung kaufte für immer nichts. Würde man
  * aufrunden, explodierte der Verbrauch (das gab es hier schon einmal, siehe
- * Kommentar in {@code EconomyTick.runConsumption}).</p>
+ * Kommentar in {@code Economy.consumeFromStock}).</p>
  *
  * <p>Deshalb wird der Bruchteil hier gesammelt, bis ein ganzes Stück
  * zusammenkommt. Nach außen bewegt sich dadurch immer nur Ganzes, während die

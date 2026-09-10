@@ -8,7 +8,7 @@ import de.nebula.model.NotificationType;
  * Benachrichtigungssystem (Umsetzungskonzept/10_...md, §5).
  *
  * <p>ALLE Codes stehen hier – vorher lagen sie über {@code DiplomacyCommands},
- * {@code BattleCommands}, {@code GroundBattleCommands} und {@code EconomyTick}
+ * {@code BattleCommands}, {@code GroundBattleCommands} und {@code Economy}
  * verstreut, sodass sich niemand versehentlich doppelt vergebene Nummern
  * ausschließen konnte und das Frontend keine Liste hatte, an der es die
  * Beschriftung eines Links festmachen konnte.</p>

@@ -110,14 +110,13 @@ public class GameState {
   /** Bevölkerungsverlauf je Kolonie als begrenzter Ringpuffer, siehe {@code PopulationHistory}. */
   public final Map<String, List<PopulationSample>> populationHistory = new ConcurrentHashMap<>();
 
-  /** Analog zu {@code consumptionBudget}/{@code lastProducedAt}/{@code rawStandardOfLiving} in der TS-Simulation – rein interne Buchführung, kein Snapshot-Feld. */
+  /** Rein interne Buchführung der Wirtschaft ({@code Economy}), keine Snapshot-Felder. */
   /**
-   * Übertragskonten für Raten unter einem Stück je Tick (siehe {@link FractionPot}).
+   * Übertragskonten für Raten unter einem Stück je Kolonietag (siehe {@link FractionPot}).
    * Die EINZIGE Stelle im Spielzustand, an der noch Bruchteile von Stückzahlen
    * liegen – Lager, Orders und Fracht bewegen sich ausschließlich in ganzen Stücken.
    */
   public final Map<String, Double> fractionPots = new ConcurrentHashMap<>();
-  public final Map<String, Double> consumptionBudget = new ConcurrentHashMap<>();
   public final Map<String, Long> lastProducedAt = new ConcurrentHashMap<>();
   public final Map<String, Double> rawStandardOfLiving = new ConcurrentHashMap<>();
   /** Deckung (0..1,5) je Grundkonsumgut und Kolonie – Java-Gegenstück zu {@code _consumptionCoverage}. colonyId -> (productTypeId -> coverage). */
@@ -159,6 +158,8 @@ public class GameState {
    * hier exakt auf das Schlüsselsegment geprüft.</p>
    */
   public void forgetColonyBookkeeping(String colonyId) {
+    // Der Kolonietag endet mit der Kolonie (Umsetzungskonzept/36).
+    GameEvents.cancel(this, GameEventType.COLONY_DAY, colonyId);
     fractionPots.keySet().removeIf(k -> {
       String[] parts = k.split(":");
       return parts.length >= 2 && parts[1].equals(colonyId);
@@ -218,7 +219,6 @@ public class GameState {
     messages.clear();
     populationHistory.clear();
     fractionPots.clear();
-    consumptionBudget.clear();
     lastProducedAt.clear();
     rawStandardOfLiving.clear();
     consumptionCoverage.clear();

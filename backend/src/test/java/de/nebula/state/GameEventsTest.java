@@ -68,13 +68,14 @@ class GameEventsTest {
   }
 
   @Test
-  void recurringJobsScheduleThemselvesAndTheEconomyStepRunsEachTick() {
+  void recurringJobsScheduleThemselvesAndTheColonyDayRunsOncePerGameDay() {
     World w = newWorld();
     long t0 = Clock.now();
     GameEvents.runDue(w.state(), w.ids(), t0);
-    Long economy = GameEvents.scheduledAt(w.state(), GameEventType.ECONOMY_STEP, "");
-    assertNotNull(economy, "Der Wirtschaftsschritt ist als wiederkehrendes Ereignis geplant");
-    assertEquals(t0 + (long) GameConstants.TICK_MS, economy, "… relativ zur Fälligkeit, nicht zur Abarbeitung");
+    Long colonyDay = GameEvents.scheduledAt(w.state(), GameEventType.COLONY_DAY, w.home().id);
+    assertNotNull(colonyDay, "Der Kolonietag ist je Kolonie als wiederkehrendes Ereignis geplant");
+    assertEquals(w.home().foundedAt + (long) GameConstants.GAME_DAY_MS, colonyDay,
+        "… einen Spieltag nach der Gründung, die Gründungszeit ist die Tageszeit der Kolonie");
     assertNotNull(GameEvents.scheduledAt(w.state(), GameEventType.STATS_SNAPSHOT, ""));
     assertNotNull(GameEvents.scheduledAt(w.state(), GameEventType.RETENTION_CLEANUP, ""));
     assertEquals(t0 + (long) GameConstants.GAME_DAY_MS,
@@ -82,9 +83,10 @@ class GameEventsTest {
         "Der Ausgleichsfonds zieht erstmals nach einem Spieltag ein");
     assertFalse(w.state().universeStats.isEmpty(), "Die erste Momentaufnahme entsteht sofort");
 
-    // Ein verspäteter Takt holt die versäumten Wirtschaftsschritte nach.
-    GameEvents.runDue(w.state(), w.ids(), t0 + 3 * (long) GameConstants.TICK_MS);
-    assertEquals(t0 + 4 * (long) GameConstants.TICK_MS, GameEvents.scheduledAt(w.state(), GameEventType.ECONOMY_STEP, ""));
+    // Nach dem Kolonietag ist der nächste relativ zur Fälligkeit geplant, nicht zur Abarbeitung.
+    GameEvents.runDue(w.state(), w.ids(), colonyDay + 5_000);
+    assertEquals(colonyDay + (long) GameConstants.GAME_DAY_MS,
+        GameEvents.scheduledAt(w.state(), GameEventType.COLONY_DAY, w.home().id));
   }
 
   @Test

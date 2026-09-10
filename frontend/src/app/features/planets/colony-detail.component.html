@@ -42,7 +42,7 @@
               <div class="stat-block">
                 <div class="stat-block-head"><span>Lebensstandard</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.standardOfLivingPct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big" [class.blackout]="powerCoverage() < 0.999"><span [style.width.%]="s.standardOfLivingPct > 100 ? 100 : s.standardOfLivingPct"></span></div>
-                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Wie gut die Bevölkerung mit Konsumgütern versorgt ist, die sie am Systemmarkt kaufen konnte – Ausreißer einzelner Momente sind geglättet. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
+                <p class="hint" [class.blackout]="powerCoverage() < 0.999">Wie gut die Bevölkerung mit Konsumgütern versorgt ist – gemessen an dem, was sie am eigenen Handelsposten kaufen und aus ihrem Vorrat essen konnte; einzelne Tage sind geglättet. {{ powerCoverage() < 0.999 ? '– durch Blackout halbiert.' : '' }}</p>
               </div>
               <div class="stat-block">
                 <div class="stat-block-head"><span>Loyalität</span><span class="mono">{{ s.loyaltyPct | number:'1.0-0' }}%</span></div>
@@ -119,7 +119,7 @@
                 Die Kolonie ernährt ihren Bestand, aber keinen Zuwachs: solange die Grundnahrung unter 100 % gedeckt ist,
                 kommt niemand hinzu – unabhängig vom freien Wohnraum.
                 Deckung: @for (g of coverageEntries(); track g.productTypeId) { {{ productName(g.productTypeId) }} {{ g.coverage * 100 | number:'1.0-0' }}%@if (!$last) { · } }.
-                Mehr Grundnahrung produzieren oder am Systemmarkt zukaufen hebt den Deckel wieder an.
+                Mehr Grundnahrung produzieren oder zukaufen und am eigenen Handelsposten anbieten hebt den Deckel wieder an.
               </p>
             } @else if (sb.growthState === 'Holding' || sb.growthState === 'Shrinking') {
               <p class="hint warn">
@@ -606,6 +606,34 @@
         </div>
 
         <div class="panel corner-frame span-2">
+          <div class="panel-header"><h2>Versorgung und Vorrat</h2></div>
+          <div class="panel-body">
+            <!-- Tageseinkauf (Umsetzungskonzept/36): einmal je Spieltag kauft die
+                 Bevölkerung am eigenen Handelsposten und füllt ihren Vorrat auf.
+                 Sichtbar wird damit, was vorher nur eine Prozentzahl war: wie
+                 lange die Kolonie ohne Nachschub auskommt. -->
+            @if (populationSupply(); as supply) {
+              <p class="hint">
+                Die Bevölkerung kauft einmal je Spieltag am eigenen Handelsposten dieser Kolonie und hält einen Vorrat von
+                {{ supply.targetDays | number:'1.0-0' }} Tagesbedarfen je Gut. Fällt der Vorrat unter {{ supply.emergencyBelowDays | number:'1.0-0' }} Tag,
+                kauft sie sofort, sobald eine Order erscheint.
+                @if (supply.nextPurchaseAt > 0) { Nächster Tageseinkauf in <strong>{{ countdown(supply.nextPurchaseAt - clock.now()) }}</strong>. }
+              </p>
+              @for (g of supply.goods; track g.productTypeId) {
+                <div class="wh-row" [class.bad]="g.daysLeft < supply.emergencyBelowDays" [class.warn]="g.daysLeft >= supply.emergencyBelowDays && g.daysLeft < 3">
+                  <strong>{{ g.name }}</strong>
+                  <span class="mono">{{ g.stock | number:'1.0-0' }} Stück</span>
+                  <span class="hint">Bedarf {{ g.dailyNeed | number:'1.1-1' }} je Tag · reicht {{ supplyDays(g.daysLeft) }}@if (g.coverage !== null) { · Deckung {{ g.coverage * 100 | number:'1.0-0' }} %}</span>
+                  @if (!g.orderAvailable) { <span class="tag warn">keine Order am Handelsposten</span> }
+                </div>
+              }
+            } @else {
+              <p class="empty-hint">Versorgungslage wird geladen…</p>
+            }
+          </div>
+        </div>
+
+        <div class="panel corner-frame span-2">
           <div class="panel-header"><h2>Wachstumsverlauf</h2></div>
           <div class="panel-body">
             <app-population-chart [trend]="populationTrend()" />
@@ -615,7 +643,7 @@
           <div class="panel-header"><h2>Bevölkerungs-Wallet</h2></div>
           <div class="panel-body">
             <div class="big-stat"><span class="mono value">{{ popWallet()?.balance ?? 0 | number:'1.0-0' }}</span><span class="hint">Credits</span></div>
-            <p class="hint">Kaufkraft der Kolonialbevölkerung – gespeist aus Löhnen und Bevölkerungswachstum, ausgegeben für Konsumgüter am Systemmarkt.</p>
+            <p class="hint">Kaufkraft der Kolonialbevölkerung – gespeist aus Löhnen und Bevölkerungswachstum, ausgegeben beim Tageseinkauf für Konsumgüter am eigenen Handelsposten.</p>
           </div>
         </div>
         <div class="panel corner-frame">

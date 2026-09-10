@@ -19,6 +19,7 @@ import de.nebula.model.WalletOwnerType;
 import de.nebula.model.WarehouseEntry;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Was mit einer Kolonie geschieht, wenn ihre Bodenverteidigung gefallen ist
@@ -85,7 +86,6 @@ final class ColonyConquest {
       // Zustand, in dem der Eroberer die Kolonie übernimmt. Ein pauschaler
       // Startwert würde sie an dieser Stelle sogar wieder anheben.
       state.rawStandardOfLiving.remove(colony.id);
-      state.consumptionBudget.remove(colony.id);
       summary = attackerName + " hat \"" + colony.name + "\" von " + previousOwnerName + " erobert.";
       moveGarrisonInto(state, victoriousGroup, colony.id);
     }
@@ -157,13 +157,20 @@ final class ColonyConquest {
    */
   private static void mergeInto(GameState state, IdGenerator ids, Colony conquered, Colony target) {
     double populationMoved = 0;
+    Map<String, Double> stockMoved = Map.of();
     for (Population p : new ArrayList<>(state.populations)) {
       if (!p.colonyId.equals(conquered.id)) continue;
       populationMoved = p.currentCount;
+      stockMoved = p.stock;
       state.populations.remove(p);
     }
     if (populationMoved > 0) {
-      for (Population p : state.populations) if (p.colonyId.equals(target.id)) p.currentCount += populationMoved;
+      for (Population p : state.populations) {
+        if (!p.colonyId.equals(target.id)) continue;
+        p.currentCount += populationMoved;
+        // Der Vorrat der Bevölkerung zieht mit ihr um (Umsetzungskonzept/36).
+        stockMoved.forEach((good, qty) -> p.stock.merge(good, qty, Double::sum));
+      }
     }
 
     Wallet conqueredWallet = GameQueries.findWallet(state, WalletOwnerType.Population, conquered.id);
@@ -198,7 +205,6 @@ final class ColonyConquest {
     state.groundForceGroups.removeIf(g -> id.equals(g.colonyId));
     state.wallets.removeIf(w -> w.ownerType == WalletOwnerType.Population && w.ownerId.equals(id));
     state.populationHistory.remove(id);
-    state.consumptionBudget.remove(id);
     state.rawStandardOfLiving.remove(id);
     state.consumptionCoverage.remove(id);
     state.forgetColonyBookkeeping(id);

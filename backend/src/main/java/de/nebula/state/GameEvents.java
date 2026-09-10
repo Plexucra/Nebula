@@ -25,11 +25,11 @@ import org.jboss.logging.Logger;
  * Folgetermine nicht mit der Abarbeitungslatenz, und Tests spulen mit
  * {@code runDue(state, ids, fälligkeit)} exakt bis zu einem Ereignis.</p>
  *
- * <p>Die Wirtschaft ist bewusst KEIN Ereignis je Objekt: Konsum, Lebensstandard
- * und Wachstum sind Raten mit Glättung, ihr Modell ist in Schritten von
- * {@code TICK_GAME_HOURS} entworfen. Sie laufen als EIN wiederkehrendes
- * Ereignis ({@link GameEventType#ECONOMY_STEP}) in fester Reihenfolge, siehe
- * {@link EconomyTick#economyStep}.</p>
+ * <p>Die Wirtschaft ist ein wiederkehrendes Ereignis JE KOLONIE – der
+ * Kolonietag ({@link GameEventType#COLONY_DAY}, {@link Economy#colonyDay}):
+ * einmal je Spieltag zur Tageszeit der Kolonie (Gründungszeit + n Tage), mit
+ * Tageseinkauf und Vorrat statt eines Sekundentakts (Umsetzungskonzept/36).
+ * Die Kolonien verteilen sich damit von selbst über den Tag.</p>
  */
 public final class GameEvents {
   private GameEvents() {
@@ -127,16 +127,13 @@ public final class GameEvents {
   }
 
   /**
-   * Sorgt dafür, dass die wiederkehrenden Aufgaben geplant sind – beim ersten
-   * Takt einer Galaxie und nach einem Reset. Die Statistik schreibt sofort
-   * ihre erste Momentaufnahme; der Wirtschaftsschritt beginnt einen Takt
-   * später, das Aufräumen nach einer Stunde, der Ausgleichsfonds nach einem
-   * vollen Spieltag.
+   * Sorgt dafür, dass die galaxieweiten wiederkehrenden Aufgaben geplant sind –
+   * beim ersten Takt einer Galaxie und nach einem Reset. Die Statistik schreibt
+   * sofort ihre erste Momentaufnahme, das Aufräumen läuft nach einer Stunde,
+   * der Ausgleichsfonds nach einem vollen Spieltag. Die Kolonietage plant die
+   * Gründung ({@link Economy#startColonyRhythm}).
    */
   private static void ensureRecurring(GameState state, long t) {
-    if (scheduledAt(state, GameEventType.ECONOMY_STEP, NO_TARGET) == null) {
-      schedule(state, GameEventType.ECONOMY_STEP, NO_TARGET, t + (long) GameConstants.TICK_MS);
-    }
     if (scheduledAt(state, GameEventType.STATS_SNAPSHOT, NO_TARGET) == null) {
       schedule(state, GameEventType.STATS_SNAPSHOT, NO_TARGET, t);
     }
@@ -151,10 +148,9 @@ public final class GameEvents {
   /**
    * Plant eine wiederkehrende Aufgabe relativ zu ihrer FÄLLIGKEIT neu, nicht
    * zur Abarbeitung – so bleibt der Takt driftfrei, und ein verspäteter Takt
-   * holt die versäumten Schritte nach (bei einer Sekunde Verzug also zwei
-   * Wirtschaftsschritte, was für Raten je Spielstunde genau richtig ist).
-   * Liegt die Aufgabe weiter als {@link #MAX_CATCH_UP_MS} zurück, wird nicht
-   * nachgeholt: das ist kein Stottern mehr, sondern eine gestellte Uhr.
+   * holt versäumte Läufe nach. Liegt die Aufgabe weiter als
+   * {@link #MAX_CATCH_UP_MS} zurück, wird nicht nachgeholt: das ist kein
+   * Stottern mehr, sondern eine gestellte Uhr.
    */
   private static void rescheduleRecurring(GameState state, ScheduledEvent event, long intervalMs) {
     long next = event.at + intervalMs;
@@ -164,7 +160,7 @@ public final class GameEvents {
       LOG.warnf("%s lag %d s zurück – setze neu auf jetzt statt nachzuholen", event.type, (now - next) / 1000);
       next = now;
     }
-    schedule(state, GameEventType.valueOf(event.type), NO_TARGET, next);
+    schedule(state, GameEventType.valueOf(event.type), event.targetId, next);
   }
 
   private static void fire(GameState state, IdGenerator ids, ScheduledEvent event) {
@@ -182,16 +178,20 @@ public final class GameEvents {
       case GROUND_FORCE_MOVED -> LandingCommands.completeGroundForceMove(state, ids, event.targetId, event.at);
       case SPECIALIZATION_DECAY -> Specializations.decay(state, event.targetId, event.at);
       case TREATY_ENDED -> TreatyCommands.endTreaty(state, ids, event.targetId, event.at);
-      case ECONOMY_STEP -> {
-        EconomyTick.economyStep(state, ids, event.at);
-        rescheduleRecurring(state, event, (long) GameConstants.TICK_MS);
+      case COLONY_DAY -> {
+        // Erst den nächsten Tag planen, dann rechnen: ein Fehler im Tag darf den
+        // Rhythmus der Kolonie nicht für immer abreißen lassen. Ohne Kolonie
+        // (aufgelöst, eingegliedert) endet der Rhythmus hier.
+        if (ColonyCommands.colony(state, event.targetId) == null) return;
+        rescheduleRecurring(state, event, (long) GameConstants.GAME_DAY_MS);
+        Economy.colonyDay(state, ids, event.targetId, event.at);
       }
       case WEALTH_REDISTRIBUTION -> {
-        EconomyTick.runWealthRedistribution(state, ids);
+        Economy.runWealthRedistribution(state, ids);
         rescheduleRecurring(state, event, (long) GameConstants.GAME_DAY_MS);
       }
       case STATS_SNAPSHOT -> {
-        EconomyTick.recordStatsSnapshot(state, event.at);
+        Economy.recordStatsSnapshot(state, event.at);
         rescheduleRecurring(state, event, (long) Clock.hoursToMs(GameConstants.STATS_SNAPSHOT_INTERVAL_GAME_HOURS));
       }
       case RETENTION_CLEANUP -> {

@@ -7,7 +7,7 @@ import { UiClockService } from '../ui/ui-clock.service';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, CarrierJumpPreview, ChainPlan, Colonization, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
-  PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
@@ -359,6 +359,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   consumptionCoverage(colonyId: Id): Signal<Record<Id, number>> {
     return this.poll('consumptionCoverage', () => ({ colonyId }), {});
+  }
+  populationSupply(colonyId: Id): Signal<PopulationSupply | null> {
+    return this.poll('populationSupply', () => ({ colonyId }), null);
   }
 
   colonySpeedBreakdown(colonyId: Id): Signal<ColonySpeedBreakdown | null> {

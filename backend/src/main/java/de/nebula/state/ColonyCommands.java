@@ -183,15 +183,20 @@ public final class ColonyCommands {
     return state.moneySupplyStates.stream().filter(m -> m.planetId.equals(planetId)).findFirst().orElse(null);
   }
 
-  /** Deckung (0..1,5) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, siehe {@code EconomyTick.runConsumption}. */
+  /** Deckung (0..1,5) je Grundkonsumgut des letzten Kolonietags – Diagnosewert für die Statistik-Seite, siehe {@code Economy.consumeFromStock}. */
   public static java.util.Map<String, Double> consumptionCoverage(GameState state, String colonyId) {
     return state.consumptionCoverage.getOrDefault(colonyId, java.util.Map.of());
+  }
+
+  /** Versorgungslage mit Vorrat und nächstem Tageseinkauf (Umsetzungskonzept/36). */
+  public static de.nebula.model.PopulationSupply populationSupply(GameState state, String colonyId) {
+    return Economy.populationSupply(state, colonyId);
   }
 
   /**
    * Nahrungsdeckung der Kolonie – die Größe, die seit Umsetzungskonzept/34_...md
    * das WACHSTUM deckelt (siehe {@code Formulas.FOOD_COVERAGE_FOR_GROWTH}).
-   * Solange die Kolonie noch keinen Konsumtick hinter sich hat, gilt sie als
+   * Solange die Kolonie noch keinen Kolonietag hinter sich hat, gilt sie als
    * gedeckt: eine frisch gegründete Kolonie soll nicht an einer noch gar nicht
    * gemessenen Lage hängen bleiben.
    */
@@ -430,6 +435,10 @@ public final class ColonyCommands {
       b.level = Integer.parseInt(start[1]);
       state.buildings.add(b);
     }
+    // Tagesrhythmus der Kolonie (Umsetzungskonzept/36): der erste Kolonietag
+    // liegt einen Spieltag nach der Gründung, eingekauft wird sofort – ohne
+    // Orders am neuen Posten bleibt der Vorrat vorerst leer.
+    Economy.startColonyRhythm(state, ids, colony);
     return colony;
   }
 }

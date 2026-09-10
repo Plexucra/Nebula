@@ -159,6 +159,16 @@ public final class SharedConstants {
     return ROOT.path("populationBaseGrowthRatePerHour").asDouble();
   }
 
+  /** Tageseinkauf (Umsetzungskonzept/36): Vorratsziel der Bevölkerung in Tagesbedarfen. */
+  public static double populationStockTargetDays() {
+    return ROOT.path("populationStockTargetDays").asDouble();
+  }
+
+  /** Unter so vielen Tagen Vorrat löst eine neue Order am eigenen Handelsposten einen Notkauf aus. */
+  public static double populationEmergencyPurchaseBelowDays() {
+    return ROOT.path("populationEmergencyPurchaseBelowDays").asDouble();
+  }
+
   /** Faktor, um den sich Wohnkapazität, Credits und Baustoffe je Wohnkomplex-Stufe vervielfachen. */
   public static double housingCapacityGrowthFactor() {
     return ROOT.path("housingCapacityGrowthFactor").asDouble();

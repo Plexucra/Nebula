@@ -52,6 +52,8 @@ public final class GameStateSeeder {
     // Einmalig für die GESAMTE (frisch erzeugte) Galaxie: Handelsgilde-Orderbuch an jeder Station
     // (Umsetzungskonzept/22_...md). Hier und nicht lazy beim ersten Stationsbesuch, siehe dortige Klassendoku.
     HubMarketCommands.seedAllMarketMakers(state, ids);
+    // Die Bevölkerung kauft sofort aus den Startorders ein und beginnt ihren Tagesrhythmus (Umsetzungskonzept/36).
+    for (var colony : seed.colonies) Economy.startColonyRhythm(state, ids, colony);
     VictoryCommands.evaluate(state, ids);
   }
 
@@ -88,6 +90,7 @@ public final class GameStateSeeder {
     state.groundForceGroups.add(seed.groundForceGroup);
     state.sellOrders.addAll(seed.sellOrders);
     ProductionCommands.tryStartNextProductionEntry(state, ids, seed.colony.id);
+    Economy.startColonyRhythm(state, ids, seed.colony);
     // Eine neue Partei mit Kolonien – die Siegprüfung hängt an genau solchen Übergängen, nicht am Tick.
     VictoryCommands.evaluate(state, ids);
   }

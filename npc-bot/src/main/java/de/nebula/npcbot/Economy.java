@@ -389,7 +389,7 @@ final class Economy {
       if (good.equals(Catalog.ELECTRONICS)) {
         if (bot.world.wallet() > ELECTRONICS_IMPORT_MIN_WALLET) shopping.merge(good, Math.min(5, missing), Double::sum);
         // Das Budget der Bevölkerung wird zu je einem Drittel auf die drei Güter verteilt
-        // (EconomyTick.runConsumption); ohne Elektronik-Order bleibt ein Drittel der Löhne
+        // (Economy.purchase im Backend); ohne Elektronik-Order bleibt ein Drittel der Löhne
         // dauerhaft im Bevölkerungs-Wallet liegen und der Kommandant blutet aus. Lokal
         // produzieren, wenn die Tier-5-Kette in vertretbarer Zeit läuft.
         if (!queuedProducts.contains(good) && electronicsFeasible(h)) {
@@ -407,8 +407,9 @@ final class Economy {
   }
 
   /**
-   * Die Bevölkerung kauft AUSSCHLIESSLICH aus Verkaufsorders ihres Systems
-   * ({@code EconomyTick.runConsumption}); die Startausstattung legt seit
+   * Die Bevölkerung kauft AUSSCHLIESSLICH aus Verkaufsorders am EIGENEN
+   * Handelsposten der Kolonie, einmal je Spieltag mit Vorrat für sieben Tage
+   * ({@code Economy.purchase}, Umsetzungskonzept/36); die Startausstattung legt seit
    * Umsetzungskonzept/20 nur noch für Grundnahrung eine Auto-Relist-Order an.
    * Ohne eigene Orders für Medizin (und Elektronik) bleibt deren Versorgung
    * dauerhaft 0, der Lebensstandard klemmt bei 50 %, die Bevölkerung wächst
@@ -448,7 +449,7 @@ final class Economy {
 
   /**
    * Preispolitik. Die Bevölkerung kauft nur, was ihr Budget hergibt
-   * ({@code EconomyTick.purchasableQuantity}); ihr Einkommen sind Löhne und
+   * (Tageseinkauf, {@code Economy.buyAtOwnPost} im Backend); ihr Einkommen sind Löhne und
    * Unterhalt (rund 0,02 Cr je Kopf und Stunde) plus die Geldschöpfung beim
    * Wachstum. Ein Preis von 450 Cr je Stück (der frühere Startpreis) ist dagegen nur bezahlbar,
    * solange die Kolonie wächst – im Testlauf fiel jede Kolonie bei rund 10 000

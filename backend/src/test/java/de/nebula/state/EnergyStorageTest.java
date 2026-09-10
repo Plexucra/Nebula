@@ -61,10 +61,12 @@ class EnergyStorageTest {
     Bootstrapped b = newState();
     Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 5);
     assertEquals(5, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9);
-    // Eine ganze Zelle fällig machen: Übertragskonto vorfüllen.
+    // Mindestens eine ganze Zelle fällig machen: Übertragskonto vorfüllen.
     b.state().fractionPots.put(FractionPot.key("power", b.colonyId()), 0.999);
-    EconomyTick.consumePowerUpkeep(b.state());
-    assertEquals(4, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9, "die fällige Zelle kam aus dem Speicher");
+    Economy.consumePower(b.state(), b.colonyId());
+    double due = b.state().powerStates.stream().filter(p -> p.colonyId.equals(b.colonyId())).findFirst().orElseThrow().dueToday;
+    assertTrue(due >= 1, "ein Kolonietag Infrastrukturverbrauch ist mindestens eine Zelle");
+    assertEquals(5 - due, EnergyStorageCommands.stored(b.state(), b.colonyId()), 1e-9, "die fälligen Zellen kamen aus dem Speicher");
     assertEquals(0, Warehouse.qty(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID), 1e-9);
     ColonyPowerState ps = b.state().powerStates.stream().filter(p -> p.colonyId.equals(b.colonyId())).findFirst().orElseThrow();
     assertTrue(ps.coverageRatio > 0.99, "versorgt, obwohl das Lager leer ist");
@@ -104,9 +106,9 @@ class EnergyStorageTest {
     assertThrows(CommandException.class, () -> EnergyStorageCommands.view(b.state(), null));
     assertTrue(b.state().energyStorages.stream().allMatch(s -> s.colonyId != null), "kein Eintrag ohne Kolonie");
 
-    // Und der Energie-Tick läuft danach unverändert weiter.
+    // Und der Kolonietag läuft danach unverändert weiter.
     Warehouse.add(b.state(), b.colonyId(), GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID, 5);
-    EconomyTick.consumePowerUpkeep(b.state());
+    Economy.consumePower(b.state(), b.colonyId());
     assertEquals(0, EnergyStorageCommands.stored(b.state(), null), 1e-9);
   }
 

@@ -14,22 +14,22 @@ public final class GameConstants {
   }
 
   /**
-   * Realzeit-Abstand zweier Ticks. Muss zum {@code @Scheduled(every = ...)}
-   * in {@code GameTick} passen – dort steht derselbe Wert als Textliteral,
-   * weil Annotationswerte Konstanten sein müssen.
+   * Der Spieltag – der Takt der Kolonie-Wirtschaft (Umsetzungskonzept/36):
+   * Unterhalt, Löhne, Einkauf, Verbrauch, Kernwerte und Wachstum werden je
+   * Kolonie EINMAL je Spieltag verbucht ({@code Economy.colonyDay}). Jede
+   * dieser Größen ist als RATE JE SPIELSTUNDE definiert und wird mit
+   * {@link #GAME_DAY_HOURS} multipliziert – nie als fester Betrag je Schritt.
    */
-  public static final double TICK_MS = 1000;
+  public static final double GAME_DAY_HOURS = 24;
+  public static final double GAME_DAY_MS = Clock.hoursToMs(GAME_DAY_HOURS);
 
   /**
-   * Spielstunden, die EIN Tick abdeckt = {@code TICK_MS / REAL_MS_PER_GAME_HOUR}.
-   * Wächst mit dem Tempo-Regler ({@link Clock#GAME_SPEED_MULTIPLIER}): der Tick
-   * bleibt eine Realsekunde lang, deckt aber mehr Spielzeit ab. JEDE
-   * tick-weise verbuchte Größe ist deshalb als RATE JE SPIELSTUNDE definiert
-   * und wird hiermit multipliziert – nie als fester Betrag je Tick.
+   * Tageseinkauf der Bevölkerung (Umsetzungskonzept/36): Vorratsziel in
+   * Tagesbedarfen je Grundkonsumgut und die Schwelle, unter der eine neue
+   * Order am eigenen Handelsposten einen sofortigen Notkauf auslöst.
    */
-  public static final double TICK_GAME_HOURS = TICK_MS / Clock.REAL_MS_PER_GAME_HOUR;
-
-  public static final double GAME_DAY_MS = Clock.hoursToMs(24);
+  public static final double POPULATION_STOCK_TARGET_DAYS = SharedConstants.populationStockTargetDays();
+  public static final double POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS = SharedConstants.populationEmergencyPurchaseBelowDays();
 
   /** Ausgleichsfonds gegen Geldhortung (Konzeption/Spieldesign/06_..., §8 und Mechanik/10_..., §7). */
   public static final double WEALTH_TAX_THRESHOLD = 1000;
@@ -91,13 +91,10 @@ public final class GameConstants {
    * aus eigener Kraft versorgen kann – Herleitung aus echten ChainPlan-Stunden
    * dort.
    *
-   * <p>Ausdrücklich JE SPIELSTUNDE, nicht je Tick: der Bedarf war vorher ein
-   * fester Betrag je Tick und hätte sich als einzige laufende Größe dem
-   * Tempo-Regler entzogen (bei doppeltem Tempo hätte die Bevölkerung je
-   * Spieltag nur noch halb so viel gegessen, während die Produktion mitzieht).
-   * Die Zahlen sind gegenüber der Tick-Fassung um den Faktor
-   * {@code 1 / TICK_GAME_HOURS} bei Tempo 1 (2,5) angehoben, das Verhalten bei
-   * Tempo 1 ist damit unverändert.</p>
+   * <p>Ausdrücklich JE SPIELSTUNDE: der Bedarf war einmal ein fester Betrag je
+   * Realzeit-Tick und hätte sich als einzige laufende Größe dem Tempo-Regler
+   * entzogen. Der Tagesbedarf ({@code Economy.dailyNeed}) ist Bevölkerung ×
+   * Rate × {@link #GAME_DAY_HOURS}.</p>
    */
   public static final List<String> CONSUMER_GOODS_ORDER = List.of("p_grundnahrung", "p_grundmedizin", "p_unterhaltungselektronik");
   /**
@@ -139,7 +136,7 @@ public final class GameConstants {
    * Benachrichtigungssystem war damit praktisch funktionslos.</p>
    *
    * <p>Alle Verwendungsstellen sind mit dem Wort {@code REALZEIT-AUSNAHME}
-   * markiert: {@code RetentionCleanup}, {@code EconomyTick.warnAboutSupplyGaps}.</p>
+   * markiert: {@code RetentionCleanup}, {@code Economy.warnAboutSupplyGaps}.</p>
    */
   public static final long NOTIFICATION_RETENTION_REAL_MS =
       (long) (SharedConstants.notificationRetentionRealDays() * 24 * 60 * 60 * 1000);

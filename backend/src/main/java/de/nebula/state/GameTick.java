@@ -14,15 +14,16 @@ import jakarta.enterprise.context.ApplicationScoped;
  * Die frühere Schleife aus zwanzig {@code processXxx}-Schritten in fester
  * Reihenfolge ist aufgelöst: Fälligkeiten (Bau, Flug, Gefechtsrunde, Auftrag,
  * Vertrag, Spezialisierungsverfall) werden dort geplant, wo sie entstehen,
- * und feuern zu ihrer Zeit; Reaktionen (Order nachfüllen, Sieg prüfen) hängen
- * an der Zustandsänderung, die sie auslöst; nur die Ratenprozesse der
- * Wirtschaft laufen weiter als ein Block in fester Reihenfolge
- * ({@link EconomyTick#economyStep}), als wiederkehrendes Ereignis.</p>
+ * und feuern zu ihrer Zeit; Reaktionen (Order nachfüllen, Sieg prüfen,
+ * Notkauf, Blackout beenden) hängen an der Zustandsänderung, die sie auslöst;
+ * die Wirtschaft läuft je Kolonie einmal je Spieltag als Kolonietag
+ * ({@link Economy#colonyDay}, Umsetzungskonzept/36).</p>
  *
  * <p>Warum trotzdem ein Sekundentakt und kein schlafender Planer: Quarkus
- * liefert den Takt ohne eigenen Thread, die Auflösung von einer Sekunde ist
- * die kleinste sinnvolle für ein Spiel mit 2,5 s je Spielstunde, und der
- * Wirtschaftsschritt ist ohnehin jede Sekunde fällig.</p>
+ * liefert den Takt ohne eigenen Thread, und die Auflösung von einer Sekunde
+ * ist die kleinste sinnvolle für ein Spiel mit 2,5 s je Spielstunde. Der Takt
+ * rechnet selbst nichts – ohne fällige Ereignisse ist er ein Blick auf die
+ * Spitze der Warteschlange.</p>
  */
 @ApplicationScoped
 public class GameTick {
@@ -37,11 +38,9 @@ public class GameTick {
 
   /**
    * Realzeit-Takt, BEWUSST unabhängig vom Tempo-Regler
-   * ({@code Clock.GAME_SPEED_MULTIPLIER}): schnelleres Spiel heißt nicht mehr
-   * Ticks je Sekunde, sondern mehr Spielstunden je Wirtschaftsschritt
-   * ({@code GameConstants.TICK_GAME_HOURS}). Der Wert muss zu
-   * {@code GameConstants.TICK_MS} passen – hier ein Textliteral, weil
-   * Annotationswerte Konstanten sein müssen.
+   * ({@code Clock.GAME_SPEED_MULTIPLIER}): schnelleres Spiel heißt, dass in
+   * einer Realsekunde mehr Spielzeit vergeht und mehr Ereignisse fällig werden,
+   * nicht mehr Takte je Sekunde.
    */
   @Scheduled(every = "1s")
   void tick() {

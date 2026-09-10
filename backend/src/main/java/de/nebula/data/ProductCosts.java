@@ -15,7 +15,7 @@ import java.util.Map;
  * {@code ProductionCommands}, {@code ChainPlanner}). Diese Klasse rechnet die
  * Arbeitsstunden trotzdem in einen Credit-Wert um, indem sie denselben
  * Lohnsatz ansetzt, den die Bevölkerung tatsächlich verdient
- * ({@code EconomyTick.payUpkeepAndWages}: 0,02 Credits je Kopf und
+ * ({@code Economy.WAGE_PER_CAPITA_PER_HOUR}: 0,02 Credits je Kopf und
  * Spielstunde) – ein reines Rechenmodell, keine zusätzliche Geldbewegung im
  * Spiel.
  *
@@ -28,7 +28,7 @@ public final class ProductCosts {
   private ProductCosts() {
   }
 
-  /** = {@code EconomyTick.payUpkeepAndWages}: population × 0,02 × TICK_GAME_HOURS je Tick, also 0,02 Credits je Kopf und Spielstunde. */
+  /** = {@code Economy.WAGE_PER_CAPITA_PER_HOUR}: 0,02 Credits je Kopf und Spielstunde, im Kolonietag mit 24 h verbucht. */
   private static final double WAGE_PER_POPULATION_PER_GAME_HOUR = 0.02;
 
   private static final Map<String, Double> CACHE = new HashMap<>();

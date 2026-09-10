@@ -127,7 +127,7 @@ class TroopTransportTest {
   /**
    * Der Kern der Aufteilung: eingeschiffte Soldaten verschwinden aus der
    * Garnison – auch aus der Sicherheitsrechnung von
-   * {@link EconomyTick#recalcCoreStats} – und kommen beim Ausschiffen
+   * {@link Economy#recalcCoreStats} – und kommen beim Ausschiffen
    * vollständig zurück.
    */
   @Test
@@ -144,8 +144,8 @@ class TroopTransportTest {
     assertNotNull(aboard);
     assertNull(aboard.colonyId, "Ein Verband an Bord gehört zu keiner Kolonie mehr (GroundForceGroup)");
     assertEquals(fleet.id, aboard.fleetId);
-    // Gegenprobe, dass der Tick den Verband ohne colonyId verträgt.
-    EconomyTick.recalcCoreStats(b.state(), 0);
+    // Gegenprobe, dass der Kolonietag den Verband ohne colonyId verträgt.
+    Economy.recalcCoreStats(b.state(), ColonyCommands.colony(b.state(), b.colonyId()), 0);
     PlanetStats stats = ColonyCommands.colonyStats(b.state(), b.colonyId());
     assertNotNull(stats);
 

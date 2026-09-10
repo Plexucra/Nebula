@@ -21,7 +21,20 @@
   Spielwirkung und wird nirgends erklärt – Rest eines früheren Konzepts zur
   Gateway-Kontrolle. Entweder Mechanik nachziehen oder Anzeige entfernen.
 
+- [ ] **Anzeige zwischen zwei Kolonietagen** (Konzept 36 §E): Kontostand
+  und Bevölkerung springen einmal je Spieltag. Die Oberfläche könnte mit
+  Basis plus Rate weiterzählen, wie bei Countdowns; der Server liefert die
+  Raten bereits (`treasuryFlowPerHour`, `growthRatePerInterval`).
+
 ## Erledigt
+
+- [x] ~~Tageseinkauf und Bevölkerungsvorrat, Kolonietag statt Sekundentakt~~ –
+  10.9.2026, Konzept 36. Die Bevölkerung kauft nur noch am eigenen
+  Handelsposten, einmal je Spieltag, mit sieben Tagesbedarfen Vorrat;
+  Notkauf bei neuer Order unter einem Tag Vorrat. Die ganze Wirtschaft
+  einer Kolonie ist EIN Ereignis je Spieltag (`Economy.colonyDay`), der
+  galaxieweite Wirtschaftsschritt je Sekunde ist weg. Blackout endet mit
+  dem Elerium-Nachschub. Panel „Versorgung und Vorrat" im Tab Bevölkerung.
 
 - [x] ~~Startpreis 60 Cr, Handelsgilde als Notanker, F8/F11/F12, Systemnummern~~ –
   10.9.2026. Startorder auf 60 Cr (Bot rechnet mit demselben Wert); die

@@ -20,7 +20,7 @@ import de.nebula.state.IdGenerator;
 import de.nebula.state.BattleCommands;
 import de.nebula.state.BlockadeCommands;
 import de.nebula.state.DiplomacyCommands;
-import de.nebula.state.EconomyTick;
+import de.nebula.state.Economy;
 import de.nebula.state.FleetCommands;
 import de.nebula.state.FleetCompositionCommands;
 import de.nebula.state.GatewayCommands;
@@ -137,7 +137,7 @@ public class GameSocket {
   private static final Set<String> READ_ONLY = Set.of(
       "players", "serverTime", "productTypes", "buildingTypes", "shipTypes", "groundUnitTypes",
       "colonies", "coloniesInSystem", "colony", "colonyStats", "population", "moneySupplyState", "populationWallet",
-      "consumptionCoverage", "colonySpeedBreakdown", "populationTrend", "transactions", "treasuryFlowPerHour",
+      "consumptionCoverage", "populationSupply", "colonySpeedBreakdown", "populationTrend", "transactions", "treasuryFlowPerHour",
       "planet", "planetsInSystem", "colonizations", "supplyInventory",
       "buildings", "buildSlots", "housingCapacity", "powerCoverage", "isBlackout", "powerUpkeepPerHour", "energyStorage",
       "warehouse", "specializations", "productionQueue", "previewProductionChain",
@@ -186,10 +186,11 @@ public class GameSocket {
       case "moneySupplyState" -> ColonyCommands.moneySupplyState(state, text(payload, "planetId"));
       case "populationWallet" -> GameQueries.findWallet(state, WalletOwnerType.Population, text(payload, "colonyId"));
       case "consumptionCoverage" -> ColonyCommands.consumptionCoverage(state, text(payload, "colonyId"));
+      case "populationSupply" -> ColonyCommands.populationSupply(state, text(payload, "colonyId"));
       case "colonySpeedBreakdown" -> ColonyCommands.colonySpeedBreakdown(state, text(payload, "colonyId"));
       case "populationTrend" -> de.nebula.state.PopulationHistory.trend(state, text(payload, "colonyId"));
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
-      case "treasuryFlowPerHour" -> EconomyTick.treasuryFlowPerHour(state, requirePlayerId());
+      case "treasuryFlowPerHour" -> Economy.treasuryFlowPerHour(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
       case "planet" -> ColonyCommands.planetForPlayer(state, text(payload, "id"), currentPlayerId());
@@ -279,7 +280,7 @@ public class GameSocket {
         yield null;
       }
       case "updateSellOrderPrice" -> {
-        MarketCommands.updateSellOrderPrice(state, requirePlayerId(), text(payload, "orderId"),
+        MarketCommands.updateSellOrderPrice(state, ids, requirePlayerId(), text(payload, "orderId"),
             payload.path("pricePerUnit").asDouble());
         yield null;
       }
@@ -327,7 +328,7 @@ public class GameSocket {
       }
 
       // --- Universums-Statistik --------------------------------------------
-      case "universeStats" -> EconomyTick.universeStats(state);
+      case "universeStats" -> Economy.universeStats(state);
       // Der entschiedene Krieg (VictoryCommands) – null, solange mehrere Parteien Kolonien haben.
       case "victory" -> state.victory;
 

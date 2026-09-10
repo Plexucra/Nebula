@@ -14,11 +14,42 @@ import de.nebula.model.ColonyPowerState;
  * Reicht der Bestand nicht, sinkt {@code coverageRatio}; unter
  * {@code Formulas.BLACKOUT_THRESHOLD} gilt die Kolonie als "im Blackout"
  * (Produktion 10 %, Kernwerte halbiert – siehe {@code ChainPlanner} und
- * {@code EconomyTick.recalcCoreStats}). Die Wohnkapazität hängt NICHT mehr
+ * {@code Economy.recalcCoreStats}). Die Wohnkapazität hängt NICHT mehr
  * daran, sie kommt allein aus dem Wohnkomplex ({@link #effectiveHousingCapacity}).
  */
 public final class PowerGrid {
   private PowerGrid() {
+  }
+
+  /** Betriebszustand der Kolonie, bei Bedarf neu angelegt (voll versorgt). */
+  static ColonyPowerState stateOf(GameState state, String colonyId) {
+    for (ColonyPowerState p : state.powerStates) if (p.colonyId.equals(colonyId)) return p;
+    ColonyPowerState ps = new ColonyPowerState();
+    ps.colonyId = colonyId;
+    ps.coverageRatio = 1;
+    state.powerStates.add(ps);
+    return ps;
+  }
+
+  /**
+   * Elerium ist angekommen (Produktion, Kauf, Entladung): holt die am
+   * Kolonietag ungedeckt gebliebene Menge sofort nach, damit der Blackout mit
+   * dem Nachschub endet und nicht erst am nächsten Tag. Reaktion statt Takt,
+   * aufgerufen aus {@link Warehouse#add}.
+   */
+  static void settleShortfall(GameState state, String colonyId) {
+    ColonyPowerState ps = null;
+    for (ColonyPowerState p : state.powerStates) if (p.colonyId.equals(colonyId)) ps = p;
+    if (ps == null || ps.shortfall <= 0) return;
+    double stock = Math.floor(EnergyStorageCommands.totalFuel(state, colonyId));
+    double covered = EnergyStorageCommands.drawForUpkeep(state, colonyId, Math.min(ps.shortfall, stock));
+    ps.shortfall -= covered;
+    if (ps.shortfall <= 1e-9) {
+      ps.shortfall = 0;
+      ps.coverageRatio = 1;
+    } else if (ps.dueToday > 0) {
+      ps.coverageRatio = (ps.dueToday - ps.shortfall) / ps.dueToday;
+    }
   }
 
   /** Ohne Infrastruktur (Stufe 0) gibt es nichts zu versorgen – {@code coverageRatio} ist dann per Definition 1. */

@@ -129,9 +129,10 @@ public final class WorldSeed {
   /**
    * Menge je Start-Verkaufsorder (aus {@link #STARTER_CONSUMER_GOODS_STOCK}
    * reserviert, Rest bleibt im Lager als Puffer für das erste Auto-Relist).
-   * {@code EconomyTick.runConsumption} kauft je Tick den Bruchteil
-   * {@code Bevölkerung × 0,00008}; die Order deckt damit unabhängig von der
-   * Koloniegröße immer gleich viele Ticks ab, weil sie mitskaliert.
+   * Der Tageseinkauf ({@code Economy.purchase}, Umsetzungskonzept/36) holt
+   * beim Start auf einen Schlag {@code POPULATION_STOCK_TARGET_DAYS}
+   * Tagesbedarfe ({@code 7 × Bevölkerung × 0,0048 ≈ 34 je 1000 Einwohner});
+   * die Order skaliert mit der Bevölkerung mit und deckt das mit Reserve.
    */
   private static final double STARTER_SELL_ORDER_QUANTITY =
       Math.ceil(GameConstants.START_POPULATION * STARTER_GOODS_PER_CAPITA_SELL_ORDER);
@@ -146,17 +147,17 @@ public final class WorldSeed {
    * deshalb EXAKT decken – ein dauerhafter Überschuss der einen Seite ist
    * zwangsläufig das Verarmen der anderen.
    *
-   * <p>Bilanz je Tick ({@code TICK_GAME_HOURS} = 0,4): Einnahme =
-   * {@code Bevölkerung × 0,00008 × Preis} (seit Umsetzungskonzept/20_...md
-   * wird NUR NOCH Grundnahrung geliefert, Grundmedizin baut der Spieler
-   * selbst auf), Abfluss = Löhne {@code Bevölkerung × 0,008} +
-   * Gebäudeunterhalt (Wohnkomplex 1,5 + Infrastruktur 2×1,5 + Industrie
-   * 3,0 = 7,5/Spielstunde ⇒ 3,0) + Flottenunterhalt (0,2 je Schiff an der
-   * Kolonie). Gleichgewichtspreis
-   * {@code P* = (0,008·Bev + 3,0 + 0,2·Schiffe) / (0,00008·Bev)}: bei der
+   * <p>Bilanz je Spielstunde: Einnahme = {@code Bevölkerung × 0,0002 × Preis}
+   * (seit Umsetzungskonzept/20_...md wird NUR NOCH Grundnahrung geliefert,
+   * Grundmedizin baut der Spieler selbst auf), Abfluss = Löhne
+   * {@code Bevölkerung × 0,02} + Gebäudeunterhalt (Wohnkomplex 1,5 +
+   * Infrastruktur 2×1,5 + Industrie 3,0 = 7,5) + Flottenunterhalt (0,5 je
+   * Schiff an der Kolonie). Gleichgewichtspreis
+   * {@code P* = (0,02·Bev + 7,5 + 0,5·Schiffe) / (0,0002·Bev)}: bei der
    * eingeschwungenen Bevölkerung (Wohnkomplex 1 ⇒ 200 Einwohner) und der
    * Startflotte (13 Schiffe) sind das <b>450 Credits/Stück</b> (vor Konzept
-   * 20, mit zusätzlichem Grundmedizin-Erlös: 300).</p>
+   * 20, mit zusätzlichem Grundmedizin-Erlös: 300). Seit dem Tageseinkauf
+   * (Umsetzungskonzept/36) fallen dieselben Beträge einmal je Spieltag an.</p>
    *
    * <p><b>Seit dem Gesamttest vom 9.9.2026 (Befund B1) steht die Order bei
    * 60 Credits.</b> Die 450 waren für rund 200 Einwohner hergeleitet; seit
@@ -172,12 +173,12 @@ public final class WorldSeed {
    * sich selbst korrigierendes Minus – gedeckt aus dem Startguthaben und dem
    * gleichzeitig geschöpften Wachstumsgeld (80 × 8 = 640 Cr).</p>
    *
-   * <p><b>Bekannte Folgewirkung von Konzept 20:</b> {@code EconomyTick.
-   * runConsumption} gewichtet Grundnahrung doppelt so hoch wie die übrigen
+   * <p><b>Bekannte Folgewirkung von Konzept 20:</b> {@code Economy.
+   * consumeFromStock} gewichtet Grundnahrung doppelt so hoch wie die übrigen
    * Konsumgüter bei der Lebensstandard-Berechnung. Ohne Grundmedizin-
-   * Versorgung startet der Lebensstandard einer frischen Kolonie deshalb bei
-   * rund 50 % statt vorher 75 % – gewollt, das ist der Anreiz, die
-   * Grundmedizin-Kette selbst aufzubauen.</p>
+   * Versorgung pendelt sich der Lebensstandard einer frischen Kolonie deshalb
+   * bei 50 bis 75 % ein (voller Nahrungsvorrat: 75 %) – gewollt, das ist der
+   * Anreiz, die Grundmedizin-Kette selbst aufzubauen.</p>
    */
   private static final double STARTER_SELL_ORDER_PRICE = 60;
 
@@ -324,15 +325,15 @@ public final class WorldSeed {
   /**
    * Wiederkehrende Verkaufsorders ({@code autoRelist}) für die
    * Grundkonsumgüter am Depot der eigenen Heimatkolonie. Ohne sie hat die
-   * Bevölkerung NICHTS zu kaufen: {@code EconomyTick.runConsumption} kauft
-   * ausschließlich aus {@code state.sellOrders} und kann NICHT direkt aus dem
-   * Kolonielager essen – die Folge wäre Versorgung 0 ⇒ Lebensstandard 0 % ⇒
-   * {@code growthConditionFactor} bei 0,15 ⇒ Loyalitätsverfall, und das
-   * Spieler-Wallet kennte ausschließlich Abflüsse (Review-Befund, siehe
-   * Umsetzungskonzept/15_...md, Auftrag 1). Mit ihnen schließt sich der
-   * Kreislauf: Produktion → Lager → Verkaufsorder → Bevölkerung kauft →
-   * Spieler verdient; das Auto-Relist füllt die Order jeden Tick aus dem
-   * nachproduzierten Lagerbestand wieder auf
+   * Bevölkerung NICHTS zu kaufen: der Tageseinkauf ({@code Economy.purchase})
+   * kauft ausschließlich aus Orders am eigenen Handelsposten und kann NICHT
+   * direkt aus dem Kolonielager essen – die Folge wäre Versorgung 0 ⇒
+   * Lebensstandard 0 % ⇒ {@code growthConditionFactor} bei 0,15 ⇒
+   * Loyalitätsverfall, und das Spieler-Wallet kennte ausschließlich Abflüsse
+   * (Review-Befund, siehe Umsetzungskonzept/15_...md, Auftrag 1). Mit ihnen
+   * schließt sich der Kreislauf: Produktion → Lager → Verkaufsorder →
+   * Bevölkerung kauft → Spieler verdient; das Auto-Relist füllt die Order bei
+   * jedem Lagerzugang aus dem nachproduzierten Bestand wieder auf
    * ({@code MarketCommands.replenishDormantSellOrders}).
    */
   private static List<SellOrder> starterSellOrders(String colonyId, String systemId, String sellerId,
@@ -748,7 +749,12 @@ public final class WorldSeed {
     popWallet.id = ids.next("wal");
     popWallet.ownerType = WalletOwnerType.Population;
     popWallet.ownerId = colony.id;
-    popWallet.balance = 900;
+    // Dieselbe Regel wie bei jeder gegründeten Kolonie (ColonyCommands.foundColony):
+    // je Einwohner CREDITS_PER_NEW_INHABITANT. Vorher 900 Cr aus der Zeit der
+    // 120-Einwohner-Kolonie – damit hätte der erste Tageseinkauf
+    // (Umsetzungskonzept/36: sieben Tagesbedarfe auf einen Schlag) nur eineinhalb
+    // Tage Nahrung bezahlt und die Heimatwelt wäre hungernd gestartet.
+    popWallet.balance = homePopulationCount * Formulas.CREDITS_PER_NEW_INHABITANT;
 
     List<Building> buildings = new ArrayList<>();
     buildings.add(buildInstance(colony.id, "b_habitat", homeHabitatLevel, ids));

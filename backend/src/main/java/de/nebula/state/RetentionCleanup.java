@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  *
  * <h2>REALZEIT-AUSNAHME</h2>
  * <p>Diese Klasse ist – zusammen mit
- * {@code EconomyTick.warnAboutSupplyGaps} – die einzige Stelle im Backend, die
+ * {@code Economy.warnAboutSupplyGaps} – die einzige Stelle im Backend, die
  * NICHT in Spielstunden rechnet. Alle Fristen hier sind bereits
  * Realzeit-Millisekunden aus {@link GameConstants} und dürfen NIEMALS durch
  * {@code Clock.hoursToMs} laufen.</p>
@@ -119,7 +119,6 @@ public final class RetentionCleanup {
     for (String colonyId : colonyIds) {
       state.populationHistory.remove(colonyId);
       state.consumptionCoverage.remove(colonyId);
-      state.consumptionBudget.remove(colonyId);
       state.rawStandardOfLiving.remove(colonyId);
       state.forgetColonyBookkeeping(colonyId);
     }

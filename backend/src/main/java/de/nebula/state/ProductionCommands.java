@@ -273,9 +273,15 @@ public final class ProductionCommands {
 
   public static void completeProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
     if (entry.bundledProducts != null) {
-      for (Map.Entry<String, Double> e : entry.bundledProducts.entrySet()) Warehouse.add(state, entry.colonyId, e.getKey(), e.getValue());
+      for (Map.Entry<String, Double> e : entry.bundledProducts.entrySet()) {
+        Warehouse.add(state, entry.colonyId, e.getKey(), e.getValue());
+        Economy.emergencyPurchase(state, ids, entry.colonyId, e.getKey());
+      }
     } else {
       Warehouse.add(state, entry.colonyId, entry.productTypeId, entry.quantity);
+      // Das Einlagern hat eine schlafende Dauerorder nachgefüllt (Warehouse.addRaw);
+      // eine knappe Bevölkerung kauft daraus sofort (Umsetzungskonzept/36).
+      Economy.emergencyPurchase(state, ids, entry.colonyId, entry.productTypeId);
     }
     Specializations.registerProducedChain(state, entry.colonyId, entry.plan);
     state.productionQueue.remove(entry);

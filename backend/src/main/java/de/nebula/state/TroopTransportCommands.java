@@ -91,7 +91,7 @@ public final class TroopTransportCommands {
   /**
    * Verlädt {@code quantity} Soldaten aus der Garnison der Kolonie, bei der die
    * Flotte liegt, an Bord. Soldaten an Bord zählen nicht mehr zur Sicherheit
-   * der Kolonie ({@code EconomyTick.recalcCoreStats}) – das Ausschiffen ist
+   * der Kolonie ({@code Economy.recalcCoreStats}) – das Ausschiffen ist
    * über {@link #disembarkSoldiers} jederzeit möglich.
    */
   public static void embarkSoldiers(GameState state, IdGenerator ids, String playerId, String fleetId, double quantity) {

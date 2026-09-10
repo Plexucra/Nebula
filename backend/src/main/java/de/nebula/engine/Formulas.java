@@ -26,30 +26,27 @@ public final class Formulas {
   }
 
   /**
-   * Gewicht des NEUEN Messwerts in einer tick-weisen Glättung
-   * ({@code neu = (1-alpha)·alt + alpha·messwert}), abgeleitet aus einer
-   * Zeitkonstante in SPIELSTUNDEN: {@code alpha = 1 - e^(-TICK_GAME_HOURS/tau)}.
+   * Gewicht des NEUEN Messwerts in einer schrittweisen Glättung
+   * ({@code neu = (1-alpha)·alt + alpha·messwert}) für einen Schritt von
+   * {@code stepGameHours}, abgeleitet aus einer Zeitkonstante in SPIELSTUNDEN:
+   * {@code alpha = 1 - e^(-step/tau)}.
    *
-   * <p>Der Grund für die Umrechnung ist der Tempo-Regler
-   * ({@link Clock#GAME_SPEED_MULTIPLIER}): feste Alpha-Werte je Tick hätten
-   * eine Reaktionszeit in REALSEKUNDEN festgeschrieben. Bei vierfachem Tempo
-   * hätte eine Kolonie dann viermal so viele SPIELstunden gebraucht, um sich
-   * von einem Versorgungsloch zu erholen, während alles andere (Produktion,
-   * Verbrauch, Wachstum) mitskaliert – die Glättung wäre die einzige Größe
-   * gewesen, die dem Regler entkommt. Über die Zeitkonstante bleibt die
-   * Reaktion in Spielstunden konstant; bei Tempo 1 ergeben sich exakt die
-   * bisherigen Alpha-Werte 0,2 / 0,1 / 0,3.</p>
+   * <p>In Spielstunden und nicht je Schritt, damit die Reaktionszeit weder am
+   * Tempo-Regler ({@link Clock#GAME_SPEED_MULTIPLIER}) noch an der Schrittweite
+   * hängt: wer die Glättung mit einem anderen Takt aufruft, bekommt dieselbe
+   * Restgewichtung je Spielstunde.</p>
    */
-  public static double smoothingAlpha(double tauGameHours) {
-    return clamp(1 - Math.exp(-GameConstants.TICK_GAME_HOURS / tauGameHours), 0, 1);
+  public static double smoothingAlpha(double tauGameHours, double stepGameHours) {
+    return clamp(1 - Math.exp(-stepGameHours / tauGameHours), 0, 1);
   }
 
-  /** Energiedeckung: {@code alpha = 0,2} bei Tempo 1, also {@code tau = -0,4/ln(0,8)}. */
-  public static final double POWER_COVERAGE_SMOOTHING_TAU_HOURS = 1.7925;
-  /** Konsumbudget der Bevölkerung: {@code alpha = 0,1} bei Tempo 1. */
-  public static final double CONSUMPTION_BUDGET_SMOOTHING_TAU_HOURS = 3.7961;
-  /** Lebensstandard: {@code alpha = 0,3} bei Tempo 1. */
-  public static final double LIVING_STANDARD_SMOOTHING_TAU_HOURS = 1.1216;
+  /**
+   * Lebensstandard: ein Spieltag Zeitkonstante. Der Tageseinkauf
+   * (Umsetzungskonzept/36) liefert je Kolonie EINEN Messwert je Spieltag; mit
+   * {@code tau = 24 h} zählt der neue Tag rund 63 %, ein einzelner schlechter
+   * Tag halbiert den Wert also nicht, drei schlechte Tage schon fast.
+   */
+  public static final double LIVING_STANDARD_SMOOTHING_TAU_HOURS = 24;
 
   /** Bebauungspunkte, die ein Gebäude auf Ziel-Level {@code level} belegt. */
   /** Kosten für den Ausbau von {@code fromLevel} auf {@code fromLevel + 1}. */
@@ -254,9 +251,9 @@ public final class Formulas {
   /**
    * Nahrungsdeckung, ab der eine Kolonie überhaupt wachsen darf
    * (Umsetzungskonzept/34_...md, Entscheidung zu §J 5). Die Deckung misst je
-   * Tick, ob die Bevölkerung ihren AKTUELLEN Bedarf am Systemmarkt hätte
-   * kaufen können ({@code EconomyTick.runConsumption}); liegt sie unter 100 %,
-   * ernährt die Kolonie nicht einmal ihren Bestand – dann kommt niemand hinzu.
+   * Spieltag, ob die Bevölkerung ihren Tagesbedarf aus dem Vorrat decken konnte
+   * ({@code Economy.consumeFromStock}); liegt sie unter 100 %, ernährt die
+   * Kolonie nicht einmal ihren Bestand – dann kommt niemand hinzu.
    *
    * <p>Vorher hing das Wachstum allein am Lebensstandard, einem geglätteten
    * Mittel über alle drei Grundbedarfsgüter. Der reagiert so träge, dass eine

@@ -33,11 +33,11 @@ package de.nebula.engine;
  * Versorgungswarnung ({@code lastSupplyWarningAt}). Sie werden mit
  * {@link #realNow()} gesetzt UND verglichen und nie mit Spielzeit gemischt.</p>
  *
- * <p>Der Realzeit-Tick selbst ({@code GameTick}, 1 s) bleibt vom Regler
- * unberührt – ein Tick deckt bei höherem Tempo schlicht mehr Spielstunden ab
- * ({@link GameConstants#TICK_GAME_HOURS}). Alles, was je Tick berechnet wird,
- * muss deshalb eine RATE JE SPIELSTUNDE sein, multipliziert mit
- * {@code TICK_GAME_HOURS} – nie ein fester Betrag je Tick.</p>
+ * <p>Der Sekundentakt des Ereignisplaners ({@code GameTick}) bleibt vom Regler
+ * unberührt – bei höherem Tempo vergeht je Realsekunde mehr Spielzeit und es
+ * werden mehr Ereignisse fällig. Alles, was periodisch verbucht wird (der
+ * Kolonietag, {@link GameConstants#GAME_DAY_HOURS}), ist eine RATE JE
+ * SPIELSTUNDE mal Schrittweite – nie ein fester Betrag je Schritt.</p>
  */
 public final class Clock {
   private Clock() {

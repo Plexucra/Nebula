@@ -170,7 +170,7 @@ final class World {
     return isNull(g) ? null : g;
   }
 
-  /** Verkaufsorders im System – die lokale Bevölkerung kauft ausschließlich daraus (EconomyTick.runConsumption). */
+  /** Verkaufsorders im System – die Bevölkerung einer Kolonie kauft nur aus denen an ihrem eigenen Handelsposten (depotColonyId, Umsetzungskonzept/36). */
   List<JsonNode> sellOrders(String systemId) {
     return list(q("sellOrders", Map.of("systemId", systemId)));
   }

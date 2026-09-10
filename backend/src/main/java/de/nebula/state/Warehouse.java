@@ -33,7 +33,10 @@ public final class Warehouse {
   public static void add(GameState state, String colonyId, String productTypeId, double delta) {
     if (delta > 0 && de.nebula.engine.GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID.equals(productTypeId)) {
       delta = EnergyStorageCommands.intake(state, colonyId, delta);
-      if (delta <= 0) return;
+      if (delta > 0) addRaw(state, colonyId, productTypeId, delta);
+      // Nachschub beendet einen Blackout sofort, nicht erst am nächsten Kolonietag.
+      PowerGrid.settleShortfall(state, colonyId);
+      return;
     }
     addRaw(state, colonyId, productTypeId, delta);
   }

@@ -61,6 +61,8 @@ public final class MarketCommands {
     // Kolonie im Bodengefecht. Bestehende Orders laufen bewusst weiter (Ware
     // und Geld sind bereits gebunden), und die Bevölkerung darf weiter kaufen –
     // deshalb steht die Sperre hier und nicht in createSellOrderCore.
+    // Die Bevölkerung kauft NUR an diesem Posten (Umsetzungskonzept/36):
+    // eine neue Order hier ist ihr ganzer Markt.
     if (GroundBattleCommands.isUnderGroundAttack(state, colonyId)) {
       throw new CommandException("Während eines laufenden Bodengefechts nimmt diese Kolonie keine neuen Handelsaufträge an.");
     }
@@ -92,6 +94,7 @@ public final class MarketCommands {
     order.autoRelist = autoRelist;
     order.sourceFleetId = null;
     state.sellOrders.add(order);
+    Economy.emergencyPurchase(state, ids, colonyId, productTypeId);
   }
 
   /**
@@ -140,6 +143,8 @@ public final class MarketCommands {
     order.autoRelist = autoRelist;
     order.sourceFleetId = fleetId;
     state.sellOrders.add(order);
+    // Am Posten einer (auch fremden) Kolonie: deren Bevölkerung darf sofort zugreifen, wenn sie knapp ist.
+    Economy.emergencyPurchase(state, ids, fleet.locationColonyId, productTypeId);
   }
 
   public static void cancelSellOrder(GameState state, String playerId, String orderId) {
@@ -228,12 +233,14 @@ public final class MarketCommands {
    * beim ersten Versuch und muss sich direkt korrigieren lassen. Die Ware
    * liegt bereits in der Order, es ändert sich nur die Zahl.</p>
    */
-  public static void updateSellOrderPrice(GameState state, String playerId, String orderId, double pricePerUnit) {
+  public static void updateSellOrderPrice(GameState state, IdGenerator ids, String playerId, String orderId, double pricePerUnit) {
     if (pricePerUnit <= 0) throw new CommandException("Der Preis muss größer als 0 sein.");
     SellOrder order = state.sellOrders.stream().filter(o -> o.id.equals(orderId)).findFirst()
         .orElseThrow(() -> new CommandException("Unbekannte Verkaufsorder."));
     if (!playerId.equals(order.sellerId)) throw new CommandException("Diese Order gehört einem anderen Kommandanten.");
     order.pricePerUnit = pricePerUnit;
+    // Ein gesenkter Preis ist der häufigste Grund, warum eine knappe Bevölkerung jetzt kaufen kann.
+    Economy.emergencyPurchase(state, ids, order.depotColonyId, order.productTypeId);
   }
 
   /** Meldet dem Verkäufer, dass eine Order leer ist – bei wiederkehrenden Orders mit dem Hinweis auf den fehlenden Nachschub. */
@@ -255,6 +262,11 @@ public final class MarketCommands {
    * {@link Warehouse#addRaw} ruft die eingeschränkte Fassung bei jedem
    * Lagerzugang – genau dem Moment, in dem eine schlafende Order wieder etwas
    * anzubieten hätte. Die Fassung über alles bleibt für Tests und Seeds.
+   *
+   * <p>Den Notkauf der Bevölkerung ({@link Economy#emergencyPurchase}) löst
+   * das Nachfüllen hier NICHT aus – das Lager kennt keinen Id-Generator für die
+   * Buchung. Die Produktion ruft ihn nach dem Einlagern selbst
+   * ({@code ProductionCommands.completeProductionEntry}).</p>
    */
   public static void replenishDormantSellOrders(GameState state) {
     replenishDormantSellOrders(state, null, null);

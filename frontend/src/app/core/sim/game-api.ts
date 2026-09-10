@@ -3,7 +3,7 @@ import { Signal } from '@angular/core';
 import {
   Battle, Blockade, BlockadeAnchor, BuildSlots, Building, BuildingType, ChainPlan, Colonization, CarrierJumpPreview, Colony, ColonySpeedBreakdown, DiplomaticRelation, DiplomaticStatus, Fleet, FleetCargoCapacity, FleetSystemTarget, FleetTroopCapacity, GameNotification, Gateway,
   GatewayWeightEntry, GroundBattle, GroundForceGroup, GroundUnitTypeDef, HubDepotEntry, HubOrder, Id, Message, PeaceOffer, Planet, PlanetStats, Player, PlayerRole, Population,
-  PopulationMoneySupplyState, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
+  PopulationMoneySupplyState, PopulationSupply, PopulationTrend, ProductType, ProductionQueueEntry, RecruitmentQueueEntry, SellOrder, ShipTypeDef,
   ShipyardQueueEntry, Specialization, SupplyInventoryEntry, System, Transaction, Treaty, TreatyOffer, TreatyType, UniverseStatSnapshot, Wallet, GameVictory,
   WarehouseEntry,
 } from '../models';
@@ -64,8 +64,10 @@ export interface GameApi {
   coloniesInSystem(systemId: Id): Signal<Colony[]>;
   colony(id: Id): Signal<Colony | undefined>;
   colonyStats(id: Id): Signal<PlanetStats | undefined>;
-  /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut – Diagnosewert für die Statistik-Seite, kein Snapshot-Feld. */
+  /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut des letzten Kolonietags – Diagnosewert für die Statistik-Seite. */
   consumptionCoverage(colonyId: Id): Signal<Record<Id, number>>;
+  /** Vorrat, Tagesbedarf, Reichweite je Grundkonsumgut und der nächste Tageseinkauf (Umsetzungskonzept/36). */
+  populationSupply(colonyId: Id): Signal<PopulationSupply | null>;
   /**
    * Fertig berechnete Aufschlüsselung ALLER Produktionstempo-Faktoren dieser
    * Kolonie (Bevölkerung/Workforce, Gebäudestufe, Spezialisierung, Fördergüte,

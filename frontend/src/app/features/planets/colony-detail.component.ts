@@ -134,6 +134,13 @@ export class ColonyDetailComponent {
    */
   protected readonly growthPerHour = computed(() => this.speedBreakdown()?.growthPerHour ?? 0);
 
+  /** Reichweite des Bevölkerungsvorrats in Tagen, als Text. */
+  protected supplyDays(days: number): string {
+    if (days <= 0) return 'leer';
+    if (days < 1) return `${Math.round(days * 24)} Spielstunden`;
+    return `${days.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Tage`;
+  }
+
   protected formatRange(gameHours: number): string {
     if (gameHours < 48) return `${gameHours.toFixed(1)} h`;
     const days = gameHours / 24;
@@ -153,11 +160,15 @@ export class ColonyDetailComponent {
     const wallet = this.popWallet()?.balance ?? 0;
     const population = this.population()?.currentCount ?? 0;
     if (population <= 0 || wallet <= 0) return null;
-    // Die Bevölkerung gibt je Runde etwa ein Zehntel ihres Guthabens aus und
-    // verteilt es auf die drei Grundgüter.
-    const perGood = (wallet * 0.1) / consumerGoods.length;
+    // Der Tageseinkauf (Umsetzungskonzept/36) verteilt das Guthaben der
+    // Bevölkerung zu gleichen Teilen auf die drei Grundgüter und füllt damit
+    // den Vorrat auf das Ziel auf.
+    const perGood = wallet / consumerGoods.length;
+    const good = this.populationSupply()?.goods.find(g => g.productTypeId === productTypeId);
+    const missing = good ? Math.max(0, Math.ceil(good.dailyNeed * (this.populationSupply()?.targetDays ?? 0)) - good.stock) : 0;
+    const perUnit = missing > 0 ? ` Für die fehlenden ${missing} Stück Vorrat wären das bis zu ${Math.round(perGood / missing).toLocaleString('de-DE')} Cr je Stück.` : '';
     return `Kaufkraft der Bevölkerung: ${Math.round(wallet).toLocaleString('de-DE')} Cr insgesamt`
-      + ` – für dieses Gut sind derzeit rund ${Math.round(perGood).toLocaleString('de-DE')} Cr je Kaufrunde verfügbar.`;
+      + ` – für dieses Gut sind beim nächsten Tageseinkauf rund ${Math.round(perGood).toLocaleString('de-DE')} Cr verfügbar.${perUnit}`;
   }
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
@@ -188,6 +199,8 @@ export class ColonyDetailComponent {
    */
   protected readonly speedBreakdown = this.api.colonySpeedBreakdown(this.colonyId);
   protected readonly consumptionCoverage = this.api.consumptionCoverage(this.colonyId);
+  /** Vorrat und Tageseinkauf der Bevölkerung (Umsetzungskonzept/36), Panel im Tab "Bevölkerung". */
+  protected readonly populationSupply = this.api.populationSupply(this.colonyId);
   protected readonly populationTrend = this.api.populationTrend(this.colonyId);
 
   /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
