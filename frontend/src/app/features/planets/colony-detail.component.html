@@ -458,14 +458,22 @@
       <div class="panel corner-frame">
         <div class="panel-header"><h2>Spezialisierung</h2></div>
         <div class="panel-body">
+          <!-- Mit Skala (Testbefund F8): vorher stand hier ein Balken ohne Zahl –
+               weder was die nächste Stufe kostet noch was sie bringt, noch wann
+               Können verlernt wird. -->
+          <p class="hint">Jede Stufe bringt +{{ speedBreakdown()?.specializationBonusPctPerLevel | number:'1.0-0' }} % Fertigungstempo für dieses
+            Produkt. Erfahrung sind investierte Produktionsstunden; die Schwelle je Stufe wächst linear. Ohne Produktion verfällt nach
+            {{ speedBreakdown()?.specializationDecayGraceGameHours | number:'1.0-1' }} Spielstunden je eine Stufe.</p>
           <div class="wh-list">
             @for (s of specializations(); track s.productTypeId) {
               <div class="spec-row">
                 <span>{{ productName(s.productTypeId) }}</span>
-                <div class="stat-bar"><span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span></div>
-                <span class="mono">Stufe {{ s.currentLevel }} <span class="hint">(+{{ specSpeedBonusPct(s.productTypeId) }}% Tempo)</span></span>
+                <div class="stat-bar" [title]="(s.experience | number:'1.0-1') + ' von ' + (s.thresholdForNextLevel | number:'1.0-1') + ' Produktionsstunden bis Stufe ' + (s.currentLevel + 1)">
+                  <span [style.width.%]="(s.experience / s.thresholdForNextLevel) * 100"></span>
+                </div>
+                <span class="mono">Stufe {{ s.currentLevel }} <span class="hint">(+{{ specSpeedBonusPct(s.productTypeId) }}% Tempo · {{ s.experience | number:'1.0-0' }}/{{ s.thresholdForNextLevel | number:'1.0-0' }} h bis Stufe {{ s.currentLevel + 1 }})</span></span>
               </div>
-            } @empty { <p class="empty-hint">Noch keine Spezialisierung.</p> }
+            } @empty { <p class="empty-hint">Noch keine Spezialisierung – sie entsteht mit jeder fertigen Produktion.</p> }
           </div>
         </div>
       </div>

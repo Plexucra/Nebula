@@ -57,8 +57,8 @@ final class Economy {
   /** Höchstmenge Soldaten bzw. Drohnen je Ausbildungsauftrag. */
   private static final int RECRUIT_MAX_BATCH = 250;
   private static final double ELECTRONICS_IMPORT_MIN_WALLET = 20000;
-  /** Preis der Start-Nahrungsorder (WorldSeed.STARTER_SELL_ORDER_PRICE), falls keine mehr existiert. */
-  private static final double DEFAULT_CONSUMER_PRICE = 450;
+  /** Preis der Start-Nahrungsorder (WorldSeed.STARTER_SELL_ORDER_PRICE, seit Gesamttest B1: 60 Cr), falls keine mehr existiert. */
+  private static final double DEFAULT_CONSUMER_PRICE = 60;
   /** Spezialware nicht endlos stapeln: oberhalb dieses Vielfachen der Reserve ruht die Charge. */
   private static final double SPECIALTY_STOCK_CAP_FACTOR = 10;
   private static final Pattern MISSING = Pattern.compile("(p_[a-z_]+) \\((\\d+) benötigt, (\\d+) vorhanden\\)");
@@ -81,7 +81,7 @@ final class Economy {
   private static final double MIN_CONSUMER_PRICE = 15;
   /** Ab diesem Guthaben der Bevölkerung gilt sie als kaufkräftig genug für höhere Preise. */
   private static final double RICH_POPULATION_WALLET = 20000;
-  /** Obergrenze der Preisspirale, gemessen am Startpreis (450 Cr). */
+  /** Obergrenze der Preisspirale, gemessen am Startpreis (60 Cr). */
   private static final double MAX_PRICE_FACTOR = 6;
   /** Reserve (Spielstunden Verbrauch), die nach Abzug des Kettenbedarfs im Lager bleiben muss. */
   private static final double GUARD_RESERVE_HOURS = 240;
@@ -450,7 +450,7 @@ final class Economy {
    * Preispolitik. Die Bevölkerung kauft nur, was ihr Budget hergibt
    * ({@code EconomyTick.purchasableQuantity}); ihr Einkommen sind Löhne und
    * Unterhalt (rund 0,02 Cr je Kopf und Stunde) plus die Geldschöpfung beim
-   * Wachstum. Der Startpreis von 450 Cr je Stück ist dagegen nur bezahlbar,
+   * Wachstum. Ein Preis von 450 Cr je Stück (der frühere Startpreis) ist dagegen nur bezahlbar,
    * solange die Kolonie wächst – im Testlauf fiel jede Kolonie bei rund 10 000
    * Einwohnern in die Hungersnot, während der Kommandant auf 50 000 Cr saß.
    * Weil der Erlös bei budgetgebundenen Käufern gleich bleibt (Budget ×

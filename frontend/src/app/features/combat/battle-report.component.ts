@@ -30,10 +30,10 @@ export class BattleReportComponent {
 
   protected readonly token: string = this.route.snapshot.paramMap.get('token') ?? '';
   protected readonly battle = this.api.battleByReportToken(this.token);
-  protected readonly allFleets = this.api.allFleets();
 
   protected systemName(id: Id): string {
-    return this.api.system(id)()?.name ?? '—';
+    const s = this.api.system(id)();
+    return s ? `${s.number} · ${s.name}` : '—';
   }
 
   protected playerName(id: Id): string {
@@ -46,7 +46,7 @@ export class BattleReportComponent {
 
   /** Bestand der Flotte VOR dem ersten Tick (Bericht ist schon ab Kampfbeginn abrufbar, bevor überhaupt ein Tick aufgelöst wurde). */
   protected currentShips(fleetId: Id): FleetShipGroup[] {
-    return this.allFleets().find(f => f.id === fleetId)?.ships ?? [];
+    return this.api.fleet(fleetId)()?.ships ?? [];
   }
 
   protected shipsLabel(ships: FleetShipGroup[]): string {

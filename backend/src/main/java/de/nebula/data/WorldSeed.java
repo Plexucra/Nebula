@@ -158,6 +158,15 @@ public final class WorldSeed {
    * Startflotte (13 Schiffe) sind das <b>450 Credits/Stück</b> (vor Konzept
    * 20, mit zusätzlichem Grundmedizin-Erlös: 300).</p>
    *
+   * <p><b>Seit dem Gesamttest vom 9.9.2026 (Befund B1) steht die Order bei
+   * 60 Credits.</b> Die 450 waren für rund 200 Einwohner hergeleitet; seit
+   * Umsetzungskonzept/24 startet eine Kolonie mit 2000. Zu 450 konnte sich die
+   * Bevölkerung nur einen Bruchteil ihres Bedarfs leisten, der Lebensstandard
+   * fiel sofort auf 27 % und die Kolonie schrumpfte, bis der Kommandant den
+   * Preis von Hand senkte – mit 60 Cr lag die Deckung im Test bei 100 %, der
+   * Lebensstandard bei 50 % und die Kolonie wuchs. Der Bot rechnet mit
+   * demselben Wert ({@code Economy.DEFAULT_CONSUMER_PRICE}).</p>
+   *
    * <p>Während der Aufbauphase (120 → 200 Einwohner) liegt der
    * Gleichgewichtspreis höher, die Kolonie macht dort also ein kleines,
    * sich selbst korrigierendes Minus – gedeckt aus dem Startguthaben und dem
@@ -170,7 +179,7 @@ public final class WorldSeed {
    * rund 50 % statt vorher 75 % – gewollt, das ist der Anreiz, die
    * Grundmedizin-Kette selbst aufzubauen.</p>
    */
-  private static final double STARTER_SELL_ORDER_PRICE = 450;
+  private static final double STARTER_SELL_ORDER_PRICE = 60;
 
   private static final double SEALED_ELERIUM_RESERVE_HOME = 25;
 
@@ -222,8 +231,14 @@ public final class WorldSeed {
 
   private static final int GALAXY_SYSTEM_COUNT = 200;
 
+  /**
+   * Bewusst OHNE "Aurelia": so heißt das erste Heimatsystem ("Aurelia-System",
+   * Planeten "Aurelia Prime", "Aurelia II", ...). Stand der Name zusätzlich im
+   * Pool, hieß ein fremdes System "Aurelia" und seine Planeten "Aurelia II",
+   * "Aurelia III" – genau die doppelten Planetennamen aus Testbefund F12.
+   */
   private static final List<String> SYSTEM_NAME_POOL = List.of(
-      "Aurelia", "Kepler's Reach", "Thessaly", "Drakon-Weite", "Vey Corva", "Halcyon Rand",
+      "Kepler's Reach", "Thessaly", "Drakon-Weite", "Vey Corva", "Halcyon Rand",
       "Praxis Gate", "Corvin Öde", "Nashira", "Talvex", "Ophir Rand", "Sirenum",
       "Kestrel-Feld", "Meridian Tor", "Borea Vor", "Xantha", "Rigel Außenposten",
       "Vantor Bogen", "Elyra Senke", "Cassiel", "Drift von Ilun", "Perath",
@@ -830,6 +845,7 @@ public final class WorldSeed {
       boolean isHub = tradeHubSet.contains(i);
       StarSystem s = new StarSystem();
       s.id = systemIds.get(i);
+      s.number = i + 1;
       s.name = isHome ? homeSystemName : systemNameAt(names, i);
       s.x = galaxy.positions().get(i).x();
       s.y = galaxy.positions().get(i).y();
@@ -973,6 +989,7 @@ public final class WorldSeed {
 
     StarSystem newSystem = new StarSystem();
     newSystem.id = systemId;
+    newSystem.number = existingSystems.stream().mapToInt(s -> s.number).max().orElse(0) + 1;
     newSystem.name = systemName;
     newSystem.x = position.x();
     newSystem.y = position.y();

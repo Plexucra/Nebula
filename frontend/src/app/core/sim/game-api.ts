@@ -180,7 +180,16 @@ export interface GameApi {
   /** ALLE eigenen Flotten, unabhängig vom Standort (auch unterwegs oder in einem fremden System). */
   fleets(): Signal<Fleet[]>;
   /** ALLE Flotten der Galaxie, jeden Besitzers (auch anderer Kommandanten und NPCs) – für die Marker auf der Galaxiekarte. Sichtbarkeit fremder Flotten dort clientseitig über `hasVisitedSystem` einschränken. */
-  allFleets(): Signal<Fleet[]>;
+  /**
+   * Alle Flotten (aller Kommandanten) in EINEM System. Die frühere Abfrage
+   * aller Flotten der Galaxie je Sekunde und Seite ist entfallen – bei
+   * tausend Systemen wäre das je Betrachter ein Vielfaches der nötigen Daten.
+   */
+  fleetsInSystem(systemId: Id): Signal<Fleet[]>;
+  /** Eine Flotte beliebigen Eigentümers (für Kampfberichte und Angriffsbestätigungen). */
+  fleet(id: Id): Signal<Fleet | undefined>;
+  /** Schiffe je System für die Galaxiekarte – eigene überall, fremde nur in besuchten Systemen; vom Server gezählt. */
+  fleetPresence(): Signal<Record<Id, { myShips: number; enemyShips: number }>>;
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]>;
   queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
   resumeShipOrder(colonyId: Id, entryId: Id): Promise<void>;

@@ -144,6 +144,8 @@ public final class ColonyCommands {
       }
     }
     result.specializationSpeedBonusPctByProduct = specBonus;
+    result.specializationBonusPctPerLevel = (Formulas.specializationSpeedFactor(1) - 1) * 100;
+    result.specializationDecayGraceGameHours = GameConstants.SPECIALIZATION_DECAY_GRACE_GAME_HOURS;
 
     // Fördergüte gilt nur für Rohstoffe (Tier 0 mit Rohstoffprofil) und hängt
     // am Planeten der Kolonie – für alle davon betroffenen Produkte vorab

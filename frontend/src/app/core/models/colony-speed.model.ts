@@ -67,6 +67,10 @@ export interface ColonySpeedBreakdown {
   buildingUpgrades: BuildingUpgradePreview[];
   /** productTypeId -> Tempobonus der Spezialisierung in Prozent. */
   specializationSpeedBonusPctByProduct: Record<Id, number>;
+  /** Tempobonus je Spezialisierungsstufe in Prozent – die Skala hinter dem Fortschrittsbalken. */
+  specializationBonusPctPerLevel: number;
+  /** Spielstunden ohne Produktion, nach denen eine Stufe verfällt. */
+  specializationDecayGraceGameHours: number;
   /** productTypeId -> Fördergüte-Ausbeutefaktor (nur Rohstoffe/Tier 0). */
   concentrationFactorByProduct: Record<Id, number>;
 }

@@ -2,10 +2,6 @@
 
 ## Offen
 
-- [ ] **Handelsgilde-Preisdrift** (Konzept 31 §J 6): 5er-Lose, ±10 % je
-  Ausführung ohne Rückkehr, Konsumgüter zu 1,4 % des lokalen Preises. Offen:
-  Driftrate zum Basispreis je Spieltag – und ob die Gilde überhaupt eine
-  Geldquelle sein soll (Konzept 22 sagt: kleine Lose).
 - [ ] **Kennwortschutz und Reset-Knopf** (F14/F15): die Anmeldung ist
   kennwortlos, der Reset-Knopf für jeden sichtbar. Für einen LAN-Abend mit
   mehreren Personen riskant. Eigenes Thema, bewusst nicht Teil von Konzept 34.
@@ -20,21 +16,29 @@
   `Math.random` in `LandingCommands` durch einen Generator im Zustand ersetzen.
   Keine relationale Datenbank für den heißen Spielzustand (siehe Sitzung
   10.9.2026: Zeilen-Updates je Sekunde in jedem Wallet/Lager).
-- [ ] **Startpreis der Konsumgüter wächst nicht mit der Startbevölkerung**
-  (Gesamttest 9.9.2026, B1): `WorldSeed.STARTER_SELL_ORDER_PRICE` = 450 Cr ist
-  für rund 200 Einwohner hergeleitet, die Kolonie startet aber mit 2000. Ein
-  frischer Kommandant fällt deshalb sofort auf Lebensstandard 27 % und verliert
-  Bevölkerung, bis er den Preis selbst senkt (mit 60 Cr: Deckung 100 %,
-  Lebensstandard 50 %, Wachstum). Bewusst NICHT geändert – Konzept 34 §D hat
-  die Konsumpreise entschieden („Kaufkraft-Lücke ist Sache des Spielers");
-  wenn der Startpreis mitwachsen soll, gehört er an `START_POPULATION`
-  gekoppelt. Der Hinweistext im Bevölkerungs-Tab nennt den Hebel inzwischen.
-- [ ] **Anzeigefragen aus dem Testergebnis**: F8 (Spezialisierungsschwellen
-  stehen nirgends), F9 (politisches Gewicht – woraus berechnet, wofür gut?),
-  F11 (mehrere Kommandanten auf einem Planeten sind gewollt, aber in der
-  Systemansicht nicht erkennbar), F12 (doppelte Planetennamen).
+- [ ] **F9, politisches Gewicht**: die Galaxiekarte zeigt je System ein Gewicht
+  je Kommandant (Einwohner × Loyalität der eigenen Kolonien dort). Es hat keine
+  Spielwirkung und wird nirgends erklärt – Rest eines früheren Konzepts zur
+  Gateway-Kontrolle. Entweder Mechanik nachziehen oder Anzeige entfernen.
 
 ## Erledigt
+
+- [x] ~~Startpreis 60 Cr, Handelsgilde als Notanker, F8/F11/F12, Systemnummern~~ –
+  10.9.2026. Startorder auf 60 Cr (Bot rechnet mit demselben Wert); die
+  Preisdrift der Handelsgilde ist entschieden gewollt (Gilde ist Notanker, kein
+  Erwerb – kein Rücklauf zum Basispreis); Spezialisierung mit Skala (Stufe,
+  Bonus, Stunden bis zur nächsten Stufe, Verfall); Systemansicht zeigt alle
+  Kolonien eines Planeten mit Eigentümer und Landungsabwehr, Kolonisieren nur
+  durch die eigene Kolonie gesperrt; Systeme tragen eine laufende Nummer
+  („17 · Kessar“ überall, Zielwahl per Nummer beim Bewegen, Suche per Nummer);
+  „Aurelia“ aus dem Namensvorrat, damit keine doppelten Planetennamen entstehen.
+
+- [x] ~~Lastgrenzen 1 und 2: galaxieweite Abfragen, eine Sperre~~ – 10.9.2026.
+  Keine Seite fragt mehr alle Flotten der Galaxie ab (`fleetsInSystem`,
+  `fleet`, `fleetPresence` vom Server gezählt); Systeme und Routen werden bei
+  Änderung gepusht und nur noch im Minutentakt gepollt. Abfragen laufen unter
+  einem Leseschloss, Befehle und Ereignisplaner unter dem Schreibschloss
+  (`GameState.lock`, `GameSocket.READ_ONLY`).
 
 - [x] ~~Tick-Schleife durch Ereignisplaner ersetzen, Spieluhr mit Versatz~~ –
   10.9.2026. `GameTick` arbeitet nur noch fällige Ereignisse ab

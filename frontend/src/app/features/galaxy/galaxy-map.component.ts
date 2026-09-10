@@ -56,7 +56,8 @@ export class GalaxyMapComponent implements AfterViewInit {
   protected readonly allPlayers = this.api.players();
   protected readonly myColonies = this.api.colonies();
   protected readonly myFleets = this.api.fleets();
-  protected readonly allFleets = this.api.allFleets();
+  /** Schiffe je System, vom Server gezählt (Fog of War inklusive) – statt aller Flotten der Galaxie je Sekunde. */
+  protected readonly fleetPresence = this.api.fleetPresence();
 
   private readonly systemsById = computed(() => new Map(this.systems().map(s => [s.id, s])));
   private readonly hopsFromHomeMap = computed(() => bfsHops(this.routes(), this.homeSystemId()));
@@ -91,28 +92,13 @@ export class GalaxyMapComponent implements AfterViewInit {
    * zu verschwinden.
    */
   protected readonly markers = computed(() => {
-    const myId = this.api.player()?.id ?? null;
-    const otherPlayerIds = new Set(this.allPlayers().map(p => p.id).filter(id => id !== myId));
     const myColonySystemIds = new Set(this.myColonies().map(c => c.systemId));
-
-    const myShipsBySystem = new Map<Id, number>();
-    for (const f of this.myFleets()) {
-      const ships = f.ships.reduce((sum, g) => sum + g.quantity, 0);
-      myShipsBySystem.set(f.systemId, (myShipsBySystem.get(f.systemId) ?? 0) + ships);
-    }
-
-    const enemyShipsBySystem = new Map<Id, number>();
-    for (const f of this.allFleets()) {
-      if (f.ownerId === myId || !otherPlayerIds.has(f.ownerId)) continue;
-      const ships = f.ships.reduce((sum, g) => sum + g.quantity, 0);
-      enemyShipsBySystem.set(f.systemId, (enemyShipsBySystem.get(f.systemId) ?? 0) + ships);
-    }
+    const presence = this.fleetPresence();
 
     const map = new Map<Id, SystemMarker>();
     for (const sys of this.systems()) {
-      const myShips = myShipsBySystem.get(sys.id) ?? 0;
-      const visited = this.api.hasVisitedSystem(sys.id)();
-      const enemyShips = visited ? (enemyShipsBySystem.get(sys.id) ?? 0) : 0;
+      const myShips = presence[sys.id]?.myShips ?? 0;
+      const enemyShips = presence[sys.id]?.enemyShips ?? 0;
       const hasColony = myColonySystemIds.has(sys.id);
       let colorClass: SystemColorClass = null;
       if (myShips > 0) colorClass = 'mine';
@@ -149,9 +135,17 @@ export class GalaxyMapComponent implements AfterViewInit {
 
   protected readonly systemSearchResults = computed(() => {
     const needle = this.systemSearch().trim().toLowerCase();
+    if (needle.length === 0) return [];
+    // Eine reine Zahl ist eine Systemnummer – die kurze, eindeutige Adresse.
+    if (/^\d+$/.test(needle)) return this.systems().filter(s => s.number === Number(needle));
     if (needle.length < 2) return [];
     return this.systems().filter(s => s.name.toLowerCase().includes(needle)).slice(0, 8);
   });
+
+  /** "17 · Kessar" – Nummer vor Namen, überall gleich (Testbefund F12). */
+  protected systemLabel(s: System | undefined | null): string {
+    return s ? `${s.number} · ${s.name}` : '—';
+  }
 
   /** Springt aus der Suche zu einem System – nutzt dieselbe Zentrierung wie die Flottenliste. */
   protected focusSystemById(systemId: Id): void {

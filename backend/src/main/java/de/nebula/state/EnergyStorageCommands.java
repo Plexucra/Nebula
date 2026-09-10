@@ -41,10 +41,16 @@ public final class EnergyStorageCommands {
     return s;
   }
 
+  /** Nur lesen – legt KEINEN Eintrag an. Für Abfragen, die unter dem Leseschloss laufen ({@code GameSocket}). */
+  private static EnergyStorage find(GameState state, String colonyId) {
+    if (colonyId == null) return null;
+    for (EnergyStorage s : state.energyStorages) if (colonyId.equals(s.colonyId)) return s;
+    return null;
+  }
+
   public static double stored(GameState state, String colonyId) {
-    if (colonyId == null) return 0;
-    for (EnergyStorage s : state.energyStorages) if (colonyId.equals(s.colonyId)) return s.stored;
-    return 0;
+    EnergyStorage s = find(state, colonyId);
+    return s == null ? 0 : s.stored;
   }
 
   /** Automatische Vorhaltemenge: Verbrauch der aktuellen Infrastrukturstufe über die Standardreichweite. */
@@ -54,8 +60,8 @@ public final class EnergyStorageCommands {
   }
 
   public static double effectiveTarget(GameState state, String colonyId) {
-    EnergyStorage s = storageOf(state, colonyId);
-    return s.reserveTarget != null ? s.reserveTarget : defaultTarget(state, colonyId);
+    EnergyStorage s = find(state, colonyId);
+    return s != null && s.reserveTarget != null ? s.reserveTarget : defaultTarget(state, colonyId);
   }
 
   /** Nimmt bis zur Vorhaltemenge auf und liefert, was NICHT aufgenommen wurde (gehört ins Lager). */
@@ -104,12 +110,14 @@ public final class EnergyStorageCommands {
     }
   }
 
+  /** Reine Anzeige – ohne Eintrag im Zustand verhält sich der Speicher wie ein leerer mit automatischer Vorhaltemenge. */
   public static EnergyStorageView view(GameState state, String colonyId) {
-    EnergyStorage s = storageOf(state, colonyId);
+    if (colonyId == null) throw new CommandException("Für den Energiespeicher fehlt die Kolonie-Angabe.");
+    EnergyStorage s = find(state, colonyId);
     EnergyStorageView v = new EnergyStorageView();
     v.colonyId = colonyId;
-    v.stored = s.stored;
-    v.automatic = s.reserveTarget == null;
+    v.stored = s == null ? 0 : s.stored;
+    v.automatic = s == null || s.reserveTarget == null;
     v.defaultTarget = defaultTarget(state, colonyId);
     v.reserveTarget = effectiveTarget(state, colonyId);
     int level = GameQueries.getBuildingLevel(state, colonyId, GameConstants.INFRASTRUCTURE_BUILDING_ID);

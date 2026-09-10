@@ -38,8 +38,40 @@ public final class FleetCommands {
     return state.fleets.stream().filter(f -> f.ownerId.equals(playerId)).toList();
   }
 
+  /** Alle Flotten der Galaxie – für Bots und Werkzeuge; die Oberfläche nutzt die gezielten Abfragen darunter. */
   public static List<Fleet> allFleets(GameState state) {
     return List.copyOf(state.fleets);
+  }
+
+  /** Alle Flotten (aller Kommandanten) in EINEM System – statt der ganzen Galaxie je Sekunde je Seite. */
+  public static List<Fleet> fleetsInSystem(GameState state, String systemId) {
+    return state.fleets.stream().filter(f -> f.systemId.equals(systemId)).toList();
+  }
+
+  /** Eine Flotte beliebigen Eigentümers (Name, Schiffe) – für Kampfberichte und Angriffsbestätigungen; {@code null}, wenn es sie nicht mehr gibt. */
+  public static Fleet fleetById(GameState state, String fleetId) {
+    return find(state, fleetId);
+  }
+
+  /** Schiffe je System für die Galaxiekarte: eigene überall, fremde nur in BESUCHTEN Systemen (Fog of War). */
+  public record FleetPresence(int myShips, int enemyShips) {
+  }
+
+  public static Map<String, FleetPresence> fleetPresence(GameState state, String playerId) {
+    Set<String> known = state.knownSystemIdsByPlayer.getOrDefault(playerId, Set.of());
+    Map<String, int[]> counts = new HashMap<>();
+    for (Fleet f : state.fleets) {
+      int ships = 0;
+      for (FleetShipGroup g : f.ships) ships += (int) g.quantity;
+      if (ships == 0) continue;
+      boolean mine = f.ownerId.equals(playerId);
+      if (!mine && !known.contains(f.systemId)) continue;
+      int[] c = counts.computeIfAbsent(f.systemId, k -> new int[2]);
+      c[mine ? 0 : 1] += ships;
+    }
+    Map<String, FleetPresence> out = new HashMap<>();
+    for (Map.Entry<String, int[]> e : counts.entrySet()) out.put(e.getKey(), new FleetPresence(e.getValue()[0], e.getValue()[1]));
+    return out;
   }
 
   public static Fleet requireOwnFleet(GameState state, String playerId, String fleetId) {

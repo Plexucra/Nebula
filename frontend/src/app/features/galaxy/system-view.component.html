@@ -1,6 +1,6 @@
 <div class="page-head">
   <span class="eyebrow">Kartografie</span>
-  <h1>{{ system()?.name ?? 'System' }}</h1>
+  <h1>{{ systemLabel() }}</h1>
   <a class="ghost small back-link" routerLink="/galaxie">← Zur Galaxiekarte</a>
 </div>
 
@@ -73,7 +73,8 @@
 
   <div class="planet-grid">
     @for (planet of planets(); track planet.id) {
-      @let colony = colonyForPlanet(planet.id);
+      @let coloniesHere = coloniesOnPlanet(planet.id);
+      @let myColony = myColonyOnPlanet(planet.id);
       @let colonyFleet = colonyShipFleetAt(planet.id);
       <div class="panel corner-frame planet-card">
         <div class="panel-header"><h3>{{ planet.name }}</h3></div>
@@ -81,10 +82,22 @@
           <span class="eyebrow">{{ planetTypeLabel(planet.type) }} · {{ planet.size }}</span>
           @if (!planet.usable) {
             <p class="hint">Nicht besiedelbar.</p>
-          } @else if (colony) {
-            <p class="hint"><a [routerLink]="['/planeten', colony.id]">{{ colony.name }}</a> — {{ ownerDisplay(colony.ownerId) }}</p>
           } @else {
-            <p class="hint">Unbesiedelt.</p>
+            <!-- ALLE Kolonien des Planeten, mit Eigentümer und Landungsabwehr: mehrere
+                 Kommandanten dürfen sich einen Planeten teilen (Testbefund F11). -->
+            @for (colony of coloniesHere; track colony.id) {
+              <p class="hint">
+                <a [routerLink]="['/planeten', colony.id]">{{ colony.name }}</a> — {{ ownerDisplay(colony.ownerId) }}
+                @if (defenseLabel(colony); as d) { <span class="tag warn">🛡 {{ d }}</span> }
+              </p>
+            } @empty {
+              <p class="hint">Unbesiedelt.</p>
+            }
+            @if (coloniesHere.length > 1) {
+              <p class="empty-hint">{{ coloniesHere.length }} Kommandanten teilen sich diesen Planeten – eine Landung trifft die Abwehr jeder kriegführenden Kolonie.</p>
+            }
+          }
+          @if (planet.usable && !myColony) {
             @if (colonizationOf(planet.id); as running) {
               <p class="hint">Koloniegründung läuft — noch {{ countdown(running.endsAt - clock.now()) }}</p>
             } @else if (colonyFleet) {

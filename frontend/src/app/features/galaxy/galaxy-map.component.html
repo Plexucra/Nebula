@@ -13,11 +13,11 @@
         <!-- Suche mit Sprung zum Treffer: bei über 200 Systemen war Ziehen die
              einzige Art, ein bestimmtes System zu finden. -->
         <span class="system-search">
-          <input type="search" placeholder="System suchen…" [ngModel]="systemSearch()" (ngModelChange)="systemSearch.set($event)" />
+          <input type="search" placeholder="Name oder Nr.…" [ngModel]="systemSearch()" (ngModelChange)="systemSearch.set($event)" />
           @if (systemSearchResults().length > 0) {
             <div class="search-results">
               @for (s of systemSearchResults(); track s.id) {
-                <button type="button" class="ghost small" (click)="focusSystemById(s.id)">{{ s.name }}</button>
+                <button type="button" class="ghost small" (click)="focusSystemById(s.id)">{{ systemLabel(s) }}</button>
               }
             </div>
           }
@@ -44,7 +44,7 @@
             <span>Zielsystem für <strong>{{ moveModeFleetName() }}</strong> auf der Karte anklicken.</span>
             <button class="ghost small" (click)="cancelMove()">Abbrechen</button>
           } @else if (rp) {
-            <span>Ziel <strong>{{ selectedSystem()?.name }}</strong> — {{ rp.hops }} Gateway-Sprung(e), Dauer {{ countdown(rp.ms) }}</span>
+            <span>Ziel <strong>{{ systemLabel(selectedSystem()) }}</strong> — {{ rp.hops }} Gateway-Sprung(e), Dauer {{ countdown(rp.ms) }}</span>
             <button class="primary small" (click)="confirmMove()" [disabled]="busy() === 'move'">Anfliegen</button>
             <button class="ghost small" (click)="cancelMove()">Abbrechen</button>
           } @else {
@@ -83,7 +83,7 @@
             (click)="onSystemClick(sys)"
           />
           @if (showLabels() || sys.isHomeSystem || selectedSystem()?.id === sys.id) {
-            <text [attr.x]="sys.x * 100" [attr.y]="sys.y * 100 - nodeRadius - 0.9" class="sys-label" text-anchor="middle">{{ sys.name }}</text>
+            <text [attr.x]="sys.x * 100" [attr.y]="sys.y * 100 - nodeRadius - 0.9" class="sys-label" text-anchor="middle">{{ sys.number }} · {{ sys.name }}</text>
           }
           @if (marker.myShips > 0) {
             <text [attr.x]="sys.x * 100 + nodeRadius + 0.7" [attr.y]="sys.y * 100 - 0.2" class="ship-count mine">{{ marker.myShips }}</text>
@@ -99,7 +99,7 @@
 
   <div class="side-column">
     <div class="panel corner-frame fleets-panel">
-      <div class="panel-header"><h2>Meine Flotten — {{ selectedSystem()?.name ?? '—' }}</h2></div>
+      <div class="panel-header"><h2>Meine Flotten — {{ systemLabel(selectedSystem()) }}</h2></div>
       <div class="panel-body fleet-list">
         @for (fleet of myFleetsInSelectedSystem(); track fleet.id) {
           <div class="fleet-row">
@@ -123,7 +123,7 @@
     </div>
 
     <div class="panel corner-frame detail-panel">
-      <div class="panel-header"><h2>{{ selectedSystem()?.name ?? 'System auswählen' }}</h2></div>
+      <div class="panel-header"><h2>{{ selectedSystem() ? systemLabel(selectedSystem()) : 'System auswählen' }}</h2></div>
       <div class="panel-body">
         @if (selectedSystem(); as s) {
           @let marker = markerFor(s.id);
@@ -131,7 +131,7 @@
           @if (s.isHomeSystem) {
             <p class="hint">Ihr Heimatsystem.</p>
           } @else {
-            <p class="hint">{{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ homeSystem()?.name }} entfernt.</p>
+            <p class="hint">{{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ systemLabel(homeSystem()) }} entfernt.</p>
           }
           @if (marker.myShips > 0) {
             <p class="hint">Eigene Flotten hier: <strong class="accent-text">{{ marker.myShips }}</strong> Schiffe.</p>

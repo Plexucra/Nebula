@@ -55,6 +55,10 @@ public class ColonySpeedBreakdown {
   public List<BuildingUpgradePreview> buildingUpgrades;
   /** productTypeId -> Tempobonus der Spezialisierung in Prozent (nur Produkte mit Spezialisierung in dieser Kolonie). */
   public Map<String, Double> specializationSpeedBonusPctByProduct;
+  /** Tempobonus je Spezialisierungsstufe in Prozent ({@code Formulas.specializationSpeedFactor}) – für die Anzeige der Skala (Testbefund F8). */
+  public double specializationBonusPctPerLevel;
+  /** Spielstunden ohne Produktion, nach denen eine Spezialisierung eine Stufe verliert ({@code GameConstants.SPECIALIZATION_DECAY_GRACE_GAME_HOURS}). */
+  public double specializationDecayGraceGameHours;
   /** productTypeId -> Fördergüte-Ausbeutefaktor (nur Rohstoffe/Tier 0 mit Rohstoffprofil). */
   public Map<String, Double> concentrationFactorByProduct;
 

@@ -60,7 +60,8 @@ export class SystemViewComponent {
   protected readonly explored = this.api.hasExploredSystem(this.systemId);
   protected readonly planets = this.api.planetsInSystem(this.systemId);
   protected readonly colonies = this.api.coloniesInSystem(this.systemId);
-  protected readonly allFleets = this.api.allFleets();
+  /** Nur die Flotten DIESES Systems – statt aller Flotten der Galaxie je Sekunde. */
+  protected readonly fleetsHere = this.api.fleetsInSystem(this.systemId);
   protected readonly players = this.api.players();
   protected readonly blockades = this.api.blockadesInSystem(this.systemId);
   /** Eigene laufende Koloniegründungen – galaxieweit, hier auf dieses System gefiltert. */
@@ -75,8 +76,34 @@ export class SystemViewComponent {
     return this.api.player()?.id;
   }
 
-  protected colonyForPlanet(planetId: Id): Colony | undefined {
-    return this.colonies().find(c => c.planetId === planetId);
+  /**
+   * ALLE Kolonien auf einem Planeten. Je Kommandant ist eine Kolonie je Planet
+   * erlaubt, mehrere Kommandanten dürfen sich einen Planeten teilen
+   * (Testbefund F11: das war in der Systemansicht nicht erkennbar – wer landen
+   * wollte, sah nicht, dass die Abwehr eines Dritten mitschießt).
+   */
+  protected coloniesOnPlanet(planetId: Id): Colony[] {
+    return this.colonies().filter(c => c.planetId === planetId);
+  }
+
+  /** Die EIGENE Kolonie auf diesem Planeten, falls es eine gibt – nur sie sperrt das Kolonisieren. */
+  protected myColonyOnPlanet(planetId: Id): Colony | undefined {
+    const myId = this.myId();
+    return this.colonies().find(c => c.planetId === planetId && c.ownerId === myId);
+  }
+
+  /** Mannschaftstransporter bekommen die Landungsabwehr JEDER kriegführenden Kolonie des Planeten ab – deshalb je Kolonie ausgewiesen. */
+  protected defenseLabel(colony: Colony): string | null {
+    const defense = this.api.buildings(colony.id)().find(b => b.typeId === 'b_defense' && b.level > 0);
+    if (!defense) return null;
+    const state = defense.activationState === 'Active' ? 'aktiv'
+      : defense.activationState === 'Activating' ? 'wird aktiviert' : 'inaktiv';
+    return `Landungsabwehr Stufe ${defense.level}, ${state}`;
+  }
+
+  protected systemLabel(): string {
+    const s = this.system();
+    return s ? `${s.number} · ${s.name}` : 'System';
   }
 
   protected ownerDisplay(ownerId: Id): string {
@@ -100,21 +127,20 @@ export class SystemViewComponent {
 
   /** ALLE (eigene + sichtbare fremde) stationierten Flotten an einem bestimmten Ort dieses Systems. */
   protected fleetsAt(target: FleetSystemTarget): Fleet[] {
-    return this.allFleets().filter(f => this.matchesTarget(f, target));
+    return this.fleetsHere().filter(f => this.matchesTarget(f, target));
   }
 
   /** Fasst Kolonie-Orbit UND bloßen Planeten-Orbit desselben Planeten zusammen – aus Flottensicht praktisch derselbe Ort. */
   protected fleetsAtPlanet(planetId: Id): Fleet[] {
-    const colony = this.colonyForPlanet(planetId);
     const atOrbit = this.fleetsAt({ kind: 'PlanetOrbit', planetId });
-    const atColony = colony ? this.fleetsAt({ kind: 'ColonyOrbit', colonyId: colony.id }) : [];
-    return [...atOrbit, ...atColony];
+    const atColonies = this.coloniesOnPlanet(planetId).flatMap(c => this.fleetsAt({ kind: 'ColonyOrbit', colonyId: c.id }));
+    return [...atOrbit, ...atColonies];
   }
 
   /** Eigene, in DIESEM System bereits stationierte Flotten – Kandidaten für eine Bewegung zwischen den Orten des Systems. */
   protected myStationedFleetsHere(): Fleet[] {
     const myId = this.myId();
-    return this.allFleets().filter(f => f.ownerId === myId && f.systemId === this.systemId && f.status === 'Stationed');
+    return this.fleetsHere().filter(f => f.ownerId === myId && f.status === 'Stationed');
   }
 
   /**
@@ -126,7 +152,7 @@ export class SystemViewComponent {
    */
   protected myInTransitFleetsHere(): Fleet[] {
     const myId = this.myId();
-    return this.allFleets().filter(f => f.ownerId === myId && f.systemId === this.systemId && f.status === 'InTransit');
+    return this.fleetsHere().filter(f => f.ownerId === myId && f.status === 'InTransit');
   }
 
   protected locationLabel(f: Fleet): string {
@@ -140,14 +166,13 @@ export class SystemViewComponent {
     const opts: SystemLocationOption[] = [];
     if (f.locationType !== 'System') opts.push({ label: 'Systemhandelsposten', target: { kind: 'System' } });
     for (const p of this.planets()) {
-      const colony = this.colonyForPlanet(p.id);
-      if (colony) {
+      const colonies = this.coloniesOnPlanet(p.id);
+      for (const colony of colonies) {
         if (f.locationType === 'ColonyOrbit' && f.locationColonyId === colony.id) continue;
-        opts.push({ label: `Kolonie ${colony.name}`, target: { kind: 'ColonyOrbit', colonyId: colony.id } });
-      } else {
-        if (f.locationType === 'PlanetOrbit' && f.locationPlanetId === p.id) continue;
-        opts.push({ label: `Orbit ${p.name} (unbesiedelt)`, target: { kind: 'PlanetOrbit', planetId: p.id } });
+        opts.push({ label: `Kolonie ${colony.name} (${this.ownerDisplay(colony.ownerId)})`, target: { kind: 'ColonyOrbit', colonyId: colony.id } });
       }
+      if (f.locationType === 'PlanetOrbit' && f.locationPlanetId === p.id) continue;
+      opts.push({ label: colonies.length ? `Orbit ${p.name}` : `Orbit ${p.name} (unbesiedelt)`, target: { kind: 'PlanetOrbit', planetId: p.id } });
     }
     return opts;
   }
@@ -199,7 +224,7 @@ export class SystemViewComponent {
     const myId = this.myId();
     const colonyShipIds = new Set(
       this.api.shipTypes().filter(s => s.class === 'ColonyShip').map(s => s.productTypeId));
-    return this.allFleets().find(f =>
+    return this.fleetsHere().find(f =>
       f.ownerId === myId && f.status === 'Stationed' && f.locationPlanetId === planetId
       && f.ships.some(g => colonyShipIds.has(g.shipProductTypeId) && g.quantity >= 1));
   }

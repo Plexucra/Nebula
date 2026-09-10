@@ -11,6 +11,13 @@ import java.util.List;
  */
 public class StarSystem {
   public String id;
+  /**
+   * Laufende Nummer in Erzeugungsreihenfolge, ab 1 – die kurze, eindeutige
+   * Adresse eines Systems (Testbefund F12: Namen können sich ähneln, die
+   * Nummer nicht). Steht in jeder Systemliste vor dem Namen und lässt sich beim
+   * Bewegen einer Flotte direkt eingeben.
+   */
+  public int number;
   public String name;
   /** Grobe Galaxie-Koordinaten für die Kartendarstellung. */
   public double x;

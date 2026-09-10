@@ -34,6 +34,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @ApplicationScoped
 public class GameState {
+  /**
+   * DIE Sperre der Galaxie. Abfragen halten das Leseschloss (beliebig viele
+   * gleichzeitig), Befehle und der Ereignisplaner das Schreibschloss. Vorher
+   * war es ein einziges {@code synchronized(state)} für alles – jede der
+   * hunderte Abfragen je Sekunde stand hinter jedem Wirtschaftsschritt an.
+   * Voraussetzung: Abfragen ändern nichts ({@code GameSocket.READ_ONLY}).
+   */
+  public final java.util.concurrent.locks.ReentrantReadWriteLock lock =
+      new java.util.concurrent.locks.ReentrantReadWriteLock();
+
   public final List<Player> players = new CopyOnWriteArrayList<>();
   public final List<StarSystem> systems = new CopyOnWriteArrayList<>();
   /** Bekannte Systeme PRO Kommandant (Fog of War) – playerId -> Set<systemId>. */

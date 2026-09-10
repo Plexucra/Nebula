@@ -46,8 +46,11 @@ public class GameTick {
   @Scheduled(every = "1s")
   void tick() {
     if (state.players.isEmpty()) return;
-    synchronized (state) {
+    state.lock.writeLock().lock();
+    try {
       GameEvents.runDue(state, ids, Clock.now());
+    } finally {
+      state.lock.writeLock().unlock();
     }
   }
 }

@@ -47,6 +47,8 @@ import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.locks.Lock;
 
 /**
  * Einziger WebSocket-Endpunkt des Spiels (Umsetzungskonzept/13_...md, §"WebSocket-Gerüst").
@@ -101,13 +103,16 @@ public class GameSocket {
       return;
     }
     try {
-      // Grobkörnige Sperre um jeden Befehl (siehe Migrationsplan §"Zustandshaltung"):
-      // schützt vor Race Conditions zwischen mehreren WS-Verbindungen und dem Tick-Loop
-      // (`GameTick`), auf Kosten von Durchsatz – für die Größenordnung dieses Prototyps
-      // unproblematisch.
+      // Abfragen unter dem Leseschloss (beliebig viele gleichzeitig), Befehle unter dem
+      // Schreibschloss – zusammen mit dem Ereignisplaner (GameTick). Was in READ_ONLY steht,
+      // darf den Zustand nicht anfassen, sonst laufen zwei Leser in dieselbe Liste.
+      Lock guard = READ_ONLY.contains(message.type) ? state.lock.readLock() : state.lock.writeLock();
       Object result;
-      synchronized (state) {
+      guard.lock();
+      try {
         result = dispatch(message.type, message.payload);
+      } finally {
+        guard.unlock();
       }
       connection.sendTextAndAwait(ServerMessage.ack(message.requestId, result));
     } catch (CommandException e) {
@@ -121,6 +126,32 @@ public class GameSocket {
   private String currentPlayerId() {
     return connections.playerIdOf(connection);
   }
+
+  /**
+   * Die reinen Abfragen des Protokolls – sie laufen unter dem Leseschloss.
+   * Jeder neue Befehl ist bis zur Aufnahme hier ein Schreibbefehl; das ist die
+   * sichere Voreinstellung. Eine Abfrage gehört nur hierher, wenn ihr Pfad
+   * nichts anlegt und nichts ändert (siehe {@code EnergyStorageCommands.view},
+   * das früher beim Lesen einen Speicher anlegte).
+   */
+  private static final Set<String> READ_ONLY = Set.of(
+      "players", "serverTime", "productTypes", "buildingTypes", "shipTypes", "groundUnitTypes",
+      "colonies", "coloniesInSystem", "colony", "colonyStats", "population", "moneySupplyState", "populationWallet",
+      "consumptionCoverage", "colonySpeedBreakdown", "populationTrend", "transactions", "treasuryFlowPerHour",
+      "planet", "planetsInSystem", "colonizations", "supplyInventory",
+      "buildings", "buildSlots", "housingCapacity", "powerCoverage", "isBlackout", "powerUpkeepPerHour", "energyStorage",
+      "warehouse", "specializations", "productionQueue", "previewProductionChain",
+      "wallet", "sellOrders", "hubDepot", "hubOrders", "universeStats", "victory",
+      "notifications", "unreadNotificationCount", "inbox", "sentMessages", "unreadMessageCount",
+      "fleets", "allFleets", "fleetsInSystem", "fleet", "fleetPresence", "shipyardQueue", "fleetTroopCapacity",
+      "groundForcesAtPlanet", "landedGroundForces", "carrierJumpPreview", "routePreview", "routePreviews", "fleetCargoCapacity",
+      "groundForces", "recruitmentQueue",
+      "gateway", "gatewayWeights", "visibleSystems", "system", "galaxyRoutes", "hasVisitedSystem", "hasExploredSystem",
+      "blockadesInSystem", "diplomaticStatus", "activeWars", "incomingPeaceOffers", "outgoingPeaceOffers",
+      "treaties", "incomingTreatyOffers", "outgoingTreatyOffers", "hasPeaceTreaty", "hasTradeAgreement",
+      "activeBattles", "battle", "battleHistory", "battleByReportToken", "attackableFleetsInSystem",
+      "activeGroundBattles", "groundBattle", "groundBattleHistory", "groundBattleByReportToken",
+      "attackableColoniesForGroup", "isColonyUnderGroundAttack");
 
   /**
    * Befehls-Dispatch anhand von {@code type} (1:1 zu einem {@code GameApi}-Methodennamen).
@@ -344,6 +375,9 @@ public class GameSocket {
       // --- Flotten -------------------------------------------------------------
       case "fleets" -> FleetCommands.fleetsOf(state, requirePlayerId());
       case "allFleets" -> FleetCommands.allFleets(state);
+      case "fleetsInSystem" -> FleetCommands.fleetsInSystem(state, text(payload, "systemId"));
+      case "fleet" -> FleetCommands.fleetById(state, text(payload, "id"));
+      case "fleetPresence" -> FleetCommands.fleetPresence(state, requirePlayerId());
       case "shipyardQueue" -> ShipyardCommands.shipyardQueueFor(state, text(payload, "colonyId"));
       case "queueShip" -> {
         ShipyardCommands.queueShip(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "shipProductTypeId"),
@@ -611,6 +645,19 @@ public class GameSocket {
    * ihre gepollten Signale abbilden kann, ohne einen eigenen Kanal-Namen zu
    * benötigen.
    */
+  /**
+   * Die galaxieweiten, selten wechselnden Listen (Kommandanten, Systeme, Routen)
+   * gehen als Push an ALLE Verbindungen, sobald sie sich ändern – bei einer
+   * Registrierung und beim Reset. Die Oberfläche pollt sie deshalb nur noch als
+   * Rückfallebene im Minutentakt statt sekündlich (bei tausend Systemen wären das
+   * je Kartenansicht hunderte Kilobyte je Sekunde gewesen).
+   */
+  private void broadcastGalaxy() {
+    connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.copyOf(state.players)));
+    connection.broadcast().sendTextAndAwait(ServerMessage.push("visibleSystems", GatewayCommands.visibleSystems(state)));
+    connection.broadcast().sendTextAndAwait(ServerMessage.push("galaxyRoutes", GatewayCommands.galaxyRoutes(state)));
+  }
+
   private void pushMessages(String playerId) {
     for (WebSocketConnection conn : connections.connectionsOf(playerId)) {
       conn.sendTextAndAwait(ServerMessage.push("inbox", MessageCommands.inbox(state, playerId)));
@@ -690,7 +737,7 @@ public class GameSocket {
     connections.login(player.id, connection);
     // REALZEIT-AUSNAHME, siehe handleLogin.
     player.lastSeenAt = de.nebula.engine.Clock.realNow();
-    connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.copyOf(state.players)));
+    broadcastGalaxy();
     return player;
   }
 
@@ -702,7 +749,7 @@ public class GameSocket {
   private Object handleResetGame() {
     state.reset();
     connections.logout(connection);
-    connection.broadcast().sendTextAndAwait(ServerMessage.push("players", List.of()));
+    broadcastGalaxy();
     return null;
   }
 }

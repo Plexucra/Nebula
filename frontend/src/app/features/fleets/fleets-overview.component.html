@@ -321,6 +321,11 @@
                     <option [value]="t.id">{{ t.label }}</option>
                   }
                 </select>
+                <!-- Oder direkt die Systemnummer eintippen (Testbefund F12): die Nummer
+                     ist die kurze, eindeutige Adresse, sie steht in jeder Systemliste vorn. -->
+                <label class="field inline-number" title="Systemnummer eingeben – sie steht in jeder Liste vor dem Namen">Nr.
+                  <input type="number" min="1" step="1" [(ngModel)]="moveNumberDraft[fleet.id]" (change)="applyMoveNumber(fleet)" (keyup.enter)="applyMoveNumber(fleet)" placeholder="Nr." />
+                </label>
                 <button class="primary small" (click)="submitMove(fleet)" [disabled]="busy() === ('move:' + fleet.id)">Losfliegen</button>
               </div>
 

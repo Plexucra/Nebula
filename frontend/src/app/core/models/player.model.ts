@@ -22,6 +22,8 @@ export interface Player {
 
 export interface System {
   id: Id;
+  /** Laufende Nummer ab 1 – die kurze, eindeutige Adresse eines Systems; beim Bewegen direkt eingebbar. */
+  number: number;
   name: string;
   /** Grobe Galaxie-Koordinaten für die Kartendarstellung. */
   x: number;

@@ -23,7 +23,6 @@ export class FleetsOverviewComponent {
 
   protected readonly colonies = this.api.colonies();
   protected readonly fleets = this.api.fleets();
-  protected readonly allFleets = this.api.allFleets();
   /** Katalog kommt asynchron – bei jedem Zugriff frisch lesen statt einmalig einzufrieren. */
   protected get shipTypes() { return this.api.productTypes().filter(p => p.category === 'Ship'); }
   protected readonly allSystems = this.api.visibleSystems();
@@ -113,8 +112,28 @@ export class FleetsOverviewComponent {
     if (!colonyId) return false;
     return this.api.colony(colonyId)()?.ownerId === this.api.player()?.id;
   }
+  /** "17 · Kessar": Nummer vor Namen – die Nummer ist die eindeutige Adresse eines Systems (Testbefund F12). */
   protected systemName(systemId: Id): string {
-    return this.api.system(systemId)()?.name ?? '—';
+    const s = this.api.system(systemId)();
+    return s ? `${s.number} · ${s.name}` : '—';
+  }
+
+  /**
+   * Zielwahl per Systemnummer: wer die Nummer kennt, tippt sie ein, statt in
+   * 200 Einträgen zu scrollen. Setzt dasselbe Ziel wie die Auswahlliste.
+   */
+  protected readonly moveNumberDraft: Partial<Record<Id, number | null>> = {};
+
+  protected applyMoveNumber(fleet: Fleet): void {
+    const number = this.moveNumberDraft[fleet.id];
+    if (!number) return;
+    const target = this.allSystems().find(s => s.number === number);
+    if (!target || target.id === fleet.systemId) {
+      this.error.set(target ? 'Die Flotte steht bereits in diesem System.' : `Es gibt kein System mit der Nummer ${number}.`);
+      return;
+    }
+    this.error.set(null);
+    this.moveDestination[fleet.id] = target.id;
   }
   protected planetName(planetId: Id): string {
     return this.api.planet(planetId)()?.name ?? '—';
@@ -442,8 +461,8 @@ export class FleetsOverviewComponent {
           id: s.id,
           hops: route?.hops ?? Number.POSITIVE_INFINITY,
           label: route
-            ? `${s.name} · ${route.hops} ${route.hops === 1 ? 'Sprung' : 'Sprünge'} · ${this.countdown(route.ms)}`
-            : `${s.name} · keine Gateway-Route`,
+            ? `${s.number} · ${s.name} · ${route.hops} ${route.hops === 1 ? 'Sprung' : 'Sprünge'} · ${this.countdown(route.ms)}`
+            : `${s.number} · ${s.name} · keine Gateway-Route`,
         };
       })
       .sort((a, b) => a.hops - b.hops || a.label.localeCompare(b.label, 'de'))
@@ -592,7 +611,7 @@ export class FleetsOverviewComponent {
     if (this.battleForFleet(fleet.id)) return null;
     if (this.attackableFleets(fleet).length > 0) return null;
     const ownerId = this.api.player()?.id;
-    const foreign = this.allFleets().filter(f => f.systemId === fleet.systemId && f.ownerId !== ownerId);
+    const foreign = this.api.fleetsInSystem(fleet.systemId)().filter(f => f.ownerId !== ownerId);
     if (foreign.length === 0) return null;
     return 'Hier stehen fremde Flotten, angreifbar ist aber keine: Ein Gefecht lässt sich nur gegen eine Flotte '
       + 'eröffnen, die im Krieg eine Blockade hält. Solange die Gegenseite nicht blockiert, ist sie unangreifbar – '
@@ -610,7 +629,7 @@ export class FleetsOverviewComponent {
   }
 
   protected async submitAttack(fleet: Fleet, defenderFleetId: Id): Promise<void> {
-    const defender = this.allFleets().find(f => f.id === defenderFleetId);
+    const defender = this.api.fleet(defenderFleetId)();
     const own = this.shipCountOf(fleet);
     const theirs = defender ? this.shipCountOf(defender) : 0;
     // Ein Gefecht ist unumkehrbar und kostet in Sekunden Schiffe – vorher startete
@@ -631,10 +650,10 @@ export class FleetsOverviewComponent {
     return nextTickAt - this.clock.now();
   }
 
-  /** Name der GEGNERISCHEN (fremden) Flotte in einem Gefecht, aus Sicht von `ownFleetId` – über `allFleets()`, da die Gegnerflotte einem anderen Kommandanten gehört und nicht in `fleets()` (nur eigene Flotten) auftaucht. */
+  /** Name der GEGNERISCHEN (fremden) Flotte in einem Gefecht, aus Sicht von `ownFleetId` – per `fleet(id)`, da sie einem anderen Kommandanten gehört und nicht in `fleets()` auftaucht. */
   protected opposingFleetName(battle: { attackerFleetId: Id; defenderFleetId: Id }, ownFleetId: Id): string {
     const opposingId = battle.attackerFleetId === ownFleetId ? battle.defenderFleetId : battle.attackerFleetId;
-    return this.allFleets().find(f => f.id === opposingId)?.name ?? '—';
+    return this.api.fleet(opposingId)()?.name ?? '—';
   }
 
   /** Kurzer Anzeigetext der eigenen Verluste im letzten Kampf-Tick, z. B. "Korvette × 1" – `null`, wenn im letzten Tick nichts verloren ging. */

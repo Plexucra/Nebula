@@ -33,6 +33,8 @@ const POLL_SCHEDULER_MS = 250;
  * Change-Detection-Aussetzer keine lebende Ansicht einfrieren lässt.
  */
 const POLL_IDLE_MS = 3000;
+/** Galaxieweite Listen (Systeme, Routen) kommen bei Änderung per Push – gepollt nur als Rückfallebene. */
+const GALAXY_POLL_MS = 60_000;
 
 interface PollEntry {
   type: string;
@@ -491,8 +493,14 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   fleets(): Signal<Fleet[]> {
     return this.poll('fleets', () => ({}), []);
   }
-  allFleets(): Signal<Fleet[]> {
-    return this.poll('allFleets', () => ({}), []);
+  fleetsInSystem(systemId: Id): Signal<Fleet[]> {
+    return this.poll('fleetsInSystem', () => ({ systemId }), []);
+  }
+  fleet(id: Id): Signal<Fleet | undefined> {
+    return this.poll('fleet', () => ({ id }), undefined);
+  }
+  fleetPresence(): Signal<Record<Id, { myShips: number; enemyShips: number }>> {
+    return this.poll('fleetPresence', () => ({}), {});
   }
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]> {
     return this.poll('shipyardQueue', () => ({ colonyId }), []);
@@ -621,14 +629,15 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   gatewayWeights(systemId: Id): Signal<GatewayWeightEntry[]> {
     return this.poll('gatewayWeights', () => ({ systemId }), []);
   }
+  /** Ändert sich nur bei Registrierung und Reset – dann pusht der Server; das Polling ist nur Rückfallebene. */
   visibleSystems(): Signal<System[]> {
-    return this.poll('visibleSystems', () => ({}), []);
+    return this.poll('visibleSystems', () => ({}), [], GALAXY_POLL_MS);
   }
   system(id: Id): Signal<System | undefined> {
     return this.poll('system', () => ({ id }), undefined);
   }
   galaxyRoutes(): Signal<{ a: Id; b: Id }[]> {
-    return this.poll('galaxyRoutes', () => ({}), []);
+    return this.poll('galaxyRoutes', () => ({}), [], GALAXY_POLL_MS);
   }
   hasVisitedSystem(systemId: Id): Signal<boolean> {
     return this.poll('hasVisitedSystem', () => ({ systemId }), false);
