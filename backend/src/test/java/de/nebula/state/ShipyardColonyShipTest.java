@@ -39,6 +39,11 @@ class ShipyardColonyShipTest {
     shipyard.typeId = "b_shipyard";
     shipyard.level = 1;
     state.buildings.add(shipyard);
+    // Die Werft montiert nur, was im Lager liegt (ShipyardInputsTest) – hier geht es um
+    // die Kolonisten-Bedingungen, deshalb liegt der Rezeptbedarf immer bereit.
+    for (var input : ProductCatalog.find(GameConstants.COLONY_SHIP_PRODUCT_ID).recipe) {
+      Warehouse.add(state, colonyId, input.inputProductTypeId, input.quantity);
+    }
     return new Bootstrapped(state, ids, playerId, colonyId);
   }
 
@@ -56,7 +61,7 @@ class ShipyardColonyShipTest {
 
   private static void queueColonyShip(Bootstrapped b) {
     ShipyardCommands.queueShip(b.state(), b.ids(), b.playerId(), b.colonyId(),
-        GameConstants.COLONY_SHIP_PRODUCT_ID, 1, false, false);
+        GameConstants.COLONY_SHIP_PRODUCT_ID, 1, false);
   }
 
   @Test
@@ -97,12 +102,16 @@ class ShipyardColonyShipTest {
     double populationBefore = population(b).currentCount;
 
     queueColonyShip(b);
-    assertEquals(balanceBefore - ShipyardCommands.colonistPremiumPerShip(), wallet(b).balance, 0.001);
+    ShipyardQueueEntry entry = b.state().shipyardQueue.get(0);
+    // Mit bestücktem Lager läuft der Auftrag sofort und zahlt beim Start Löhne
+    // (Umsetzungskonzept/38); die fließen beim Abbruch nicht zurück – die Prämie schon.
+    double wages = entry.plan.wageCredits;
+    assertTrue(wages > 0, "Vorbedingung: der laufende Auftrag hat Löhne gezahlt");
+    assertEquals(balanceBefore - ShipyardCommands.colonistPremiumPerShip() - wages, wallet(b).balance, 0.001);
     assertEquals(populationBefore - GameConstants.START_POPULATION, population(b).currentCount, 0.001);
 
-    ShipyardQueueEntry entry = b.state().shipyardQueue.get(0);
     ShipyardCommands.cancelShipOrder(b.state(), b.ids(), b.playerId(), b.colonyId(), entry.id);
-    assertEquals(balanceBefore, wallet(b).balance, 0.001, "Prämie muss beim Abbruch zurückfließen");
+    assertEquals(balanceBefore - wages, wallet(b).balance, 0.001, "Prämie muss beim Abbruch zurückfließen");
     assertEquals(populationBefore, population(b).currentCount, 0.001, "Kolonisten müssen beim Abbruch zurückkehren");
   }
 
@@ -131,9 +140,6 @@ class ShipyardColonyShipTest {
     setLoyalty(b, 100);
     population(b).currentCount = 4 * GameConstants.START_POPULATION;
     wallet(b).balance = 10 * ShipyardCommands.colonistPremiumPerShip();
-    for (var input : ProductCatalog.find(GameConstants.COLONY_SHIP_PRODUCT_ID).recipe) {
-      Warehouse.add(b.state(), b.colonyId(), input.inputProductTypeId, input.quantity);
-    }
 
     queueColonyShip(b);
     ShipyardQueueEntry entry = b.state().shipyardQueue.get(0);

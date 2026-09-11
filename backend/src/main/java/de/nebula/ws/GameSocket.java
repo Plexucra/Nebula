@@ -384,12 +384,17 @@ public class GameSocket {
       case "fleet" -> FleetCommands.view(FleetCommands.fleetById(state, text(payload, "id")));
       case "fleetPresence" -> FleetCommands.fleetPresence(state, requirePlayerId());
       case "shipyardQueue" -> ShipyardCommands.shipyardQueueFor(state, text(payload, "colonyId"));
+      // Die Werft montiert nur, was im Lager liegt – „autoProduceMissing" gibt es hier nicht mehr
+      // (ein altes Feld im Payload wird ignoriert). Fehlende Vorprodukte: queueMissingShipInputs.
       case "queueShip" -> {
         ShipyardCommands.queueShip(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "shipProductTypeId"),
-            payload.path("quantity").asDouble(), payload.path("autoProduceMissing").asBoolean(false),
-            payload.path("requeueOnComplete").asBoolean(false));
+            payload.path("quantity").asDouble(), payload.path("requeueOnComplete").asBoolean(false));
         yield null;
       }
+      // body: { colonyId, shipProductTypeId, quantity } – reiht die fehlenden Vorprodukte als EINEN
+      // Bündelauftrag in die Produktion ein; Antwort: eingereihte Mengen je Produkt.
+      case "queueMissingShipInputs" -> ShipyardCommands.queueMissingShipInputs(state, ids, requirePlayerId(),
+          text(payload, "colonyId"), text(payload, "shipProductTypeId"), payload.path("quantity").asDouble());
       case "resumeShipOrder" -> {
         ShipyardCommands.resumeShipOrder(state, ids, requirePlayerId(), text(payload, "colonyId"), text(payload, "entryId"));
         yield null;

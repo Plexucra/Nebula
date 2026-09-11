@@ -26,12 +26,13 @@
           </select>
           <input type="number" min="1" [(ngModel)]="selFor(colony).qty" />
           <label class="checkbox-inline">
-            <input type="checkbox" [(ngModel)]="selFor(colony).autoProduceMissing" /> Vorprodukte automatisch mitproduzieren
-          </label>
-          <label class="checkbox-inline">
             <input type="checkbox" [(ngModel)]="selFor(colony).requeueOnComplete" /> Nach Erfolg erneut einreihen
           </label>
-          <button class="primary small" [disabled]="busy() === ('queueship:' + colony.id)" (click)="queueShip(colony)">Bauen</button>
+          <!-- Die Werft montiert nur, was im Lager liegt – der Server lehnt sonst ab;
+               der Knopf ist dann gesperrt und darunter steht, was fehlt. -->
+          <button class="primary small" [disabled]="busy() === ('queueship:' + colony.id) || missingShipInputs(colony).length > 0"
+                  [title]="missingShipInputs(colony).length > 0 ? 'Es fehlen Vorprodukte im Lager.' : ''"
+                  (click)="queueShip(colony)">Bauen</button>
         </div>
         @if (selFor(colony).productId; as selectedId) {
           <div class="ship-preview">
@@ -40,6 +41,33 @@
             }
             <p class="hint mono">{{ productName(selectedId) }}: {{ shipFacts(selectedId) }}</p>
           </div>
+          @if (shipInputs(colony).length > 0) {
+            <div class="ship-inputs">
+              <span class="eyebrow" title="Die Werft baut nur zusammen, was im Lager liegt. Vorprodukte entstehen in der Produktion.">Vorprodukte im Lager</span>
+              <ul class="inputs-list">
+                @for (i of shipInputs(colony); track i.productTypeId) {
+                  <li [class.bad]="i.available + 1e-9 < i.required">
+                    <span>{{ productName(i.productTypeId) }}</span>
+                    <span class="mono">{{ i.available | number:'1.0-0' }} / {{ i.required | number:'1.0-0' }}</span>
+                  </li>
+                }
+              </ul>
+              @if (missingShipInputs(colony).length > 0) {
+                <div class="form-row inputs-actions">
+                  <button class="small" (click)="queueShipInputs(colony)" [disabled]="busy() === ('inputs:' + colony.id)"
+                          title="Alle fehlenden Vorprodukte als EIN Auftrag in die Produktionswarteschlange – die Vorstufen holt sich der Auftrag selbst. Ist er fertig, hier erneut auf Bauen.">
+                    {{ busy() === ('inputs:' + colony.id) ? 'Reihe ein…' : 'Fehlende Vorprodukte in die Produktion einreihen' }}
+                  </button>
+                  <span class="hint">Danach hier erneut „Bauen" – die Werft montiert erst, wenn alles im Lager liegt.</span>
+                </div>
+              }
+              @if (inputsQueuedHint(); as queued) {
+                @if (queued.colonyId === colony.id) {
+                  <p class="hint">Eingereiht: {{ queued.text }} · <a routerLink="/produktion">Produktion öffnen</a></p>
+                }
+              }
+            </div>
+          }
         }
 
         <div class="queue-list">

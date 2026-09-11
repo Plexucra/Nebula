@@ -10,13 +10,17 @@ import de.nebula.model.PlanetStats;
 import de.nebula.model.Population;
 import de.nebula.model.ProductCategory;
 import de.nebula.model.ProductType;
+import de.nebula.model.RecipeInput;
 import de.nebula.model.ShipyardQueueEntry;
 import de.nebula.model.ProductionQueueStatus;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 1:1-Portierung der Werft-Sektion (sequentielle Warteschlange, strukturell
@@ -31,13 +35,28 @@ public final class ShipyardCommands {
     return state.shipyardQueue.stream().filter(q -> q.colonyId.equals(colonyId)).toList();
   }
 
+  /**
+   * Reiht einen Werftauftrag ein. Die Werft baut NUR noch zusammen: alle direkten
+   * Vorprodukte des Schiffs müssen im Lager liegen, sonst wird der Auftrag abgelehnt
+   * und die Meldung nennt, was fehlt. Vorher gab es „Vorprodukte automatisch
+   * mitproduzieren": der Werftauftrag rechnete die komplette Vorkette in seine eigene
+   * Laufzeit ein und fertigte sie am Industriekomplex VORBEI – in der Produktions-
+   * warteschlange stand kein Auftrag, nichts war blockiert, die Kolonie baute
+   * Legierungen und Module gewissermaßen im Nebenraum der Werft. Jetzt gilt für
+   * Schiffe dasselbe wie für Gebäude: Vorprodukte kommen aus der Produktion
+   * ({@link #queueMissingShipInputs}), die Werft montiert, was da ist.
+   */
   public static void queueShip(GameState state, IdGenerator ids, String playerId, String colonyId,
-                                String shipProductTypeId, double quantity, boolean autoProduceMissing, boolean requeueOnComplete) {
+                                String shipProductTypeId, double quantity, boolean requeueOnComplete) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
     ProductType product = ProductCatalog.find(shipProductTypeId);
     if (product.category != ProductCategory.Ship) throw new CommandException("Kein Schiffstyp.");
     if (GameQueries.getBuildingLevel(state, colonyId, "b_shipyard") < 1) throw new CommandException("Ohne Werft können keine Schiffe gebaut werden.");
+    // Vor reserveColonists: die Kolonistenprämie und der Auszug der Kolonisten
+    // haben keinen Rückweg – ein an fehlenden Vorprodukten scheiternder Auftrag
+    // darf sie nicht schon gebucht haben.
+    requireInputsInStock(state, colonyId, product, quantity);
     if (GameConstants.COLONY_SHIP_PRODUCT_ID.equals(shipProductTypeId)) {
       reserveColonists(state, ids, playerId, colonyId, quantity);
     }
@@ -47,7 +66,6 @@ public final class ShipyardCommands {
     entry.colonyId = colonyId;
     entry.shipProductTypeId = shipProductTypeId;
     entry.quantity = quantity;
-    entry.autoProduceMissing = autoProduceMissing;
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
     entry.stoppedReasonCode = null;
@@ -56,6 +74,60 @@ public final class ShipyardCommands {
     entry.endsAt = null;
     state.shipyardQueue.add(entry);
     tryStartNextShipyardEntry(state, ids, colonyId);
+  }
+
+  /**
+   * Direkte Vorprodukte des Schiffs, die für {@code quantity} Stück im Lager noch fehlen:
+   * Produkt → {@code ceil(Bedarf − Bestand)}. Leer, wenn die Werft sofort loslegen kann.
+   * Tiefer geht die Liste bewusst nicht – der Bündelauftrag in der Produktion holt sich
+   * die Vorstufen seiner Vorprodukte selbst (autoProduceMissing), genau wie beim Ausbau.
+   */
+  public static Map<String, Double> missingInputs(GameState state, String colonyId, String shipProductTypeId, double quantity) {
+    ProductType product = ProductCatalog.find(shipProductTypeId);
+    LinkedHashMap<String, Double> missing = new LinkedHashMap<>();
+    for (RecipeInput input : product.recipe) {
+      double required = input.quantity * quantity;
+      double available = Warehouse.qty(state, colonyId, input.inputProductTypeId);
+      if (available + 1e-9 < required) missing.put(input.inputProductTypeId, Math.ceil(required - available));
+    }
+    return missing;
+  }
+
+  /** Meldung im Format der Bau-Ablehnung („p_x (N benötigt, M vorhanden)"), damit Bots beide gleich lesen. */
+  private static void requireInputsInStock(GameState state, String colonyId, ProductType product, double quantity) {
+    List<String> missing = new ArrayList<>();
+    for (RecipeInput input : product.recipe) {
+      double required = input.quantity * quantity;
+      double available = Warehouse.qty(state, colonyId, input.inputProductTypeId);
+      if (available + 1e-9 < required) {
+        missing.add(input.inputProductTypeId + " (" + (long) Math.ceil(required) + " benötigt, " + (long) Math.floor(available) + " vorhanden)");
+      }
+    }
+    if (!missing.isEmpty()) {
+      throw new CommandException("Fehlende Vorprodukte: " + String.join(", ", missing)
+          + " – die Werft baut nur zusammen, was im Lager liegt. Fehlende Vorprodukte in die Produktion einreihen und danach erneut bauen.");
+    }
+  }
+
+  /**
+   * Reiht die Vorprodukte, die für {@code quantity} Schiffe dieses Typs noch fehlen, als
+   * EINEN Bündelauftrag in die Produktionswarteschlange ein – das Gegenstück zu
+   * {@link BuildingCommands#queueMissingMaterials} für die Werft. Ist der Auftrag
+   * fertig, liegt alles im Lager und {@link #queueShip} nimmt den Bau an.
+   *
+   * @return die eingereihten Mengen je Vorprodukt (vom Mindestlos ggf. angehoben)
+   */
+  public static Map<String, Double> queueMissingShipInputs(GameState state, IdGenerator ids, String playerId, String colonyId,
+                                                           String shipProductTypeId, double quantity) {
+    GameQueries.requireOwnColony(state, playerId, colonyId);
+    if (quantity <= 0) throw new CommandException("Menge muss größer als 0 sein.");
+    ProductType product = ProductCatalog.find(shipProductTypeId);
+    if (product.category != ProductCategory.Ship) throw new CommandException("Kein Schiffstyp.");
+    Map<String, Double> demand = missingInputs(state, colonyId, shipProductTypeId, quantity);
+    if (demand.isEmpty()) {
+      throw new CommandException("Für " + (long) quantity + " × " + product.name + " sind alle Vorprodukte vorhanden – der Bau kann eingereiht werden.");
+    }
+    return ProductionCommands.queueProductionBundleCore(state, ids, colonyId, demand, true, false, true);
   }
 
   public static void resumeShipOrder(GameState state, IdGenerator ids, String playerId, String colonyId, String entryId) {
@@ -168,7 +240,10 @@ public final class ShipyardCommands {
 
   private static void startShipyardEntry(GameState state, IdGenerator ids, ShipyardQueueEntry entry) {
     ChainPlan plan = ChainPlanner.planChain(state, entry.colonyId, entry.shipProductTypeId, entry.quantity, "b_shipyard");
-    if (!plan.feasible && !entry.autoProduceMissing) {
+    // Beim Einreihen war alles da; ein Auftrag HINTER einem laufenden kann inzwischen
+    // leer ausgehen (der erste hat das Lager geleert). Dann stoppt er wie bisher und
+    // wartet auf „Fortsetzen" – Vorkette in der Werft gibt es nicht mehr.
+    if (!plan.feasible) {
       entry.plan = plan;
       entry.status = ProductionQueueStatus.stopped;
       entry.stoppedReasonCode = Notifications.CODE_QUEUE_STOPPED;
@@ -222,7 +297,6 @@ public final class ShipyardCommands {
       fresh.colonyId = entry.colonyId;
       fresh.shipProductTypeId = entry.shipProductTypeId;
       fresh.quantity = entry.quantity;
-      fresh.autoProduceMissing = entry.autoProduceMissing;
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;
       fresh.stoppedReasonCode = null;

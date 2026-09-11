@@ -78,7 +78,7 @@ class ColonizationJourneyTest {
   /** Baut EIN Kolonisationsschiff fertig und liefert den Zeitpunkt der Fertigstellung. */
   private static long buildColonyShip(Bootstrapped b) {
     ShipyardCommands.queueShip(b.state(), b.ids(), b.playerId(), b.colonyId(),
-        GameConstants.COLONY_SHIP_PRODUCT_ID, 1, false, false);
+        GameConstants.COLONY_SHIP_PRODUCT_ID, 1, false);
     ShipyardQueueEntry entry = b.state().shipyardQueue.get(0);
     GameEvents.fireNow(b.state(), b.ids(), GameEventType.SHIP_COMPLETED, entry.id);
     assertEquals(1, Warehouse.qty(b.state(), b.colonyId(), GameConstants.COLONY_SHIP_PRODUCT_ID), 0.001,

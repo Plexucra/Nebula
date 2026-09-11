@@ -156,13 +156,52 @@ export class FleetsOverviewComponent {
     return fleet.locationColonyId === null && (this.api.system(fleet.systemId)()?.isTradeHub ?? false);
   }
 
-  selection: Record<Id, { productId: Id; qty: number; autoProduceMissing: boolean; requeueOnComplete: boolean }> = {};
+  selection: Record<Id, { productId: Id; qty: number; requeueOnComplete: boolean }> = {};
 
-  protected selFor(colony: Colony): { productId: Id; qty: number; autoProduceMissing: boolean; requeueOnComplete: boolean } {
+  protected selFor(colony: Colony): { productId: Id; qty: number; requeueOnComplete: boolean } {
     if (!this.selection[colony.id]) {
-      this.selection[colony.id] = { productId: this.shipTypes[0]?.id ?? '', qty: 1, autoProduceMissing: true, requeueOnComplete: false };
+      this.selection[colony.id] = { productId: this.shipTypes[0]?.id ?? '', qty: 1, requeueOnComplete: false };
     }
     return this.selection[colony.id];
+  }
+
+  /**
+   * Direkte Vorprodukte des gewählten Schiffs mit Bedarf und Lagerbestand. Die
+   * Werft montiert nur, was im Lager liegt: Vorher rechnete „Vorprodukte
+   * automatisch mitproduzieren" die ganze Vorkette in den Werftauftrag ein und
+   * fertigte sie am Industriekomplex vorbei – in der Produktion stand kein
+   * Auftrag, nichts war blockiert. Die Regel selbst setzt der Server durch
+   * (`queueShip` lehnt ab); diese Liste zeigt sie VOR dem Klick.
+   */
+  protected shipInputs(colony: Colony): { productTypeId: Id; required: number; available: number }[] {
+    const sel = this.selFor(colony);
+    const product = this.api.productTypes().find(p => p.id === sel.productId);
+    if (!product) return [];
+    const ships = Math.max(1, Math.floor(sel.qty || 0));
+    const stock = this.api.warehouse(colony.id)();
+    return product.recipe.map(r => ({
+      productTypeId: r.inputProductTypeId,
+      required: r.quantity * ships,
+      available: stock.find(w => w.productTypeId === r.inputProductTypeId)?.quantity ?? 0,
+    }));
+  }
+
+  protected missingShipInputs(colony: Colony): { productTypeId: Id; required: number; available: number }[] {
+    return this.shipInputs(colony).filter(i => i.available + 1e-9 < i.required);
+  }
+
+  /** Bestätigung nach dem Einreihen der Vorprodukte – der Auftrag selbst ist nur auf der Produktionsseite zu sehen. */
+  protected readonly inputsQueuedHint = signal<{ colonyId: Id; text: string } | null>(null);
+
+  /** Reiht alle fehlenden Vorprodukte als EINEN Produktionsauftrag ein – danach unter „Bauen" den Werftauftrag anstoßen. */
+  protected async queueShipInputs(colony: Colony): Promise<void> {
+    const sel = this.selFor(colony);
+    this.inputsQueuedHint.set(null);
+    await this.run('inputs:' + colony.id, async () => {
+      const queued = await this.api.queueMissingShipInputs(colony.id, sel.productId, sel.qty);
+      const parts = Object.entries(queued).map(([pid, qty]) => `${Math.round(qty).toLocaleString('de-DE')} × ${this.productName(pid)}`);
+      this.inputsQueuedHint.set({ colonyId: colony.id, text: parts.join(', ') });
+    });
   }
 
   protected queueProgressPct(entry: { status: string; startedAt: number | null; endsAt: number | null }): number {
@@ -195,7 +234,8 @@ export class FleetsOverviewComponent {
 
   protected async queueShip(colony: Colony): Promise<void> {
     const sel = this.selFor(colony);
-    await this.run('queueship:' + colony.id, () => this.api.queueShip(colony.id, sel.productId, sel.qty, sel.autoProduceMissing, sel.requeueOnComplete));
+    this.inputsQueuedHint.set(null);
+    await this.run('queueship:' + colony.id, () => this.api.queueShip(colony.id, sel.productId, sel.qty, sel.requeueOnComplete));
   }
 
   protected async resumeOrder(colonyId: Id, entryId: Id): Promise<void> {

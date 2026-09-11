@@ -639,7 +639,34 @@ export class ColonyDetailComponent {
   protected openNewOrder(): void {
     this.error.set(null); // eine alte Fehlermeldung gehört nicht in den frischen Dialog
     this.newOrderOpen.set(true);
-    this.refreshNewOrderPreview();
+    this.presetNewOrderQuantity();
+  }
+
+  /** Aufschlag auf die Mindestmenge, mit der die Stückzahl vorbelegt wird. */
+  private static readonly NEW_ORDER_HEADROOM = 1.1;
+
+  /**
+   * Belegt die Stückzahl mit der aktuellen Mindestmenge plus 10 % vor, statt mit 1:
+   * mit 1 Stück stand sonst beim Öffnen sofort „Los zu klein" im Dialog und der
+   * Einreihen-Knopf war gesperrt. Die Mindestmenge hängt von Kolonie, Produkt und
+   * Lager ab, deshalb kommt sie vom Server – und wird bei jedem Produktwechsel neu
+   * geholt. Bis die Antwort da ist, läuft die Vorschau mit der bisherigen Menge.
+   */
+  private presetNewOrderQuantity(): void {
+    const productTypeId = this.newProductionProductId;
+    if (!productTypeId) {
+      this.refreshNewOrderPreview();
+      return;
+    }
+    this.newOrderPreviewLoading.set(true);
+    this.api.minimumProductionQuantity(this.colonyId, productTypeId).then(minimum => {
+      if (productTypeId !== this.newProductionProductId || !this.newOrderOpen()) return;
+      this.newProductionQty = Math.max(1, Math.ceil(minimum * ColonyDetailComponent.NEW_ORDER_HEADROOM));
+      this.refreshNewOrderPreview();
+    }).catch(() => {
+      if (productTypeId !== this.newProductionProductId) return;
+      this.refreshNewOrderPreview();
+    });
   }
   protected closeNewOrder(): void {
     this.newOrderOpen.set(false);
@@ -671,7 +698,7 @@ export class ColonyDetailComponent {
   protected onProductPicked(productTypeId: Id): void {
     this.productPickerOpen.set(false);
     this.newProductionProductId = productTypeId;
-    this.refreshNewOrderPreview();
+    this.presetNewOrderQuantity();
   }
 
   /** "Wird berechnet"-Prognose fürs Neuer-Auftrag-Formular – reine Vorschau, legt keinen Auftrag an (siehe `GameApi.previewProductionChain`). */

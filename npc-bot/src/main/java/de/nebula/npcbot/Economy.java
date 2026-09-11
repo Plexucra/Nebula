@@ -594,8 +594,15 @@ final class Economy {
     }
   }
 
-  private boolean queueMissingMaterials(Health h, String message) {
-    if (message == null || !message.startsWith("Fehlende Baustoffe")) return false;
+  /**
+   * Liest die Ablehnung eines Ausbaus („Fehlende Baustoffe: …") oder eines
+   * Werftauftrags („Fehlende Vorprodukte: …" – die Werft montiert nur, was im
+   * Lager liegt) und reiht das Fehlende als EIN Bündel in die Produktion ein.
+   * {@code true}, wenn die Meldung diese Form hatte und damit erledigt ist –
+   * auch dann, wenn alles Fehlende schon in der Warteschlange steht.
+   */
+  boolean queueMissingMaterials(Health h, String message) {
+    if (message == null || !(message.startsWith("Fehlende Baustoffe") || message.startsWith("Fehlende Vorprodukte"))) return false;
     Set<String> already = materialOrders.computeIfAbsent(h.colonyId(), k -> new HashSet<>());
     Matcher m = MISSING.matcher(message);
     LinkedHashMap<String, Double> products = new LinkedHashMap<>();
@@ -615,9 +622,9 @@ final class Economy {
       bot.call("queueProductionBundle", Map.of("colonyId", h.colonyId(), "products", products, "autoProduceMissing", true, "requeueOnComplete", false,
           "raiseToMinimum", true));
       already.addAll(products.keySet());
-      bot.monitor.log(h.name() + ": Baustoffe gebündelt eingereiht: " + products);
+      bot.monitor.log(h.name() + ": " + (message.startsWith("Fehlende Vorprodukte") ? "Vorprodukte" : "Baustoffe") + " gebündelt eingereiht: " + products);
     } catch (CommandException e) {
-      bot.monitor.log(h.name() + ": Baustoff-Produktion abgelehnt: " + e.getMessage());
+      bot.monitor.log(h.name() + ": Produktion der fehlenden Vorprodukte abgelehnt: " + e.getMessage());
     }
     return true;
   }
@@ -661,12 +668,12 @@ final class Economy {
   }
 
   /**
-   * Werftauftrag mit Auto-Produktion: seit dem Kettenplaner jeden Schritt in
-   * seiner eigenen Anlage rechnet (Konzept 31 §I), läuft die Vorkette mit
-   * Industrietempo und nur die Endmontage mit Werfttempo – und der Auftrag
-   * belegt die Werft-Warteschlange, nicht die des Industriekomplexes, der frei
-   * bleibt für Nahrung, Medizin und Elerium. Die Energie-/Versorgungs-Wache
-   * gilt trotzdem: die Kette zieht Elerium aus dem Lager.
+   * Werftauftrag in zwei Schritten: die Werft montiert nur, was im Lager liegt.
+   * Fehlen Vorprodukte, lehnt der Server ab und nennt sie – dann werden sie wie
+   * Baustoffe als EIN Bündel in die Produktionswarteschlange gestellt
+   * ({@link #queueMissingMaterials}); der Werftauftrag kommt im nächsten Takt,
+   * in dem alles im Lager liegt. Die Energie-/Versorgungs-Wache gilt für beides:
+   * die Vorkette zieht Elerium aus dem Lager.
    */
   private void orderShip(Health h, String shipType, String eventType, int quantity) {
     String id = h.colonyId();
@@ -675,12 +682,12 @@ final class Economy {
     JsonNode preview = bot.world.previewChain(id, shipType, qty);
     double eta = Json.dbl(preview, "totalHours");
     try {
-      bot.call("queueShip", Map.of("colonyId", id, "shipProductTypeId", shipType, "quantity", qty,
-          "autoProduceMissing", true, "requeueOnComplete", false));
-      bot.monitor.event(eventType, h.name() + ": Werftauftrag " + (long) qty + "x " + shipType + " (Kettenvorschau " + fmtHours(eta) + ")",
+      bot.call("queueShip", Map.of("colonyId", id, "shipProductTypeId", shipType, "quantity", qty, "requeueOnComplete", false));
+      bot.monitor.event(eventType, h.name() + ": Werftauftrag " + (long) qty + "x " + shipType + " (Montage " + fmtHours(eta) + ")",
           "colonyId", id, "ship", shipType, "qty", qty, "etaGameHours", eta);
       bot.world.invalidate("shipyardQueue");
     } catch (CommandException e) {
+      if (queueMissingMaterials(h, e.getMessage())) return;
       bot.monitor.log(h.name() + ": Werftauftrag " + shipType + " abgelehnt: " + e.getMessage());
     }
   }

@@ -197,7 +197,10 @@ export interface GameApi {
   /** Schiffe je System für die Galaxiekarte – eigene überall, fremde nur in besuchten Systemen; vom Server gezählt. */
   fleetPresence(): Signal<Record<Id, { myShips: number; enemyShips: number }>>;
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]>;
-  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void>;
+  /** Die Werft montiert nur, was im Lager liegt – fehlen Vorprodukte, lehnt der Server ab (siehe `queueMissingShipInputs`). */
+  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, requeueOnComplete: boolean): Promise<void>;
+  /** Reiht die für `quantity` Schiffe fehlenden Vorprodukte als EINEN Bündelauftrag in die Produktion ein; Antwort: Mengen je Produkt. */
+  queueMissingShipInputs(colonyId: Id, shipProductTypeId: Id, quantity: number): Promise<Record<Id, number>>;
   resumeShipOrder(colonyId: Id, entryId: Id): Promise<void>;
   cancelShipOrder(colonyId: Id, entryId: Id): Promise<void>;
   /**

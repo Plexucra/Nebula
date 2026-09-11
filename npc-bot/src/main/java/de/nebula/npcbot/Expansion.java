@@ -120,22 +120,32 @@ final class Expansion {
       blockedReason = "Werft belegt";
       return;
     }
-    // Der Werftauftrag holt die 1,27 Mio. Rohstoffeinheiten selbst mit Industrietempo
-    // (Konzept 31 §I); nur Energie- und Versorgungs-Wache gelten.
+    // Die Werft montiert nur, was im Lager liegt: die 1,27 Mio. Rohstoffeinheiten der
+    // Vorkette laufen als Bündelauftrag durch die Produktion (Economy.queueMissingMaterials),
+    // der Werftauftrag kommt, sobald alles da ist. Energie- und Versorgungs-Wache gelten.
     Economy.Health home = bot.economy.home();
     if (home != null && !bot.economy.energyGuard(home, Map.of(Catalog.COLONY_SHIP, 1.0), "Kolonisationsschiff")) {
       blockedReason = "wartet auf Energie-/Versorgungsreserve für das Kolonisationsschiff";
       return;
     }
     JsonNode preview = bot.world.previewChain(bot.homeColonyId, Catalog.COLONY_SHIP, 1);
-    bot.call("queueShip", Map.of("colonyId", bot.homeColonyId, "shipProductTypeId", Catalog.COLONY_SHIP, "quantity", 1.0,
-        "autoProduceMissing", true, "requeueOnComplete", false));
+    try {
+      bot.call("queueShip", Map.of("colonyId", bot.homeColonyId, "shipProductTypeId", Catalog.COLONY_SHIP, "quantity", 1.0,
+          "requeueOnComplete", false));
+    } catch (CommandException e) {
+      if (home != null && bot.economy.queueMissingMaterials(home, e.getMessage())) {
+        blockedReason = "Vorprodukte des Kolonisationsschiffs werden produziert";
+        phase = Phase.WAITING;
+        return;
+      }
+      throw e;
+    }
     bot.world.invalidate("shipyardQueue", "wallet", "population");
     shipOrderedAt = System.currentTimeMillis();
     phase = Phase.SHIP_QUEUED;
     blockedReason = "";
-    bot.monitor.event("COLONY_SHIP_ORDERED", "Kolonisationsschiff bestellt für " + targetPlanetName + " (Kettenvorschau "
-        + Economy.fmtHours(Json.dbl(preview, "totalHours")) + " zzgl. feste Bauwoche)", "planet", targetPlanetId, "etaGameHours", Json.dbl(preview, "totalHours"));
+    bot.monitor.event("COLONY_SHIP_ORDERED", "Kolonisationsschiff bestellt für " + targetPlanetName + " (feste Bauwoche, Vorschau "
+        + Economy.fmtHours(Json.dbl(preview, "totalHours")) + ")", "planet", targetPlanetId, "etaGameHours", Json.dbl(preview, "totalHours"));
   }
 
   private void pickTarget() {

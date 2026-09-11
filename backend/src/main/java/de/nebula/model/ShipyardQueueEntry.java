@@ -6,7 +6,11 @@ public class ShipyardQueueEntry {
   public String colonyId;
   public String shipProductTypeId;
   public double quantity;
-  public boolean autoProduceMissing;
+  /**
+   * Kein {@code autoProduceMissing} mehr: die Werft montiert nur, was im Lager liegt;
+   * fehlende Vorprodukte reiht {@code ShipyardCommands.queueMissingShipInputs} in die
+   * Produktionswarteschlange ein.
+   */
   public boolean requeueOnComplete;
   public ProductionQueueStatus status;
   public Integer stoppedReasonCode;

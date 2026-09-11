@@ -515,8 +515,11 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   shipyardQueue(colonyId: Id): Signal<ShipyardQueueEntry[]> {
     return this.poll('shipyardQueue', () => ({ colonyId }), []);
   }
-  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, autoProduceMissing: boolean, requeueOnComplete: boolean): Promise<void> {
-    return this.send('queueShip', { colonyId, shipProductTypeId, quantity, autoProduceMissing, requeueOnComplete });
+  queueShip(colonyId: Id, shipProductTypeId: Id, quantity: number, requeueOnComplete: boolean): Promise<void> {
+    return this.send('queueShip', { colonyId, shipProductTypeId, quantity, requeueOnComplete });
+  }
+  queueMissingShipInputs(colonyId: Id, shipProductTypeId: Id, quantity: number): Promise<Record<Id, number>> {
+    return this.send('queueMissingShipInputs', { colonyId, shipProductTypeId, quantity });
   }
   resumeShipOrder(colonyId: Id, entryId: Id): Promise<void> {
     return this.send('resumeShipOrder', { colonyId, entryId });

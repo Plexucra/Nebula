@@ -432,6 +432,12 @@ eine Balance- oder Designentscheidung ist, steht als Vorschlag in §J.
 
 ### 1. Werft und Ausbildungszentrum rechnen wie der Industriekomplex
 
+> **Überholt für die Werft (11.9.2026, siehe TODO.md):** Ein Werftauftrag
+> fertigt keine Vorkette mehr. Die Werft montiert nur, was im Lager liegt;
+> `queueShip` lehnt ohne Vorprodukte ab, `queueMissingShipInputs` reiht sie
+> als Bündel in die Produktionswarteschlange ein. Die Regel unten gilt damit
+> nur noch für das Ausbildungszentrum und für die Vorschau.
+
 `ChainPlanner.planChain` bestimmt die Anlage jetzt **je Kettenschritt** aus
 der Produktkategorie (`facilityFor`): Schiffe → Werft, Bodeneinheiten →
 Ausbildungszentrum, alles andere → Industriekomplex. Der Anlagenparameter

@@ -141,7 +141,6 @@ export interface ShipyardQueueEntry {
   colonyId: Id;
   shipProductTypeId: Id;
   quantity: number;
-  autoProduceMissing: boolean;
   requeueOnComplete: boolean;
   status: ProductionQueueStatus;
   stoppedReasonCode: number | null;

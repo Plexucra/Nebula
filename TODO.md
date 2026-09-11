@@ -39,6 +39,18 @@
 
 ## Erledigt
 
+- [x] ~~Werft fertigte Vorprodukte am Industriekomplex vorbei~~ – 11.9.2026.
+  „Vorprodukte automatisch mitproduzieren" im Werftauftrag rechnete die ganze
+  Vorkette in dessen Laufzeit ein; in der Produktionswarteschlange stand kein
+  Auftrag, nichts war blockiert. Jetzt montiert die Werft nur, was im Lager
+  liegt: `queueShip` lehnt ohne Vorprodukte ab („Fehlende Vorprodukte: …",
+  gleiches Format wie beim Ausbau, geprüft VOR dem Abmustern der Kolonisten),
+  der neue Befehl `queueMissingShipInputs` reiht das Fehlende als EIN Bündel
+  in die Produktion ein (Knopf auf der Flottenseite mit Bestand/Bedarf je
+  Vorprodukt). Bots lesen die Ablehnung wie eine Baustoffmeldung. Test:
+  `ShipyardInputsTest`. **Offen:** das Ausbildungszentrum
+  (`RecruitmentCommands`) hat dasselbe Muster noch.
+
 - [x] ~~Gehälter je Arbeitsstunde, Kauforders der Bevölkerung, Arbeiter und
   Akademiker, Forschungszentrum~~ – 11.9.2026, Konzept 38. Produktion kostet
   beim Start Löhne (`ChainPlan.wageCredits`, Code 509 ohne Guthaben), die
