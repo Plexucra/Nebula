@@ -85,10 +85,32 @@ class FleetCommandsJumpFuelTest {
         "Die schwerere Kampfflotte hat den größeren Tank");
   }
 
+  /**
+   * Die Flotte geht als {@code FleetView} über den WebSocket: alle Flottenfelder
+   * flach (nicht unter "fleet" verschachtelt) plus Tankgröße, Verbrauch je
+   * Sprung und Reichweite – die Oberfläche rechnet sie nicht mehr selbst.
+   */
+  @Test
+  void fleetViewCarriesTheFuelFiguresNextToTheFleetFields() throws Exception {
+    Bootstrapped b = newBootstrappedState();
+    Fleet freighter = fleetNamed(b.state(), b.playerId(), "Handelsflotte Testheim");
+    var json = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(FleetCommands.view(freighter));
+    assertEquals(freighter.id, json.path("id").asText(), "Flottenfelder stehen flach in der Ansicht");
+    assertTrue(json.path("fleet").isMissingNode(), "keine verschachtelte Flotte");
+    assertEquals(FleetCommands.fuelTankCapacity(freighter), json.path("fuelTankCapacity").asDouble(), 1e-9);
+    assertEquals(Math.floor(FleetCommands.fuelTankCapacity(freighter)), FleetCommands.fuelTankCapacity(freighter), 1e-9,
+        "Fassungsvermögen in ganzen Kapseln");
+    assertEquals(FleetCommands.jumpFuelPerHop(freighter), json.path("jumpFuelPerHop").asDouble(), 1e-9);
+    int expectedRange = (int) Math.floor(freighter.fuelCapsules / FleetCommands.jumpFuelPerHop(freighter) + 1e-9);
+    assertEquals(expectedRange, json.path("fuelRangeHops").asInt());
+    assertTrue(expectedRange >= GameConstants.JUMP_FUEL_TANK_RANGE_HOPS, "voller Starttank reicht mindestens die Nennreichweite");
+  }
+
   private static double expectedTank(Fleet fleet) {
     double sum = 0;
     for (var g : fleet.ships) sum += de.nebula.data.ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
-    return sum;
+    // Das Fassungsvermögen der Flotte ist auf ganze Kapseln aufgerundet (Gesamttest 11.9.2026).
+    return Math.ceil(sum - 1e-9);
   }
 
   /**

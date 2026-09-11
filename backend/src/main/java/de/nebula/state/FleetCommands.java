@@ -1,5 +1,6 @@
 package de.nebula.state;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import de.nebula.data.ProductCatalog;
 import de.nebula.data.ShipCatalog;
 import de.nebula.engine.Clock;
@@ -51,6 +52,28 @@ public final class FleetCommands {
   /** Eine Flotte beliebigen Eigentümers (Name, Schiffe) – für Kampfberichte und Angriffsbestätigungen; {@code null}, wenn es sie nicht mehr gibt. */
   public static Fleet fleetById(GameState state, String fleetId) {
     return find(state, fleetId);
+  }
+
+  /**
+   * Eine Flotte, wie sie über den WebSocket geht: alle Felder der Flotte plus
+   * die Treibstoffzahlen, die Oberfläche und Bot sonst aus dem Schiffskatalog
+   * nachrechnen müssten (Review 11.9.2026 §3.2). Bewusst eine Ansicht und
+   * kein Feld am Modell: die Werte folgen aus den Schiffen und gehören weder
+   * in den Spielzustand noch in einen späteren Schnappschuss.
+   */
+  public record FleetView(@JsonUnwrapped Fleet fleet, double fuelTankCapacity, double jumpFuelPerHop, int fuelRangeHops) {
+  }
+
+  /** {@code null} bleibt {@code null} – eine verschwundene Flotte hat keine Ansicht. */
+  public static FleetView view(Fleet fleet) {
+    if (fleet == null) return null;
+    double perHop = jumpFuelPerHop(fleet);
+    int range = perHop <= 0 ? 0 : (int) Math.floor(fleet.fuelCapsules / perHop + 1e-9);
+    return new FleetView(fleet, fuelTankCapacity(fleet), perHop, range);
+  }
+
+  public static List<FleetView> views(List<Fleet> fleets) {
+    return fleets.stream().map(FleetCommands::view).toList();
   }
 
   /** Schiffe je System für die Galaxiekarte: eigene überall, fremde nur in BESUCHTEN Systemen (Fog of War). */
@@ -596,9 +619,20 @@ public final class FleetCommands {
    * {@code GameConstants.JUMP_FUEL_TANK_RANGE_HOPS}.
    */
   public static double fuelTankCapacity(Fleet fleet) {
+    return fuelTankCapacity(fleet.ships);
+  }
+
+  /**
+   * Fassungsvermögen für eine Schiffsliste, auf GANZE Kapseln aufgerundet.
+   * Die Schiffstanks selbst sind masseabgeleitet und damit krumm (ein Frachter
+   * 11,25 Kapseln); als Fassungsvermögen gelesen, sah „11,3 Kapseln" wie ein
+   * Rundungsfehler aus (Gesamttest 11.9.2026). Aufgerundet reicht der Tank
+   * mindestens {@code JUMP_FUEL_TANK_RANGE_HOPS} Sprünge, nie weniger.
+   */
+  public static double fuelTankCapacity(List<FleetShipGroup> ships) {
     double sum = 0;
-    for (FleetShipGroup g : fleet.ships) sum += ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
-    return sum;
+    for (FleetShipGroup g : ships) sum += ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
+    return Math.ceil(sum - 1e-9);
   }
 
   /** Kapseln, die diese Flotte für EINEN Sprung verbraucht – Summe über die Schiffsmassen. */

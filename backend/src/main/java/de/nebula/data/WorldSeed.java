@@ -118,9 +118,7 @@ public final class WorldSeed {
    * die Schiffe sind.
    */
   private static double fullTank(List<FleetShipGroup> ships) {
-    double sum = 0;
-    for (FleetShipGroup g : ships) sum += ShipCatalog.find(g.shipProductTypeId).fuelTankCapacity * g.quantity;
-    return sum;
+    return de.nebula.state.FleetCommands.fuelTankCapacity(ships);
   }
 
   /** Gesamter Startbestand je Grundkonsumgut, aufgeteilt in Lager + sofort eingestellte Verkaufsorder. */

@@ -102,9 +102,19 @@ export interface Fleet {
    * Eleriumkapseln im separaten TANK (Umsetzungskonzept/26_...md). Keine Fracht:
    * belegt keine Lade­kapazität, kann aber auch nicht ausgeladen werden – sonst
    * wäre der Tank ein zweiter, weit größerer Frachtraum. Fassungsvermögen:
-   * `ShipTypeDef.fuelTankCapacity` je Schiff der Flotte.
+   * `fuelTankCapacity`.
    */
   fuelCapsules: number;
+  /**
+   * Die drei Treibstoffzahlen rechnet der Server (`FleetCommands.FleetView`,
+   * Review 11.9.2026 §3.2) – die Oberfläche summiert nicht mehr selbst über
+   * den Schiffskatalog. Fassungsvermögen in ganzen Kapseln (aufgerundete Summe
+   * der Schiffstanks), Verbrauch je Gateway-Sprung, und wie viele Sprünge der
+   * aktuelle Tankinhalt trägt.
+   */
+  fuelTankCapacity: number;
+  jumpFuelPerHop: number;
+  fuelRangeHops: number;
   /** Ziel des GERADE LAUFENDEN, einzelnen Gateway-Sprungs – nur während `status === 'InTransit'` gesetzt. Bei einer mehrsprungigen Reise NICHT das Endziel, siehe `pendingHops`. */
   destinationSystemId: Id | null;
   departedAt: number | null;

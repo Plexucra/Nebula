@@ -402,9 +402,9 @@ final class Trade {
   }
 
   /**
-   * Betankt für eine Fahrt über {@code hops} Sprünge. Ein voller Tank reicht für
-   * {@code jumpFuelTankRangeHops} (50) Sprünge – der Verbrauch je Sprung ist
-   * also {@code Fassungsvermögen / 50}. Vorher wurde immer auf VOLL getankt und
+   * Betankt für eine Fahrt über {@code hops} Sprünge – mit dem Verbrauch je
+   * Sprung, den der Server an die Flotte hängt ({@code jumpFuelPerHop}).
+   * Vorher wurde immer auf VOLL getankt und
    * erst unter der Hälfte nachgelegt: Eine Kampfflotte mit zwei Kreuzern fasst
    * 12 600 Kapseln, der Bot hielt aber nur zehn im Lager vor – die Flotte kam
    * nie über den ersten Sprung hinaus ("Nicht genug Treibstoff im Tank
@@ -416,7 +416,7 @@ final class Trade {
     double capacity = bot.world.fleetTankCapacity(fleet);
     double tank = Json.dbl(fleet, "fuelCapsules");
     if (capacity <= 0) return;
-    double needed = Math.min(capacity, Math.ceil(capacity / Catalog.FUEL_TANK_RANGE_HOPS * Math.max(1, hops) * FUEL_TRIP_MARGIN));
+    double needed = Math.min(capacity, Math.ceil(bot.world.fleetJumpFuelPerHop(fleet) * Math.max(1, hops) * FUEL_TRIP_MARGIN));
     if (tank >= needed) return;
     double stock = Math.floor(bot.world.stock(bot.homeColonyId, Catalog.JUMP_FUEL));
     double qty = Math.min(Math.ceil(needed - tank), stock);

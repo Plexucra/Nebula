@@ -76,18 +76,6 @@ export class FleetsOverviewComponent {
     return `${tons.toLocaleString('de-DE', { maximumFractionDigits: 0 })} t`;
   }
 
-  /**
-   * Reichweite des Tanks in Sprüngen – die Zahl, die den Kommandanten
-   * interessiert. Der Verbrauch je Sprung hängt an der Schiffsmasse
-   * (Umsetzungskonzept/34_...md, F7), ein voller Tank reicht deshalb bei jeder
-   * Flotte für dieselbe Zahl Sprünge; nur der Füllstand entscheidet.
-   */
-  protected fuelRangeInJumps(fleet: Fleet): number {
-    const perHop = this.jumpFuelPerHop(fleet);
-    if (perHop <= 0) return 0;
-    return Math.floor(fleet.fuelCapsules / perHop);
-  }
-
   protected shipyardLevel(colonyId: Id): number {
     return this.api.buildings(colonyId)().find(b => b.typeId === 'b_shipyard')?.level ?? 0;
   }
@@ -352,20 +340,6 @@ export class FleetsOverviewComponent {
   }
 
   protected readonly refuelQty: Partial<Record<Id, number>> = {};
-
-  /**
-   * Fassungsvermögen des Tanks: `ShipTypeDef.fuelTankCapacity` je Schiff der
-   * Flotte. Der Wert kommt fertig aus dem Katalog (der Server leitet ihn aus
-   * der Schiffsmasse ab) – hier steht bewusst keine zweite Formel.
-   */
-  protected fuelTankCapacity(fleet: Fleet): number {
-    return fleet.ships.reduce((sum, g) => sum + (this.shipDef(g.shipProductTypeId)?.fuelTankCapacity ?? 0) * g.quantity, 0);
-  }
-
-  /** Kapseln, die diese Flotte für EINEN Sprung verbraucht – Summe über die Schiffsmassen. */
-  protected jumpFuelPerHop(fleet: Fleet): number {
-    return fleet.ships.reduce((sum, g) => sum + (this.shipDef(g.shipProductTypeId)?.jumpFuelPerHop ?? 0) * g.quantity, 0);
-  }
 
   protected async submitRefuel(fleet: Fleet): Promise<void> {
     const qty = this.refuelQty[fleet.id] ?? 0;

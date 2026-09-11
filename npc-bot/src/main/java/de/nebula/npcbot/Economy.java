@@ -65,8 +65,17 @@ final class Economy {
 
   record Health(String colonyId, String name, boolean home, double population, double loyalty, double standardOfLiving,
                 boolean blackout, double eleriumHours, double foodCoverage, int infrastructure, int industry,
-                int shipyard, int academy, int soldiers, int drones) {
+                int shipyard, int academy, int soldiers, int drones, double housingCapacity) {
   }
+
+  /**
+   * Ab diesem Anteil belegten Wohnraums hat der Wohnkomplex Vorrang vor dem
+   * Ausbauplan. Vorher stand er in jedem Plan erst hinter Industrie 8: im
+   * Gesamttest 11.9.2026 standen alle 40 Bots auf Wohnkomplex 1, ihre
+   * Bevölkerung lag nach Minuten am Limit (20 000), und der Wohnraum statt der
+   * Versorgung deckelte die ganze Wirtschaft.
+   */
+  private static final double HOUSING_EXPAND_AT_SHARE = 0.8;
 
   private final Bot bot;
   private final Map<String, Set<String>> materialOrders = new HashMap<>();
@@ -210,7 +219,7 @@ final class Economy {
       fresh.put(id, new Health(id, text(c, "name"), Json.bool(c, "isHomeworld"), w.population(id),
           Json.dbl(stats, "loyaltyPct"), Json.dbl(stats, "standardOfLivingPct"), blackout, hours, food, infra,
           w.buildingLevel(id, Catalog.INDUSTRY), w.buildingLevel(id, Catalog.SHIPYARD), w.buildingLevel(id, Catalog.ACADEMY),
-          World.unitCount(garrison, Catalog.SOLDIER), World.droneCount(garrison)));
+          World.unitCount(garrison, Catalog.SOLDIER), World.droneCount(garrison), w.housingCapacity(id)));
     }
     for (String gone : new ArrayList<>(health.keySet())) {
       if (!fresh.containsKey(gone)) {
@@ -308,7 +317,7 @@ final class Economy {
     if (h.home() && !queuedProducts.contains(Catalog.JUMP_FUEL)) {
       double perHopBiggestFleet = 0;
       for (JsonNode f : bot.world.ownFleets()) {
-        perHopBiggestFleet = Math.max(perHopBiggestFleet, bot.world.fleetTankCapacity(f) / Catalog.FUEL_TANK_RANGE_HOPS);
+        perHopBiggestFleet = Math.max(perHopBiggestFleet, bot.world.fleetJumpFuelPerHop(f));
       }
       double target = Math.max(10, Math.ceil(perHopBiggestFleet * Catalog.DEFAULT_TRIP_HOPS));
       double stock = bot.world.stock(id, Catalog.JUMP_FUEL);
@@ -547,34 +556,55 @@ final class Economy {
   private void manageBuildings(Health h, Strategy.Plan plan) {
     String id = h.colonyId();
     World w = bot.world;
+    // Wohnraum vor dem Plan, sobald er knapp wird – aber nicht in Notlagen
+    // (Blackout, Hunger): dort bremst der Plan bewusst jedes Wachstum.
+    if (housingTight(h, plan) && !w.buildingPending(id, Catalog.HABITAT) && tryBuild(h, plan, Catalog.HABITAT)) return;
     for (int i = 0; i < plan.buildPriority.size(); i++) {
       String typeId = plan.buildPriority.get(i);
       int cap = plan.buildCaps.get(i);
       int level = w.buildingLevel(id, typeId);
       if (level >= cap || w.buildingPending(id, typeId)) continue;
       if (typeId.equals(Catalog.DEFENSE) && !h.home()) continue;
-      try {
-        bot.call("queueBuilding", Map.of("colonyId", id, "buildingTypeId", typeId));
-        bot.monitor.event("BUILD_ORDERED", h.name() + ": " + typeId + " Stufe " + level + " -> " + (level + 1), "colonyId", id, "type", typeId, "level", level + 1);
-        w.invalidate("buildings");
-        return;
-      } catch (CommandException e) {
-        String msg = e.getMessage() == null ? "" : e.getMessage();
-        if (msg.contains("Bebauungsplatz")) {
-          if (plan.allowInfrastructureGrowth && h.eleriumHours() >= ELERIUM_HOURS_FOR_INFRA_GROWTH && !w.buildingPending(id, Catalog.INFRASTRUCTURE)) {
-            try {
-              bot.call("queueBuilding", Map.of("colonyId", id, "buildingTypeId", Catalog.INFRASTRUCTURE));
-              bot.monitor.event("BUILD_ORDERED", h.name() + ": Infrastruktur (kein Bebauungsplatz für " + typeId + ")", "colonyId", id, "type", Catalog.INFRASTRUCTURE, "level", h.infrastructure() + 1);
-              w.invalidate("buildings");
-            } catch (CommandException infra) {
-              queueMissingMaterials(h, infra.getMessage());
-            }
+      if (tryBuild(h, plan, typeId)) return;
+      // sonst (z. B. Credits) – nächstgünstigere Priorität versuchen
+    }
+  }
+
+  private static boolean housingTight(Health h, Strategy.Plan plan) {
+    return plan.allowInfrastructureGrowth && h.housingCapacity() > 0 && h.population() >= HOUSING_EXPAND_AT_SHARE * h.housingCapacity();
+  }
+
+  /**
+   * Reiht die nächste Stufe eines Gebäudes ein. {@code true}, wenn damit für
+   * diesen Takt etwas angestoßen ist – der Ausbau selbst, eine
+   * Infrastrukturstufe für den fehlenden Bebauungsplatz oder die fehlenden
+   * Baustoffe; {@code false}, wenn der Ausbau an etwas anderem scheiterte
+   * (z. B. Credits).
+   */
+  private boolean tryBuild(Health h, Strategy.Plan plan, String typeId) {
+    String id = h.colonyId();
+    World w = bot.world;
+    int level = w.buildingLevel(id, typeId);
+    try {
+      bot.call("queueBuilding", Map.of("colonyId", id, "buildingTypeId", typeId));
+      bot.monitor.event("BUILD_ORDERED", h.name() + ": " + typeId + " Stufe " + level + " -> " + (level + 1), "colonyId", id, "type", typeId, "level", level + 1);
+      w.invalidate("buildings");
+      return true;
+    } catch (CommandException e) {
+      String msg = e.getMessage() == null ? "" : e.getMessage();
+      if (msg.contains("Bebauungsplatz")) {
+        if (plan.allowInfrastructureGrowth && h.eleriumHours() >= ELERIUM_HOURS_FOR_INFRA_GROWTH && !w.buildingPending(id, Catalog.INFRASTRUCTURE)) {
+          try {
+            bot.call("queueBuilding", Map.of("colonyId", id, "buildingTypeId", Catalog.INFRASTRUCTURE));
+            bot.monitor.event("BUILD_ORDERED", h.name() + ": Infrastruktur (kein Bebauungsplatz für " + typeId + ")", "colonyId", id, "type", Catalog.INFRASTRUCTURE, "level", h.infrastructure() + 1);
+            w.invalidate("buildings");
+          } catch (CommandException infra) {
+            queueMissingMaterials(h, infra.getMessage());
           }
-          return;
         }
-        if (queueMissingMaterials(h, msg)) return;
-        // sonst (z. B. Credits) – nächstgünstigere Priorität versuchen
+        return true;
       }
+      return queueMissingMaterials(h, msg);
     }
   }
 

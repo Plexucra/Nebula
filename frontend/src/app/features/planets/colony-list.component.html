@@ -28,8 +28,9 @@
              genau die Werte, nach denen man entscheidet, welche Kolonie dran ist. -->
         <div class="stat-row">
           <div class="stat-item">
-            <span class="label">Wohnraum <span class="mono val">{{ s.infrastructurePct | number:'1.0-0' }}%</span></span>
-            <div class="stat-bar"><span [style.width.%]="s.infrastructurePct > 100 ? 100 : s.infrastructurePct"></span></div>
+            @let occupied = housingOccupancyPct(s.infrastructurePct);
+            <span class="label">Wohnraum <span class="mono val">{{ occupied === null ? 'unter 25' : (occupied | number:'1.0-0') }} % belegt</span></span>
+            <div class="stat-bar"><span [style.width.%]="occupied ?? 25"></span></div>
           </div>
           <div class="stat-item">
             <span class="label">Sicherheit <span class="mono val">{{ s.securityPct | number:'1.0-0' }}%</span></span>

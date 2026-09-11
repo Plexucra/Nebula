@@ -3,6 +3,7 @@ import { DecimalPipe, DatePipe } from '@angular/common';
 import { GAME_API } from '../../core/sim/game-api.token';
 import { Colony, Id, PlanetStats, Population, Wallet } from '../../core/models';
 import { SparklineTileComponent } from '../../shared/sparkline-tile.component';
+import { CONSUMER_GOODS } from '../../core/shared-constants';
 
 interface ColonyRow {
   colony: Colony;
@@ -15,12 +16,12 @@ interface ColonyRow {
   blackout: Signal<boolean>;
 }
 
-/** Reihenfolge/Kurzlabel für die Deckungsanzeige, siehe `CONSUMER_GOODS_ORDER` im Service (dort nicht exportiert). */
-const COVERAGE_GOODS: { id: Id; short: string; label: string }[] = [
-  { id: 'p_grundnahrung', short: 'N', label: 'Grundnahrung' },
-  { id: 'p_grundmedizin', short: 'M', label: 'Grundmedizin' },
-  { id: 'p_unterhaltungselektronik', short: 'E', label: 'Unterhaltungselektronik' },
-];
+/** Beschriftung der Deckungsanzeige – reine Oberflächentexte; WELCHE Güter und in welcher Reihenfolge, sagt `CONSUMER_GOODS`. */
+const COVERAGE_LABELS: Record<Id, { short: string; label: string }> = {
+  p_grundnahrung: { short: 'N', label: 'Grundnahrung' },
+  p_grundmedizin: { short: 'M', label: 'Grundmedizin' },
+  p_unterhaltungselektronik: { short: 'E', label: 'Unterhaltungselektronik' },
+};
 
 @Component({
   selector: 'app-statistics',
@@ -66,9 +67,10 @@ export class StatisticsComponent {
     blackout: this.api.isBlackout(colony.id),
   }));
 
-  protected readonly coverageGoods = COVERAGE_GOODS;
+  protected readonly coverageGoods: { id: Id; short: string; label: string }[] =
+    CONSUMER_GOODS.map(id => ({ id, ...(COVERAGE_LABELS[id] ?? { short: '?', label: id }) }));
   /** Auflösung der Ein-Buchstaben-Kürzel – sie standen vorher ohne jede Legende in der Tabelle. */
-  protected readonly coverageLegend = COVERAGE_GOODS.map(g => `${g.short} = ${g.label}`).join(', ');
+  protected readonly coverageLegend = this.coverageGoods.map(g => `${g.short} = ${g.label}`).join(', ');
 
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;

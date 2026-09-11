@@ -8,7 +8,8 @@ import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service'
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import { PopulationChartComponent } from '../../shared/population-chart.component';
-import { ENERGY_RESERVE_DEFAULT_GAME_HOURS } from '../../core/shared-constants';
+import { CONSUMER_GOODS, ENERGY_RESERVE_DEFAULT_GAME_HOURS } from '../../core/shared-constants';
+import { housingOccupancyPct } from '../../core/util/housing';
 
 /**
  * Der frühere eigene Tab "verteidigung" ist entfallen: Er enthielt EINE
@@ -155,7 +156,7 @@ export class ColonyDetailComponent {
    * leisten", ohne zu sagen, welcher Preis ginge.
    */
   protected priceHint(productTypeId: Id): string | null {
-    const consumerGoods = ['p_grundnahrung', 'p_grundmedizin', 'p_unterhaltungselektronik'];
+    const consumerGoods = CONSUMER_GOODS;
     if (!consumerGoods.includes(productTypeId)) return null;
     const wallet = this.popWallet()?.balance ?? 0;
     const population = this.population()?.currentCount ?? 0;
@@ -223,6 +224,7 @@ export class ColonyDetailComponent {
   protected readonly allPlayers = this.api.players();
   protected readonly tab = signal<Tab>(this.initialTab());
   protected readonly busy = signal<string | null>(null);
+  protected readonly housingOccupancyPct = housingOccupancyPct;
   protected readonly error = signal<string | null>(null);
 
   private static readonly OWNER_ONLY_TABS: Tab[] = ['bebauung', 'produktion', 'bodentruppen', 'bevoelkerung'];

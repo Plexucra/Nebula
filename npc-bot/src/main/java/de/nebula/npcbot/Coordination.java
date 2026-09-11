@@ -391,7 +391,9 @@ final class Coordination {
           String home = text(m, "homeSystemId");
           double best = Double.MAX_VALUE;
           for (EnemyColony e : enemies) {
-            double score = e.enemyFleetStrength <= 0 ? Double.MAX_VALUE : bot.world.hops(home, e.systemId) * 30.0 + e.enemyFleetStrength;
+            // Zu schwache Flotten sind kein Ziel (Military.MIN_RAID_TARGET_STRENGTH) – sonst endloser Überfall auf eine Mini-Flotte.
+            double score = e.enemyFleetStrength < Military.MIN_RAID_TARGET_STRENGTH ? Double.MAX_VALUE
+                : bot.world.hops(home, e.systemId) * 30.0 + e.enemyFleetStrength;
             if (score < best) {
               best = score;
               target = e;
@@ -518,7 +520,7 @@ final class Coordination {
     for (JsonNode f : bot.world.allFleets()) {
       JsonNode owner = bot.world.player(text(f, "ownerId"));
       if (owner == null || !bot.isEnemyCampName(text(owner, "name")) || !World.hasWarships(f)) continue;
-      enemyFleetBySystem.merge(text(f, "systemId"), World.strength(f), Double::sum);
+      enemyFleetBySystem.merge(text(f, "systemId"), bot.world.strength(f), Double::sum);
     }
     // Durchsucht die Heimatsysteme ALLER Kommandanten, nicht nur die der Gegner:
     // gegründete Kolonien liegen im Heimatsystem ihres Gründers, und eroberte
@@ -534,7 +536,7 @@ final class Coordination {
         JsonNode owner = bot.world.player(text(c, "ownerId"));
         if (owner == null || !bot.isEnemyCampName(text(owner, "name"))) continue;
         String cid = text(c, "id");
-        out.add(new EnemyColony(cid, text(c, "name"), sys, text(c, "planetId"), World.activeDroneValue(bot.world.garrison(cid)),
+        out.add(new EnemyColony(cid, text(c, "name"), sys, text(c, "planetId"), bot.world.activeDroneValue(bot.world.garrison(cid)),
             bot.world.population(cid), enemyFleetBySystem.getOrDefault(sys, 0.0)));
       }
     }

@@ -160,10 +160,10 @@
               <!-- Reichweite statt nur Füllstand: Der Tank fasst ein Vielfaches
                    dessen, was je gebraucht wird, der Balken sah deshalb immer
                    leer aus und schreckte vom Losfliegen ab. -->
-              <!-- Beide Zahlen mit derselben Genauigkeit: gerundet stand am vollen
-                   Frachtertank "11,3 / 11 Kapseln" – mehr Inhalt als Fassungsvermögen. -->
-              <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fuelTankCapacity(fleet) | number:'1.0-1' }} Kapseln
-                <span class="hint">— reicht für {{ fuelRangeInJumps(fleet) | number:'1.0-0' }} Gateway-Sprünge dieser Flotte</span>
+              <!-- Das Fassungsvermögen kommt vom Server in ganzen Kapseln; der Inhalt
+                   darf eine angebrochene Kapsel zeigen. -->
+              <span class="mono">{{ fleet.fuelCapsules | number:'1.0-1' }} / {{ fleet.fuelTankCapacity | number:'1.0-0' }} Kapseln
+                <span class="hint">— reicht für {{ fleet.fuelRangeHops | number:'1.0-0' }} Gateway-Sprünge dieser Flotte</span>
               </span>
               @if ((fleet.locationType === 'ColonyOrbit' && colonyOwnedByMe(fleet.locationColonyId)) || isAtTradeHub(fleet)) {
                 <input type="number" min="1" [(ngModel)]="refuelQty[fleet.id]" placeholder="Menge" />

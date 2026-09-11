@@ -95,8 +95,14 @@ public final class GameConstants {
    * Realzeit-Tick und hätte sich als einzige laufende Größe dem Tempo-Regler
    * entzogen. Der Tagesbedarf ({@code Economy.dailyNeed}) ist Bevölkerung ×
    * Rate × {@link #GAME_DAY_HOURS}.</p>
+   *
+   * <p>Werte und Reihenfolge stehen in {@code shared/game-constants.json}
+   * ({@code consumerNeedPerCapitaPerGameHour}); Bot und Oberfläche lesen
+   * dieselbe Tabelle.</p>
    */
-  public static final List<String> CONSUMER_GOODS_ORDER = List.of("p_grundnahrung", "p_grundmedizin", "p_unterhaltungselektronik");
+  public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA_PER_HOUR = SharedConstants.consumerNeedPerCapitaPerGameHour();
+  /** Einkaufsreihenfolge des Tageseinkaufs – die Reihenfolge der Bedarfstabelle. */
+  public static final List<String> CONSUMER_GOODS_ORDER = List.copyOf(CONSUMER_NEED_PER_CAPITA_PER_HOUR.keySet());
   /**
    * Das Grundnahrungsmittel – das einzige Konsumgut, an dem nicht nur der
    * Lebensstandard hängt, sondern das WACHSTUM selbst
@@ -104,8 +110,6 @@ public final class GameConstants {
    * hinaus, was sie ernähren kann).
    */
   public static final String FOOD_PRODUCT_ID = "p_grundnahrung";
-  public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA_PER_HOUR = Map.of(
-      "p_grundnahrung", 0.0002, "p_grundmedizin", 0.0001, "p_unterhaltungselektronik", 0.0001);
 
   /**
    * Takt der Universums-Statistik und des Bevölkerungsverlaufs in
@@ -181,7 +185,7 @@ public final class GameConstants {
   public static final double SPECIALIZATION_DECAY_GRACE_GAME_HOURS = 6.4;
 
   /** Reisezeit je einzelnem Gateway-Sprung (Spielstunden), siehe {@code Fleet.pendingHops}. */
-  public static final double HOURS_PER_GATEWAY_HOP = 4;
+  public static final double HOURS_PER_GATEWAY_HOP = SharedConstants.hoursPerGatewayHop();
 
   /**
    * Trägersprung ohne Gateway (Umsetzungskonzept/06_...md, {@code CarrierTransit}).
@@ -235,7 +239,9 @@ public final class GameConstants {
 
   /** Bodentruppen-Crewing (Mechanik/05_..., §3-4). */
   public static final List<String> DRONE_PRODUCT_IDS = List.of("p_drone_light", "p_drone_medium", "p_drone_heavy");
-  public static final int DRONES_PER_SOLDIER = 5;
+  public static final int DRONES_PER_SOLDIER = SharedConstants.dronesPerSoldier();
+  /** Rekrutierung nur bei einer Loyalität ÜBER diesem Wert ({@code RecruitmentCommands.queueRecruitment}). */
+  public static final double RECRUIT_MIN_LOYALTY_PCT = SharedConstants.recruitMinLoyaltyPct();
   /**
    * Die einzige Bodeneinheit, die keine Maschine ist – und deshalb die
    * einzige, die NICHT als Fracht reisen darf (Umsetzungskonzept/28_...md,

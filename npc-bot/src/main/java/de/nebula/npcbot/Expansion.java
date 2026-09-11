@@ -104,9 +104,13 @@ final class Expansion {
     }
     StringBuilder why = new StringBuilder();
     if (s.shipyardLevel < 1) why.append("keine Werft; ");
-    if (s.homeLoyalty < Catalog.COLONY_SHIP_MIN_LOYALTY_PCT) why.append(String.format("Loyalität %.0f%% < 90%%; ", s.homeLoyalty));
-    if (s.homePopulation < 2 * Catalog.START_POPULATION + 50) why.append(String.format("Bevölkerung %.0f < 4050; ", s.homePopulation));
-    if (s.wallet < Catalog.COLONIST_PREMIUM + 500) why.append(String.format("Credits %.0f < 16500; ", s.wallet));
+    if (s.homeLoyalty < Catalog.COLONY_SHIP_MIN_LOYALTY_PCT) {
+      why.append(String.format("Loyalität %.0f%% < %.0f%%; ", s.homeLoyalty, Catalog.COLONY_SHIP_MIN_LOYALTY_PCT));
+    }
+    double minPopulation = 2 * Catalog.START_POPULATION + 50;
+    if (s.homePopulation < minPopulation) why.append(String.format("Bevölkerung %.0f < %.0f; ", s.homePopulation, minPopulation));
+    double minWallet = Catalog.COLONIST_PREMIUM + 500;
+    if (s.wallet < minWallet) why.append(String.format("Credits %.0f < %.0f; ", s.wallet, minWallet));
     if (why.length() > 0) {
       blockedReason = why.toString();
       phase = Phase.WAITING;

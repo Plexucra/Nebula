@@ -17,7 +17,7 @@ import static de.nebula.npcbot.Json.text;
  * <p><b>Raum</b> ({@link SpaceState}): die Kampfflotte blockiert zu Hause
  * (nur eine blockierende Flotte ist angreifbar – ohne diese Haltung hätte
  * kein Gegner je ein Ziel), zieht als RAIDER gegen gegnerische
- * Blockadeflotten, wenn die Stärkeschätzung ({@link Catalog#SHIP_MILITARY_WEIGHT})
+ * Blockadeflotten, wenn die Stärkeschätzung ({@link World#strength})
  * deutlich zu ihren Gunsten steht, zieht sich bei schweren Verlusten zurück
  * und kehrt bei Bedrohung der Heimat um.</p>
  *
@@ -50,6 +50,14 @@ final class Military {
   enum InvasionPhase {NONE, BUILDING, LOADING, TRAVELING, ORBIT, LANDED, FIGHTING, RETURNING}
 
   private static final double RAID_SUPERIORITY = 1.2;
+  /**
+   * Mindeststärke eines Raider-Ziels (in Korvetten-Äquivalenten, siehe
+   * {@link World#strength}). Im Gesamttest 11.9.2026 überfiel ein Raider alle
+   * drei Minuten dieselbe Mini-Flotte der Stärke 1, die ihr Besitzer nach
+   * jedem Verlust aus Lagerschiffen neu aufstellte – regelkonform, aber ein
+   * sinnloser Kreislauf. Auch {@link Coordination} wählt kein schwächeres Ziel.
+   */
+  static final double MIN_RAID_TARGET_STRENGTH = 5;
   private static final double ESCORT_SUPERIORITY = 0.8;
   private static final double RETREAT_BELOW_SHARE = 0.4;
   /**
@@ -130,7 +138,7 @@ final class Military {
     for (JsonNode f : bot.world.ownFleets()) {
       if (World.hasWarships(f)) {
         combatFleetId = text(f, "id");
-        initialStrength = World.strength(f);
+        initialStrength = bot.world.strength(f);
         break;
       }
     }
@@ -143,7 +151,7 @@ final class Military {
 
   double fleetStrength() {
     JsonNode f = combatFleet();
-    return f == null ? 0 : World.strength(f);
+    return f == null ? 0 : bot.world.strength(f);
   }
 
   double initialStrength() {
@@ -306,8 +314,8 @@ final class Military {
     double population = bot.world.population(targetColonyId);
     String dominant = World.dominantDrone(garrison);
     droneType = dominant == null ? Catalog.DRONE_MEDIUM : Catalog.counterFor(dominant);
-    double enemyValue = World.activeDroneValue(garrison);
-    double myValue = Catalog.DRONE_VALUE.get(droneType);
+    double enemyValue = bot.world.activeDroneValue(garrison);
+    double myValue = bot.world.droneValue(droneType);
     // Konter wirkt ×2 auf den eigenen Schaden – die Hälfte des nominellen Werts genügt, plus Sicherheitsaufschlag.
     int drones = (int) Math.ceil(enemyValue * DRONE_SUPERIORITY / (myValue * 2));
     neededDrones = Math.max(MIN_DRONES, drones) * (1 + wave);
@@ -435,7 +443,12 @@ final class Military {
       return false;
     }
     double mine = fleetStrength();
-    double theirs = World.strength(strongest);
+    double theirs = bot.world.strength(strongest);
+    if (theirs < MIN_RAID_TARGET_STRENGTH) {
+      blockedReason = String.format("Feindflotte in %s zu schwach für einen Angriff (%.0f < %.0f)",
+          bot.world.systemName(systemId), theirs, MIN_RAID_TARGET_STRENGTH);
+      return false;
+    }
     if (mine < theirs * RAID_SUPERIORITY) {
       blockedReason = String.format("Feindflotte zu stark (%.0f vs. %.0f)", mine, theirs);
       return false;
@@ -455,7 +468,7 @@ final class Military {
     JsonNode best = null;
     double bestStrength = -1;
     for (JsonNode f : bot.world.attackableFleetsInSystem(systemId)) {
-      double s = World.strength(f);
+      double s = bot.world.strength(f);
       if (s > bestStrength) {
         bestStrength = s;
         best = f;
@@ -468,7 +481,7 @@ final class Military {
     JsonNode target = strongestEnemyBlockade(systemId);
     if (target == null) return false;
     double mine = fleetStrength();
-    double theirs = World.strength(target);
+    double theirs = bot.world.strength(target);
     if (mine < theirs * superiority) {
       blockedReason = String.format("Gegner in %s zu stark (%.0f vs. %.0f)", bot.world.systemName(systemId), mine, theirs);
       return false;
@@ -896,7 +909,7 @@ final class Military {
     double loyaltyAfter = -1;
     JsonNode ticksNode = battle.path("ticks");
     if (ticksNode.isArray() && ticksNode.size() > 0) loyaltyAfter = Json.dbl(ticksNode.get(ticksNode.size() - 1), "loyaltyPctAfter", -1);
-    if ("Combat".equals(phaseName) && ticks > 0 && World.activeDroneValue(group) <= 0) {
+    if ("Combat".equals(phaseName) && ticks > 0 && bot.world.activeDroneValue(group) <= 0) {
       retreatGround("keine aktiven Drohnen mehr im Kampf");
       return;
     }
@@ -910,7 +923,7 @@ final class Military {
     }
     if (ticks > 0 && ticks % 3 == 0) {
       bot.monitor.log("Bodengefecht " + groundBattleId + ": Phase " + phaseName + ", Tick " + ticks + ", Soldaten "
-          + World.unitCount(group, Catalog.SOLDIER) + ", aktive Drohnen-Wert " + String.format("%.0f", World.activeDroneValue(group))
+          + World.unitCount(group, Catalog.SOLDIER) + ", aktive Drohnen-Wert " + String.format("%.0f", bot.world.activeDroneValue(group))
           + (loyaltyAfter >= 0 ? ", Loyalität " + String.format("%.1f", loyaltyAfter) + " %" : ""));
     }
   }

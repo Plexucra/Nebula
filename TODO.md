@@ -2,6 +2,14 @@
 
 ## Offen
 
+- [ ] Als Schutz vor überflutung mit Events dürfen Produktionsaufträge nicht eingestellt 
+  werden, die weniger als 10 Minuten Spielzeit andauern. Fehlermeldung kann dann auf fehlende 
+  effizienz / Serienproduktion von zu kleinen Aufträgen hinweisen und angeben wie viele Stückzahl 
+  mindestens anzugeben sind. Dies muss auch Aufträge stoppen die bereits zu einer Zeit 
+  eingereiht wurden, als die Bauzeit noch über 10 Minuten war.
+- [ ] Bebauung ist sehr unübersichtlich geworden in der UI. Ich möchte für jede Bebauung 
+  ein Bild ergänzt haben und die Inhalte einer Bebauung besser Strukturiert haben.
+  Also z.b. Bereiche Bild / Stufe / Informationen / Ausbau pro Bebauung. Und die Einträge noch stärker voneinander abgegrenzt.
 - [ ] **Kennwortschutz und Reset-Knopf** (F14/F15): die Anmeldung ist
   kennwortlos, der Reset-Knopf für jeden sichtbar. Für einen LAN-Abend mit
   mehreren Personen riskant. Eigenes Thema, bewusst nicht Teil von Konzept 34.
@@ -20,23 +28,73 @@
   je Kommandant (Einwohner × Loyalität der eigenen Kolonien dort). Es hat keine
   Spielwirkung und wird nirgends erklärt – Rest eines früheren Konzepts zur
   Gateway-Kontrolle. Entweder Mechanik nachziehen oder Anzeige entfernen.
+  *Empfehlung 11.9.2026: Anzeige entfernen.*
 
 - [ ] **Anzeige zwischen zwei Kolonietagen** (Konzept 36 §E): Kontostand
   und Bevölkerung springen einmal je Spieltag. Die Oberfläche könnte mit
   Basis plus Rate weiterzählen, wie bei Countdowns; der Server liefert die
   Raten bereits (`treasuryFlowPerHour`, `growthRatePerInterval`).
+  *Empfehlung (Review 11.9.2026 §3.3): nicht umsetzen und abhaken – die
+  Werte springen im Spiel wirklich einmal am Tag, eine geglättete Anzeige
+  zeigte einen Verlauf, den es nicht gibt.*
 
-- [ ] **Startpreis 60 Cr an einer Quelle** (Review 11.9.2026 §3.2): steht in
+- [ ] **Startpreis 60 Cr – Entscheidung** (Review 11.9.2026 §3.2): steht in
   `WorldSeed.STARTER_SELL_ORDER_PRICE` und im Bot
-  (`DEFAULT_CONSUMER_PRICE`); mit dem gedrittelten Lohn liegt das
-  Gleichgewicht bei rund 17 Cr – beide Werte in `shared/game-constants.json`
-  ziehen und dabei entscheiden, ob 20 der bessere Start ist.
-- [ ] **Flotten-Treibstoffzahlen vom Server** (Review 11.9.2026 §3.2):
-  `fuelTankCapacity`, `jumpFuelPerHop`, `fuelRangeInJumps` rechnet die
-  Oberfläche noch selbst aus dem Schiffskatalog – als drei Felder an die
-  Flotte hängen, wie `fleetCargoCapacity`.
+  (`Economy.DEFAULT_CONSUMER_PRICE`); mit dem gedrittelten Lohn liegt das
+  Gleichgewicht bei rund 17 Cr. **Achtung Kopplung:** das Preisband des Bots
+  hängt am Default – Obergrenze `DEFAULT × MAX_PRICE_FACTOR (6)`, Untergrenze
+  fest `MIN_CONSUMER_PRICE = 15`, Schritte ×0,7 / ×1,15 / ×1,2. Mit Default 20
+  fiele der Abschlag auf 14 → 15 gekappt, die Preissenkung liefe ins Leere.
+  Wer die Zahl verschiebt, zieht Untergrenze und Faktor mit. Alternative
+  ohne neues Literal: seit 11.9. stehen Lohn UND Pro-Kopf-Bedarfe in
+  `shared/game-constants.json` – WorldSeed und Bot können den Startpreis als
+  `wagePerCapitaPerGameHour / Σ consumerNeedPerCapitaPerGameHour` (≈ 17 Cr)
+  ableiten. Offen: 60 bewusst über dem Gleichgewicht (Anreiz) oder ableiten?
+- [ ] **Invasionsdauer unter Live-Balance** (Gesamttest 11.9.2026 B2):
+  2 000 Soldaten je Landung, 27 Plätze je Transporter, 6 Spieltage je
+  Werftcharge – Eroberungen kommen erst nach Stunden Realzeit.
+  Stellschrauben: Soldatenbedarf der Landung (`Military.sizeForce` im Bot,
+  Siegeanteil) oder `troopCapacity` des Transporters im Schiffskatalog.
+  Entscheidung, keine Reparatur.
 
 ## Erledigt
+
+- [x] ~~Regelzahlen nach `/shared`, Treibstoffzahlen vom Server, Bot-Befunde,
+  Oberflächen-Kleinigkeiten, `logs/` aus Git~~ – 11.9.2026, aus den
+  Vorschlägen nach dem Review vom selben Tag.
+  - **Regel für `/shared`:** Regelzahlen, die ein Mensch festlegt und mehr als
+    ein Beteiligter kennt, stehen in `shared/game-constants.json`; Werte, die
+    aus den Katalogen folgen, holen Bot und Oberfläche vom Server. Neu in der
+    Datei: `consumerNeedPerCapitaPerGameHour` (Reihenfolge = Einkaufsreihenfolge,
+    `GameConstants.CONSUMER_GOODS_ORDER` entsteht daraus), `creditsPerNewInhabitant`,
+    `recruitMinLoyaltyPct` (vorher Literal 50 samt Text in `RecruitmentCommands`),
+    `combatTickGameHours`, `dronesPerSoldier`, `siegeSurrenderLoyaltyPct`,
+    `hoursPerGatewayHop` (auch im e2e-Skript).
+  - **Bot:** neue `SharedConstants` im npc-bot; `Catalog` enthält keine
+    abgetippten Zahlen mehr (Eleriumverbrauch, Startbevölkerung,
+    Kolonisations-Loyalität, Kolonistenprämie, Bedarfe, Kampftakt …).
+    Kampfwert je Schiff (`World.strength`, `carrierSlotUsage` der Schiffe mit
+    Konterklasse) und je Drohne (`World.droneValue`) kommen aus `shipTypes`
+    bzw. `productTypes` des Servers. Unbenutzte Kopien entfernt.
+  - **Treibstoffzahlen vom Server:** `fleets`, `allFleets`, `fleetsInSystem`
+    und `fleet` liefern `FleetCommands.FleetView` – die Flotte plus
+    `fuelTankCapacity`, `jumpFuelPerHop`, `fuelRangeHops`. Oberfläche und Bot
+    rechnen nicht mehr über den Schiffskatalog. Das Fassungsvermögen einer
+    Flotte ist auf ganze Kapseln aufgerundet (vorher „11,3 Kapseln" beim
+    Frachter). Test `FleetCommandsJumpFuelTest.fleetViewCarries…`.
+  - **Bots bauen den Wohnkomplex aus**, sobald 80 % des Wohnraums belegt sind
+    (Vorrang vor dem Ausbauplan, nicht in Blackout/Hunger). Vorher stand er
+    in jedem Plan hinter Industrie 8, und alle 40 Bots blieben auf Stufe 1.
+  - **Raider greifen keine Mini-Flotten mehr an** (Stärke unter 5
+    Korvetten-Äquivalenten, `Military.MIN_RAID_TARGET_STRENGTH`, auch in der
+    Zielwahl des Koordinators).
+  - **Oberfläche:** Loyalitätshinweis in fremden Kolonien spricht vom
+    „Kommandanten" statt von „Ihnen"; die Wohnraum-Kachel zeigt die Belegung
+    („64 % belegt") statt „Wohnraum 400 %"; Konsumgüterlisten in Statistik und
+    Preisanhalt kommen aus `CONSUMER_GOODS`; neun unbenutzte Exporte aus
+    `core/shared-constants.ts` entfernt.
+  - **`logs/` nicht mehr versioniert** (`git rm --cached`, `.gitignore` im
+    Wurzelverzeichnis) – 40 Dateien, 800 MB, in die das Live-Spiel schreibt.
 
 - [x] ~~Speicher, Löhne, Regelquelle~~ – 11.9.2026, Review in
   `Konzeption/Review_2026-09-11_Speicher_Loehne_Regelquelle.md`. Heap-Grenzen

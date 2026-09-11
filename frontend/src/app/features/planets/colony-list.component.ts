@@ -6,6 +6,7 @@ import { Colonization, Colony, Id, PlanetType } from '../../core/models';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { UiClockService } from '../../core/ui/ui-clock.service';
 import { COLONIZATION_GAME_HOURS, START_POPULATION } from '../../core/shared-constants';
+import { housingOccupancyPct } from '../../core/util/housing';
 
 @Component({
   selector: 'app-colony-list',
@@ -19,6 +20,7 @@ export class ColonyListComponent {
   protected readonly api = inject(GAME_API);
   private readonly clock = inject(UiClockService);
   protected readonly colonies = this.api.colonies();
+  protected readonly housingOccupancyPct = housingOccupancyPct;
   /** Reaktiv: `player()` ist beim echten Backend erst nach der ersten Server-Antwort gesetzt (siehe TradeOverviewComponent). */
   protected readonly homeSystemId = computed(() => this.api.player()?.homeSystemId ?? '');
   protected readonly planetsInSystem = computed(() => this.api.planetsInSystem(this.homeSystemId())());

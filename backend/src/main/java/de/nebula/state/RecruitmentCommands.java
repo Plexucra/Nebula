@@ -47,7 +47,9 @@ public final class RecruitmentCommands {
     if (product.category != ProductCategory.GroundUnit) throw new CommandException("Kein Bodentruppen-Typ.");
     if (GameQueries.getBuildingLevel(state, colonyId, "b_academy") < 1) throw new CommandException("Ohne Ausbildungszentrum keine Rekrutierung möglich.");
     PlanetStats stats = ColonyCommands.colonyStats(state, colonyId);
-    if (stats == null || stats.loyaltyPct <= 50) throw new CommandException("Rekrutierung erfordert eine Loyalität über 50%.");
+    if (stats == null || stats.loyaltyPct <= GameConstants.RECRUIT_MIN_LOYALTY_PCT) {
+      throw new CommandException("Rekrutierung erfordert eine Loyalität über " + (long) GameConstants.RECRUIT_MIN_LOYALTY_PCT + "%.");
+    }
 
     RecruitmentQueueEntry entry = new RecruitmentQueueEntry();
     entry.id = ids.next("rq");

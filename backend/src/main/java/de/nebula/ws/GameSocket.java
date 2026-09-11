@@ -370,10 +370,11 @@ public class GameSocket {
       }
 
       // --- Flotten -------------------------------------------------------------
-      case "fleets" -> FleetCommands.fleetsOf(state, requirePlayerId());
-      case "allFleets" -> FleetCommands.allFleets(state);
-      case "fleetsInSystem" -> FleetCommands.fleetsInSystem(state, text(payload, "systemId"));
-      case "fleet" -> FleetCommands.fleetById(state, text(payload, "id"));
+      // Flotten gehen als FleetView hinaus: mit Tankgröße, Verbrauch je Sprung und Reichweite.
+      case "fleets" -> FleetCommands.views(FleetCommands.fleetsOf(state, requirePlayerId()));
+      case "allFleets" -> FleetCommands.views(FleetCommands.allFleets(state));
+      case "fleetsInSystem" -> FleetCommands.views(FleetCommands.fleetsInSystem(state, text(payload, "systemId")));
+      case "fleet" -> FleetCommands.view(FleetCommands.fleetById(state, text(payload, "id")));
       case "fleetPresence" -> FleetCommands.fleetPresence(state, requirePlayerId());
       case "shipyardQueue" -> ShipyardCommands.shipyardQueueFor(state, text(payload, "colonyId"));
       case "queueShip" -> {

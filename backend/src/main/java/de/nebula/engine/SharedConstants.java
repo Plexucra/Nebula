@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Werte, die BEIDE Anwendungen brauchen und die deshalb nur an EINER Stelle
@@ -229,5 +232,54 @@ public final class SharedConstants {
   /** Reichweite einer vollen Tankfüllung in Sprüngen – daraus folgt das Fassungsvermögen je Schiff. */
   public static double jumpFuelTankRangeHops() {
     return ROOT.path("jumpFuelTankRangeHops").asDouble();
+  }
+
+  /** Reisezeit je Gateway-Sprung in Spielstunden. */
+  public static double hoursPerGatewayHop() {
+    return positive("hoursPerGatewayHop");
+  }
+
+  /**
+   * Grundbedarf je Einwohner und Spielstunde, in der Reihenfolge der Datei –
+   * die ist zugleich die Einkaufsreihenfolge des Tageseinkaufs.
+   */
+  public static Map<String, Double> consumerNeedPerCapitaPerGameHour() {
+    JsonNode node = ROOT.path("consumerNeedPerCapitaPerGameHour");
+    if (!node.isObject() || node.isEmpty()) throw new IllegalStateException("consumerNeedPerCapitaPerGameHour fehlt oder ist leer");
+    Map<String, Double> out = new LinkedHashMap<>();
+    node.fields().forEachRemaining(e -> out.put(e.getKey(), e.getValue().asDouble()));
+    return Collections.unmodifiableMap(out);
+  }
+
+  /** Wachstumsgeld je neuem Einwohner, zugleich Grundlage der Kolonistenprämie. */
+  public static double creditsPerNewInhabitant() {
+    return ROOT.path("creditsPerNewInhabitant").asDouble();
+  }
+
+  /** Rekrutierung nur bei einer Loyalität ÜBER diesem Wert. */
+  public static double recruitMinLoyaltyPct() {
+    return ROOT.path("recruitMinLoyaltyPct").asDouble();
+  }
+
+  /** Dauer eines Kampf-Ticks in Spielstunden (Raum- und Bodenkampf). */
+  public static int combatTickGameHours() {
+    return (int) positive("combatTickGameHours");
+  }
+
+  /** Drohnen, die ein Soldat kommandiert. */
+  public static int dronesPerSoldier() {
+    return (int) positive("dronesPerSoldier");
+  }
+
+  /** Loyalität, unter der eine belagerte Kolonie an den Angreifer übergeht. */
+  public static double siegeSurrenderLoyaltyPct() {
+    return ROOT.path("siegeSurrenderLoyaltyPct").asDouble();
+  }
+
+  /** Ein Wert, der fehlen würde, stünde sonst still als 0 im Spiel – bei Teilern und Takten wäre das fatal. */
+  private static double positive(String key) {
+    double value = ROOT.path(key).asDouble();
+    if (value <= 0) throw new IllegalStateException(key + " muss größer als 0 sein, ist aber " + value);
+    return value;
   }
 }

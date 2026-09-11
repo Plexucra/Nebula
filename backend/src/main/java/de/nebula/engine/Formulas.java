@@ -295,7 +295,7 @@ public final class Formulas {
     };
   }
 
-  public static final double CREDITS_PER_NEW_INHABITANT = 8;
+  public static final double CREDITS_PER_NEW_INHABITANT = SharedConstants.creditsPerNewInhabitant();
 
   /** Ab welchem {@code coverageRatio} eine Kolonie als "im Blackout" gilt (Konzeption/Spieldesign/06_..., "Energieversorgung"). */
   public static final double BLACKOUT_THRESHOLD = 0.999;
@@ -326,7 +326,7 @@ public final class Formulas {
   public static final double COMBAT_DURABILITY_FACTOR = 1;
 
   /** Dauer eines Kampf-Ticks in Spielstunden (Mechanik/04_..., §6). */
-  public static final int COMBAT_TICK_HOURS = 8;
+  public static final int COMBAT_TICK_HOURS = SharedConstants.combatTickGameHours();
 
   /**
    * Abschusskapazität der planetaren Verteidigung je Ausbaustufe
@@ -449,7 +449,7 @@ public final class Formulas {
    * Loyalitätsschwelle, unterhalb derer die Kolonie tatsächlich an den
    * Angreifer übergeht. Erst hier – nicht schon mit dem Fall der Garnison.
    */
-  public static final double SIEGE_SURRENDER_LOYALTY_PCT = 2;
+  public static final double SIEGE_SURRENDER_LOYALTY_PCT = SharedConstants.siegeSurrenderLoyaltyPct();
 
   /**
    * Verluste, die eine Seite je Belagerungstick zufügt:

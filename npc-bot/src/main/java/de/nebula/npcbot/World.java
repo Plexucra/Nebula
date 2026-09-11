@@ -131,6 +131,11 @@ final class World {
     return q("colonyStats", Map.of("id", colonyId));
   }
 
+  /** Wohnraum der Kolonie in Einwohnern (Wohnkomplex, im Blackout gemindert) – {@code PowerGrid.effectiveHousingCapacity}. */
+  double housingCapacity(String colonyId) {
+    return q("housingCapacity", Map.of("colonyId", colonyId)).asDouble(0);
+  }
+
   double population(String colonyId) {
     return Json.dbl(q("population", Map.of("id", colonyId)), "currentCount");
   }
@@ -175,28 +180,20 @@ final class World {
     return list(q("sellOrders", Map.of("systemId", systemId)));
   }
 
-  private Map<String, Double> shipTankCapacities;
-
   /**
-   * Fassungsvermögen des Treibstofftanks EINER Flotte in Eleriumkapseln –
-   * Summe der Schiffstanks aus {@code shipTypes}. Seit
+   * Fassungsvermögen des Treibstofftanks EINER Flotte in Eleriumkapseln – der
+   * Server hängt es an jede Flotte ({@code FleetCommands.FleetView}). Seit
    * Umsetzungskonzept/34_...md hängt der Sprungverbrauch an der Schiffsmasse;
    * eine feste Kapselzahl je Schiff (der frühere Bot-Richtwert) lässt schwere
    * Flotten mit leerem Tank stehen.
    */
   double fleetTankCapacity(JsonNode fleet) {
-    if (shipTankCapacities == null) {
-      Map<String, Double> all = new HashMap<>();
-      for (JsonNode d : list(c.call("shipTypes", Map.of()))) {
-        all.put(text(d, "productTypeId"), Json.dbl(d, "fuelTankCapacity"));
-      }
-      shipTankCapacities = all;
-    }
-    double sum = 0;
-    for (JsonNode s : fleet.path("ships")) {
-      sum += shipTankCapacities.getOrDefault(text(s, "shipProductTypeId"), 0.0) * Json.dbl(s, "quantity");
-    }
-    return sum;
+    return Json.dbl(fleet, "fuelTankCapacity");
+  }
+
+  /** Kapseln, die diese Flotte für EINEN Gateway-Sprung verbraucht – ebenfalls aus der Flottenansicht des Servers. */
+  double fleetJumpFuelPerHop(JsonNode fleet) {
+    return Json.dbl(fleet, "jumpFuelPerHop");
   }
 
   private Double troopCapacityPerTransport;
@@ -529,10 +526,29 @@ final class World {
     return false;
   }
 
-  static double strength(JsonNode fleet) {
+  private Map<String, Double> shipMilitaryWeights;
+
+  /**
+   * Militärische Stärke einer Flotte: Summe der Kampfschiffe, gewichtet mit
+   * ihrem {@code carrierSlotUsage} aus dem Schiffskatalog des Servers
+   * (Korvette 1, Zerstörer 10, Kreuzer 100). Seit Umsetzungskonzept/27_...md
+   * ist das zugleich das Verhältnis von Masse und Arbeitsaufwand – eine
+   * brauchbare Näherung des echten Kampfwerts. Zählen nur Schiffe mit einer
+   * Konterklasse; Frachter, Transporter, Träger und Kolonisationsschiff
+   * kämpfen nicht (das Kolonisationsschiff hätte sonst Gewicht 177).
+   */
+  double strength(JsonNode fleet) {
+    if (shipMilitaryWeights == null) {
+      Map<String, Double> all = new HashMap<>();
+      for (JsonNode d : list(c.call("shipTypes", Map.of()))) {
+        if (isNull(d.path("countersClass"))) continue;
+        all.put(text(d, "productTypeId"), Json.dbl(d, "carrierSlotUsage"));
+      }
+      shipMilitaryWeights = all;
+    }
     double sum = 0;
     for (JsonNode s : fleet.path("ships")) {
-      sum += Catalog.SHIP_MILITARY_WEIGHT.getOrDefault(text(s, "shipProductTypeId"), 0.0) * Json.dbl(s, "quantity");
+      sum += shipMilitaryWeights.getOrDefault(text(s, "shipProductTypeId"), 0.0) * Json.dbl(s, "quantity");
     }
     return sum;
   }
@@ -568,10 +584,29 @@ final class World {
   }
 
   /** Kampfwert der AKTIVEN Drohnen eines Verbands (nur sie kämpfen, Mechanik/05 §3). */
-  static double activeDroneValue(JsonNode group) {
+  double activeDroneValue(JsonNode group) {
     double sum = 0;
-    for (String d : Catalog.DRONES) sum += activeCount(group, d) * Catalog.DRONE_VALUE.get(d);
+    for (String d : Catalog.DRONES) sum += activeCount(group, d) * droneValue(d);
     return sum;
+  }
+
+  private Map<String, Double> droneValues;
+
+  /**
+   * Kampfwert EINER Drohne = {@code workHoursPerUnit × baseProductionHours}
+   * aus dem Produktkatalog des Servers – dieselbe Rechnung wie
+   * {@code Formulas.productionAspect} im Backend.
+   */
+  double droneValue(String droneType) {
+    if (droneValues == null) {
+      Map<String, Double> all = new HashMap<>();
+      for (JsonNode p : list(c.call("productTypes", Map.of()))) {
+        String id = text(p, "id");
+        if (Catalog.DRONES.contains(id)) all.put(id, Json.dbl(p, "workHoursPerUnit") * Json.dbl(p, "baseProductionHours"));
+      }
+      droneValues = all;
+    }
+    return droneValues.getOrDefault(droneType, 0.0);
   }
 
   /** Häufigste Drohnenklasse eines Verbands – Grundlage der Konterwahl. */

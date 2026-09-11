@@ -30,9 +30,10 @@
           <div class="panel-body stat-grid">
             @if (stats(); as s) {
               <div class="stat-block">
-                <div class="stat-block-head"><span>Wohnraum</span><span class="mono">{{ s.infrastructurePct | number:'1.0-0' }}%</span></div>
-                <div class="stat-bar big"><span [style.width.%]="s.infrastructurePct > 100 ? 100 : s.infrastructurePct"></span></div>
-                <p class="hint">Trägt die Bevölkerung – kein direkter Produktionsbonus.</p>
+                @let occupied = housingOccupancyPct(s.infrastructurePct);
+                <div class="stat-block-head"><span>Wohnraum</span><span class="mono">{{ occupied === null ? 'unter 25' : (occupied | number:'1.0-0') }} % belegt</span></div>
+                <div class="stat-bar big"><span [style.width.%]="occupied ?? 25"></span></div>
+                <p class="hint">Anteil der Plätze im Wohnkomplex, die bewohnt sind. Bei 100 % wächst die Bevölkerung nicht weiter – kein direkter Produktionsbonus.</p>
               </div>
               <div class="stat-block">
                 <div class="stat-block-head"><span>Sicherheit</span><span class="mono" [class.blackout]="powerCoverage() < 0.999">{{ s.securityPct | number:'1.0-0' }}%</span></div>
@@ -47,7 +48,7 @@
               <div class="stat-block">
                 <div class="stat-block-head"><span>Loyalität</span><span class="mono">{{ s.loyaltyPct | number:'1.0-0' }}%</span></div>
                 <div class="stat-bar big"><span [style.width.%]="s.loyaltyPct"></span></div>
-                <p class="hint">Die Verbundenheit der Bevölkerung mit Ihnen – sie verändert sich nur langsam und wächst, solange die Menschen gut versorgt und sicher leben. {{ c.isHomeworld ? 'Heimatwelt-Bonus aktiv.' : '' }}</p>
+                <p class="hint">Die Verbundenheit der Bevölkerung mit {{ isOwnColony() ? 'Ihnen' : 'ihrem Kommandanten' }} – sie verändert sich nur langsam und wächst, solange die Menschen gut versorgt und sicher leben. {{ c.isHomeworld ? 'Heimatwelt-Bonus aktiv.' : '' }}</p>
               </div>
             }
           </div>
