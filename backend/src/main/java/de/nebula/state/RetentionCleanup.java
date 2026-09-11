@@ -3,6 +3,7 @@ package de.nebula.state;
 import de.nebula.engine.Clock;
 import de.nebula.engine.GameConstants;
 import de.nebula.model.Player;
+import de.nebula.model.PlayerRole;
 
 import java.util.List;
 import java.util.Set;
@@ -47,7 +48,32 @@ public final class RetentionCleanup {
     // REALZEIT-AUSNAHME: bereits Realzeit-Millisekunden, NICHT über Clock.hoursToMs umrechnen.
     state.notifications.removeIf(n -> !n.keep && t - n.createdAt > GameConstants.NOTIFICATION_RETENTION_REAL_MS);
     state.messages.removeIf(m -> !m.keep && t - m.sentAt > GameConstants.MESSAGE_RETENTION_REAL_MS);
+    purgeNpcMail(state, t);
     deleteInactivePlayers(state, ids, t);
+  }
+
+  /**
+   * NPC-Post lebt kurz. Die Bots schicken ihrem Koordinator alle drei Takte
+   * eine Statusnachricht und lesen sie einmal; Benachrichtigungen liest kein
+   * Bot. Mit der menschlichen Frist von 30 bzw. 14 echten Tagen lagen nach
+   * 35 Stunden LAN-Betrieb 210 000 Nachrichten und 214 000 Benachrichtigungen
+   * im Speicher (rund 200 MB lebende Daten, der Löwenanteil des Servers), und
+   * jeder Bot zog sein komplettes Postfach bei jedem Takt neu vom Server.
+   * Gelesene Nachrichten an einen NPC und alle Benachrichtigungen an einen
+   * NPC (Adresse: Kommandant oder eine seiner Kolonien) verschwinden deshalb
+   * nach {@code NPC_MAIL_RETENTION_REAL_MS}; "Beibehalten" gilt weiterhin.
+   */
+  static void purgeNpcMail(GameState state, long t) {
+    Set<String> npcIds = state.players.stream()
+        .filter(p -> p.role == PlayerRole.Npc).map(p -> p.id).collect(Collectors.toSet());
+    if (npcIds.isEmpty()) return;
+    Set<String> npcColonyIds = state.colonies.stream()
+        .filter(c -> npcIds.contains(c.ownerId)).map(c -> c.id).collect(Collectors.toSet());
+    long limit = GameConstants.NPC_MAIL_RETENTION_REAL_MS;
+    state.messages.removeIf(m -> !m.keep && m.read && npcIds.contains(m.toPlayerId) && t - m.sentAt > limit);
+    state.notifications.removeIf(n -> !n.keep && t - n.createdAt > limit
+        && ((n.playerId != null && npcIds.contains(n.playerId))
+            || (n.playerId == null && n.colonyId != null && npcColonyIds.contains(n.colonyId))));
   }
 
   /**

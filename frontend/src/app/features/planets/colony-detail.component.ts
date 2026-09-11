@@ -252,7 +252,8 @@ export class ColonyDetailComponent {
   /**
    * Handel am Posten ist nur zwischen Kommandanten mit Handelsvertrag möglich
    * (Konzept 05 §14) – die eigene Order ist davon unbenommen (dafür gibt es
-   * „Zurückziehen"). Die Bevölkerung kauft ohne Vertrag.
+   * „Zurückziehen"). Dieselbe Regel gilt für die Bevölkerung: sie kauft nur
+   * beim eigenen Kommandanten oder dessen Vertragspartnern.
    */
   protected canTradeWith(ownerId: Id | null): boolean {
     if (!ownerId || ownerId === this.playerId()) return true;

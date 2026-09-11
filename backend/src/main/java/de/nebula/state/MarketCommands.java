@@ -35,7 +35,8 @@ import java.util.Objects;
  *       Einrichtung des Planeten, genutzt von allen Kolonien darauf und von
  *       allen dort gelandeten Flotten. Handel zwischen zwei Kommandanten nur
  *       mit Handelsvertrag (Konzept 05 §14, geprüft im Matching); die
- *       Bevölkerung der Kolonien kauft ohne Vertrag aus der Verkaufsseite
+ *       Bevölkerung einer Kolonie kauft aus der Verkaufsseite nur bei ihrem
+ *       eigenen Kommandanten oder dessen Handelsvertragspartnern
  *       ({@code Economy}). Keine Handelsgilde-Orders.</li>
  * </ul>
  *
@@ -133,7 +134,7 @@ public final class MarketCommands {
         .toList();
   }
 
-  /** Verkaufs-Orders am Posten eines Planeten, günstigste zuerst – die Einkaufsliste der Bevölkerung. */
+  /** Verkaufs-Orders am Posten eines Planeten, günstigste zuerst, ungefiltert – die Bevölkerung siebt daraus nach Vertrag ({@code Economy.ownPostOrders}). */
   public static List<MarketOrder> sellOrdersAtPost(GameState state, String systemId, String planetId, String productTypeId) {
     List<MarketOrder> orders = new ArrayList<>();
     for (MarketOrder o : state.marketOrders) {

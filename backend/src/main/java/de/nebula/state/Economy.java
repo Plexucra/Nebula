@@ -23,6 +23,7 @@ import de.nebula.model.UniverseStatSnapshot;
 import de.nebula.model.Wallet;
 import de.nebula.model.WalletOwnerType;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -156,8 +157,8 @@ public final class Economy {
 
   /** Credits je Schiff und Spielstunde, das an einer Kolonie liegt. */
   public static final double FLEET_UPKEEP_PER_SHIP_PER_HOUR = 0.5;
-  /** Credits je Einwohner und Spielstunde (siehe {@code ProductCosts}). */
-  public static final double WAGE_PER_CAPITA_PER_HOUR = 0.02;
+  /** Credits je Einwohner und Spielstunde – EINE Quelle in {@code shared/game-constants.json} (auch Preisanker in {@code ProductCosts}). */
+  public static final double WAGE_PER_CAPITA_PER_HOUR = GameConstants.WAGE_PER_CAPITA_PER_HOUR;
 
   private static void payFromOwnerWallet(GameState state, IdGenerator ids, Wallet ownerWallet,
                                           Wallet popWallet, double amount, TransactionReason reason, String note) {
@@ -251,9 +252,25 @@ public final class Economy {
 
   private static final int MAX_PURCHASE_PASSES = 10;
 
-  /** Kaufbare Verkaufs-Orders am Handelsposten des Planeten dieser Kolonie, günstigste zuerst – egal, wer verkauft (keine Vertragspflicht für die Bevölkerung). */
+  /**
+   * Kaufbare Verkaufs-Orders am Handelsposten des Planeten dieser Kolonie,
+   * günstigste zuerst. Die Bevölkerung kauft nur bei ihrem eigenen
+   * Kommandanten oder bei Kommandanten, mit denen er einen Handelsvertrag hat
+   * (dieselbe Vertragsregel wie im Matching des Postens, Konzept 05 §14) –
+   * ein fremder Händler ohne Vertrag erreicht die Bevölkerung nicht.
+   */
   static List<MarketOrder> ownPostOrders(GameState state, Colony colony, String goodId) {
-    return MarketCommands.sellOrdersAtPost(state, colony.systemId, colony.planetId, goodId);
+    List<MarketOrder> orders = new ArrayList<>();
+    for (MarketOrder o : MarketCommands.sellOrdersAtPost(state, colony.systemId, colony.planetId, goodId)) {
+      if (mayPopulationBuyFrom(state, colony, o)) orders.add(o);
+    }
+    return orders;
+  }
+
+  /** Verkäufer ist der eigene Kommandant oder ein Handelsvertragspartner. Orders ohne Eigentümer (Handelsgilde) gibt es am Posten nicht. */
+  static boolean mayPopulationBuyFrom(GameState state, Colony colony, MarketOrder order) {
+    if (order.ownerId == null) return false;
+    return order.ownerId.equals(colony.ownerId) || TreatyCommands.hasTradeAgreement(state, colony.ownerId, order.ownerId);
   }
 
   // --- Verbrauch und Lebensstandard ----------------------------------------
@@ -333,8 +350,8 @@ public final class Economy {
       String message = anyOrder
           ? "Die Bevölkerung von \"" + colony.name + "\" kann sich " + goodName + " nicht leisten (Deckung "
               + Math.round(e.getValue() * 100) + " %) – Preis der Verkaufsorder prüfen, das Bevölkerungs-Wallet gibt nicht mehr her."
-          : "In \"" + colony.name + "\" gibt es keine Verkaufsorder für " + goodName + " – die Bevölkerung kauft nur am eigenen "
-              + "Handelsposten, der Lebensstandard bleibt ohne dieses Gut gedeckelt.";
+          : "In \"" + colony.name + "\" gibt es keine kaufbare Verkaufsorder für " + goodName + " – die Bevölkerung kauft nur am eigenen "
+              + "Handelsposten und nur von Ihnen oder von Handelsvertragspartnern; der Lebensstandard bleibt ohne dieses Gut gedeckelt.";
       Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_SUPPLY_GAP, message,
           colony.id, Notifications.colonyLink(colony.id));
     }

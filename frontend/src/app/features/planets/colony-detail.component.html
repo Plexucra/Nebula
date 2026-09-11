@@ -669,7 +669,7 @@
         <div class="panel corner-frame span-2">
           <div class="panel-header">
             <h2>Handelsposten {{ planet()?.name ?? '' }}</h2>
-            <span class="hint">Die Einrichtung des Planeten – genutzt von allen Kolonien darauf und von allen hier gelandeten Flotten, wie an einer Handelsgilde-Station: Kauf- und Verkaufs-Orders kreuzen sich sofort, auch teilweise, zum Preis der älteren Order. Zwischen zwei Kommandanten nur mit <a routerLink="/diplomatie">Handelsvertrag</a>; die Bevölkerung der Kolonien kauft ohne Vertrag aus der Verkaufsseite. Eigene Kolonie auf dem Planeten: Verkauf aus dem Lager, Käufe landen im Lager. Sonst läuft alles über das eigene Depot am Posten (Flotte: „Ins Depot entladen"). Neue Verkaufs-Orders aus dem Lager über „Anbieten" (Tab <a (click)="setTab('produktion')" class="link-like">Produktion</a>).</span>
+            <span class="hint">Die Einrichtung des Planeten – genutzt von allen Kolonien darauf und von allen hier gelandeten Flotten, wie an einer Handelsgilde-Station: Kauf- und Verkaufs-Orders kreuzen sich sofort, auch teilweise, zum Preis der älteren Order. Zwischen zwei Kommandanten nur mit <a routerLink="/diplomatie">Handelsvertrag</a>; auch die Bevölkerung einer Kolonie kauft aus der Verkaufsseite nur bei ihrem eigenen Kommandanten oder dessen Vertragspartnern. Eigene Kolonie auf dem Planeten: Verkauf aus dem Lager, Käufe landen im Lager. Sonst läuft alles über das eigene Depot am Posten (Flotte: „Ins Depot entladen"). Neue Verkaufs-Orders aus dem Lager über „Anbieten" (Tab <a (click)="setTab('produktion')" class="link-like">Produktion</a>).</span>
           </div>
           <div class="panel-body wh-list">
             @if (error(); as e) { <div class="error">{{ e }}</div> }

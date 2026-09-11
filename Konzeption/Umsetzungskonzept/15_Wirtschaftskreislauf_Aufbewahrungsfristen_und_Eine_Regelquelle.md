@@ -48,7 +48,12 @@ Kommandant selbst auf. Maximal erreichbarer Lebensstandard bleibt dadurch
   dem Lager abzieht). `runConsumption` kauft je Tick höchstens `ceil(Bedarf)`,
   bei Startbevölkerung 420 also 1 Stück je Gut – 20 Stück puffern damit rund
   20 Ticks.
-- **Preis: 20 Credits/Stück**, hergeleitet über den dominanten Geldabfluss:
+- **Preis: 20 Credits/Stück**, hergeleitet über den dominanten Geldabfluss
+  (Stand damals; seit 11.9.2026 ist der Lohn `wagePerCapitaPerGameHour` in
+  `shared/game-constants.json` auf ein Drittel gesenkt, 0,0067, und der
+  Gleichgewichtspreis damit auf rund 17 Cr – der Startpreis 60 aus Konzept 36
+  liegt bewusst darüber, das Wachstumsgeld trägt die Differenz, die Bots
+  senken ihre Preise automatisch):
   Löhne je Tick = `Bevölkerung × 0,02 × TICK_GAME_HOURS` = Bevölkerung × 0,008;
   Konsumbedarf je Tick = Bevölkerung × (0,0004 + 0,00015) = Bevölkerung ×
   0,00055 Stück. Gleichsetzen ergibt 0,008 / 0,00055 ≈ **14,5 Credits/Stück**,

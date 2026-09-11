@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Beendet den mit build-and-run-lan.sh gestarteten Server UND die von ihm
-# mitgestartete NPC-Bot-Armee (20 Prozesse, siehe npc-bot/run-army.sh) wieder.
+# mitgestartete NPC-Bot-Armee (40 Bots in einem Prozess, siehe npc-bot/run-army.sh) wieder.
 # Nötig, weil build-and-run-lan.sh Server und Bot-Armee im Hintergrund startet
 # (kein Kindprozess, der beim Schließen des Terminals automatisch mitstirbt,
 # und Strg+C wirkt nur im ursprünglichen Terminal) – wer im Hintergrund oder

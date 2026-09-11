@@ -26,7 +26,7 @@ auch von weit her, "buchhalterisch". Kauf-Orders gab es dort nicht.
 | Depot | je Kommandant und Ort (`DepotEntry`, `Depot`), unbegrenzt; Flotte: „Ins Depot entladen" / „Aus Depot laden" auch bei fremder Kolonie |
 | Lager = Depot | wer eine Kolonie auf dem Planeten hat: Verkaufs-Orders aus dem Lager (`sourceColonyId`), Käufe ins Lager; Depot bleibt ungenutzt |
 | Matching | wie an der Station (Preis-Zeit-Priorität, Maker-Preis, Escrow), zusätzlich am Posten: Paare zweier Kommandanten ohne Handelsvertrag werden übersprungen |
-| Bevölkerung | kauft am Kolonietag und beim Notkauf aus der Verkaufsseite des Postens ihres Planeten, günstigste zuerst, ohne Vertrag (Konzept 36) |
+| Bevölkerung | kauft am Kolonietag und beim Notkauf aus der Verkaufsseite des Postens ihres Planeten, günstigste zuerst (Konzept 36) – aber nur Orders ihres eigenen Kommandanten oder seiner Handelsvertragspartner (seit 11.9.2026; vorher ohne Vertrag) |
 | Handelsgilde | Market-Maker nur an Stationen |
 | Dauerorder | `autoRelist`: nach dem Leerkauf sofort aus der Quelle nachlegen (Lager oder Depot), sonst schlafend mit Restmenge 0 bis zum nächsten Zugang |
 | Sofortkauf | „Kaufen" neben einer Verkaufs-Order (`buyFromOrder`): zum Orderpreis, mit Vertragsprüfung, Lieferung ins Lager der eigenen Kolonie auf dem Planeten, sonst ins Depot |

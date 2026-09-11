@@ -4,7 +4,7 @@
 
 Drittes großes Feature nach der Client-Server-Migration (Umsetzungskonzept/13_...md):
 ein Ingame-Nachrichtensystem zwischen Kommandanten, eine komplette Neuausrichtung
-der NPCs als eigenständige Java-Bot-Armee (20 Prozesse, zwei verfeindete Lager),
+der NPCs als eigenständige Java-Bot-Armee (ursprünglich 20 Prozesse, seit 11.9.2026 40 Bots in einem Prozess, zwei verfeindete Lager),
 und die Möglichkeit, die Anwendung im LAN von einem Smartphone oder einem
 anderen Rechner aus zu erreichen. Die drei Teile hängen zusammen: die
 Bot-Armee koordiniert ihre Spezialisierung über genau das neue
@@ -203,9 +203,11 @@ behoben.
 
 ### Start-/Stop-Skripte
 
-`npc-bot/run-army.sh [server-url]` startet alle 20 Prozesse (10× `--camp=NORD`,
-10× `--camp=SUED`, `--index=1..10` je Lager), schreibt PIDs nach
-`npc-bot/army.pids` und je Bot ein eigenes Logfile nach `npc-bot/logs/`.
+`npc-bot/run-army.sh [server-url]` startete ursprünglich alle 20 Prozesse (10×
+`--camp=NORD`, 10× `--camp=SUED`, `--index=1..10` je Lager). **Seit 11.9.2026**
+startet es EINEN `BotArmy`-Prozess mit 40 Bots (20 je Lager, `BOTS_PER_CAMP`
+überschreibbar) – 40 einzelne JVMs à 600 MB passten nicht mehr in den
+Speicher. PID nach `npc-bot/army.pids`, Logs nach `npc-bot/logs/`.
 `npc-bot/stop-army.sh` beendet alle in `army.pids` gelisteten Prozesse
 sauber (SIGTERM).
 

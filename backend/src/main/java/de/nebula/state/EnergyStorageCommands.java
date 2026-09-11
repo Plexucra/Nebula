@@ -122,7 +122,8 @@ public final class EnergyStorageCommands {
     v.reserveTarget = effectiveTarget(state, colonyId);
     int level = GameQueries.getBuildingLevel(state, colonyId, GameConstants.INFRASTRUCTURE_BUILDING_ID);
     v.upkeepPerHour = Formulas.infrastructureEleriumPerHour(level);
-    v.storedCoverageGameHours = v.upkeepPerHour > 0 ? s.stored / v.upkeepPerHour : null;
+    // v.stored statt s.stored: ohne Eintrag im Zustand ist s null (frische Kolonie vor dem ersten Kolonietag).
+    v.storedCoverageGameHours = v.upkeepPerHour > 0 ? v.stored / v.upkeepPerHour : null;
     v.warehouseStock = Warehouse.qty(state, colonyId, GameConstants.INFRASTRUCTURE_FUEL_PRODUCT_ID);
     return v;
   }

@@ -12,8 +12,9 @@ export type MarketOrderSide = 'Buy' | 'Sell';
  * Stationen) – solche Orders lassen sich nicht zurückziehen.
  *
  * Am Posten handeln zwei Kommandanten nur mit Handelsvertrag (das Matching
- * überspringt Paare ohne Vertrag); die Bevölkerung der Kolonien kauft ohne
- * Vertrag aus der Verkaufsseite.
+ * überspringt Paare ohne Vertrag); auch die Bevölkerung einer Kolonie kauft
+ * aus der Verkaufsseite nur beim eigenen Kommandanten oder dessen
+ * Handelsvertragspartnern.
  */
 export interface MarketOrder {
   id: Id;

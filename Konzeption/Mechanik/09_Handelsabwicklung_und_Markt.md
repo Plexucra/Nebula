@@ -32,7 +32,9 @@ gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 > Sonnensystem nicht mehr möglich – nur noch an einer sektoralen
 > Handelsstation der Handelsgilde. Depotverkauf/-kauf bleibt überall
 > möglich, erfordert zwischen den beiden beteiligten Kommandanten aber
-> einen gültigen Handelsvertrag (nicht für die Bevölkerung, siehe §4/§12).
+> einen gültigen Handelsvertrag (seit 11.9.2026 auch für die Bevölkerung:
+> sie kauft nur beim eigenen Kommandanten oder dessen Vertragspartnern,
+> siehe §3/§4).
 > An einer Handelsstation gilt keine dieser beiden Einschränkungen.
 
 ## 3. Planetarer Handelsposten und Depots (Umsetzungskonzept/37)
@@ -52,6 +54,10 @@ gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 - Handel zwischen zwei Kommandanten nur mit Handelsvertrag (Konzept 05
   §14): das Matching überspringt Paare ohne Vertrag. Keine Handelsgilde-
   Orders am Posten (kein Notanker, siehe §5 der Handelsgilde).
+- Dieselbe Vertragsregel gilt für die Bevölkerung: sie kauft am Posten nur
+  Verkaufs-Orders ihres eigenen Kommandanten oder seiner
+  Handelsvertragspartner. Ein fremder Händler ohne Vertrag erreicht sie
+  nicht, auch nicht mit dem günstigeren Preis.
 - Abbruch einer Order: Ware zurück in ihre Quelle (Lager oder Depot),
   Credits zurück ins Wallet.
 
@@ -60,8 +66,9 @@ gemeinsamen Systemmarkt (kein eigenes planetarisches Orderbuch).
 - Bevölkerung kauft zu denselben tatsächlichen Sell-Order-Preisen wie
   Spieler (kein künstlicher Bevölkerungspreis).
 - Sie kauft **ausschließlich am Planetaren Handelsposten ihres Planeten**
-  (§3) – aus der Verkaufsseite des Orderbuchs, egal wer verkauft, ohne
-  Handelsvertrag. Nicht an der System-Handelsstation, nicht an den Posten
+  (§3) – aus der Verkaufsseite des Orderbuchs, und nur Orders ihres
+  eigenen Kommandanten oder seiner Handelsvertragspartner. Nicht an der
+  System-Handelsstation, nicht an den Posten
   anderer Planeten (Umsetzungskonzept/36 und 37, ersetzt die frühere
   Systemmarkt-Regel).
 - Der Kauf ist sofort wirksam: die Ware wandert in den **Vorrat der

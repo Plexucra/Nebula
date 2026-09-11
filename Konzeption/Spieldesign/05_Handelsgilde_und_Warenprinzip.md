@@ -135,9 +135,10 @@ Frachtertransport.
 > **Präzisierung (10.9.2026, Umsetzungskonzept/36 und 37):** Die
 > **Bevölkerung** einer Kolonie kauft ausschließlich am **Planetaren
 > Handelsposten ihres Planeten** – aus der Verkaufsseite des dortigen
-> Orderbuchs, egal wer verkauft (§14). Sie kauft zu denselben
-> tatsächlichen Preisen wie Spieler, ohne Sonderpreis und ohne
-> Handelsvertrag-Pflicht (Bevölkerung ist keine Vertragspartei). Sie kauft
+> Orderbuchs, aber nur Orders ihres eigenen Kommandanten oder seiner
+> Handelsvertragspartner (§14; seit 11.9.2026 – vorher kaufte sie bei
+> jedem). Sie kauft zu denselben tatsächlichen Preisen wie Spieler, ohne
+> Sonderpreis. Sie kauft
 > **einmal je Spieltag** und hält einen **Vorrat von sieben Tagesbedarfen**
 > je Grundkonsumgut; gegessen wird aus dem Vorrat. Die Wirtschaft einer
 > Kolonie ist damit ein Ereignis je Spieltag statt eines Sekundentakts.

@@ -122,7 +122,7 @@ World (Weltsicht, je Takt gecacht)
 | `Military` | Raum: Heimatblockade, Raids mit Stärkeschätzung, Rückzug, Wiederaufbau. Boden: die komplette Landungsoperation (§E). |
 | `Expansion` | Kolonisationsschiff und Gründung im eigenen System, danach Versorgung. |
 | `Monitor` | Menschenlesbares Log und JSONL-Spur je Bot. |
-| `BotArmy` | Alle 20 Bots in einem Prozess (ein Thread und eine Verbindung je Bot) statt 20 JVMs à 600 MB; `run-army.sh` funktioniert unverändert. |
+| `BotArmy` | Alle Bots in einem Prozess (ein Thread und eine Verbindung je Bot) statt einer JVM je Bot; seit 11.9.2026 der Weg von `run-army.sh` (40 Bots, `-Xmx1g`, Serial-GC). Die 600 MB je JVM waren nur der Anfang: ohne `-Xmx` wuchs jede Bot-JVM im LAN-Betrieb auf 1,3–3,8 GB RSS für rund 130 MB lebende Daten, davon der Großteil das ungelesene, 30 Tage aufbewahrte Postfach mit Statusnachrichten (siehe `RetentionCleanup.purgeNpcMail`). |
 
 ### Was die Wirtschaft anders macht als bisher
 

@@ -114,6 +114,44 @@ class RetentionAndPlayerDeletionTest {
     assertTrue(MessageCommands.inbox(state, to).isEmpty());
   }
 
+  /**
+   * NPC-Post lebt nur Minuten (Speicher des LAN-Servers, 11.9.2026): gelesene
+   * Nachrichten an einen NPC und Benachrichtigungen an ihn oder seine Kolonie
+   * verschwinden nach {@code NPC_MAIL_RETENTION_REAL_MS}; ungelesene Nachrichten
+   * und die Post eines Menschen bleiben.
+   */
+  @Test
+  void npcMailIsPurgedAfterMinutesWhileHumanMailStays() {
+    GameState state = new GameState();
+    IdGenerator ids = new IdGenerator();
+    GameStateSeeder.bootstrap(state, WorldSeed.createWorldSeed("Mensch", "Heim", ids), ids);
+    GameStateSeeder.appendPlayer(state,
+        WorldSeed.createAdditionalPlayerSeed(state.systems, state.players, "NPC-Nord-01", "Heim NPC", ids, PlayerRole.Npc, "NORD"),
+        ids);
+    Player human = state.players.get(0);
+    Player npc = state.players.get(1);
+    for (Player p : state.players) p.lastSeenAt = Clock.now();
+    long now = Clock.now();
+
+    MessageCommands.sendMessage(state, ids, human.id, npc.id, "Status", "gelesen");
+    MessageCommands.sendMessage(state, ids, human.id, npc.id, "Status", "ungelesen");
+    MessageCommands.sendMessage(state, ids, npc.id, human.id, "Antwort", "an den Menschen");
+    MessageCommands.markMessageRead(state, npc.id, MessageCommands.inbox(state, npc.id).get(0).id);
+    MessageCommands.markMessageRead(state, human.id, MessageCommands.inbox(state, human.id).get(0).id);
+    Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_BUILDING_DONE, "NPC-Meldung", npc.id, null);
+    Notifications.notify(state, ids, NotificationType.Info, Notifications.CODE_BUILDING_DONE, "NPC-Kolonie", npc.homeworldColonyId, null);
+    Notifications.notifyPlayer(state, ids, NotificationType.Info, Notifications.CODE_BUILDING_DONE, "Menschen-Meldung", human.id, null);
+    int notificationsBefore = state.notifications.size();
+
+    purgeWithActivePlayers(state, now + GameConstants.NPC_MAIL_RETENTION_REAL_MS + 1000);
+
+    assertEquals(1, MessageCommands.inbox(state, npc.id).size(), "nur die ungelesene NPC-Nachricht bleibt");
+    assertEquals("ungelesen", MessageCommands.inbox(state, npc.id).get(0).body);
+    assertEquals(1, MessageCommands.inbox(state, human.id).size(), "gelesene Post eines Menschen bleibt bis zur normalen Frist");
+    assertEquals(notificationsBefore - 2, state.notifications.size(), "beide NPC-Benachrichtigungen sind weg, die des Menschen nicht");
+    assertTrue(state.notifications.stream().anyMatch(n -> "Menschen-Meldung".equals(n.message)));
+  }
+
   // --- Löschung inaktiver Kommandanten ---------------------------------------
 
   @Test

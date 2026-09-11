@@ -97,6 +97,16 @@ public final class SharedConstants {
   public static double inactivePlayerDeletionRealDays() {
     return ROOT.path("inactivePlayerDeletionRealDays").asDouble();
   }
+
+  /** REALZEIT-AUSNAHME: Post und Benachrichtigungen an NPC-Kommandanten werden nach so vielen echten Minuten weggeräumt. */
+  public static double npcMailRetentionRealMinutes() {
+    return ROOT.path("npcMailRetentionRealMinutes").asDouble();
+  }
+
+  /** Lohn je Einwohner und Spielstunde – Preisanker und Kaufkraftquelle der Bevölkerung zugleich. */
+  public static double wagePerCapitaPerGameHour() {
+    return ROOT.path("wagePerCapitaPerGameHour").asDouble();
+  }
   // --- Ende REALZEIT-AUSNAHME ---------------------------------------------
 
   /** Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md). */

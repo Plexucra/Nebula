@@ -363,7 +363,8 @@ final class Trade {
   }
 
   private double creditReserve() {
-    return CREDIT_RESERVE_BASE + bot.world.population(bot.homeColonyId) * 0.02 * 48;
+    // Zwei Spieltage Löhne als Reserve – Lohnsatz aus shared/game-constants.json, nicht mehr als Literal hier.
+    return CREDIT_RESERVE_BASE + bot.world.population(bot.homeColonyId) * GameSpeed.WAGE_PER_CAPITA_PER_GAME_HOUR * 48;
   }
 
   private double bestPrice(String productTypeId, String side) {

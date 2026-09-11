@@ -28,7 +28,7 @@
         <div class="legend">
           <span class="legend-item"><i class="dot mine"></i>Eigene Flotte</span>
           <span class="legend-item"><i class="dot colony"></i>Eigene Kolonie</span>
-          <span class="legend-item"><i class="dot enemy"></i>Feindliche Flotte</span>
+          <span class="legend-item"><i class="dot enemy"></i>Fremde Flotte</span>
           <!-- Die beiden fehlenden Legendeneinträge: ohne sie waren der eigene
                Ring und der Handelsgilde-Kreis unerklärt. -->
           <span class="legend-item"><i class="dot home"></i>Heimatsystem</span>
@@ -78,7 +78,7 @@
             [class.mine]="marker.colorClass === 'mine'"
             [class.colony]="marker.colorClass === 'colony'"
             [class.enemy]="marker.colorClass === 'enemy'"
-            [class.home]="sys.isHomeSystem"
+            [class.home]="sys.id === homeSystem()?.id"
             [class.hub]="sys.isTradeHub"
             (click)="onSystemClick(sys)"
           />
@@ -128,7 +128,9 @@
         @if (selectedSystem(); as s) {
           @let marker = markerFor(s.id);
           <span class="tag" [class.good]="s.isTradeHub">{{ s.factionFlavor }}</span>
-          @if (s.isHomeSystem) {
+          <!-- isHomeSystem ist ein Weltmerkmal (Heimat IRGENDEINES Kommandanten) –
+               „Ihr Heimatsystem" gilt nur für das eigene (Gesamttest 11.9.2026). -->
+          @if (s.id === homeSystem()?.id) {
             <p class="hint">Ihr Heimatsystem.</p>
           } @else {
             <p class="hint">{{ hopsFromHome(s.id) }} Gateway-Sprung(e) von {{ systemLabel(homeSystem()) }} entfernt.</p>
@@ -137,7 +139,8 @@
             <p class="hint">Eigene Flotten hier: <strong class="accent-text">{{ marker.myShips }}</strong> Schiffe.</p>
           }
           @if (marker.enemyShips > 0) {
-            <p class="hint">Feindliche Flotten hier: <strong class="danger-text">{{ marker.enemyShips }}</strong> Schiffe.</p>
+            <!-- Der Server zählt hier ALLE fremden Flotten (Fog of War, nicht nur Kriegsgegner) – deshalb „fremd", nicht „feindlich". -->
+            <p class="hint">Fremde Flotten hier: <strong class="danger-text">{{ marker.enemyShips }}</strong> Schiffe.</p>
           }
 
           <div class="divider"></div>

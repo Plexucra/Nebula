@@ -26,7 +26,34 @@
   Basis plus Rate weiterzählen, wie bei Countdowns; der Server liefert die
   Raten bereits (`treasuryFlowPerHour`, `growthRatePerInterval`).
 
+- [ ] **Startpreis 60 Cr an einer Quelle** (Review 11.9.2026 §3.2): steht in
+  `WorldSeed.STARTER_SELL_ORDER_PRICE` und im Bot
+  (`DEFAULT_CONSUMER_PRICE`); mit dem gedrittelten Lohn liegt das
+  Gleichgewicht bei rund 17 Cr – beide Werte in `shared/game-constants.json`
+  ziehen und dabei entscheiden, ob 20 der bessere Start ist.
+- [ ] **Flotten-Treibstoffzahlen vom Server** (Review 11.9.2026 §3.2):
+  `fuelTankCapacity`, `jumpFuelPerHop`, `fuelRangeInJumps` rechnet die
+  Oberfläche noch selbst aus dem Schiffskatalog – als drei Felder an die
+  Flotte hängen, wie `fleetCargoCapacity`.
+
 ## Erledigt
+
+- [x] ~~Speicher, Löhne, Regelquelle~~ – 11.9.2026, Review in
+  `Konzeption/Review_2026-09-11_Speicher_Loehne_Regelquelle.md`. Heap-Grenzen
+  für Server (`-Xmx2g`) und Bot-Armee (`-Xmx1g`, Serial-GC) in den
+  Startskripten; NPC-Post wird nach 30 echten Minuten weggeräumt
+  (`RetentionCleanup.purgeNpcMail`); Lohn je Kopf auf ein Drittel (0,0067)
+  und als `wagePerCapitaPerGameHour` an EINER Stelle in
+  `shared/game-constants.json` für Backend, Preisanker und Bot.
+
+- [x] ~~Bevölkerung kauft nur bei Vertragspartnern, 40 NPCs, Gesamttest~~ –
+  11.9.2026. Die Bevölkerung einer Kolonie kauft am Posten nur noch Orders
+  ihres eigenen Kommandanten oder seiner Handelsvertragspartner
+  (`Economy.ownPostOrders`, Versorgungswarnung und `orderAvailable` folgen
+  derselben Regel). Bot-Armee verdoppelt auf 20 je Lager (40 Bots), dafür
+  `run-army.sh` auf den Ein-Prozess-Modus `BotArmy` umgestellt (40 JVMs
+  passten nicht in den Speicher). Gesamttest mit Befunden und Fixes:
+  `Konzeption/Testergebnis_2026-09-11_Gesamttest_Vertragsregel_40_NPC.md`.
 
 - [x] ~~Planetarer Handelsposten als Orderbuch wie die Station~~ – 10.9.2026,
   Konzept 37. Ein Ordermodell für Station und Posten (`MarketOrder`,

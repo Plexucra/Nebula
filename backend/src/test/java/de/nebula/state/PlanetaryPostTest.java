@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Der Planetare Handelsposten als Orderbuch wie an der Station
  * (Umsetzungskonzept/37): Zugang über Kolonie oder gelandete Flotte, Depot
  * für Fremde, Lager für die eigene Kolonie, Handelsvertrag im Matching, die
- * Bevölkerung kauft ohne Vertrag.
+ * Bevölkerung kauft nur beim eigenen Kommandanten oder bei Vertragspartnern.
  */
 class PlanetaryPostTest {
 
@@ -90,12 +90,13 @@ class PlanetaryPostTest {
   }
 
   @Test
-  void aForeignFleetSellsFromItsDepotAndThePopulationBuysWithoutTreaty() {
+  void thePopulationIgnoresForeignSellOrdersWithoutATradeAgreement() {
     Arena a = newArena();
     Fleet fleet = bertsFreighterAtAnnasHome(a, 100);
     double bertBefore = wallet(a, a.bId()).balance;
+    double annaBefore = wallet(a, a.aId()).balance;
 
-    // Annas Startorder liegt bei 60 Cr; Bert unterbietet und die Bevölkerung kauft zuerst bei ihm.
+    // Annas Startorder liegt bei 60 Cr; Bert unterbietet – ohne Vertrag bleibt seine Order für die Bevölkerung unsichtbar.
     MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 30, false);
     assertEquals(0, FleetCargo.qty(fleet, GameConstants.FOOD_PRODUCT_ID), 1e-9, "Fracht ist in der Order gebunden");
     MarketOrder berts = post(a).stream().filter(o -> a.bId().equals(o.ownerId)).findFirst().orElseThrow();
@@ -103,7 +104,25 @@ class PlanetaryPostTest {
 
     ColonyCommands.population(a.state(), a.home().id).stock.clear();
     Economy.colonyDay(a.state(), a.ids(), a.home().id, Clock.now());
-    assertTrue(wallet(a, a.bId()).balance > bertBefore, "die Bevölkerung hat bei Bert gekauft – ohne Handelsvertrag");
+    assertEquals(bertBefore, wallet(a, a.bId()).balance, 1e-9, "ohne Handelsvertrag kauft die Bevölkerung nichts bei Bert");
+    assertEquals(100, berts.remainingQuantity, 1e-9);
+    assertTrue(wallet(a, a.aId()).balance > annaBefore, "die Bevölkerung kauft stattdessen die teurere Order ihres eigenen Kommandanten");
+  }
+
+  @Test
+  void thePopulationBuysFromAForeignSellOrderWithATradeAgreement() {
+    Arena a = newArena();
+    Fleet fleet = bertsFreighterAtAnnasHome(a, 100);
+    tradeAgreement(a);
+    double bertBefore = wallet(a, a.bId()).balance;
+
+    // Mit Vertrag ist Berts günstigere Order die erste Wahl der Bevölkerung.
+    MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 30, false);
+    MarketOrder berts = post(a).stream().filter(o -> a.bId().equals(o.ownerId)).findFirst().orElseThrow();
+
+    ColonyCommands.population(a.state(), a.home().id).stock.clear();
+    Economy.colonyDay(a.state(), a.ids(), a.home().id, Clock.now());
+    assertTrue(wallet(a, a.bId()).balance > bertBefore, "die Bevölkerung hat bei Bert gekauft – mit Handelsvertrag");
     assertTrue(berts.remainingQuantity < 100);
   }
 

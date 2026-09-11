@@ -45,8 +45,8 @@ const players = await call(ws, 'players');
 const nordBots = players.filter(p => /^NPC-Nord-\d\d$/.test(p.name)).sort((a, b) => a.name.localeCompare(b.name));
 const suedBots = players.filter(p => /^NPC-Sued-\d\d$/.test(p.name)).sort((a, b) => a.name.localeCompare(b.name));
 console.log(`[verify] Registrierte Spieler gesamt: ${players.length} (NORD-Bots: ${nordBots.length}, SUED-Bots: ${suedBots.length})`);
-assert.strictEqual(nordBots.length, 10, 'Erwartet 10 registrierte NORD-Bots');
-assert.strictEqual(suedBots.length, 10, 'Erwartet 10 registrierte SUED-Bots');
+assert.strictEqual(nordBots.length, 20, 'Erwartet 20 registrierte NORD-Bots');
+assert.strictEqual(suedBots.length, 20, 'Erwartet 20 registrierte SUED-Bots');
 console.log('[verify] BESTANDEN: 20 Bot-Kommandanten vollständig registriert (' + nordBots.map(p => p.name).join(', ') + ' / ' + suedBots.map(p => p.name).join(', ') + ')');
 
 // --- 2. Kriegszustände zwischen den Lagern ---------------------------------
@@ -77,7 +77,7 @@ for (const bot of [...nordBots, ...suedBots]) {
   if (active.length > 0) { battleFound = { kind: 'aktiv', battle: active[0], as: bot.name }; break; }
   if (history.length > 0) { battleFound = { kind: 'beendet', battle: history[0], as: bot.name }; break; }
 }
-assert.ok(battleFound, 'Erwartet mindestens ein aktives oder beendetes Gefecht bei irgendeinem der 20 Bots');
+assert.ok(battleFound, 'Erwartet mindestens ein aktives oder beendetes Gefecht bei irgendeinem der 40 Bots');
 console.log(`[verify] BESTANDEN: Gefecht gefunden (${battleFound.kind}, geprüft als ${battleFound.as}): id=${battleFound.battle.id}, `
   + `Angreifer=${battleFound.battle.attackerId}, Verteidiger=${battleFound.battle.defenderId}, `
   + `outcome=${battleFound.battle.outcome ?? '(läuft noch)'}, Ticks=${battleFound.battle.ticksResolved}.`);

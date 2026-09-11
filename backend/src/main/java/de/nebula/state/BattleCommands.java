@@ -270,6 +270,11 @@ public final class BattleCommands {
 
     attackerFleet.ships = atkApplied.ships();
     defenderFleet.ships = defApplied.ships();
+    // Mit einem vernichteten Schiff geht auch sein Tank verloren – sonst zeigt
+    // die Flotte bis zum nächsten Sprung mehr Treibstoff als Tankvolumen
+    // (Gesamttest 11.9.2026: „12.600 / 10.700 Kapseln").
+    attackerFleet.fuelCapsules = Math.min(attackerFleet.fuelCapsules, FleetCommands.fuelTankCapacity(attackerFleet));
+    defenderFleet.fuelCapsules = Math.min(defenderFleet.fuelCapsules, FleetCommands.fuelTankCapacity(defenderFleet));
 
     BattleTickResult tickResult = new BattleTickResult();
     tickResult.tick = battle.ticksResolved + 1;

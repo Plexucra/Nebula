@@ -33,6 +33,9 @@ final class GameSpeed {
     return (long) (gameHours * REAL_MS_PER_GAME_HOUR);
   }
 
+  /** Lohn je Einwohner und Spielstunde – dieselbe Quelle wie {@code Economy.WAGE_PER_CAPITA_PER_HOUR} im Backend. */
+  static final double WAGE_PER_CAPITA_PER_GAME_HOUR = ROOT.path("wagePerCapitaPerGameHour").asDouble();
+
   private static JsonNode load() {
     String resource = "shared/game-constants.json";
     try (InputStream in = GameSpeed.class.getClassLoader().getResourceAsStream(resource)) {

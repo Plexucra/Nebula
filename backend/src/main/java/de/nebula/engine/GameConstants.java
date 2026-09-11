@@ -149,7 +149,18 @@ public final class GameConstants {
   /** REALZEIT-AUSNAHME, siehe {@link #NOTIFICATION_RETENTION_REAL_MS}. */
   public static final long INACTIVE_PLAYER_DELETION_REAL_MS =
       (long) (SharedConstants.inactivePlayerDeletionRealDays() * 24 * 60 * 60 * 1000);
+  /** REALZEIT-AUSNAHME, siehe {@link #NOTIFICATION_RETENTION_REAL_MS}: gelesene Post und alle Benachrichtigungen an NPC-Kommandanten. */
+  public static final long NPC_MAIL_RETENTION_REAL_MS =
+      (long) (SharedConstants.npcMailRetentionRealMinutes() * 60 * 1000);
   // ===================== Ende REALZEIT-AUSNAHME ===========================
+
+  /**
+   * Lohn je Einwohner und Spielstunde, gezahlt vom Kommandanten an das
+   * Bevölkerungs-Wallet seiner Kolonie ({@code Economy.colonyDay}). Eine
+   * Quelle für Lohn, Preisanker der Handelsgilde ({@code ProductCosts}) und
+   * die Kreditreserve der Bots – siehe {@code shared/game-constants.json}.
+   */
+  public static final double WAGE_PER_CAPITA_PER_HOUR = SharedConstants.wagePerCapitaPerGameHour();
 
   /**
    * Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md,

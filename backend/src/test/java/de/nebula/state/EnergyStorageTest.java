@@ -121,4 +121,16 @@ class EnergyStorageTest {
     EnergyStorageCommands.storageOf(b.state(), b.colonyId());
     assertEquals(1, b.state().energyStorages.size());
   }
+
+  /** Gesamttest 11.9.2026: die Abfrage einer frischen Kolonie ohne Speicher-Eintrag warf eine NullPointerException. */
+  @Test
+  void viewWorksBeforeAnyStorageEntryExists() {
+    Bootstrapped b = newState();
+    b.state().energyStorages.removeIf(s -> s.colonyId.equals(b.colonyId()));
+    EnergyStorageView v = EnergyStorageCommands.view(b.state(), b.colonyId());
+    assertEquals(0, v.stored, 1e-9);
+    assertTrue(v.automatic);
+    assertEquals(0, v.storedCoverageGameHours, 1e-9, "leerer Speicher deckt null Stunden");
+    assertTrue(v.reserveTarget > 0);
+  }
 }

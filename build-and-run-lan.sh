@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Baut das Angular-Frontend als Production-Bundle, bettet es in das Quarkus-
 # Backend ein, startet den Server auf allen Netzwerkschnittstellen und
-# anschließend die komplette NPC-Bot-Armee (20 Prozesse, siehe
+# anschließend die komplette NPC-Bot-Armee (40 Bots in einem Prozess, siehe
 # npc-bot/run-army.sh) gegen diesen Server (Umsetzungskonzept/14_...md,
 # Teil 2+3 – "NPC-Bot-Armee" und "LAN-Betrieb"). Damit ist die Anwendung unter
 # http://<LAN-IP-dieses-Rechners>:8080/ von jedem Gerät im selben WLAN
@@ -75,12 +75,19 @@ fi
 echo "    Zum Beenden: Strg+C (in diesem Terminal) oder ./stop-lan.sh (von woanders)"
 echo ""
 
-# Läuft NICHT mehr per `exec` im Vordergrund: die 20 Bot-Prozesse (siehe unten)
-# müssen NACH einem erfolgreichen Serverstart angestoßen werden, brauchen also
+# Läuft NICHT mehr per `exec` im Vordergrund: die Bot-Armee (siehe unten)
+# muss NACH einem erfolgreichen Serverstart angestoßen werden, brauchen also
 # ein Skript, das danach noch weiterläuft. `trap` sorgt dafür, dass sowohl
 # Server als auch Bot-Armee bei Strg+C (SIGINT) oder SIGTERM sauber beendet
 # werden – exakt das, was bisher `exec` + Strg+C implizit erledigte.
-java -jar "$RUN_JAR" &
+# Heap-Grenze (11.9.2026): ohne -Xmx nimmt sich die JVM bis zu einem Viertel des
+# Arbeitsspeichers (auf einem 64-GB-Rechner 16 GB) und gibt einmal belegte
+# Bereiche nicht zurück – der Live-Server stand nach 35 Stunden bei 5,8 GB RSS
+# für rund 200 MB lebende Daten. 2 GB reichen für Galaxie, 40 Bots und die
+# Aufbewahrungsfristen weit; die periodische GC gibt ungenutzten Heap frei.
+SERVER_JAVA_OPTS="${SERVER_JAVA_OPTS:--Xms256m -Xmx2g -XX:+UseG1GC -XX:G1PeriodicGCInterval=60000 -XX:MaxHeapFreeRatio=30 -XX:MinHeapFreeRatio=10}"
+# shellcheck disable=SC2086
+java $SERVER_JAVA_OPTS -jar "$RUN_JAR" &
 SERVER_PID=$!
 
 cleanup() {
@@ -113,7 +120,7 @@ if [ "$SERVER_READY" -ne 1 ]; then
   exit 1
 fi
 
-echo "==> Server läuft – starte Bot-Armee (20 Prozesse) ..."
+echo "==> Server läuft – starte Bot-Armee (40 Bots, ein Prozess) ..."
 "$NPC_BOT_DIR/run-army.sh" "ws://localhost:8080/game"
 
 wait "$SERVER_PID"
