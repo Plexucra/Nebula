@@ -239,8 +239,26 @@
                   }
                 </section>
 
-                <section class="bc-upgrade">
-                  <span class="eyebrow">Ausbau</span>
+                <!-- Der Ausbau ist standardmäßig eingeklappt: mit sieben Karten
+                     untereinander, jede mit Eckdaten, Baustofftabelle und drei
+                     Knöpfen, war die Seite zu voll. Eingeklappt bleibt eine Zeile
+                     mit Ziel, Kosten, Dauer und dem wichtigsten Hinderungsgrund;
+                     ein laufender Ausbau zeigt immer seinen Fortschritt. -->
+                <section class="bc-upgrade" [class.collapsed]="!building?.pendingOrder && !isUpgradeOpen(bt.id)">
+                  <div class="bc-upgrade-head">
+                    <span class="eyebrow">Ausbau</span>
+                    @if (!building?.pendingOrder) {
+                      <span class="hint bc-upgrade-summary">
+                        Stufe {{ level + 1 }} · {{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }} h
+                        @if (upgradeBlockedReason(bt); as reason) { · <span class="bad">{{ reason }}</span> }
+                        @else if (missingMaterials(bt).length > 0) { · <span class="bad">Baustoffe fehlen</span> }
+                        @else if (eleriumUpgradeWarning(bt)) { · <span class="warn">Elerium reicht danach nicht</span> }
+                      </span>
+                      <button type="button" class="ghost small bc-upgrade-toggle" (click)="toggleUpgrade(bt.id)" [attr.aria-expanded]="isUpgradeOpen(bt.id)">
+                        {{ isUpgradeOpen(bt.id) ? 'Einklappen ▴' : (level === 0 ? 'Bauen ▾' : 'Ausbauen ▾') }}
+                      </button>
+                    }
+                  </div>
                   @if (building?.pendingOrder; as order) {
                     <div class="bc-progress">
                       <span>Stufe {{ order.targetLevel }} fertig in <strong class="mono">{{ countdown(order.completesAt - clock.now()) }}</strong></span>
@@ -249,7 +267,7 @@
                         <button class="ghost small" (click)="cancelBuilding(building!.id)" [disabled]="busy() === 'cancel:' + building!.id">Abbrechen</button>
                       </div>
                     </div>
-                  } @else {
+                  } @else if (isUpgradeOpen(bt.id)) {
                     <!-- Drei Zellen über die volle Kartenbreite: Eckdaten, Baustoffe,
                          Hinweise und Knöpfe – schmal gestapelt (Container-Abfrage). -->
                     <div class="bc-upgrade-grid">
@@ -319,7 +337,11 @@
       <div class="panel corner-frame">
         <div class="panel-header">
           <h2>Produktion</h2>
-          <span class="hint">Pro Kolonie läuft immer nur ein Auftrag gleichzeitig – neue Aufträge warten in der Liste. „Nicht vorhandene Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette (Zeit + Rohstoffe); ist das Häkchen nicht gesetzt und die direkten Vorprodukte fehlen, hält die Warteschlange an und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung wieder ans Ende der Liste.</span>
+          <span class="hint">Pro Kolonie läuft immer nur ein Auftrag gleichzeitig – neue Aufträge warten in der Liste; ihre Reihenfolge lässt sich mit ▲▼ ändern.</span>
+          <!-- Das Auftragsformular samt Vorschau steckt in einem Dialog: mit
+               Tempo-Aufschlüsselung, Formular, Prognose und Warteschlange
+               untereinander war der Tab zu voll. -->
+          <button type="button" class="primary small" (click)="openNewOrder()" [disabled]="buildingLevel('b_industry') < 1">Neuer Auftrag…</button>
         </div>
         @if (buildingLevel('b_industry') < 1) { <p class="hint panel-hint">Benötigt einen Industriekomplex.</p> }
         @if (powerCoverage() < 0.999) { <p class="hint blackout panel-hint">Der Infrastruktur fehlt Stabilisiertes Elerium – bis wieder genug im Lager liegt, arbeiten alle Anlagen nur mit einem Bruchteil ihrer Leistung.</p> }
@@ -352,63 +374,7 @@
             <p class="hint">Dazu je Auftrag: Spezialisierung des Produkts (siehe Aufschlüsselung je Schritt unten und Panel „Spezialisierung" weiter unten) und bei Rohstoffen die Fördergüte des Planeten – zusammen ergibt sich die Geschwindigkeit, durch die die Basisstunden geteilt werden.</p>
           </div>
 
-          <span class="eyebrow">Neuer Auftrag</span>
-          <div class="form-row">
-            <button type="button" class="product-select-btn" (click)="openProductPicker()">
-              {{ productName(newProductionProductId) }} <span class="hint">— ändern</span>
-            </button>
-            <input type="number" min="1" [(ngModel)]="newProductionQty" (ngModelChange)="refreshNewOrderPreview()" />
-            <label class="checkbox-inline" title="Fehlende Vorprodukte werden vorausberechnet in denselben Auftrag mit eingerechnet, statt die Warteschlange bei Mangel anzuhalten.">
-              <input type="checkbox" [(ngModel)]="newProductionAutoMissing" /> Nicht vorhandene Vorprodukte automatisch mitproduzieren
-            </label>
-            <label class="checkbox-inline" title="Reiht denselben Auftrag nach Fertigstellung automatisch erneut ans Ende der Warteschlange ein.">
-              <input type="checkbox" [(ngModel)]="newProductionRequeue" /> Nach Erfolg erneut einreihen
-            </label>
-            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1 || newOrderMinimumQty() !== null">Auftrag einreihen</button>
-          </div>
-          @if (newOrderMinimumQty(); as minQty) {
-            <!-- Mindestdauer (TODO 11.9.2026): der Server nimmt Aufträge unter
-                 dieser Dauer nicht an – hier schon vor dem Klick sichtbar. -->
-            <div class="alert-banner warn">
-              <strong>Los zu klein</strong>
-              <span>{{ newProductionQty }} Stück wären nach {{ (newOrderPreview()?.totalHours ?? 0) * 60 | number:'1.0-1' }} Spielminuten fertig.
-                Aufträge unter {{ minOrderGameMinutes }} Spielminuten nimmt der Industriekomplex nicht an – eine Serie von Kleinstaufträgen
-                rüstet die Anlagen für jedes Los neu und ist ineffizient. Mindestens <strong>{{ minQty | number:'1.0-0' }} Stück</strong> einreihen.</span>
-              <button type="button" class="small" (click)="raiseNewOrderToMinimum()">Auf {{ minQty | number:'1.0-0' }} Stück erhöhen</button>
-            </div>
-          }
-
-          <div class="chain-plan new-order-preview">
-            @if (newOrderPreviewLoading()) {
-              <span class="hint calculating">Wird berechnet…</span>
-            } @else if (newOrderPreview()) {
-              @let preview = newOrderPreview()!;
-              <!-- "benötigte ArbeitsSTUNDEN", nicht Arbeitskräfte: Die Zahl ist der
-                   Arbeitsaufwand der ganzen Kette. Als "Arbeitskräfte" beschriftet
-                   suggerierte sie, man bräuchte eine Million Einwohner. Dazu die
-                   vorhandene Bevölkerung als Bezugsgröße. -->
-              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ preview.workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden bei {{ speedBreakdown()?.availableWorkers ?? 0 | number:'1.0-0' }} Arbeitern · Löhne: <strong class="mono">{{ preview.wageCredits | number:'1.0-2' }} Cr</strong> beim Start @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
-              @for (step of preview.steps; track step.productTypeId) {
-                <div class="chain-step">
-                  <span>{{ productName(step.productTypeId) }}</span>
-                  <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
-                  <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
-                  <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
-                  <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
-                  @if (step.quantityToProduce > 0) {
-                    <span class="hint step-factors">
-                      @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
-                      @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
-                    </span>
-                    @if (step.workforceLimited) {
-                      <span class="hint warn">Bremst hier: es fehlen Arbeitskräfte – dieser Schritt bindet {{ step.workersBoundPerHour | number:'1.0-0' }} Arbeitskräfte je Stunde, mehr als die Kolonie hat.</span>
-                    }
-                  }
-                </div>
-              }
-            }
-          </div>
-
+          <span class="eyebrow">Warteschlange</span>
           <div class="queue-list">
             @for (entry of productionQueue(); track entry.id) {
               <div class="queue-entry" [class.stopped]="entry.status === 'stopped'">
@@ -477,6 +443,82 @@
           </div>
         </div>
       </div>
+
+      @if (newOrderOpen()) {
+        <div class="modal-backdrop order-dialog-backdrop" (click)="closeNewOrder()">
+          <div class="panel corner-frame modal-panel order-dialog" (click)="$event.stopPropagation()">
+            <div class="panel-header">
+              <h2>Neuer Produktionsauftrag</h2>
+              <button class="ghost small" type="button" (click)="closeNewOrder()">✕</button>
+            </div>
+            <div class="panel-body">
+              <p class="hint">„Nicht vorhandene Vorprodukte automatisch mitproduzieren" berechnet einmalig die komplette Kette (Zeit + Rohstoffe); ist das Häkchen nicht gesetzt und die direkten Vorprodukte fehlen, hält die Warteschlange an und muss manuell fortgesetzt werden. „Nach Erfolg erneut einreihen" hängt denselben Auftrag nach Fertigstellung wieder ans Ende der Liste.</p>
+              @if (error(); as e) { <div class="error">{{ e }}</div> }
+              <div class="form-row">
+                <button type="button" class="product-select-btn" (click)="openProductPicker()">
+                  {{ productName(newProductionProductId) }} <span class="hint">— ändern</span>
+                </button>
+                <input type="number" min="1" [(ngModel)]="newProductionQty" (ngModelChange)="refreshNewOrderPreview()" />
+                <label class="checkbox-inline" title="Fehlende Vorprodukte werden vorausberechnet in denselben Auftrag mit eingerechnet, statt die Warteschlange bei Mangel anzuhalten.">
+                  <input type="checkbox" [(ngModel)]="newProductionAutoMissing" /> Nicht vorhandene Vorprodukte automatisch mitproduzieren
+                </label>
+                <label class="checkbox-inline" title="Reiht denselben Auftrag nach Fertigstellung automatisch erneut ans Ende der Warteschlange ein.">
+                  <input type="checkbox" [(ngModel)]="newProductionRequeue" /> Nach Erfolg erneut einreihen
+                </label>
+              </div>
+              @if (newOrderMinimumQty(); as minQty) {
+                <!-- Mindestdauer (TODO 11.9.2026): der Server nimmt Aufträge unter
+                     dieser Dauer nicht an – hier schon vor dem Klick sichtbar. -->
+                <div class="alert-banner warn">
+                  <strong>Los zu klein</strong>
+                  <span>{{ newProductionQty }} Stück wären nach {{ (newOrderPreview()?.totalHours ?? 0) * 60 | number:'1.0-1' }} Spielminuten fertig.
+                    Aufträge unter {{ minOrderGameMinutes }} Spielminuten nimmt der Industriekomplex nicht an – eine Serie von Kleinstaufträgen
+                    rüstet die Anlagen für jedes Los neu und ist ineffizient. Mindestens <strong>{{ minQty | number:'1.0-0' }} Stück</strong> einreihen.</span>
+                  <button type="button" class="small" (click)="raiseNewOrderToMinimum()">Auf {{ minQty | number:'1.0-0' }} Stück erhöhen</button>
+                </div>
+              }
+
+              <div class="chain-plan new-order-preview">
+                @if (newOrderPreviewLoading()) {
+                  <span class="hint calculating">Wird berechnet…</span>
+                } @else if (newOrderPreview()) {
+                  @let preview = newOrderPreview()!;
+                  <!-- "benötigte ArbeitsSTUNDEN", nicht Arbeitskräfte: Die Zahl ist der
+                       Arbeitsaufwand der ganzen Kette. Als "Arbeitskräfte" beschriftet
+                       suggerierte sie, man bräuchte eine Million Einwohner. Dazu die
+                       vorhandene Bevölkerung als Bezugsgröße. -->
+                  <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ preview.workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden bei {{ speedBreakdown()?.availableWorkers ?? 0 | number:'1.0-0' }} Arbeitern · Löhne: <strong class="mono">{{ preview.wageCredits | number:'1.0-2' }} Cr</strong> beim Start @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
+                  @for (step of preview.steps; track step.productTypeId) {
+                    <div class="chain-step">
+                      <span>{{ productName(step.productTypeId) }}</span>
+                      <span class="mono">Bedarf {{ step.quantityNeeded }}</span>
+                      <span class="mono">aus Lager {{ step.quantityFromWarehouse }}</span>
+                      <span class="mono">zu produzieren {{ step.quantityToProduce }}</span>
+                      <span class="mono">{{ step.hours | number:'1.1-1' }} h</span>
+                      @if (step.quantityToProduce > 0) {
+                        <span class="hint step-factors">
+                          @if (specLevel(step.productTypeId) > 0) { Spez. Stufe {{ specLevel(step.productTypeId) }} (+{{ specSpeedBonusPct(step.productTypeId) }}%) }
+                          @if (concentrationFactorFor(step.productTypeId); as cf) { · Fördergüte-Faktor {{ cf | number:'1.2-2' }} }
+                        </span>
+                        @if (step.workforceLimited) {
+                          <span class="hint warn">Bremst hier: es fehlen Arbeitskräfte – dieser Schritt bindet {{ step.workersBoundPerHour | number:'1.0-0' }} Arbeitskräfte je Stunde, mehr als die Kolonie hat.</span>
+                        }
+                      }
+                    </div>
+                  }
+                }
+              </div>
+
+              <div class="order-dialog-actions">
+                <button type="button" class="ghost small" (click)="closeNewOrder()">Abbrechen</button>
+                <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1 || newOrderMinimumQty() !== null || newOrderPreviewLoading()">
+                  {{ busy() === 'production' ? 'Reihe ein…' : 'Auftrag einreihen' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
 
       <app-product-picker-dialog
         [products]="productTypes"

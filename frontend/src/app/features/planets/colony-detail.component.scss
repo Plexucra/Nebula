@@ -220,6 +220,19 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
 }
 
 .bc-note { margin: 8px 0 0; }
+/* Kopfzeile des Ausbau-Bereichs: Eyebrow, Kurzfassung (Ziel · Kosten · Dauer · Hindernis), Auf-/Zuklappen. */
+.bc-upgrade-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  .eyebrow { margin: 0; }
+  .bc-upgrade-summary { flex: 1 1 240px; margin: 0; }
+  .bc-upgrade-toggle { margin-left: auto; }
+  .bad { color: var(--danger); }
+  .warn { color: var(--amber); }
+}
+.bc-upgrade:not(.collapsed) .bc-upgrade-head { margin-bottom: 10px; }
 .bc-progress { display: flex; flex-direction: column; gap: 8px; }
 .bc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
@@ -365,12 +378,33 @@ dd.mono.blackout, span.mono.blackout { color: var(--violet); }
   &.warn { color: var(--danger); }
 }
 
+/* Dialog „Neuer Produktionsauftrag" – gleicher Rahmen wie der Produktwähler
+   (product-picker-dialog), der darüber liegt (z-index 1000). */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 5, 10, 0.72);
+}
+.modal-panel {
+  width: 100%;
+  max-width: min(920px, 94vw);
+  max-height: 85vh;
+  overflow: hidden auto;
+}
+.order-dialog .form-row { margin-top: 10px; }
+.order-dialog .hint:first-child { margin: 0; }
+.order-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .new-order-preview {
   border: 1px solid var(--line);
-  border-top: none;
-  border-radius: 0 0 var(--radius) var(--radius);
-  margin: -8px 0 8px;
+  border-radius: var(--radius);
+  margin-top: 10px;
 }
+@media (max-width: 720px) { .modal-panel { max-width: 100vw; max-height: 92vh; } }
 
 .calculating {
   position: relative;

@@ -33,8 +33,13 @@
           </label>
           <button class="primary small" [disabled]="busy() === ('queueship:' + colony.id)" (click)="queueShip(colony)">Bauen</button>
         </div>
-        @if (selFor(colony).productId) {
-          <p class="hint mono">{{ productName(selFor(colony).productId) }}: {{ shipFacts(selFor(colony).productId) }}</p>
+        @if (selFor(colony).productId; as selectedId) {
+          <div class="ship-preview">
+            @if (shipImage(selectedId); as src) {
+              <img [src]="src" [alt]="productName(selectedId)" width="600" height="300" loading="lazy" decoding="async" />
+            }
+            <p class="hint mono">{{ productName(selectedId) }}: {{ shipFacts(selectedId) }}</p>
+          </div>
         }
 
         <div class="queue-list">

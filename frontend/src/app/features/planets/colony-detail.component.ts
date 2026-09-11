@@ -281,6 +281,13 @@ export class ColonyDetailComponent {
   protected newProductionAutoMissing = true;
   protected newProductionRequeue = false;
   protected readonly productPickerOpen = signal(false);
+  /** Dialog „Neuer Produktionsauftrag" – Formular und Vorschau liegen nicht mehr im Tab, siehe `openNewOrder`. */
+  protected readonly newOrderOpen = signal(false);
+  /**
+   * Gebäude, deren Ausbau-Bereich aufgeklappt ist (Tab „Bebauung"). Standardmäßig
+   * eingeklappt; mehrere gleichzeitig offen, damit sich Baustoffe vergleichen lassen.
+   */
+  protected readonly openUpgrades = signal<ReadonlySet<Id>>(new Set());
   /** Reine Vorschau (keine Auftragsanlage) für das Neuer-Auftrag-Formular, siehe `refreshNewOrderPreview`. */
   protected readonly newOrderPreview = signal<ChainPlan | null>(null);
   protected readonly newOrderPreviewLoading = signal(false);
@@ -329,12 +336,6 @@ export class ColonyDetailComponent {
 
   protected countdown = formatCountdown;
 
-  constructor() {
-    // Direkt mit ?tab=produktion geöffnet: dieselbe Sofort-Vorschau wie in setTab
-    // (erst nach allen Feldinitialisierern, deshalb hier und nicht im Feld).
-    if (this.tab() === 'produktion') queueMicrotask(() => this.refreshNewOrderPreview());
-  }
-
   private initialTab(): Tab {
     const t = this.route.snapshot.queryParamMap.get('tab');
     if (t === 'verteidigung') return 'bebauung'; // alter Tab, siehe Tab-Typ
@@ -349,9 +350,6 @@ export class ColonyDetailComponent {
    */
   protected setTab(t: Tab): void {
     this.tab.set(t);
-    // Vorschau samt „Los zu klein"-Prüfung sofort, nicht erst nach der ersten Eingabe –
-    // sonst war „Auftrag einreihen" mit der Startmenge 1 freigegeben und der Server lehnte ab.
-    if (t === 'produktion') this.refreshNewOrderPreview();
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: t },
@@ -496,7 +494,7 @@ export class ColonyDetailComponent {
    * Gebäude mit Foto (`frontend/public/buildings/<id>.jpg`, verkleinert aus `/Bilder`);
    * alle übrigen zeigen die gezeichnete Grafik `<id>.svg`.
    */
-  private static readonly BUILDING_PHOTOS: ReadonlySet<Id> = new Set(['b_infrastructure', 'b_habitat', 'b_industry', 'b_shipyard', 'b_academy']);
+  private static readonly BUILDING_PHOTOS: ReadonlySet<Id> = new Set(['b_infrastructure', 'b_habitat', 'b_industry', 'b_shipyard', 'b_academy', 'b_research']);
 
   protected hasBuildingPhoto(typeId: Id): boolean {
     return ColonyDetailComponent.BUILDING_PHOTOS.has(typeId);
@@ -625,10 +623,36 @@ export class ColonyDetailComponent {
     void this.run(`deactivate:${buildingId}`, () => this.api.deactivateDefense(this.colonyId, buildingId));
   }
 
-  protected submitProduction(): void {
-    void this.run('production', () => this.api.queueProduction(
+  protected async submitProduction(): Promise<void> {
+    await this.run('production', () => this.api.queueProduction(
       this.colonyId, this.newProductionProductId, this.newProductionQty,
       this.newProductionAutoMissing, this.newProductionRequeue));
+    // Bei einem Fehler bleibt der Dialog offen und zeigt ihn; sonst ist der Auftrag in der Liste.
+    if (!this.error()) this.newOrderOpen.set(false);
+  }
+
+  /**
+   * Öffnet den Auftragsdialog und rechnet die Vorschau samt „Los zu klein"-Prüfung
+   * sofort, nicht erst nach der ersten Eingabe – sonst wäre „Auftrag einreihen" mit
+   * der Startmenge 1 freigegeben und der Server lehnte ab.
+   */
+  protected openNewOrder(): void {
+    this.error.set(null); // eine alte Fehlermeldung gehört nicht in den frischen Dialog
+    this.newOrderOpen.set(true);
+    this.refreshNewOrderPreview();
+  }
+  protected closeNewOrder(): void {
+    this.newOrderOpen.set(false);
+    this.productPickerOpen.set(false);
+  }
+
+  protected isUpgradeOpen(typeId: Id): boolean {
+    return this.openUpgrades().has(typeId);
+  }
+  protected toggleUpgrade(typeId: Id): void {
+    const next = new Set(this.openUpgrades());
+    if (!next.delete(typeId)) next.add(typeId);
+    this.openUpgrades.set(next);
   }
   protected resumeProduction(entryId: Id): void {
     void this.run(`resumeprod:${entryId}`, () => this.api.resumeProduction(this.colonyId, entryId));
@@ -670,6 +694,13 @@ export class ColonyDetailComponent {
       this.newOrderPreview.set(plan);
       this.newOrderMinimumQty.set(minimum);
       this.newOrderPreviewLoading.set(false);
+    }).catch(e => {
+      // Sonst bliebe „Wird berechnet…" stehen und der Einreihen-Knopf für immer gesperrt.
+      if (productTypeId !== this.newProductionProductId || quantity !== this.newProductionQty) return;
+      this.newOrderPreview.set(null);
+      this.newOrderMinimumQty.set(null);
+      this.newOrderPreviewLoading.set(false);
+      this.error.set(e instanceof Error ? e.message : 'Vorschau fehlgeschlagen.');
     });
   }
 

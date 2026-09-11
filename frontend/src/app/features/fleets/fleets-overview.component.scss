@@ -11,6 +11,27 @@
 }
 .transfer-form { margin: 4px 0 10px; }
 
+/* Ausgewählter Schiffstyp mit Foto – gleicher Rahmen wie die Gebäudekarte
+   (colony-detail, .bc-image), nur niedriger, weil die Werft ein Formular ist. */
+.ship-preview {
+  margin: 0 0 10px;
+  max-width: 600px;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    object-position: center;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: #06080f;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    margin-bottom: 6px;
+  }
+  p { margin: 0; }
+}
+
 .checkbox-inline {
   display: flex;
   align-items: center;

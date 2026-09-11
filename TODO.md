@@ -83,9 +83,20 @@
     300 KB), in einem einheitlichen Rahmen von 600 × 400 links, daneben Stufe
     und Informationen, darunter der Ausbau in drei Spalten (Eckdaten,
     Baustoffe, Hinweise/Knöpfe). Schmale Karten stapeln per Container-Abfrage,
-    das Bild bleibt 400 px hoch. Planetare Abwehr hat noch kein Foto und zeigt
+    das Bild bleibt 400 px hoch. Seit 11.9. abends ist der Ausbau-Bereich
+    standardmäßig eingeklappt (Kurzzeile Ziel · Kosten · Dauer · Hindernis,
+    Knopf „Bauen/Ausbauen ▾", mehrere Karten gleichzeitig aufklappbar); ein
+    laufender Ausbau zeigt immer Fortschritt und „Abbrechen". Im Tab
+    Produktion steckt „Neuer Auftrag" (Formular, Los-zu-klein-Prüfung,
+    Prognose) in einem Dialog über „Neuer Auftrag…" im Panelkopf; die
+    Vorschau rechnet beim Öffnen, nicht mehr beim Tabwechsel. Planetare Abwehr hat noch kein Foto und zeigt
     die gezeichnete Grafik `b_defense.svg` im selben Rahmen. Ungebaute Gebäude
-    gedämpft. Stil-Budget je Komponente auf 12 kB angehoben.
+    gedämpft. Stil-Budget je Komponente auf 12 kB angehoben. Forschungszentrum
+    seit 11.9. abends ebenfalls mit Foto. Schiffe: Korvette, Zerstörer, Kreuzer
+    und Träger haben Fotos (`frontend/public/ships/<productTypeId>.jpg`, aus
+    `/Bilder/Schiffe`), die Werft in der Flottenübersicht zeigt das Bild des
+    gewählten Schiffstyps über dem Steckbrief; Frachter, Mannschaftstransporter
+    und Kolonisationsschiff noch ohne Bild (dann kein Rahmen).
 
 - [x] ~~Regelzahlen nach `/shared`, Treibstoffzahlen vom Server, Bot-Befunde,
   Oberflächen-Kleinigkeiten, `logs/` aus Git~~ – 11.9.2026, aus den

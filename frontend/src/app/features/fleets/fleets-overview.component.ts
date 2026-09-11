@@ -57,6 +57,17 @@ export class FleetsOverviewComponent {
     return parts.join(' · ');
   }
 
+  /**
+   * Schiffstypen mit Foto (`frontend/public/ships/<productTypeId>.jpg`, verkleinert
+   * aus `/Bilder/Schiffe`). Frachter, Mannschaftstransporter und
+   * Kolonisationsschiff haben noch keins – dann bleibt der Bildrahmen weg.
+   */
+  private static readonly SHIP_PHOTOS: ReadonlySet<Id> = new Set(['p_corvette', 'p_destroyer', 'p_cruiser', 'p_carrier']);
+
+  protected shipImage(productTypeId: Id): string | null {
+    return FleetsOverviewComponent.SHIP_PHOTOS.has(productTypeId) ? `ships/${productTypeId}.jpg` : null;
+  }
+
   protected shipClassLabel(shipClass: string): string {
     const byClass: Record<string, string> = {
       Corvette: 'Korvette', Destroyer: 'Zerstörer', Cruiser: 'Kreuzer', Freighter: 'Frachter',
