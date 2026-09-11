@@ -38,6 +38,13 @@ export interface MarketOrder {
   autoRelist: boolean;
   /** Kolonie auf dem Planeten, aus deren Lager diese Verkaufs-Order gespeist ist; `null` = aus dem Depot. */
   sourceColonyId: Id | null;
+  /**
+   * Gebot der BEVÖLKERUNG dieser Kolonie (Umsetzungskonzept/38): `ownerId` ist
+   * ihr Kommandant (Vertragsregel), das Geld kommt aus dem Bevölkerungs-Wallet,
+   * die Ware geht in ihren Vorrat. Nicht zurückziehbar, nicht umpreisbar – die
+   * Bevölkerung stellt es an jedem Kolonietag neu. `null` = normale Order.
+   */
+  populationColonyId: Id | null;
 }
 
 /**

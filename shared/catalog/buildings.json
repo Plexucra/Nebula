@@ -150,6 +150,44 @@
     ]
   },
   {
+    "id": "b_research",
+    "name": "Forschungszentrum",
+    "category": "Research",
+    "description": "Arbeitsplätze für Akademiker. Stufe 1 bezahlt bis zu 20.000 Akademiker, jede weitere Stufe verdoppelt die Plätze – Kosten und Baustoffe verdoppeln sich mit. Akademiker kommen aus der Arbeiterschaft, sobald ihre höherwertigen Konsumgüter versorgt sind, und bilden über alle Kolonien das Forschungsniveau.",
+    "baseCostPerLevel": 200,
+    "baseHoursPerLevel": 1.5,
+    "upkeepPerLevel": 4,
+    "housingCapacityPerLevel": null,
+    "researchCapacityPerLevel": 20000,
+    "materials": [
+      {
+        "productTypeId": "p_stahl",
+        "baseQuantity": 2,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_glaswerkstoff",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_leitermetall",
+        "baseQuantity": 1,
+        "fromLevel": 1
+      },
+      {
+        "productTypeId": "p_druckhabitatsegment",
+        "baseQuantity": 1,
+        "fromLevel": 4
+      },
+      {
+        "productTypeId": "p_energienetzbaugruppe",
+        "baseQuantity": 1,
+        "fromLevel": 6
+      }
+    ]
+  },
+  {
     "id": "b_defense",
     "name": "Planetare Abwehr",
     "category": "PlanetaryDefense",

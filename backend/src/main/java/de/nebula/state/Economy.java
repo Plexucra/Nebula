@@ -2,22 +2,30 @@ package de.nebula.state;
 
 import de.nebula.data.BuildingCatalog;
 import de.nebula.data.ProductCatalog;
+import de.nebula.data.ProductCosts;
 import de.nebula.engine.Clock;
 import de.nebula.engine.Formulas;
 import de.nebula.engine.GameConstants;
 import de.nebula.model.Building;
+import de.nebula.model.BuildingCategory;
+import de.nebula.model.BuildingType;
 import de.nebula.model.Colony;
 import de.nebula.model.ColonyPowerState;
 import de.nebula.model.GroundForceGroup;
 import de.nebula.model.GroundForceUnitStack;
+import de.nebula.model.MarketOrder;
 import de.nebula.model.NotificationType;
 import de.nebula.model.Planet;
 import de.nebula.model.PlanetStats;
 import de.nebula.model.Population;
+import de.nebula.model.PopulationGrowthState;
 import de.nebula.model.PopulationMoneySupplyState;
 import de.nebula.model.PopulationSupply;
 import de.nebula.model.ProductType;
-import de.nebula.model.MarketOrder;
+import de.nebula.model.ProductionQueueEntry;
+import de.nebula.model.ProductionQueueStatus;
+import de.nebula.model.RecruitmentQueueEntry;
+import de.nebula.model.ShipyardQueueEntry;
 import de.nebula.model.TransactionReason;
 import de.nebula.model.UniverseStatSnapshot;
 import de.nebula.model.Wallet;
@@ -30,29 +38,27 @@ import java.util.Map;
 
 /**
  * Die Wirtschaft einer Kolonie als EIN Ereignis je Spieltag – der Kolonietag
- * ({@link #colonyDay}, Umsetzungskonzept/36). Vorher lief dasselbe als
- * galaxieweiter Schritt jede Realsekunde ({@code EconomyTick.economyStep});
- * jetzt rechnet jede Kolonie einmal je Spieltag zu ihrer eigenen Tageszeit
- * (Gründungszeit + n Tage), und dazwischen rechnet niemand.
+ * ({@link #colonyDay}, Umsetzungskonzept/36). Seit Umsetzungskonzept/38 mit
+ * Löhnen je Arbeitsstunde, Kauforders der Bevölkerung und zwei Klassen
+ * (Arbeiter und Akademiker):
  *
- * <p><b>Tageseinkauf und Vorrat.</b> Die Bevölkerung kauft ausschließlich am
- * EIGENEN planetaren Handelsposten (Orders mit {@code depotColonyId} = diese
- * Kolonie) und füllt ihren Vorrat je Grundkonsumgut auf
- * {@code POPULATION_STOCK_TARGET_DAYS} Tagesbedarfe auf. Gegessen wird aus
- * dem Vorrat; der Vorrat federt Orderlücken, Blockaden und das Wachstum
- * innerhalb eines Tages ab. Genau ein Käufer je Posten – deshalb gibt es
- * keinen Wettlauf mehrerer Kolonien um dieselbe Order.</p>
+ * <p><b>Gebote statt Einkauf.</b> Die Bevölkerung stellt am EIGENEN
+ * planetaren Handelsposten stehende Kauforders ({@link #refreshPopulationBids}):
+ * Menge ist die Lücke bis zum Vorrat von {@code POPULATION_STOCK_TARGET_DAYS}
+ * Tagesbedarfen, das Limit folgt aus Tagesbudget, Guthaben und Bedarf der
+ * gesamten Bevölkerung. Das Orderbuch bedient die Gebote, sobald eine
+ * passende Verkaufsorder erscheint; am Kolonietag werden sie erneuert.</p>
  *
- * <p><b>Notkauf.</b> Sinkt der Vorrat unter
- * {@code POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS} und am eigenen Posten
- * erscheint eine Order (neu, umgepreist oder nachgefüllt), kauft die Kolonie
- * sofort nach ({@link #emergencyPurchase}) – der Orderbuch-Push, begrenzt auf
- * den Fall, in dem er etwas bringt.</p>
+ * <p><b>Güterstaffel.</b> Je Wohnstufe kommt ein Pflichtgut hinzu
+ * ({@code CONSUMER_GOODS_ORDER}); das nächste Gut ist das Wachstumsgut, das
+ * mitgekauft wird und ohne volle Deckung die Kolonie an der Stufengrenze
+ * hält. Akademiker brauchen zusätzlich {@code ACADEMIC_GOODS_ORDER} nach
+ * Zentrumsstufe und entstehen nur in bezahlte Plätze eines Forschungszentrums.</p>
  *
  * <p>Die Reihenfolge im Kolonietag ist tragend – NICHT umstellen:
  * {@link #recalcCoreStats} liest den in {@link #consumePower} gesetzten
  * Energiestand und den in {@link #consumeFromStock} gesetzten Lebensstandard,
- * {@link #growPopulationAndMoneySupply} die Kernwerte und die Nahrungsdeckung
+ * {@link #growPopulationAndMoneySupply} die Kernwerte und die Deckungen
  * desselben Tages, und die Flankenmeldungen am Ende sehen den fertigen
  * Zustand. {@code t} ist die Ereigniszeit.</p>
  */
@@ -67,9 +73,9 @@ public final class Economy {
     GameEvents.schedule(state, GameEventType.COLONY_DAY, colonyId, at);
   }
 
-  /** Bei Gründung: sofort einkaufen, erster Kolonietag einen Spieltag später – die Gründungszeit ist die Tageszeit der Kolonie. */
+  /** Bei Gründung: sofort Gebote stellen, erster Kolonietag einen Spieltag später – die Gründungszeit ist die Tageszeit der Kolonie. */
   public static void startColonyRhythm(GameState state, IdGenerator ids, Colony colony) {
-    stockUp(state, ids, colony.id);
+    refreshPopulationBids(state, ids, colony);
     scheduleColonyDay(state, colony.id, colony.foundedAt + (long) GameConstants.GAME_DAY_MS);
   }
 
@@ -79,7 +85,7 @@ public final class Economy {
     if (colony == null) return;
     consumePower(state, colonyId);
     payUpkeepAndWages(state, ids, colony);
-    purchase(state, ids, colony, null);
+    refreshPopulationBids(state, ids, colony);
     consumeFromStock(state, ids, colony);
     recalcCoreStats(state, colony, t);
     growPopulationAndMoneySupply(state, ids, colony);
@@ -87,13 +93,127 @@ public final class Economy {
     notifyTreasuryState(state, ids, colony.ownerId);
   }
 
-  /** Bedarf eines Grundkonsumguts je Spieltag bei dieser Bevölkerung (bruchteilig – die Stückelung macht das Übertragskonto). */
+  private static double stockOf(Population population, String goodId) {
+    return population.stock.getOrDefault(goodId, 0.0);
+  }
+
+  // --- Bedarf: Staffel der Arbeiter, Güter der Akademiker -----------------------
+
+  /**
+   * Der Bedarf EINER Kolonie für einen Spieltag (Umsetzungskonzept/38, Teil D):
+   * Pflichtgüter der Wohnstufe, das Wachstumsgut der nächsten Stufe und die
+   * Akademikergüter der Zentrumsstufen, jeweils mit Tagesbedarf über die
+   * gesamte Bevölkerung. Reihenfolge = Einkaufsreihenfolge = Vorrang.
+   */
+  public static final class Demand {
+    public final Map<String, Double> dailyNeed = new LinkedHashMap<>();
+    public final Map<String, PopulationSupply.Group> group = new LinkedHashMap<>();
+    public int stage;
+    public double stageCap;
+    public String growthGood;
+    public int researchLevel;
+    public List<String> essentials = List.of();
+    public List<String> academicGoods = List.of();
+  }
+
+  static double housingCapacityPerLevel() {
+    Integer perLevel = BuildingCatalog.find(GameConstants.HOUSING_BUILDING_ID).housingCapacityPerLevel;
+    return perLevel == null ? 20000 : perLevel;
+  }
+
+  public static Demand demand(GameState state, Colony colony, Population population) {
+    Demand d = new Demand();
+    double total = population.currentCount;
+    double workers = population.workers();
+    double academics = population.academics;
+    double perLevel = housingCapacityPerLevel();
+    d.stage = Formulas.consumerStage(total, perLevel, GameConstants.HOUSING_GROWTH_FACTOR);
+    d.stageCap = Formulas.consumerStageCap(d.stage, perLevel, GameConstants.HOUSING_GROWTH_FACTOR);
+    List<String> order = GameConstants.CONSUMER_GOODS_ORDER;
+    int essentialCount = Math.min(d.stage, order.size());
+    d.essentials = order.subList(0, essentialCount);
+    d.growthGood = d.stage < order.size() ? order.get(d.stage) : null;
+    for (int i = 0; i < essentialCount; i++) {
+      String good = order.get(i);
+      d.dailyNeed.put(good, total * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(good) * GameConstants.GAME_DAY_HOURS);
+      d.group.put(good, PopulationSupply.Group.Essential);
+    }
+    if (d.growthGood != null) {
+      d.dailyNeed.put(d.growthGood, total * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(d.growthGood) * GameConstants.GAME_DAY_HOURS);
+      d.group.put(d.growthGood, PopulationSupply.Group.Growth);
+    }
+    d.researchLevel = GameQueries.getBuildingLevel(state, colony.id, GameConstants.RESEARCH_BUILDING_ID);
+    if (d.researchLevel >= 1 || academics > 0) {
+      // Ohne Akademiker fragt die Kolonie ihre Güter für einen Startterm nach – sonst
+      // gäbe es nie eine Deckung, aus der der erste Akademiker entstehen könnte.
+      double persons = Math.max(academics, workers * GameConstants.ACADEMIC_SEED_SHARE_OF_WORKERS);
+      List<String> aOrder = GameConstants.ACADEMIC_GOODS_ORDER;
+      int levels = Math.max(d.researchLevel, 1);
+      d.academicGoods = aOrder.subList(0, Math.min(aOrder.size(), GameConstants.ACADEMIC_BASE_GOODS_COUNT + levels - 1));
+      for (String good : d.academicGoods) {
+        double need = persons * GameConstants.ACADEMIC_NEED_PER_CAPITA_PER_HOUR.get(good) * GameConstants.GAME_DAY_HOURS;
+        d.dailyNeed.merge(good, need, Double::sum);
+        d.group.putIfAbsent(good, PopulationSupply.Group.Academic);
+      }
+    }
+    return d;
+  }
+
+  /** Bedarf eines Konsumguts je Spieltag bei dieser Bevölkerung (bruchteilig – die Stückelung macht das Übertragskonto). */
   public static double dailyNeed(double population, String goodId) {
     return population * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.getOrDefault(goodId, 0.0) * GameConstants.GAME_DAY_HOURS;
   }
 
-  private static double stockOf(Population population, String goodId) {
-    return population.stock.getOrDefault(goodId, 0.0);
+  /** Bezahlte Akademikerplätze der Kolonie – Summe über die Forschungszentren, je Stufe verdoppelt (Umsetzungskonzept/38). */
+  public static double researchCapacity(GameState state, String colonyId) {
+    double sum = 0;
+    for (Building b : state.buildings) {
+      if (!b.colonyId.equals(colonyId)) continue;
+      BuildingType type = BuildingCatalog.find(b.typeId);
+      if (type.category != BuildingCategory.Research || type.researchCapacityPerLevel == null) continue;
+      sum += Formulas.housingCapacity(type.researchCapacityPerLevel, b.level);
+    }
+    return sum;
+  }
+
+  /**
+   * Deckel der Akademiker: die Kapazität der höchsten Zentrumsstufe, deren
+   * Güter alle voll gedeckt sind (Deckung ≥ 1,0 am letzten Kolonietag). Ohne
+   * Zentrum 0; fehlt schon ein Gut der Stufe 1, ebenfalls 0.
+   */
+  public static double academicCap(GameState state, Colony colony, Demand d) {
+    if (d.researchLevel < 1) return 0;
+    Map<String, Double> coverage = state.consumptionCoverage.getOrDefault(colony.id, Map.of());
+    BuildingType type = BuildingCatalog.find(GameConstants.RESEARCH_BUILDING_ID);
+    double perLevel = type.researchCapacityPerLevel == null ? 0 : type.researchCapacityPerLevel;
+    List<String> aOrder = GameConstants.ACADEMIC_GOODS_ORDER;
+    double cap = 0;
+    for (int level = 1; level <= d.researchLevel; level++) {
+      int goods = Math.min(aOrder.size(), GameConstants.ACADEMIC_BASE_GOODS_COUNT + level - 1);
+      boolean covered = true;
+      for (int i = 0; i < goods; i++) {
+        if (coverage.getOrDefault(aOrder.get(i), 0.0) < Formulas.FOOD_COVERAGE_FOR_GROWTH) {
+          covered = false;
+          break;
+        }
+      }
+      if (!covered) break;
+      cap = Formulas.housingCapacity(perLevel, level);
+    }
+    return Math.min(cap, researchCapacity(state, colony.id));
+  }
+
+  /**
+   * Deckel der Güterstaffel für das Wachstum: die Stufengrenze, solange das
+   * Wachstumsgut nicht voll gedeckt ist, sonst unbegrenzt (der Wohnraum
+   * begrenzt dann). Vor dem ersten Kolonietag gilt das Gut als gedeckt – eine
+   * frisch gegründete Kolonie hängt nicht an einer ungemessenen Lage.
+   */
+  public static double goodsCap(GameState state, Colony colony, Demand d) {
+    if (d.growthGood == null) return Double.MAX_VALUE;
+    Map<String, Double> coverage = state.consumptionCoverage.get(colony.id);
+    if (coverage == null) return Double.MAX_VALUE;
+    return coverage.getOrDefault(d.growthGood, 0.0) >= Formulas.FOOD_COVERAGE_FOR_GROWTH ? Double.MAX_VALUE : d.stageCap;
   }
 
   // --- Energie -----------------------------------------------------------------
@@ -126,9 +246,16 @@ public final class Economy {
     ps.coverageRatio = due > 0 ? covered / due : (stock >= 1 ? 1 : 0);
   }
 
-  // --- Unterhalt und Löhne --------------------------------------------------
+  // --- Unterhalt und Forschungsgehälter -------------------------------------------
 
-  /** Gebäude- und Flottenunterhalt sowie Löhne EINES Spieltags, vom Kommandanten- ins Bevölkerungs-Wallet. */
+  /**
+   * Gebäude- und Flottenunterhalt EINES Spieltags sowie die Gehälter der
+   * Akademiker (24 Stunden je Kopf zum Lohnsatz, Umsetzungskonzept/38, Teil D),
+   * vom Kommandanten- ins Bevölkerungs-Wallet. Reicht das Guthaben nicht für
+   * alle Akademiker, gehen die unbezahlten sofort zurück zu den Arbeitern –
+   * es gibt keine unbezahlten Akademiker. Die Löhne der Produktion bucht
+   * {@link Wages} beim Start jedes Auftrags.
+   */
   public static void payUpkeepAndWages(GameState state, IdGenerator ids, Colony colony) {
     Wallet ownerWallet = GameQueries.findWallet(state, WalletOwnerType.Player, colony.ownerId);
     Wallet popWallet = GameQueries.findWallet(state, WalletOwnerType.Population, colony.id);
@@ -146,111 +273,123 @@ public final class Economy {
         for (var g : f.ships) fleetUpkeep += g.quantity * FLEET_UPKEEP_PER_SHIP_PER_HOUR;
       }
     }
-    Population population = ColonyCommands.population(state, colony.id);
-    double wage = (population != null ? population.currentCount : 0) * WAGE_PER_CAPITA_PER_HOUR;
-
     double day = GameConstants.GAME_DAY_HOURS;
     payFromOwnerWallet(state, ids, ownerWallet, popWallet, buildingUpkeep * day, TransactionReason.BuildingUpkeep, "Gebäudeunterhalt");
     payFromOwnerWallet(state, ids, ownerWallet, popWallet, fleetUpkeep * day, TransactionReason.FleetUpkeep, "Flottenunterhalt");
-    payFromOwnerWallet(state, ids, ownerWallet, popWallet, wage * day, TransactionReason.Wage, "Löhne");
+
+    Population population = ColonyCommands.population(state, colony.id);
+    if (population == null || population.academics < 1) return;
+    double perAcademic = Formulas.academicWagePerDay();
+    double due = population.academics * perAcademic;
+    double paid = payFromOwnerWallet(state, ids, ownerWallet, popWallet, due, TransactionReason.Wage,
+        "Forschungsgehalt für " + Math.round(population.academics) + " Akademiker");
+    if (paid + 0.001 < due) {
+      double keep = Math.floor(paid / perAcademic);
+      double unpaid = population.academics - keep;
+      population.academics = keep;
+      Notifications.notify(state, ids, NotificationType.Warnung, Notifications.CODE_POPULATION_SHRINKING,
+          Math.round(unpaid) + " Akademiker in \"" + colony.name + "\" sind unbezahlt in die Arbeiterschaft zurückgekehrt – "
+              + "das Guthaben reichte nicht für die Forschungsgehälter.", colony.id, Notifications.colonyLink(colony.id));
+    }
   }
 
   /** Credits je Schiff und Spielstunde, das an einer Kolonie liegt. */
   public static final double FLEET_UPKEEP_PER_SHIP_PER_HOUR = 0.5;
-  /** Credits je Einwohner und Spielstunde – EINE Quelle in {@code shared/game-constants.json} (auch Preisanker in {@code ProductCosts}). */
-  public static final double WAGE_PER_CAPITA_PER_HOUR = GameConstants.WAGE_PER_CAPITA_PER_HOUR;
 
-  private static void payFromOwnerWallet(GameState state, IdGenerator ids, Wallet ownerWallet,
-                                          Wallet popWallet, double amount, TransactionReason reason, String note) {
+  /** @return der tatsächlich gezahlte Betrag (gedeckelt durch das Guthaben) */
+  private static double payFromOwnerWallet(GameState state, IdGenerator ids, Wallet ownerWallet,
+                                           Wallet popWallet, double amount, TransactionReason reason, String note) {
     // ownerWallet ist das LIVE-Objekt aus state.wallets – vorherige Buchungen
     // desselben Tages sind in balance bereits enthalten.
     double affordable = Math.min(amount, Math.max(ownerWallet.balance, 0));
     if (affordable > 0.001) Ledger.recordTx(state, ids, ownerWallet.id, popWallet.id, affordable, reason, note);
+    return affordable > 0.001 ? affordable : 0;
   }
 
-  // --- Tageseinkauf ------------------------------------------------------------
-
-  /** Füllt den Vorrat aller Grundkonsumgüter auf – für Gründung und Seed; sonst Teil des Kolonietags. */
-  public static void stockUp(GameState state, IdGenerator ids, String colonyId) {
-    Colony colony = ColonyCommands.colony(state, colonyId);
-    if (colony != null) purchase(state, ids, colony, null);
-  }
+  // --- Gebote der Bevölkerung (Umsetzungskonzept/38, Teil C) ------------------------
 
   /**
-   * Notkauf: eine Order am eigenen Handelsposten ist neu, umgepreist oder
-   * nachgefüllt. Liegt der Vorrat dieses Guts unter der Notkauf-Schwelle, kauft
-   * die Bevölkerung sofort auf, statt bis zum nächsten Kolonietag zu warten.
-   * Für alle anderen Güter und volle Vorräte ist das ein Nichts – der
-   * Regelfall bleibt der Tageseinkauf.
+   * Erneuert die Kauforders der Bevölkerung: alte zurückziehen (Escrow zurück),
+   * Einkommen glätten, Tagesbudget bilden, je Gut mit Vorratslücke ein Gebot
+   * stellen und matchen.
+   *
+   * <p>Verteilung des Budgets in zwei Schritten: erst deckt es in
+   * Einkaufsreihenfolge, was jedes Gut zum aktuellen Briefkurs kostet
+   * (Grundsicherung – Grundnahrung vor Luxus), dann hebt der Rest alle Gebote
+   * im Verhältnis {@code Ankerpreis × Tagesbedarf}. Ist ein Grundgut teurer
+   * als das ganze Budget, liegt sein Gebot unter dem Brief, es wird nichts
+   * gekauft, und der Kommandant sieht am Gebot, was die Bevölkerung tragen
+   * kann.</p>
    */
-  public static void emergencyPurchase(GameState state, IdGenerator ids, String colonyId, String goodId) {
-    if (colonyId == null || !GameConstants.CONSUMER_GOODS_ORDER.contains(goodId)) return;
-    Colony colony = ColonyCommands.colony(state, colonyId);
-    Population population = ColonyCommands.population(state, colonyId);
-    if (colony == null || population == null) return;
-    double need = dailyNeed(population.currentCount, goodId);
-    if (need <= 0) return;
-    if (stockOf(population, goodId) / need >= GameConstants.POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS) return;
-    purchase(state, ids, colony, goodId);
-  }
-
-  /**
-   * Kauft je Grundkonsumgut so viel nach, dass der Vorrat das Ziel
-   * ({@code POPULATION_STOCK_TARGET_DAYS} Tagesbedarfe) erreicht – aus dem
-   * Bevölkerungs-Wallet, zu gleichen Teilen auf die Güter verteilt, wobei ein
-   * nicht ausgegebener Anteil den folgenden Gütern zufließt. {@code onlyGoodId}
-   * beschränkt den Kauf auf ein Gut (Notkauf).
-   */
-  private static void purchase(GameState state, IdGenerator ids, Colony colony, String onlyGoodId) {
+  public static void refreshPopulationBids(GameState state, IdGenerator ids, Colony colony) {
     Population population = ColonyCommands.population(state, colony.id);
     Wallet popWallet = GameQueries.findWallet(state, WalletOwnerType.Population, colony.id);
-    if (population == null || popWallet == null || population.currentCount <= 0) return;
+    if (population == null || popWallet == null) return;
+    MarketCommands.cancelPopulationBids(state, colony.id);
+    if (population.currentCount <= 0) return;
 
-    double remaining = Math.max(popWallet.balance, 0);
-    int goodsLeft = GameConstants.CONSUMER_GOODS_ORDER.size();
-    for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
-      double goodBudget = remaining / goodsLeft--;
-      if (onlyGoodId != null && !onlyGoodId.equals(goodId)) continue;
-      double target = Math.ceil(dailyNeed(population.currentCount, goodId) * GameConstants.POPULATION_STOCK_TARGET_DAYS);
-      double toBuy = target - stockOf(population, goodId);
-      if (toBuy < 1) continue;
-      remaining -= buyAtOwnPost(state, ids, colony, population, popWallet, goodId, toBuy, goodBudget);
+    // Einkommen: der Zufluss seit dem letzten Kolonietag, geglättet.
+    double inflow = state.populationInflowSinceLastDay.getOrDefault(colony.id, 0.0);
+    state.populationInflowSinceLastDay.remove(colony.id);
+    Double previous = state.populationDailyIncome.get(colony.id);
+    double alpha = Formulas.smoothingAlpha(GameConstants.POPULATION_INCOME_SMOOTHING_DAYS * GameConstants.GAME_DAY_HOURS,
+        GameConstants.GAME_DAY_HOURS);
+    double income = previous == null ? inflow : previous * (1 - alpha) + inflow * alpha;
+    state.populationDailyIncome.put(colony.id, income);
+
+    double wallet = Math.max(popWallet.balance, 0);
+    double budget = Math.min(wallet, income + wallet / GameConstants.POPULATION_STOCK_TARGET_DAYS);
+    state.populationDailyBudget.put(colony.id, budget);
+    if (budget < 0.01) return;
+
+    Demand d = demand(state, colony, population);
+    Map<String, Double> gaps = new LinkedHashMap<>();
+    for (Map.Entry<String, Double> e : d.dailyNeed.entrySet()) {
+      double target = Math.ceil(e.getValue() * GameConstants.POPULATION_STOCK_TARGET_DAYS);
+      double gap = target - stockOf(population, e.getKey());
+      if (gap >= 1) gaps.put(e.getKey(), gap);
     }
-  }
+    if (gaps.isEmpty()) return;
 
-  /**
-   * Kauft bis zu {@code quantity} Stück am eigenen Handelsposten, günstigste
-   * Order zuerst, in ganzen Stücken und im Budget. Mehrere Durchgänge, weil
-   * eine leer gekaufte Dauerorder sich sofort aus dem Lager nachfüllt
-   * ({@link MarketCommands#settleSellOrderPurchase}) und dann weiter liefern kann.
-   *
-   * @return ausgegebene Credits
-   */
-  private static double buyAtOwnPost(GameState state, IdGenerator ids, Colony colony, Population population,
-                                     Wallet popWallet, String goodId, double quantity, double budget) {
-    double spent = 0;
-    double bought = 0;
-    for (int pass = 0; pass < MAX_PURCHASE_PASSES && bought < quantity; pass++) {
-      boolean progress = false;
-      for (MarketOrder order : ownPostOrders(state, colony, goodId)) {
-        if (spent >= budget - 1e-9 || bought >= quantity) break;
-        double affordable = Math.floor((budget - spent) / order.limitPrice);
-        double qty = Math.min(Math.min(affordable, Math.floor(order.remainingQuantity)), quantity - bought);
-        if (qty < 1) continue;
-        double cost = Math.round(qty * order.limitPrice * 100) / 100.0;
-        // Ohne Käufer-Id: die Ware geht in den Vorrat, nicht in ein Lager oder Depot.
-        MarketCommands.settleAsk(state, ids, order, qty, cost, popWallet.id, null);
-        spent += cost;
-        bought += qty;
-        progress = true;
+    // 1. Grundsicherung in Einkaufsreihenfolge zum aktuellen Brief.
+    double remaining = budget;
+    Map<String, Double> share = new LinkedHashMap<>();
+    for (Map.Entry<String, Double> e : gaps.entrySet()) {
+      Double ask = cheapestAsk(state, colony, e.getKey());
+      double base = 0;
+      if (ask != null && remaining > 0) {
+        base = Math.min(remaining, ask * e.getValue());
+        remaining -= base;
       }
-      if (!progress) break;
+      share.put(e.getKey(), base);
     }
-    if (bought > 0) population.stock.merge(goodId, bought, Double::sum);
-    return spent;
+    // 2. Der Rest im Verhältnis Ankerpreis × Tagesbedarf.
+    double weightSum = 0;
+    for (String good : gaps.keySet()) weightSum += ProductCosts.of(good) * d.dailyNeed.get(good);
+    Map<String, Double> surplus = new LinkedHashMap<>();
+    for (String good : gaps.keySet()) {
+      double weight = weightSum > 0 ? ProductCosts.of(good) * d.dailyNeed.get(good) / weightSum : 1.0 / gaps.size();
+      surplus.put(good, remaining * weight);
+    }
+    for (Map.Entry<String, Double> e : gaps.entrySet()) {
+      // Die Grundsicherung gilt je Stück der Lücke (so trifft das Gebot den
+      // Brief); der Überschuss wird auf den ganzen Wochenvorrat umgelegt, nicht
+      // nur auf die Lücke – sonst zahlt eine satte Kolonie für die letzten
+      // 30 Stück das Zehnfache des Ankerpreises (im 40-Bot-Lauf 9 → 138 Cr).
+      double gap = e.getValue();
+      double target = Math.ceil(d.dailyNeed.get(e.getKey()) * GameConstants.POPULATION_STOCK_TARGET_DAYS);
+      double perUnit = share.get(e.getKey()) / gap + surplus.get(e.getKey()) / Math.max(gap, target);
+      double limit = Math.floor(perUnit * 100 + 1e-6) / 100.0; // auf Cent, ohne Rundungsfehler unter den Brief zu rutschen
+      if (limit < 0.01) continue;
+      MarketCommands.createPopulationBid(state, ids, colony, e.getKey(), e.getValue(), limit);
+    }
   }
 
-  private static final int MAX_PURCHASE_PASSES = 10;
+  /** Günstigster Brief am eigenen Posten, den die Bevölkerung kaufen darf; {@code null} ohne Order. */
+  static Double cheapestAsk(GameState state, Colony colony, String goodId) {
+    List<MarketOrder> asks = ownPostOrders(state, colony, goodId);
+    return asks.isEmpty() ? null : asks.get(0).limitPrice;
+  }
 
   /**
    * Kaufbare Verkaufs-Orders am Handelsposten des Planeten dieser Kolonie,
@@ -269,29 +408,33 @@ public final class Economy {
 
   /** Verkäufer ist der eigene Kommandant oder ein Handelsvertragspartner. Orders ohne Eigentümer (Handelsgilde) gibt es am Posten nicht. */
   static boolean mayPopulationBuyFrom(GameState state, Colony colony, MarketOrder order) {
-    if (order.ownerId == null) return false;
+    if (order.ownerId == null || order.populationColonyId != null) return false;
     return order.ownerId.equals(colony.ownerId) || TreatyCommands.hasTradeAgreement(state, colony.ownerId, order.ownerId);
   }
 
   // --- Verbrauch und Lebensstandard ----------------------------------------
 
   /**
-   * Isst den Tagesbedarf aus dem Vorrat und misst daran die Versorgung: je Gut
-   * {@code gedeckt × (1 + 0,5 × Vorratsreichweite/Ziel)}, also 1,0 wenn der
-   * Tag gedeckt war, bis 1,5 mit vollem Vorrat, 0 ohne Essen – ein leerer
-   * Vorrat bekommt keinen Bonus. Daraus der Lebensstandard (Grundnahrung
-   * doppelt gewichtet), geglättet über {@code LIVING_STANDARD_SMOOTHING_TAU_HOURS}.
+   * Isst den Tagesbedarf aller nachgefragten Güter aus dem Vorrat und misst
+   * daran die Versorgung: je Gut {@code gedeckt × (1 + 0,5 × Vorratsreichweite/Ziel)},
+   * also 1,0 wenn der Tag gedeckt war, bis 1,5 mit vollem Vorrat, 0 ohne
+   * Essen – ein leerer Vorrat bekommt keinen Bonus. Daraus zwei Lebensstandards
+   * (Umsetzungskonzept/38, Teil D): der der Arbeiter aus den Pflichtgütern
+   * (Grundnahrung doppelt gewichtet), der der Akademiker aus ALLEN Gütern.
+   * Das Wachstumsgut zählt nur für die Akademiker und den Staffeldeckel.
+   * Beide geglättet über {@code LIVING_STANDARD_SMOOTHING_TAU_HOURS}.
    */
   public static void consumeFromStock(GameState state, IdGenerator ids, Colony colony) {
     Population population = ColonyCommands.population(state, colony.id);
     PlanetStats stats = ColonyCommands.colonyStats(state, colony.id);
     if (population == null || stats == null) return;
+    Demand d = demand(state, colony, population);
 
-    double coverageSum = 0;
-    double weightSum = 0;
+    double workerSum = 0, workerWeight = 0, academicSum = 0, academicWeight = 0;
     Map<String, Double> coverageByGood = new LinkedHashMap<>();
-    for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
-      double need = dailyNeed(population.currentCount, goodId);
+    for (Map.Entry<String, Double> e : d.dailyNeed.entrySet()) {
+      String goodId = e.getKey();
+      double need = e.getValue();
       if (need <= 0) continue;
       // Gegessen wird in GANZEN Stücken: der Bruchteil wandert ins Übertragskonto
       // (Umsetzungskonzept/25_...md).
@@ -305,29 +448,40 @@ public final class Economy {
       double coverage = Formulas.clamp(fed * (1 + 0.5 * reserveShare), 0, 1.5);
       coverageByGood.put(goodId, coverage);
       double weight = goodId.equals(GameConstants.FOOD_PRODUCT_ID) ? 2 : 1;
-      coverageSum += coverage * weight;
-      weightSum += weight;
+      if (d.group.get(goodId) == PopulationSupply.Group.Essential) {
+        workerSum += coverage * weight;
+        workerWeight += weight;
+      }
+      academicSum += coverage * weight;
+      academicWeight += weight;
     }
     state.consumptionCoverage.put(colony.id, coverageByGood);
     warnAboutSupplyGaps(state, ids, colony, population, coverageByGood);
 
-    double prevRaw = state.rawStandardOfLiving.getOrDefault(colony.id, stats.standardOfLivingPct);
-    double newStandard = weightSum > 0 ? (coverageSum / weightSum) * 100 : prevRaw;
     double alpha = Formulas.smoothingAlpha(Formulas.LIVING_STANDARD_SMOOTHING_TAU_HOURS, GameConstants.GAME_DAY_HOURS);
+    double blackoutFactor = PowerGrid.isBlackout(state, colony.id) ? Formulas.BLACKOUT_STAT_FACTOR : 1;
+
+    double prevRaw = state.rawStandardOfLiving.getOrDefault(colony.id, stats.standardOfLivingPct);
+    double newStandard = workerWeight > 0 ? (workerSum / workerWeight) * 100 : prevRaw;
     double smoothedRaw = prevRaw * (1 - alpha) + newStandard * alpha;
     state.rawStandardOfLiving.put(colony.id, smoothedRaw);
-    double effective = PowerGrid.isBlackout(state, colony.id) ? smoothedRaw * Formulas.BLACKOUT_STAT_FACTOR : smoothedRaw;
-    stats.standardOfLivingPct = Formulas.clamp(effective, 0, 200);
+    stats.standardOfLivingPct = Formulas.clamp(smoothedRaw * blackoutFactor, 0, 200);
+
+    double prevAcademic = state.rawAcademicStandardOfLiving.getOrDefault(colony.id, stats.academicStandardOfLivingPct);
+    double newAcademic = academicWeight > 0 ? (academicSum / academicWeight) * 100 : prevAcademic;
+    double smoothedAcademic = prevAcademic * (1 - alpha) + newAcademic * alpha;
+    state.rawAcademicStandardOfLiving.put(colony.id, smoothedAcademic);
+    stats.academicStandardOfLivingPct = Formulas.clamp(smoothedAcademic * blackoutFactor, 0, 200);
   }
 
   /** Unter dieser Deckung gilt ein Gut als unversorgt (Problem-Code {@code CODE_SUPPLY_GAP}, Umsetzungskonzept/32_...md, Teil B). */
   private static final double SUPPLY_WARNING_BELOW = 0.5;
 
   /**
-   * Warnt den Kommandanten, wenn ein Grundbedarfsgut fehlt – weil am eigenen
-   * Handelsposten keine Verkaufsorder steht oder weil die Bevölkerung sich den
-   * Preis nicht leisten kann. Die Entscheidung bleibt beim Kommandanten; die
-   * Warnung nennt nur, was fehlt.
+   * Warnt den Kommandanten, wenn ein nachgefragtes Gut fehlt – weil am eigenen
+   * Handelsposten keine Verkaufsorder steht oder weil sie über dem Gebot der
+   * Bevölkerung liegt. Die Entscheidung bleibt beim Kommandanten; die Warnung
+   * nennt nur, was fehlt und was die Bevölkerung bietet.
    *
    * <p>REALZEIT-AUSNAHME ({@code GameConstants.SUPPLY_WARNING_COOLDOWN_REAL_MS}):
    * der Mindestabstand zweier gleicher Warnungen zählt in ECHTEN Minuten. Wie
@@ -345,13 +499,16 @@ public final class Economy {
       Long last = state.lastSupplyWarningAt.get(key);
       if (last != null && now - last < cooldownMs) continue;
       state.lastSupplyWarningAt.put(key, now);
-      boolean anyOrder = !ownPostOrders(state, colony, e.getKey()).isEmpty();
+      Double ask = cheapestAsk(state, colony, e.getKey());
+      Double bid = null;
+      for (MarketOrder o : MarketCommands.populationBids(state, colony.id)) if (o.productTypeId.equals(e.getKey())) bid = o.limitPrice;
       String goodName = ProductCatalog.find(e.getKey()).name;
-      String message = anyOrder
+      String bidText = bid == null ? "" : " Die Bevölkerung bietet " + bid + " Cr je Stück.";
+      String message = ask != null
           ? "Die Bevölkerung von \"" + colony.name + "\" kann sich " + goodName + " nicht leisten (Deckung "
-              + Math.round(e.getValue() * 100) + " %) – Preis der Verkaufsorder prüfen, das Bevölkerungs-Wallet gibt nicht mehr her."
+              + Math.round(e.getValue() * 100) + " %) – die günstigste Verkaufsorder liegt bei " + ask + " Cr." + bidText
           : "In \"" + colony.name + "\" gibt es keine kaufbare Verkaufsorder für " + goodName + " – die Bevölkerung kauft nur am eigenen "
-              + "Handelsposten und nur von Ihnen oder von Handelsvertragspartnern; der Lebensstandard bleibt ohne dieses Gut gedeckelt.";
+              + "Handelsposten und nur von Ihnen oder von Handelsvertragspartnern." + bidText;
       Notifications.notify(state, ids, NotificationType.Problem, Notifications.CODE_SUPPLY_GAP, message,
           colony.id, Notifications.colonyLink(colony.id));
     }
@@ -392,6 +549,12 @@ public final class Economy {
     stats.lastRecalculatedAt = t;
   }
 
+  /**
+   * Wachstum der Gesamtbevölkerung gegen Wohnraum, Nahrungs- und Staffeldeckel
+   * (Umsetzungskonzept/38, Teil D), danach der Wechsel zwischen Arbeitern und
+   * Akademikern – die Gesamtzahl ändert nur das Wachstum, der Wechsel nie.
+   * Wachstumsgeld entsteht wie bisher nur über dem Höchststand des Planeten.
+   */
   public static void growPopulationAndMoneySupply(GameState state, IdGenerator ids, Colony colony) {
     Population population = ColonyCommands.population(state, colony.id);
     PlanetStats stats = ColonyCommands.colonyStats(state, colony.id);
@@ -399,9 +562,11 @@ public final class Economy {
     if (population == null || stats == null || planet == null) return;
 
     double capacity = PowerGrid.effectiveHousingCapacity(state, colony.id);
+    Demand d = demand(state, colony, population);
+    double goodsCap = goodsCap(state, colony, d);
     // Der Nahrungsdeckel (Umsetzungskonzept/34_...md, §J 5) liest die Deckung
     // aus DIESEM Tag: consumeFromStock läuft unmittelbar vorher.
-    double perHour = Formulas.populationGrowthDelta(population.currentCount, capacity, stats.standardOfLivingPct,
+    double perHour = Formulas.populationGrowthDelta(population.currentCount, capacity, goodsCap, stats.standardOfLivingPct,
         stats.securityPct, ColonyCommands.foodCoverage(state, colony.id));
     // Blackout unterbindet nur Wachstum – Schrumpfung durch Überbevölkerung (negatives Delta) läuft unabhängig davon normal weiter.
     if (perHour > 0 && PowerGrid.isBlackout(state, colony.id)) perHour = 0;
@@ -412,6 +577,21 @@ public final class Economy {
     double newCount = Math.max(0, population.currentCount + wholeDelta);
     population.currentCount = newCount;
     population.growthRatePerInterval = perHour;
+
+    // Akademiker: aus den Arbeitern in bezahlte Plätze, bei Mangel zurück.
+    double cap = academicCap(state, colony, d);
+    double academicPerHour;
+    if (stats.academicStandardOfLivingPct < Formulas.LIVING_STANDARD_SHRINK_BELOW_PCT && population.academics > 0) {
+      academicPerHour = Formulas.academicShrinkDelta(population.academics, stats.academicStandardOfLivingPct);
+      if (population.academics > cap) academicPerHour = Math.min(academicPerHour, Formulas.academicGrowthDelta(population.academics, population.workers(), cap));
+    } else if (population.academics > cap || stats.academicStandardOfLivingPct >= Formulas.LIVING_STANDARD_GROWTH_FROM_PCT) {
+      academicPerHour = Formulas.academicGrowthDelta(population.academics, population.workers(), cap);
+    } else {
+      academicPerHour = 0;
+    }
+    if (academicPerHour > 0 && PowerGrid.isBlackout(state, colony.id)) academicPerHour = 0;
+    double academicDelta = FractionPot.due(state, FractionPot.key("academics", colony.id), academicPerHour * GameConstants.GAME_DAY_HOURS);
+    population.academics = Formulas.clamp(population.academics + academicDelta, 0, newCount);
 
     PopulationMoneySupplyState moneyState = ColonyCommands.moneySupplyState(state, colony.planetId);
     if (moneyState != null && newCount > moneyState.historicalPeakPopulation) {
@@ -424,6 +604,39 @@ public final class Economy {
     } else if (moneyState != null) {
       moneyState.lastPopulation = newCount;
     }
+  }
+
+  /** Wachstumszustand samt Staffeldeckel – für Anzeige und Verlauf. */
+  public static PopulationGrowthState growthState(GameState state, Colony colony) {
+    Population population = ColonyCommands.population(state, colony.id);
+    PlanetStats stats = ColonyCommands.colonyStats(state, colony.id);
+    if (population == null || stats == null) return PopulationGrowthState.Holding;
+    double capacity = PowerGrid.effectiveHousingCapacity(state, colony.id);
+    Demand d = demand(state, colony, population);
+    return Formulas.populationGrowthState(population.currentCount, capacity, goodsCap(state, colony, d),
+        stats.standardOfLivingPct, ColonyCommands.foodCoverage(state, colony.id));
+  }
+
+  /** Wachstumsrate je Spielstunde samt Staffeldeckel – für Anzeige und Verlauf. */
+  public static double growthPerHour(GameState state, Colony colony) {
+    Population population = ColonyCommands.population(state, colony.id);
+    PlanetStats stats = ColonyCommands.colonyStats(state, colony.id);
+    if (population == null || stats == null) return 0;
+    double capacity = PowerGrid.effectiveHousingCapacity(state, colony.id);
+    Demand d = demand(state, colony, population);
+    return Formulas.populationGrowthDelta(population.currentCount, capacity, goodsCap(state, colony, d),
+        stats.standardOfLivingPct, stats.securityPct, ColonyCommands.foodCoverage(state, colony.id));
+  }
+
+  /** Forschungsniveau eines Kommandanten: die Akademiker aller seiner Kolonien (Umsetzungskonzept/38, Teil D). */
+  public static int researchLevel(GameState state, String playerId) {
+    double sum = 0;
+    for (Colony c : state.colonies) {
+      if (!c.ownerId.equals(playerId)) continue;
+      Population p = ColonyCommands.population(state, c.id);
+      if (p != null) sum += p.academics;
+    }
+    return (int) Math.round(sum);
   }
 
   // --- Flankenmeldungen -----------------------------------------------------
@@ -478,8 +691,8 @@ public final class Economy {
       // An den Kommandanten adressiert – ohne Adresse wäre die Meldung global
       // und stünde in JEDER fremden Glocke (siehe Notifications.notifyPlayer).
       Notifications.notifyPlayer(state, ids, NotificationType.Problem, Notifications.CODE_TREASURY_EMPTY,
-          "Ihr Guthaben ist aufgebraucht. Gebäude- und Flottenunterhalt laufen weiter – "
-              + "Einnahmen schaffen Verkaufsorders für Konsumgüter, entlasten tut ein Rückbau.",
+          "Ihr Guthaben ist aufgebraucht. Gebäude- und Flottenunterhalt laufen weiter, neue Aufträge starten ohne Löhne nicht – "
+              + "Einnahmen schaffen Verkäufe an die Gebote Ihrer Bevölkerung, entlasten tut ein Rückbau.",
           playerId, "/konto");
     }
     if (Notifications.edgeTriggered(state, "treasuryLow:" + playerId, draining) && draining) {
@@ -492,29 +705,49 @@ public final class Economy {
 
   // --- Anzeige -----------------------------------------------------------------
 
-  /** Versorgungslage für die Oberfläche: Vorrat, Tagesbedarf, Reichweite, Deckung je Gut und der nächste Einkauf. */
+  /** Versorgungslage für die Oberfläche: je Gut Vorrat, Tagesbedarf, Reichweite, Deckung, Gebot und Brief; dazu Klassen, Staffel und Budget. */
   public static PopulationSupply populationSupply(GameState state, String colonyId) {
     PopulationSupply result = new PopulationSupply();
     result.targetDays = GameConstants.POPULATION_STOCK_TARGET_DAYS;
-    result.emergencyBelowDays = GameConstants.POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS;
     Population population = ColonyCommands.population(state, colonyId);
     if (population == null) return result;
     Colony colony = ColonyCommands.colony(state, colonyId);
     if (colony == null) return result;
+    PlanetStats stats = ColonyCommands.colonyStats(state, colonyId);
     Long next = GameEvents.scheduledAt(state, GameEventType.COLONY_DAY, colonyId);
     result.nextPurchaseAt = next != null ? next : 0;
     Map<String, Double> coverage = state.consumptionCoverage.getOrDefault(colonyId, Map.of());
-    for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
+    Demand d = demand(state, colony, population);
+    Map<String, MarketOrder> bids = new LinkedHashMap<>();
+    for (MarketOrder o : MarketCommands.populationBids(state, colonyId)) bids.put(o.productTypeId, o);
+    for (Map.Entry<String, Double> e : d.dailyNeed.entrySet()) {
       PopulationSupply.Good good = new PopulationSupply.Good();
-      good.productTypeId = goodId;
-      good.name = ProductCatalog.find(goodId).name;
-      good.stock = stockOf(population, goodId);
-      good.dailyNeed = dailyNeed(population.currentCount, goodId);
+      good.productTypeId = e.getKey();
+      good.name = ProductCatalog.find(e.getKey()).name;
+      good.group = d.group.get(e.getKey());
+      good.stock = stockOf(population, e.getKey());
+      good.dailyNeed = e.getValue();
       good.daysLeft = good.dailyNeed > 0 ? good.stock / good.dailyNeed : 0;
-      good.coverage = coverage.get(goodId);
-      good.orderAvailable = !ownPostOrders(state, colony, goodId).isEmpty();
+      good.coverage = coverage.get(e.getKey());
+      good.askPrice = cheapestAsk(state, colony, e.getKey());
+      good.orderAvailable = good.askPrice != null;
+      MarketOrder bid = bids.get(e.getKey());
+      good.bidPrice = bid != null ? bid.limitPrice : null;
+      good.bidQuantity = bid != null ? bid.remainingQuantity : 0;
       result.goods.add(good);
     }
+    result.workers = population.workers();
+    result.academics = population.academics;
+    result.consumerStage = d.stage;
+    result.consumerStageCap = d.stageCap;
+    result.growthGoodId = d.growthGood;
+    result.growthGoodCovered = goodsCap(state, colony, d) == Double.MAX_VALUE;
+    result.researchCapacity = researchCapacity(state, colonyId);
+    result.academicCap = academicCap(state, colony, d);
+    result.researchLevel = d.researchLevel;
+    result.academicStandardOfLivingPct = stats != null ? stats.academicStandardOfLivingPct : 0;
+    result.dailyIncome = state.populationDailyIncome.getOrDefault(colonyId, 0.0);
+    result.dailyBudget = state.populationDailyBudget.getOrDefault(colonyId, 0.0);
     return result;
   }
 
@@ -609,9 +842,11 @@ public final class Economy {
 
   /**
    * Saldo des Kommandanten-Wallets je SPIELSTUNDE: Konsumeinnahmen minus
-   * Löhne, Gebäude- und Flottenunterhalt. Dieselbe Rechnung wie in
-   * {@link #payUpkeepAndWages}/{@link #purchase}, nur als Rate statt als
-   * Tagesbetrag – die Zahl, die in der Kopfzeile neben dem Guthaben steht.
+   * Gebäude- und Flottenunterhalt, Forschungsgehälter und die Löhne der
+   * laufenden Aufträge (Lohn des Auftrags über seine Laufzeit verteilt).
+   * Dieselbe Rechnung wie in {@link #payUpkeepAndWages} und {@link Wages},
+   * nur als Rate statt als Tagesbetrag – die Zahl, die in der Kopfzeile neben
+   * dem Guthaben steht.
    */
   public static double treasuryFlowPerHour(GameState state, String playerId) {
     double outflow = 0;
@@ -629,7 +864,8 @@ public final class Economy {
         }
       }
       Population p = ColonyCommands.population(state, colony.id);
-      if (p != null) outflow += p.currentCount * WAGE_PER_CAPITA_PER_HOUR;
+      if (p != null) outflow += p.academics * GameConstants.WAGE_PER_WORK_HOUR;
+      outflow += runningWagesPerHour(state, colony.id);
       // Einnahmen: was die Bevölkerung dieser Kolonie je Spielstunde für
       // Konsumgüter ausgibt, landet über die Verkaufsorders beim Kommandanten.
       inflow += consumptionSpendPerHour(state, colony);
@@ -637,31 +873,51 @@ public final class Economy {
     return inflow - outflow;
   }
 
+  /** Löhne der laufenden Aufträge aller drei Warteschlangen einer Kolonie, auf ihre Laufzeit verteilt. */
+  private static double runningWagesPerHour(GameState state, String colonyId) {
+    double perHour = 0;
+    for (ProductionQueueEntry e : state.productionQueue) {
+      if (e.colonyId.equals(colonyId) && e.status == ProductionQueueStatus.running && e.plan.totalHours > 0) perHour += e.plan.wageCredits / e.plan.totalHours;
+    }
+    for (ShipyardQueueEntry e : state.shipyardQueue) {
+      if (e.colonyId.equals(colonyId) && e.status == ProductionQueueStatus.running && e.plan.totalHours > 0) perHour += e.plan.wageCredits / e.plan.totalHours;
+    }
+    for (RecruitmentQueueEntry e : state.recruitmentQueue) {
+      if (e.colonyId.equals(colonyId) && e.status == ProductionQueueStatus.running && e.plan.totalHours > 0) perHour += e.plan.wageCredits / e.plan.totalHours;
+    }
+    return perHour;
+  }
+
   /**
-   * Konsumausgaben der Bevölkerung einer Kolonie je Spielstunde – Gegenstück
-   * zum Tageseinkauf als Rate: Pro-Kopf-Bedarf × Einwohner × tatsächliche
-   * Deckung × günstigster eigener Preis, über die Grundgüter summiert.
+   * Konsumausgaben der Bevölkerung einer Kolonie je Spielstunde an den EIGENEN
+   * Kommandanten: Tagesbedarf × tatsächliche Deckung × Ausführungspreis, wobei
+   * der Preis der niedrigere von eigenem Brief und Gebot ist (der Preis der
+   * älteren Order, näherungsweise). Ohne kreuzendes Paar fließt nichts.
    */
   private static double consumptionSpendPerHour(GameState state, Colony colony) {
     Population p = ColonyCommands.population(state, colony.id);
     if (p == null || p.currentCount <= 0) return 0;
     Map<String, Double> coverage = state.consumptionCoverage.get(colony.id);
     if (coverage == null) return 0;
+    Demand d = demand(state, colony, p);
+    Map<String, Double> bids = new LinkedHashMap<>();
+    for (MarketOrder o : MarketCommands.populationBids(state, colony.id)) bids.put(o.productTypeId, o.limitPrice);
 
     double spend = 0;
-    for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
-      double covered = coverage.getOrDefault(goodId, 0.0);
+    for (Map.Entry<String, Double> e : d.dailyNeed.entrySet()) {
+      double covered = coverage.getOrDefault(e.getKey(), 0.0);
       if (covered <= 0) continue;
-      double need = p.currentCount * GameConstants.CONSUMER_NEED_PER_CAPITA_PER_HOUR.get(goodId);
+      double needPerHour = e.getValue() / GameConstants.GAME_DAY_HOURS;
       // Nur eigene Orders zahlen auf das eigene Konto ein – fremde Orders am
       // eigenen Posten liefern zwar Waren, das Geld geht aber woandershin.
       double bestOwnPrice = Double.NaN;
-      for (MarketOrder o : ownPostOrders(state, colony, goodId)) {
+      for (MarketOrder o : ownPostOrders(state, colony, e.getKey())) {
         if (!colony.ownerId.equals(o.ownerId)) continue;
         if (Double.isNaN(bestOwnPrice) || o.limitPrice < bestOwnPrice) bestOwnPrice = o.limitPrice;
       }
-      if (Double.isNaN(bestOwnPrice)) continue;
-      spend += need * Math.min(covered, 1.0) * bestOwnPrice;
+      Double bid = bids.get(e.getKey());
+      if (Double.isNaN(bestOwnPrice) || bid == null || bid + 1e-9 < bestOwnPrice) continue;
+      spend += needPerHour * Math.min(covered, 1.0) * Math.min(bestOwnPrice, bid);
     }
     return spend;
   }

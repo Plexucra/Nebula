@@ -116,9 +116,19 @@ public final class RecruitmentCommands {
               + ProductCatalog.find(entry.unitProductTypeId).name + "\" vorhanden.", entry.colonyId, null);
       return;
     }
+    // Löhne je Arbeitsstunde (Umsetzungskonzept/38, Teil B) – auch die Ausbildung zahlt.
+    String label = (long) entry.quantity + " × " + ProductCatalog.find(entry.unitProductTypeId).name;
+    if (!Wages.affordable(state, entry.colonyId, plan)) {
+      entry.plan = plan;
+      entry.status = ProductionQueueStatus.stopped;
+      entry.stoppedReasonCode = Notifications.CODE_WAGES_UNPAID;
+      Wages.notifyUnpaid(state, ids, entry.colonyId, plan, label, "Rekrutierungs-Warteschlange");
+      return;
+    }
     for (ChainPlanStep step : plan.steps) {
       if (step.quantityFromWarehouse > 0) Warehouse.add(state, entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
     }
+    Wages.pay(state, ids, entry.colonyId, plan, label);
     long startedAt = Clock.now();
     long endsAt = startedAt + (long) Clock.hoursToMs(plan.totalHours);
     entry.plan = plan;

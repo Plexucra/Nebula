@@ -5667,42 +5667,6 @@
     "workHoursPerUnit": 166100.0
   },
   {
-    "id": "p_trinkwasserration",
-    "name": "Trinkwasserration",
-    "category": "ConsumerGood",
-    "tier": 5,
-    "recipe": [
-      {
-        "inputProductTypeId": "p_nahrungsbasis",
-        "quantity": 1.0
-      },
-      {
-        "inputProductTypeId": "p_prozesswasser",
-        "quantity": 1.0
-      }
-    ],
-    "resourceProfile": [
-      {
-        "resourceTypeId": "res_eis",
-        "weight": 0.33
-      },
-      {
-        "resourceTypeId": "res_salz",
-        "weight": 0.33
-      },
-      {
-        "resourceTypeId": "res_atmosphaere",
-        "weight": 0.34
-      }
-    ],
-    "baseProductionHours": 8.0,
-    "massKg": 6000.0,
-    "volumeM3": 6.0,
-    "eleriumG": 0.0048,
-    "description": "Trinkwasserration.",
-    "workHoursPerUnit": 60.0
-  },
-  {
     "id": "p_grundnahrung",
     "name": "Grundnahrung",
     "category": "ConsumerGood",
@@ -5735,43 +5699,7 @@
     "massKg": 1000.0,
     "volumeM3": 2.0,
     "eleriumG": 0.0048,
-    "description": "Einfache Nährstoffration direkt aus Wasser und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann; weniger ergiebig als Standardnahrung.",
-    "workHoursPerUnit": 60.0
-  },
-  {
-    "id": "p_standardnahrung",
-    "name": "Standardnahrung",
-    "category": "ConsumerGood",
-    "tier": 5,
-    "recipe": [
-      {
-        "inputProductTypeId": "p_nahrungsbasis",
-        "quantity": 1.0
-      },
-      {
-        "inputProductTypeId": "p_hygienebasis",
-        "quantity": 1.0
-      }
-    ],
-    "resourceProfile": [
-      {
-        "resourceTypeId": "res_eis",
-        "weight": 0.33
-      },
-      {
-        "resourceTypeId": "res_salz",
-        "weight": 0.33
-      },
-      {
-        "resourceTypeId": "res_atmosphaere",
-        "weight": 0.34
-      }
-    ],
-    "baseProductionHours": 8.0,
-    "massKg": 6000.0,
-    "volumeM3": 12.0,
-    "eleriumG": 0.0048,
-    "description": "Standardnahrung.",
+    "description": "Einfache Nährstoffration direkt aus Wasser und Kohlenstoffmineral – bewusst flache Kette, damit eine Startkolonie ihre Bevölkerung aus eigener Kraft ernähren kann.",
     "workHoursPerUnit": 60.0
   },
   {
@@ -6053,7 +5981,7 @@
   {
     "id": "p_infanterieausruestung",
     "name": "Infanterieausrüstung",
-    "category": "ConsumerGood",
+    "category": "MilitaryEquipment",
     "tier": 5,
     "recipe": [
       {
@@ -6093,7 +6021,7 @@
   {
     "id": "p_schwere_bodenausruestung",
     "name": "Schwere Bodenausrüstung",
-    "category": "ConsumerGood",
+    "category": "MilitaryEquipment",
     "tier": 5,
     "recipe": [
       {
@@ -6565,12 +6493,8 @@
     "tier": 6,
     "recipe": [
       {
-        "inputProductTypeId": "p_trinkwasserration",
-        "quantity": 1.0
-      },
-      {
         "inputProductTypeId": "p_grundnahrung",
-        "quantity": 3.0
+        "quantity": 4.0
       },
       {
         "inputProductTypeId": "p_hygienewaren",
@@ -6609,12 +6533,8 @@
     "tier": 6,
     "recipe": [
       {
-        "inputProductTypeId": "p_trinkwasserration",
-        "quantity": 1.0
-      },
-      {
-        "inputProductTypeId": "p_standardnahrung",
-        "quantity": 1.0
+        "inputProductTypeId": "p_grundnahrung",
+        "quantity": 2.0
       },
       {
         "inputProductTypeId": "p_hygienewaren",
@@ -6657,7 +6577,7 @@
     "tier": 6,
     "recipe": [
       {
-        "inputProductTypeId": "p_trinkwasserration",
+        "inputProductTypeId": "p_grundnahrung",
         "quantity": 1.0
       },
       {
@@ -6701,7 +6621,7 @@
     "tier": 6,
     "recipe": [
       {
-        "inputProductTypeId": "p_standardnahrung",
+        "inputProductTypeId": "p_grundnahrung",
         "quantity": 1.0
       },
       {
@@ -6745,7 +6665,7 @@
     "tier": 6,
     "recipe": [
       {
-        "inputProductTypeId": "p_standardnahrung",
+        "inputProductTypeId": "p_grundnahrung",
         "quantity": 1.0
       },
       {
@@ -6785,7 +6705,7 @@
   {
     "id": "p_infanteriepaket",
     "name": "Infanteriepaket",
-    "category": "ConsumerGood",
+    "category": "MilitaryEquipment",
     "tier": 6,
     "recipe": [
       {
@@ -6797,12 +6717,8 @@
         "quantity": 6.0
       },
       {
-        "inputProductTypeId": "p_trinkwasserration",
-        "quantity": 1.0
-      },
-      {
         "inputProductTypeId": "p_grundnahrung",
-        "quantity": 3.0
+        "quantity": 4.0
       },
       {
         "inputProductTypeId": "p_hygienewaren",
@@ -6833,9 +6749,13 @@
   {
     "id": "p_schweres_truppenpaket",
     "name": "Schweres Truppenpaket",
-    "category": "ConsumerGood",
+    "category": "MilitaryEquipment",
     "tier": 6,
     "recipe": [
+      {
+        "inputProductTypeId": "p_grundnahrung",
+        "quantity": 2.0
+      },
       {
         "inputProductTypeId": "p_schwere_bodenausruestung",
         "quantity": 1.0
@@ -6846,14 +6766,6 @@
       },
       {
         "inputProductTypeId": "p_erweiterte_medizin",
-        "quantity": 1.0
-      },
-      {
-        "inputProductTypeId": "p_trinkwasserration",
-        "quantity": 1.0
-      },
-      {
-        "inputProductTypeId": "p_standardnahrung",
         "quantity": 1.0
       }
     ],

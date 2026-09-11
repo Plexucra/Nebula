@@ -1,8 +1,6 @@
 package de.nebula.state;
 
 import de.nebula.engine.Clock;
-import de.nebula.engine.Formulas;
-import de.nebula.engine.GameConstants;
 import de.nebula.model.Colony;
 import de.nebula.model.PlanetStats;
 import de.nebula.model.Population;
@@ -53,8 +51,7 @@ public final class PopulationHistory {
       sample.population = population.currentCount;
       sample.standardOfLivingPct = stats.standardOfLivingPct;
       sample.housingCapacity = capacity;
-      sample.growthState = Formulas.populationGrowthState(population.currentCount, capacity, stats.standardOfLivingPct,
-          ColonyCommands.foodCoverage(state, colony.id));
+      sample.growthState = Economy.growthState(state, colony); // samt Staffeldeckel (GoodsLimited)
 
       List<PopulationSample> history = state.populationHistory.computeIfAbsent(colony.id, id -> new ArrayList<>());
       synchronized (history) {
@@ -110,9 +107,11 @@ public final class PopulationHistory {
         result.limitingFactor = PopulationTrend.LimitingFactor.Housing;
       } else {
         Map<String, Double> coverage = state.consumptionCoverage.getOrDefault(colonyId, Map.of());
+        // Die Deckung führt nur die aktuell nachgefragten Güter (Güterstaffel,
+        // Umsetzungskonzept/38); ein Gut, das die Stufe nicht verlangt, fehlt nicht.
         boolean short_ = coverage.isEmpty();
-        for (String goodId : GameConstants.CONSUMER_GOODS_ORDER) {
-          if (coverage.getOrDefault(goodId, 0.0) < SUPPLY_SHORT_COVERAGE) short_ = true;
+        for (double c : coverage.values()) {
+          if (c < SUPPLY_SHORT_COVERAGE) short_ = true;
         }
         if (short_) result.limitingFactor = PopulationTrend.LimitingFactor.Supply;
       }

@@ -67,6 +67,10 @@ final class ColonyConquest {
     state.productionQueue.removeIf(e -> e.colonyId.equals(colony.id));
     state.recruitmentQueue.removeIf(e -> e.colonyId.equals(colony.id));
     for (Building b : state.buildings) if (b.colonyId.equals(colony.id)) b.pendingOrder = null;
+    // Die Gebote der Bevölkerung tragen den bisherigen Kommandanten als Eigentümer –
+    // zurückziehen (Escrow zurück ins Bevölkerungs-Wallet), der nächste Kolonietag
+    // stellt sie unter dem neuen Herrn neu (Umsetzungskonzept/38, Teil C).
+    MarketCommands.cancelPopulationBids(state, colony.id);
 
     Colony ownColonyOnPlanet = state.colonies.stream()
         .filter(c -> c.ownerId.equals(battle.attackerId) && c.planetId.equals(colony.planetId))
@@ -157,10 +161,12 @@ final class ColonyConquest {
    */
   private static void mergeInto(GameState state, IdGenerator ids, Colony conquered, Colony target) {
     double populationMoved = 0;
+    double academicsMoved = 0;
     Map<String, Double> stockMoved = Map.of();
     for (Population p : new ArrayList<>(state.populations)) {
       if (!p.colonyId.equals(conquered.id)) continue;
       populationMoved = p.currentCount;
+      academicsMoved = p.academics;
       stockMoved = p.stock;
       state.populations.remove(p);
     }
@@ -168,6 +174,7 @@ final class ColonyConquest {
       for (Population p : state.populations) {
         if (!p.colonyId.equals(target.id)) continue;
         p.currentCount += populationMoved;
+        p.academics += academicsMoved; // Akademiker ziehen mit (Umsetzungskonzept/38, Teil D)
         // Der Vorrat der Bevölkerung zieht mit ihr um (Umsetzungskonzept/36).
         stockMoved.forEach((good, qty) -> p.stock.merge(good, qty, Double::sum));
       }

@@ -8,6 +8,9 @@
 ```text
 1 neuer Einwohner  → +1 Credit (der Bevölkerung/Kaufkraft zugerechnet)
 1 Arbeitseinheit    → kostet 1 Credit
+                      (umgesetzt seit Umsetzungskonzept/38: eine Einwohner-
+                       Arbeitsstunde kostet wagePerWorkHour, gebucht beim
+                       Start des Auftrags; Akademiker 24 Stunden je Spieltag)
 Normale Transaktionen erzeugen kein neues Geld.
 Kein simulierter Arbeitsmarkt (vorerst). Zwei feste Abgabesätze für den
 Ausgleichsfonds existieren, s. §7 – keine spielerseitig einstellbaren

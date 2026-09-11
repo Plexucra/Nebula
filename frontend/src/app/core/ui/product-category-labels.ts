@@ -7,6 +7,7 @@ export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
   BuildingMaterial: 'Baumaterial',
   ShipModule: 'Schiffsmodule',
   EnergyModule: 'Energiemodule',
+  MilitaryEquipment: 'Militärausrüstung',
   Ship: 'Schiffe',
   GroundUnit: 'Bodeneinheiten',
 };

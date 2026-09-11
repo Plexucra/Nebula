@@ -11,6 +11,8 @@ export type NotificationType = 'Info' | 'Warnung' | 'Problem';
  *
  * Bekannte Codes:
  * - 503 (Problem): Auftragswarteschlange einer Kolonie mangels Vorprodukten angehalten.
+ * - 504 (Problem): Produktionsauftrag gestoppt, weil er kürzer als die Mindestdauer wäre (`MIN_PRODUCTION_ORDER_GAME_MINUTES`).
+ * - 509 (Problem): Auftrag gestoppt, weil das Kommandanten-Wallet die Löhne nicht deckt (Umsetzungskonzept/38, Teil B); Fortsetzen nach Zahlungseingang.
  * - 4xx (Warnung, reserviert, noch nicht ausgelöst): z. B. feindliche Flotte im System gesichtet – wartet auf Kampf-/Flottenbewegungslogik.
  */
 export interface GameNotification {

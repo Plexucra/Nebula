@@ -10,13 +10,12 @@ import { Id } from './common.model';
  * (Rumpf/Antrieb/Energie/Elektronik/Versorgung/Waffen/Ladung/Hangar/
  * Truppen), bis Umsetzungskonzept/20_...md Teil von `BuildingMaterial` –
  * ausschließlich Eingang von `Ship`-Rezepten, nirgends sonst verbaut.
- * 'Facility': planetare Anlagen (Ebene 7 im Produktionsbaum, z. B.
- * Schiffswerft, Koloniehabitat) – aktuell als Katalogeintrag vorhanden,
- * aber noch nicht mit dem Gebäude-Ausbausystem verknüpft (siehe
- * product-catalog.ts Kopfkommentar).
+ * 'MilitaryEquipment' (seit Umsetzungskonzept/38 aus `ConsumerGood`
+ * herausgelöst): Infanterie- und Bodenausrüstung samt Truppenpaketen –
+ * Zutaten der Bodeneinheiten, keine Konsumgüter der Bevölkerung.
  */
 export type ProductCategory =
-  'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'ShipModule' | 'RawResource' | 'EnergyModule';
+  'Ship' | 'GroundUnit' | 'ConsumerGood' | 'BuildingMaterial' | 'ShipModule' | 'RawResource' | 'EnergyModule' | 'MilitaryEquipment';
 
 export interface RecipeInput {
   inputProductTypeId: Id;

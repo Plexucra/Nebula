@@ -505,6 +505,8 @@ public final class GroundBattleCommands {
       if (!p.colonyId.equals(colonyId)) continue;
       double lost = Math.min(p.currentCount, Math.floor(amount));
       p.currentCount -= lost;
+      // Verluste treffen die Gesamtzahl; Akademiker nie mehr als Einwohner (Umsetzungskonzept/38, Teil D).
+      p.academics = Math.min(p.academics, p.currentCount);
       return lost;
     }
     return 0;

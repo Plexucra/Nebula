@@ -28,8 +28,14 @@ zugerechnet:
 
 **Spieler → Lohn → Bevölkerung**
 
-Die Bevölkerung kauft mit dieser Kaufkraft reale Konsumgüter zu
-Marktpreisen:
+Seit Umsetzungskonzept/38 (11.9.2026) ist das wörtlich umgesetzt: jede
+Arbeitsstunde eines Auftrags kostet den festen Lohnsatz, gebucht beim
+Start; dazu Gehälter für Akademiker. Eine Grundsicherung gibt es nicht –
+wer nicht arbeiten lässt, zahlt nichts, und seine Bevölkerung hat nichts.
+
+Die Bevölkerung kauft mit dieser Kaufkraft reale Konsumgüter – sie stellt
+dafür eigene Kauforders aus Einkommen, Guthaben und Bedarf (Konzept 38),
+der Verkäufer bedient sie oder nicht:
 
 **Bevölkerung → Geld → Verkäufer**
 

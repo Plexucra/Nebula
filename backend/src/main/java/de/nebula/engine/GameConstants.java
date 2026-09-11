@@ -24,12 +24,14 @@ public final class GameConstants {
   public static final double GAME_DAY_MS = Clock.hoursToMs(GAME_DAY_HOURS);
 
   /**
-   * Tageseinkauf der Bevölkerung (Umsetzungskonzept/36): Vorratsziel in
-   * Tagesbedarfen je Grundkonsumgut und die Schwelle, unter der eine neue
-   * Order am eigenen Handelsposten einen sofortigen Notkauf auslöst.
+   * Vorrat der Bevölkerung (Umsetzungskonzept/36): Vorratsziel in
+   * Tagesbedarfen je Konsumgut – zugleich die Menge, die ihre Kauforders
+   * nachfragen, und der Teiler des Guthabens im Tagesbudget
+   * (Umsetzungskonzept/38, Teil C).
    */
   public static final double POPULATION_STOCK_TARGET_DAYS = SharedConstants.populationStockTargetDays();
-  public static final double POPULATION_EMERGENCY_PURCHASE_BELOW_DAYS = SharedConstants.populationEmergencyPurchaseBelowDays();
+  /** Glättung des Einkommens des Bevölkerungs-Wallets in Spieltagen (Umsetzungskonzept/38, Teil C). */
+  public static final double POPULATION_INCOME_SMOOTHING_DAYS = SharedConstants.populationIncomeSmoothingDays();
 
   /** Ausgleichsfonds gegen Geldhortung (Konzeption/Spieldesign/06_..., §8 und Mechanik/10_..., §7). */
   public static final double WEALTH_TAX_THRESHOLD = 1000;
@@ -81,15 +83,19 @@ public final class GameConstants {
    * {@code ChainPlanner.computeProductionHours}.
    */
   public static final double PRODUCTION_SPEED_MULTIPLIER = SharedConstants.productionSpeedMultiplier();
+  /**
+   * Mindestdauer eines Produktionsauftrags in Spielstunden – kürzere lehnt
+   * {@code ProductionCommands.queueProduction} ab, siehe {@code _minProductionOrderGameMinutes}
+   * in {@code shared/game-constants.json}.
+   */
+  public static final double MIN_PRODUCTION_ORDER_GAME_HOURS = SharedConstants.minProductionOrderGameMinutes() / 60.0;
 
   /**
-   * Bevölkerungs-Konsum: Reihenfolge und Pro-Kopf-Bedarf je Grundkonsumgut
-   * UND SPIELSTUNDE. Mit Umsetzungskonzept/17_...md, Teil C gesenkt
-   * (Grundnahrung 0,001 → 0,0002, Grundmedizin 0,000375 → 0,0001, Elektronik
-   * 0,00025 → 0,0001), damit die Startkolonie (120 Einwohner,
-   * Industriekomplex 1) ihre Bevölkerung mit ≈ 50 % Warteschlangen-Auslastung
-   * aus eigener Kraft versorgen kann – Herleitung aus echten ChainPlan-Stunden
-   * dort.
+   * Güterstaffel der ARBEITER (Umsetzungskonzept/38_...md, Teil D): Pro-Kopf-
+   * Bedarf je Konsumgut UND SPIELSTUNDE, Eintrag i ist ab Wohnstufe i Pflicht
+   * (Grenzen aus der Wohnkapazität, siehe {@code Formulas.consumerStage}).
+   * Die Sätze der ersten drei Güter stammen aus Umsetzungskonzept/17_...md,
+   * Teil C (Grundnahrung 0,0002, Grundmedizin und Elektronik 0,0001).
    *
    * <p>Ausdrücklich JE SPIELSTUNDE: der Bedarf war einmal ein fester Betrag je
    * Realzeit-Tick und hätte sich als einzige laufende Größe dem Tempo-Regler
@@ -101,8 +107,23 @@ public final class GameConstants {
    * dieselbe Tabelle.</p>
    */
   public static final Map<String, Double> CONSUMER_NEED_PER_CAPITA_PER_HOUR = SharedConstants.consumerNeedPerCapitaPerGameHour();
-  /** Einkaufsreihenfolge des Tageseinkaufs – die Reihenfolge der Bedarfstabelle. */
+  /** Staffel- und Einkaufsreihenfolge – die Reihenfolge der Bedarfstabelle; zugleich der Vorrang der Gebote. */
   public static final List<String> CONSUMER_GOODS_ORDER = List.copyOf(CONSUMER_NEED_PER_CAPITA_PER_HOUR.keySet());
+  /**
+   * Zusatzbedarf der AKADEMIKER je Kopf und Spielstunde in Stufenreihenfolge
+   * (Umsetzungskonzept/38_...md, Teil D): die ersten {@link #ACADEMIC_BASE_GOODS_COUNT}
+   * Güter gehören zur Zentrumsstufe 1, jedes weitere zur nächsten Stufe.
+   */
+  public static final Map<String, Double> ACADEMIC_NEED_PER_CAPITA_PER_HOUR = SharedConstants.academicNeedPerCapitaPerGameHour();
+  public static final List<String> ACADEMIC_GOODS_ORDER = List.copyOf(ACADEMIC_NEED_PER_CAPITA_PER_HOUR.keySet());
+  public static final int ACADEMIC_BASE_GOODS_COUNT = SharedConstants.academicBaseGoodsCount();
+  /** Startterm der Akademiker-Nachfrage und ihres Zuwachses als Anteil der Arbeiter. */
+  public static final double ACADEMIC_SEED_SHARE_OF_WORKERS = SharedConstants.academicSeedShareOfWorkers();
+  /** Rückkehr eines Akademiker-Überhangs zu den Arbeitern je Spielstunde. */
+  public static final double ACADEMIC_RETURN_RATE_PER_HOUR = SharedConstants.academicReturnRatePerHour();
+  /** Das Forschungszentrum – bezahlte Akademikerplätze (Umsetzungskonzept/38_...md). */
+  public static final String RESEARCH_BUILDING_ID = "b_research";
+  public static final String HOUSING_BUILDING_ID = "b_habitat";
   /**
    * Das Grundnahrungsmittel – das einzige Konsumgut, an dem nicht nur der
    * Lebensstandard hängt, sondern das WACHSTUM selbst
@@ -159,12 +180,14 @@ public final class GameConstants {
   // ===================== Ende REALZEIT-AUSNAHME ===========================
 
   /**
-   * Lohn je Einwohner und Spielstunde, gezahlt vom Kommandanten an das
-   * Bevölkerungs-Wallet seiner Kolonie ({@code Economy.colonyDay}). Eine
-   * Quelle für Lohn, Preisanker der Handelsgilde ({@code ProductCosts}) und
-   * die Kreditreserve der Bots – siehe {@code shared/game-constants.json}.
+   * Lohn je EINWOHNER-Arbeitsstunde (Umsetzungskonzept/38_...md, Teil B):
+   * beim Start jedes Auftrags {@code totalWorkHours / PRODUCTION_SPEED_MULTIPLIER × Lohn}
+   * vom Kommandanten ins Bevölkerungs-Wallet ({@code Formulas.wageFor}), je
+   * Spieltag für jeden Akademiker 24 Stunden. Eine Quelle für Lohn,
+   * Preisanker der Handelsgilde ({@code ProductCosts}) und die Kreditreserve
+   * der Bots – siehe {@code shared/game-constants.json}. Keine Grundsicherung.
    */
-  public static final double WAGE_PER_CAPITA_PER_HOUR = SharedConstants.wagePerCapitaPerGameHour();
+  public static final double WAGE_PER_WORK_HOUR = SharedConstants.wagePerWorkHour();
 
   /**
    * Kündigungsfristen für Friedens-/Handelsverträge (Umsetzungskonzept/21_...md,

@@ -3,12 +3,12 @@ import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { GAME_API } from '../../core/sim/game-api.token';
-import { BuildingType, ChainPlan, Id, MarketOrder, MaterialRequirement, PlanetType, ProductionQueueEntry } from '../../core/models';
+import { BuildingType, ChainPlan, Id, MarketOrder, MaterialRequirement, PlanetType, PopulationSupplyGroup, ProductionQueueEntry } from '../../core/models';
 import { UiClockService, formatCountdown } from '../../core/ui/ui-clock.service';
 import { planetTypeLabel } from '../../core/ui/planet-type-labels';
 import { ProductPickerDialogComponent } from '../../core/ui/product-picker-dialog.component';
 import { PopulationChartComponent } from '../../shared/population-chart.component';
-import { CONSUMER_GOODS, ENERGY_RESERVE_DEFAULT_GAME_HOURS } from '../../core/shared-constants';
+import { CONSUMER_GOODS, ENERGY_RESERVE_DEFAULT_GAME_HOURS, MIN_PRODUCTION_ORDER_GAME_MINUTES } from '../../core/shared-constants';
 import { housingOccupancyPct } from '../../core/util/housing';
 
 /**
@@ -21,7 +21,7 @@ import { housingOccupancyPct } from '../../core/util/housing';
 type Tab = 'uebersicht' | 'bebauung' | 'produktion' | 'bodentruppen' | 'bevoelkerung' | 'handel';
 
 /** Platzhalter, solange eine Vorschau noch nicht (neu) berechnet wurde – siehe `refreshNewOrderPreview`/`toggleQueueEntry`. */
-const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true, totalWorkHours: 0, workersBoundPerHour: 0 };
+const EMPTY_CHAIN_PLAN: ChainPlan = { totalHours: 0, steps: [], feasible: true, totalWorkHours: 0, workersBoundPerHour: 0, wageCredits: 0 };
 
 @Component({
   selector: 'app-colony-detail',
@@ -150,27 +150,41 @@ export class ColonyDetailComponent {
   }
 
   /**
-   * Preisanhalt beim Anbieten: Was die Bevölkerung dieser Kolonie je Stück
-   * überhaupt aufbringen kann. Vorher gab es dafür keinerlei Anhaltspunkt – ein
-   * zu hoch gesetzter Preis führte nur zur Meldung "kann sich das nicht
-   * leisten", ohne zu sagen, welcher Preis ginge.
+   * Preisanhalt beim Anbieten: das stehende Gebot der Bevölkerung
+   * (Umsetzungskonzept/38). Eine Verkaufsorder zum oder unter dem Gebot kreuzt
+   * sofort; eine darüber bleibt liegen, bis das Gebot am nächsten Kolonietag
+   * neu gestellt wird.
    */
   protected priceHint(productTypeId: Id): string | null {
-    const consumerGoods = CONSUMER_GOODS;
-    if (!consumerGoods.includes(productTypeId)) return null;
-    const wallet = this.popWallet()?.balance ?? 0;
-    const population = this.population()?.currentCount ?? 0;
-    if (population <= 0 || wallet <= 0) return null;
-    // Der Tageseinkauf (Umsetzungskonzept/36) verteilt das Guthaben der
-    // Bevölkerung zu gleichen Teilen auf die drei Grundgüter und füllt damit
-    // den Vorrat auf das Ziel auf.
-    const perGood = wallet / consumerGoods.length;
     const good = this.populationSupply()?.goods.find(g => g.productTypeId === productTypeId);
-    const missing = good ? Math.max(0, Math.ceil(good.dailyNeed * (this.populationSupply()?.targetDays ?? 0)) - good.stock) : 0;
-    const perUnit = missing > 0 ? ` Für die fehlenden ${missing} Stück Vorrat wären das bis zu ${Math.round(perGood / missing).toLocaleString('de-DE')} Cr je Stück.` : '';
-    return `Kaufkraft der Bevölkerung: ${Math.round(wallet).toLocaleString('de-DE')} Cr insgesamt`
-      + ` – für dieses Gut sind beim nächsten Tageseinkauf rund ${Math.round(perGood).toLocaleString('de-DE')} Cr verfügbar.${perUnit}`;
+    if (!good) {
+      return CONSUMER_GOODS.includes(productTypeId)
+        ? 'Die Bevölkerung fragt dieses Gut auf ihrer Wohnstufe noch nicht nach – es wird erst mit der nächsten Stufe zum Wachstumsgut.'
+        : null;
+    }
+    if (good.bidPrice === null) {
+      return 'Die Bevölkerung hat gerade kein Gebot stehen – ihr Vorrat ist voll oder ihr Budget aufgebraucht; am nächsten Kolonietag stellt sie neu.';
+    }
+    return `Gebot der Bevölkerung: ${good.bidQuantity.toLocaleString('de-DE')} Stück zu ${good.bidPrice.toLocaleString('de-DE', { maximumFractionDigits: 2 })} Cr je Stück`
+      + ` – eine Order zu diesem Preis oder darunter kreuzt sofort.`;
   }
+
+  /** Beschriftung der Nachfragegruppe eines Guts (Umsetzungskonzept/38). */
+  protected groupLabel(group: PopulationSupplyGroup): string {
+    switch (group) {
+      case 'Essential': return 'Pflichtgut';
+      case 'Growth': return 'Wachstumsgut';
+      case 'Academic': return 'Akademiker';
+    }
+  }
+
+  /** Gebot der Bevölkerung – der Kommandant ist Eigentümer, darf es aber weder zurückziehen noch umpreisen. */
+  protected isPopulationBid(o: MarketOrder): boolean {
+    return !!o.populationColonyId;
+  }
+
+  /** Forschungsniveau des Kommandanten – die Akademiker aller Kolonien. */
+  protected readonly researchLevel = this.api.researchLevel();
   protected readonly specializations = this.api.specializations(this.colonyId);
   protected readonly productionQueue = this.api.productionQueue(this.colonyId);
   protected readonly groundForces = this.api.groundForces(this.colonyId);
@@ -215,7 +229,7 @@ export class ColonyDetailComponent {
    */
   protected readonly speedBreakdown = this.api.colonySpeedBreakdown(this.colonyId);
   protected readonly consumptionCoverage = this.api.consumptionCoverage(this.colonyId);
-  /** Vorrat und Tageseinkauf der Bevölkerung (Umsetzungskonzept/36), Panel im Tab "Bevölkerung". */
+  /** Vorrat, Gebote, Staffel und Klassen der Bevölkerung (Umsetzungskonzept/36 und 38), Panels im Tab "Bevölkerung". */
   protected readonly populationSupply = this.api.populationSupply(this.colonyId);
   protected readonly populationTrend = this.api.populationTrend(this.colonyId);
 
@@ -270,6 +284,16 @@ export class ColonyDetailComponent {
   /** Reine Vorschau (keine Auftragsanlage) für das Neuer-Auftrag-Formular, siehe `refreshNewOrderPreview`. */
   protected readonly newOrderPreview = signal<ChainPlan | null>(null);
   protected readonly newOrderPreviewLoading = signal(false);
+  /**
+   * Kleinste zulässige Stückzahl, sobald die Vorschau unter der Mindestdauer liegt
+   * (sonst `null`) – der Server lehnt solche Aufträge ab, der Knopf ist dann gesperrt.
+   */
+  protected readonly newOrderMinimumQty = signal<number | null>(null);
+  protected readonly minOrderGameMinutes = MIN_PRODUCTION_ORDER_GAME_MINUTES;
+  /** Code 504: der Auftrag fiel seit dem Einreihen unter die Mindestdauer (`Notifications.CODE_ORDER_TOO_SMALL`). */
+  protected readonly ORDER_TOO_SMALL_CODE = 504;
+  /** Code 509: die Löhne des Auftrags übersteigen das Guthaben (`Notifications.CODE_WAGES_UNPAID`, Umsetzungskonzept/38). */
+  protected readonly WAGES_UNPAID_CODE = 509;
 
   protected newUnitProductId = this.groundUnitTypes[0]?.id ?? '';
   protected newUnitQty = 5;
@@ -305,6 +329,12 @@ export class ColonyDetailComponent {
 
   protected countdown = formatCountdown;
 
+  constructor() {
+    // Direkt mit ?tab=produktion geöffnet: dieselbe Sofort-Vorschau wie in setTab
+    // (erst nach allen Feldinitialisierern, deshalb hier und nicht im Feld).
+    if (this.tab() === 'produktion') queueMicrotask(() => this.refreshNewOrderPreview());
+  }
+
   private initialTab(): Tab {
     const t = this.route.snapshot.queryParamMap.get('tab');
     if (t === 'verteidigung') return 'bebauung'; // alter Tab, siehe Tab-Typ
@@ -319,6 +349,9 @@ export class ColonyDetailComponent {
    */
   protected setTab(t: Tab): void {
     this.tab.set(t);
+    // Vorschau samt „Los zu klein"-Prüfung sofort, nicht erst nach der ersten Eingabe –
+    // sonst war „Auftrag einreihen" mit der Startmenge 1 freigegeben und der Server lehnte ab.
+    if (t === 'produktion') this.refreshNewOrderPreview();
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: t },
@@ -408,6 +441,7 @@ export class ColonyDetailComponent {
       case 'Growing': return 'Wachstum';
       case 'Overcrowded': return 'Überbevölkert';
       case 'FoodLimited': return 'Nahrungsgrenze erreicht';
+      case 'GoodsLimited': return 'Stufengrenze der Güterstaffel';
       default: return '–';
     }
   }
@@ -445,6 +479,38 @@ export class ColonyDetailComponent {
 
   protected upgradeHours(bt: BuildingType): number {
     return this.upgradePreview(bt.id)?.upgradeHours ?? 0;
+  }
+
+  /** Kopfzeile der Gebäudekarte: wofür das Gebäude da ist. */
+  protected categoryLabel(category: BuildingType['category']): string {
+    switch (category) {
+      case 'Infrastructure': return 'Versorgung';
+      case 'Housing': return 'Wohnen';
+      case 'ProductionFacility': return 'Produktion';
+      case 'PlanetaryDefense': return 'Verteidigung';
+      case 'Research': return 'Forschung';
+    }
+  }
+
+  /**
+   * Gebäude mit Foto (`frontend/public/buildings/<id>.jpg`, verkleinert aus `/Bilder`);
+   * alle übrigen zeigen die gezeichnete Grafik `<id>.svg`.
+   */
+  private static readonly BUILDING_PHOTOS: ReadonlySet<Id> = new Set(['b_infrastructure', 'b_habitat', 'b_industry', 'b_shipyard', 'b_academy']);
+
+  protected hasBuildingPhoto(typeId: Id): boolean {
+    return ColonyDetailComponent.BUILDING_PHOTOS.has(typeId);
+  }
+
+  protected buildingImage(typeId: Id): string {
+    return `buildings/${typeId}.${this.hasBuildingPhoto(typeId) ? 'jpg' : 'svg'}`;
+  }
+
+  /** Fortschritt eines laufenden Ausbaus in Prozent – Balken in der Gebäudekarte. */
+  protected buildingProgressPct(order: { startedAt: number; completesAt: number }): number {
+    const total = order.completesAt - order.startedAt;
+    if (total <= 0) return 100;
+    return Math.min(100, Math.max(0, ((this.clock.now() - order.startedAt) / total) * 100));
   }
 
   /** Produktionstempo einer Produktionsanlage (Industriekomplex/Werft/Ausbildungszentrum) als Prozentsatz – Stufe 1 = 100%, Stufe 4 = 400%. */
@@ -586,16 +652,33 @@ export class ColonyDetailComponent {
 
   /** "Wird berechnet"-Prognose fürs Neuer-Auftrag-Formular – reine Vorschau, legt keinen Auftrag an (siehe `GameApi.previewProductionChain`). */
   protected refreshNewOrderPreview(): void {
-    if (!this.newProductionProductId || this.newProductionQty <= 0) { this.newOrderPreview.set(null); return; }
+    if (!this.newProductionProductId || this.newProductionQty <= 0) {
+      this.newOrderPreview.set(null);
+      this.newOrderMinimumQty.set(null);
+      return;
+    }
     const productTypeId = this.newProductionProductId;
     const quantity = this.newProductionQty;
     this.newOrderPreviewLoading.set(true);
-    this.api.previewProductionChain(this.colonyId, productTypeId, quantity).then(plan => {
+    this.api.previewProductionChain(this.colonyId, productTypeId, quantity).then(async plan => {
+      // Die Mindeststückzahl nur nachfragen, wenn der Auftrag zu kurz wäre.
+      const minimum = plan.totalHours * 60 < MIN_PRODUCTION_ORDER_GAME_MINUTES
+        ? await this.api.minimumProductionQuantity(this.colonyId, productTypeId)
+        : null;
       // Falls Produkt/Menge inzwischen weitergeklickt wurden, dieses veraltete Ergebnis verwerfen.
       if (productTypeId !== this.newProductionProductId || quantity !== this.newProductionQty) return;
       this.newOrderPreview.set(plan);
+      this.newOrderMinimumQty.set(minimum);
       this.newOrderPreviewLoading.set(false);
     });
+  }
+
+  /** „Auf N Stück erhöhen" in der Vorschau eines zu kleinen Auftrags. */
+  protected raiseNewOrderToMinimum(): void {
+    const minimum = this.newOrderMinimumQty();
+    if (minimum === null) return;
+    this.newProductionQty = minimum;
+    this.refreshNewOrderPreview();
   }
 
   protected toggleQueueEntry(entry: ProductionQueueEntry): void {
@@ -624,10 +707,13 @@ export class ColonyDetailComponent {
     return Math.min(100, Math.max(0, ((this.clock.now() - entry.startedAt) / total) * 100));
   }
 
-  protected queueStatusLabel(entry: { status: string }): string {
+  protected queueStatusLabel(entry: { status: string; stoppedReasonCode?: number | null }): string {
     switch (entry.status) {
       case 'running': return 'läuft';
-      case 'stopped': return 'gestoppt';
+      case 'stopped':
+        if (entry.stoppedReasonCode === this.ORDER_TOO_SMALL_CODE) return 'Los zu klein';
+        if (entry.stoppedReasonCode === this.WAGES_UNPAID_CODE) return 'Löhne offen';
+        return 'gestoppt';
       case 'done': return 'fertig';
       default: return 'wartet';
     }

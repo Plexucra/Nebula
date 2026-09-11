@@ -118,8 +118,18 @@ public class GameState {
   public final Map<String, Double> fractionPots = new ConcurrentHashMap<>();
   public final Map<String, Long> lastProducedAt = new ConcurrentHashMap<>();
   public final Map<String, Double> rawStandardOfLiving = new ConcurrentHashMap<>();
-  /** Deckung (0..1,5) je Grundkonsumgut und Kolonie – Java-Gegenstück zu {@code _consumptionCoverage}. colonyId -> (productTypeId -> coverage). */
+  /** Ungeglätteter Lebensstandard der Akademiker je Kolonie (Umsetzungskonzept/38, Teil D). */
+  public final Map<String, Double> rawAcademicStandardOfLiving = new ConcurrentHashMap<>();
+  /** Deckung (0..1,5) je Konsumgut und Kolonie – Java-Gegenstück zu {@code _consumptionCoverage}. colonyId -> (productTypeId -> coverage). */
   public final Map<String, Map<String, Double>> consumptionCoverage = new ConcurrentHashMap<>();
+  /**
+   * Kaufkraft der Bevölkerung (Umsetzungskonzept/38, Teil C): Zufluss ins
+   * Bevölkerungs-Wallet seit dem letzten Kolonietag (gezählt im {@code Ledger}),
+   * daraus geglättetes Tageseinkommen und das Tagesbudget der letzten Gebote.
+   */
+  public final Map<String, Double> populationInflowSinceLastDay = new ConcurrentHashMap<>();
+  public final Map<String, Double> populationDailyIncome = new ConcurrentHashMap<>();
+  public final Map<String, Double> populationDailyBudget = new ConcurrentHashMap<>();
 
   /**
    * Der entschiedene Krieg (siehe {@code VictoryCommands}) – {@code null},
@@ -166,6 +176,10 @@ public class GameState {
     lastProducedAt.keySet().removeIf(k -> k.startsWith(colonyId + ":"));
     lastSupplyWarningAt.keySet().removeIf(k -> k.startsWith(colonyId + ":"));
     notificationEdgeState.keySet().removeIf(k -> k.endsWith(":" + colonyId));
+    rawAcademicStandardOfLiving.remove(colonyId);
+    populationInflowSinceLastDay.remove(colonyId);
+    populationDailyIncome.remove(colonyId);
+    populationDailyBudget.remove(colonyId);
   }
 
   /**
@@ -219,7 +233,11 @@ public class GameState {
     fractionPots.clear();
     lastProducedAt.clear();
     rawStandardOfLiving.clear();
+    rawAcademicStandardOfLiving.clear();
     consumptionCoverage.clear();
+    populationInflowSinceLastDay.clear();
+    populationDailyIncome.clear();
+    populationDailyBudget.clear();
     victory = null;
     partiesEverWithColonies.clear();
     events.clear();

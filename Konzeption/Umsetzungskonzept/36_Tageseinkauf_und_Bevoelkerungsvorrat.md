@@ -1,5 +1,11 @@
 # 36 — Tageseinkauf und Bevölkerungsvorrat: der Kolonietag
 
+> **Stand 11.9.2026, Umsetzungskonzept/38:** Tageseinkauf und Notkauf sind
+> durch stehende **Kauforders der Bevölkerung** abgelöst; der Kolonietag,
+> der Vorrat von sieben Tagesbedarfen und die Deckungsmessung gelten weiter.
+> Was hier über `purchase`, `buyAtOwnPost` und `emergencyPurchase` steht,
+> beschreibt den Zwischenstand.
+
 **Vorgabe (Nutzer, 10.9.2026):** „Die Kolonie soll nur noch auf dem
 planetaren Handelsposten kaufen … Die Alternative wäre, dass die Kolonie nur
 einmal am Tag einen Kauf durchführt, am besten etwas mehr kauft, als sie

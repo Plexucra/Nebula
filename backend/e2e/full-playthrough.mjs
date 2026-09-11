@@ -382,8 +382,19 @@ async function main() {
   const warehouseBefore = await a.call('warehouse', { colonyId: colonyA.id });
   const ferroBefore = warehouseBefore.find(w => w.productTypeId === 'p_ferrometall')?.quantity ?? 0;
 
+  // Mindestdauer eines Auftrags (minProductionOrderGameMinutes): 3 Stück wären nach
+  // Sekunden Spielzeit fertig und würden abgelehnt – erst die Ablehnung prüfen, dann
+  // mit der vom Server genannten Mindestmenge einreihen.
+  const tooSmall = await a.call('queueProduction', {
+    colonyId: colonyA.id, productTypeId: 'p_ferrometall', quantity: 1,
+    autoProduceMissing: true, requeueOnComplete: false,
+  }).then(() => null, e => e);
+  assert.ok(tooSmall && /Mindestens \d+ Stück/.test(String(tooSmall.message ?? tooSmall)),
+    `1 Stück Ferrometall muss als zu kleines Los abgelehnt werden (${tooSmall})`);
+  const ferroQty = await a.call('minimumProductionQuantity', { colonyId: colonyA.id, productTypeId: 'p_ferrometall' });
+  assert.ok(ferroQty > 1, `Mindestmenge für Ferrometall muss über 1 liegen (${ferroQty})`);
   await a.call('queueProduction', {
-    colonyId: colonyA.id, productTypeId: 'p_ferrometall', quantity: 3,
+    colonyId: colonyA.id, productTypeId: 'p_ferrometall', quantity: ferroQty,
     autoProduceMissing: true, requeueOnComplete: false,
   });
   const runningEntry = await waitUntil(async () => {
@@ -392,7 +403,7 @@ async function main() {
     return e && e.status === 'running' ? e : undefined;
   }, { timeoutMs: 10_000, intervalMs: 200, description: 'p_ferrometall-Auftrag startet (status=running)' });
   assert.ok(runningEntry.plan.totalHours > 0, 'Gestarteter Auftrag muss einen berechneten ChainPlan mit totalHours > 0 haben');
-  log(`Produktionsauftrag p_ferrometall×3 läuft, ChainPlan.totalHours=${runningEntry.plan.totalHours.toFixed(3)}`);
+  log(`Produktionsauftrag p_ferrometall×${ferroQty} läuft, ChainPlan.totalHours=${runningEntry.plan.totalHours.toFixed(3)}`);
 
   await waitUntil(async () => {
     const q = await a.call('productionQueue', { colonyId: colonyA.id });
@@ -401,7 +412,7 @@ async function main() {
 
   const warehouseAfter = await a.call('warehouse', { colonyId: colonyA.id });
   const ferroAfter = warehouseAfter.find(w => w.productTypeId === 'p_ferrometall')?.quantity ?? 0;
-  assert.equal(ferroAfter, ferroBefore + 3, `Lagerbestand p_ferrometall muss um genau 3 gestiegen sein (${ferroBefore} → erwartet ${ferroBefore + 3}, tatsächlich ${ferroAfter})`);
+  assert.equal(ferroAfter, ferroBefore + ferroQty, `Lagerbestand p_ferrometall muss um genau ${ferroQty} gestiegen sein (${ferroBefore} → erwartet ${ferroBefore + ferroQty}, tatsächlich ${ferroAfter})`);
   log(`Produktionskette tickgetrieben abgeschlossen: Lagerbestand p_ferrometall ${ferroBefore} → ${ferroAfter}`);
 
   // --- Schritt 4: Kampfflotte per echtem Gateway-Sprung bewegen --------------

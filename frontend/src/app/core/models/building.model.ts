@@ -3,9 +3,10 @@ import { Id } from './common.model';
 /**
  * `Infrastructure`: ausschließlich das Gebäude "Infrastruktur" (Bebauungsplätze,
  * Elerium-Verbrauch, planetweit begrenzt). `Housing`: Wohnkomplex – liefert
- * allein die Wohnkapazität. Siehe Umsetzungskonzept/17_...md.
+ * allein die Wohnkapazität. `Research`: Forschungszentrum – bezahlte Plätze für
+ * Akademiker (Umsetzungskonzept/38). Siehe Umsetzungskonzept/17_...md.
  */
-export type BuildingCategory = 'Infrastructure' | 'Housing' | 'ProductionFacility' | 'PlanetaryDefense';
+export type BuildingCategory = 'Infrastructure' | 'Housing' | 'ProductionFacility' | 'PlanetaryDefense' | 'Research';
 
 /** Baustoffbedarf ab Zielstufe `fromLevel`: `ceil(baseQuantity × Stufe^1,3)` je Ausbau (Backend rechnet, siehe `MaterialRequirement`). */
 export interface BuildingMaterial {
@@ -25,6 +26,8 @@ export interface BuildingType {
   upkeepPerLevel: number;
   /** Für Housing: Wohnkapazität pro Level. */
   housingCapacityPerLevel: number | null;
+  /** Für Research: bezahlte Akademikerplätze auf Stufe 1, je Stufe verdoppelt (Umsetzungskonzept/38). */
+  researchCapacityPerLevel: number | null;
   materials: BuildingMaterial[];
 }
 

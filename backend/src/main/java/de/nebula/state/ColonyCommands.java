@@ -73,14 +73,18 @@ public final class ColonyCommands {
     Colony colony = colony(state, colonyId);
     if (colony == null) throw new CommandException("Unbekannte Kolonie.");
 
-    double population = 0;
-    for (Population p : state.populations) if (p.colonyId.equals(colonyId)) population = p.currentCount;
+    Population pop = population(state, colonyId);
+    double population = pop != null ? pop.currentCount : 0;
     PlanetStats stats = colonyStats(state, colonyId);
     int industryLevel = GameQueries.getBuildingLevel(state, colonyId, "b_industry");
 
     ColonySpeedBreakdown result = new ColonySpeedBreakdown();
     result.population = population;
-    result.availableWorkers = population;
+    // Arbeitskraft sind die Arbeiter, nicht die Akademiker (Umsetzungskonzept/38, Teil D).
+    result.availableWorkers = pop != null ? pop.workers() : 0;
+    result.academics = pop != null ? pop.academics : 0;
+    result.researchCapacity = Economy.researchCapacity(state, colonyId);
+    result.wagePerWorkHour = GameConstants.WAGE_PER_WORK_HOUR;
     result.industryLevel = industryLevel;
     result.buildingSpeedFactor = Formulas.buildingLevelSpeedFactor(industryLevel);
     result.blackout = PowerGrid.isBlackout(state, colonyId);
@@ -89,12 +93,9 @@ public final class ColonyCommands {
 
     double housingCapacity = PowerGrid.effectiveHousingCapacity(state, colonyId);
     result.housingCapacity = housingCapacity;
-    double foodCoverage = foodCoverage(state, colonyId);
-    result.growthState = stats != null
-        ? Formulas.populationGrowthState(population, housingCapacity, stats.standardOfLivingPct, foodCoverage)
-        : PopulationGrowthState.Holding;
-    result.growthPerHour = stats != null
-        ? Formulas.populationGrowthDelta(population, housingCapacity, stats.standardOfLivingPct, stats.securityPct, foodCoverage) : 0;
+    // Wachstumszustand und -rate samt Staffeldeckel (Umsetzungskonzept/38, Teil D).
+    result.growthState = stats != null ? Economy.growthState(state, colony) : PopulationGrowthState.Holding;
+    result.growthPerHour = stats != null ? Economy.growthPerHour(state, colony) : 0;
     result.shrinkBelowPct = Formulas.LIVING_STANDARD_SHRINK_BELOW_PCT;
     result.growthFromPct = Formulas.LIVING_STANDARD_GROWTH_FROM_PCT;
     BuildSlots slots = BuildingCommands.buildSlots(state, colonyId);

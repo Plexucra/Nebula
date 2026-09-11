@@ -46,10 +46,11 @@ public final class ChainPlanner {
   /** Produktionszeit EINER Einheit in Spielstunden, zu den aktuellen Geschwindigkeitsfaktoren der Kolonie. */
   public static double computeProductionHours(GameState state, String colonyId, ProductType product, String facilityTypeId) {
     if (hasFixedBuildTime(product)) return GameConstants.COLONY_SHIP_BUILD_HOURS;
+    // Arbeitskraft sind die ARBEITER – Akademiker forschen (Umsetzungskonzept/38_...md, Teil D).
     double population = 100;
     for (Population p : state.populations) {
       if (p.colonyId.equals(colonyId)) {
-        population = p.currentCount;
+        population = p.workers();
         break;
       }
     }
@@ -205,7 +206,8 @@ public final class ChainPlanner {
       }
     }
 
-    return new ChainPlan(totalHours, steps, feasible, totalWorkHours, workersBoundPerHour);
+    // Löhne des Auftrags (Umsetzungskonzept/38_...md, Teil B) – in der Vorschau sichtbar, beim Start gebucht.
+    return new ChainPlan(totalHours, steps, feasible, totalWorkHours, workersBoundPerHour, Formulas.wageFor(totalWorkHours));
   }
 
   /**

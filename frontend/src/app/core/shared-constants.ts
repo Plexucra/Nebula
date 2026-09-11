@@ -32,13 +32,16 @@ export const START_POPULATION: number = sharedConstants.startPopulation;
 export const COLONIZATION_GAME_HOURS: number = sharedConstants.colonizationGameHours;
 /** Standard-Reichweite des Energiespeichers in Spielstunden (Umsetzungskonzept/32_...md) – Schwelle der Ausbauwarnung. */
 export const ENERGY_RESERVE_DEFAULT_GAME_HOURS: number = sharedConstants.energyReserveDefaultGameHours;
+/** Mindestdauer eines Produktionsauftrags in Spielminuten – kürzere lehnt der Server ab (Hinweis in der Auftragsvorschau). */
+export const MIN_PRODUCTION_ORDER_GAME_MINUTES: number = sharedConstants.minProductionOrderGameMinutes;
 /** Trägersprung ohne Gateway (Umsetzungskonzept/06_...md) – für Hinweistexte. */
 export const CARRIER_TRANSIT_TIME_FACTOR: number = sharedConstants.carrierTransitTimeFactor;
 export const CARRIER_TRANSIT_FUEL_FACTOR: number = sharedConstants.carrierTransitFuelFactor;
 /**
- * Die Grundkonsumgüter der Bevölkerung in Einkaufsreihenfolge – die Schlüssel
- * der Bedarfstabelle `consumerNeedPerCapitaPerGameHour`, aus der auch
- * `GameConstants.CONSUMER_GOODS_ORDER` im Backend entsteht.
+ * Die Güterstaffel der Arbeiter in Stufen- und Einkaufsreihenfolge – die
+ * Schlüssel der Bedarfstabelle `consumerNeedPerCapitaPerGameHour`, aus der
+ * auch `GameConstants.CONSUMER_GOODS_ORDER` im Backend entsteht
+ * (Umsetzungskonzept/38: Eintrag i wird ab Wohnstufe i Pflicht).
  */
 export const CONSUMER_GOODS: readonly string[] = Object.keys(sharedConstants.consumerNeedPerCapitaPerGameHour);
 

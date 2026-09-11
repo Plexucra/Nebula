@@ -104,6 +104,12 @@ public final class WorldSeed {
    * Blackout-Todesspirale (Produktion ×0,1 kann kein Elerium mehr
    * nachliefern). 3 Stück je Umlauf decken den Bedarf bis Infrastruktur 3
    * (0,0198/h ≈ 2,7 je Umlauf) mit Puffer.
+   *
+   * <p>Seit der Mindestdauer eines Produktionsauftrags (TODO 11.9.2026) sind das nur
+   * noch Ausgangswerte: {@code GameStateSeeder} hebt jeden Startauftrag am fertigen
+   * Zustand auf die Mindestmenge an ({@code ProductionCommands.raiseToMinimum}) – bei
+   * Industriekomplex 5 und dem heutigen Fertigungstempo wären 3 Stück nach Sekunden
+   * Spielzeit fertig.</p>
    */
   private static final double STARTER_ELERIUM_QUANTITY = 3;
   /**
@@ -171,14 +177,22 @@ public final class WorldSeed {
    * sich selbst korrigierendes Minus – gedeckt aus dem Startguthaben und dem
    * gleichzeitig geschöpften Wachstumsgeld (80 × 8 = 640 Cr).</p>
    *
-   * <p><b>Bekannte Folgewirkung von Konzept 20:</b> {@code Economy.
-   * consumeFromStock} gewichtet Grundnahrung doppelt so hoch wie die übrigen
-   * Konsumgüter bei der Lebensstandard-Berechnung. Ohne Grundmedizin-
-   * Versorgung pendelt sich der Lebensstandard einer frischen Kolonie deshalb
-   * bei 50 bis 75 % ein (voller Nahrungsvorrat: 75 %) – gewollt, das ist der
-   * Anreiz, die Grundmedizin-Kette selbst aufzubauen.</p>
+   * <p><b>Seit Umsetzungskonzept/38 (11.9.2026) steht die Order bei 20 Credits.</b>
+   * Die Bevölkerung kauft nicht mehr zu jedem Preis, sondern stellt Gebote aus
+   * ihrem Tagesbudget: am ersten Tag {@code min(Wallet, Wallet / 7)} = 2 286 Cr
+   * für die Lücke von rund 67 Stück Grundnahrung, also etwa 34 Cr je Stück.
+   * Eine Order zu 60 Cr würde nie ausgeführt und die Kolonie hungerte am
+   * ersten Tag. Dauerhaft trägt das Lohneinkommen (rund 10 Cr je Spielstunde
+   * bei der Startwarteschlange) etwa 25 Cr je Stück. Der Bot verkauft seit
+   * Konzept 38 direkt ins Gebot; 20 Cr ist sein Rückfallwert ohne Gebot
+   * ({@code Economy.DEFAULT_CONSUMER_PRICE}).</p>
+   *
+   * <p>Mit Konzept 38 ist auf Wohnstufe 1 nur noch Grundnahrung Pflichtgut,
+   * Grundmedizin das Wachstumsgut der nächsten Stufe: der Lebensstandard einer
+   * frischen Kolonie kann damit 100 % erreichen, wachsen über 20 000 kann sie
+   * aber erst mit voller Grundmedizin-Deckung.</p>
    */
-  private static final double STARTER_SELL_ORDER_PRICE = 60;
+  private static final double STARTER_SELL_ORDER_PRICE = 20;
 
   private static final double SEALED_ELERIUM_RESERVE_HOME = 25;
 

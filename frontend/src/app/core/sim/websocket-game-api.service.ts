@@ -452,6 +452,10 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   previewProductionChain(colonyId: Id, productTypeId: Id, quantity: number): Promise<ChainPlan> {
     return this.send('previewProductionChain', { colonyId, productTypeId, quantity });
   }
+
+  minimumProductionQuantity(colonyId: Id, productTypeId: Id): Promise<number> {
+    return this.send('minimumProductionQuantity', { colonyId, productTypeId });
+  }
   resumeProduction(colonyId: Id, entryId: Id): Promise<void> {
     return this.send('resumeProduction', { colonyId, entryId });
   }
@@ -481,6 +485,9 @@ export class WebSocketGameApiService implements GameApi, OnDestroy {
   }
   treasuryFlowPerHour(): Signal<number> {
     return this.poll('treasuryFlowPerHour', () => ({}), 0);
+  }
+  researchLevel(): Signal<number> {
+    return this.poll('researchLevel', () => ({}), 0);
   }
   transactions(): Signal<Transaction[]> {
     return this.poll('transactions', () => ({}), []);

@@ -81,7 +81,7 @@
   <div class="panel corner-frame npc-panel">
     <div class="panel-header">
       <h2>Meine Kolonien ({{ colonyRows.length }})</h2>
-      <span class="hint">Guthaben der Kolonialbevölkerung – gespeist aus Löhnen, ausgegeben für Konsumgüter</span>
+      <span class="hint">Guthaben der Kolonialbevölkerung – gespeist aus Löhnen je Arbeitsstunde und Forschungsgehältern, ausgegeben über ihre Gebote für Konsumgüter</span>
     </div>
     <div class="panel-body">
       <div class="npc-table own-colony-table">
@@ -92,7 +92,7 @@
           <span>Credits</span>
           <span>Lebensstd.</span>
           <!-- Legende direkt in der Kopfzeile: die Kürzel waren nirgends erklärt. -->
-          <span>Deckung Grundgüter <span class="hint">({{ coverageLegend }})</span></span>
+          <span>Deckung Konsumgüter <span class="hint">({{ coverageLegend() }})</span></span>
           <span>Loyalität</span>
           <span>Status</span>
         </div>
@@ -104,7 +104,7 @@
             <span class="mono">{{ row.wallet()?.balance ?? 0 | number:'1.0-0' }}</span>
             <span class="mono">{{ row.stats()?.standardOfLivingPct ?? 0 | number:'1.0-0' }}%</span>
             <span class="coverage-cell">
-              @for (good of coverageGoods; track good.id) {
+              @for (good of coverageGoods(); track good.id) {
                 <span class="coverage-chip" [class.low]="coveragePct(row.coverage(), good.id) < 50" [title]="good.label + ': ' + coveragePct(row.coverage(), good.id) + '% gedeckt'">
                   {{ good.short }} {{ coveragePct(row.coverage(), good.id) }}%
                 </span>

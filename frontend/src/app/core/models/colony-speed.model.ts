@@ -4,9 +4,11 @@ import { BuildSlots, MaterialRequirement } from './building.model';
 /**
  * `FoodLimited`: die Nahrungsdeckung trägt den Bestand, aber keinen Zuwachs
  * (Umsetzungskonzept/34_...md, §J 5) – eigener Zustand, damit die Kolonieansicht
- * den Grund des Stillstands benennen kann.
+ * den Grund des Stillstands benennen kann. `GoodsLimited`: die Kolonie steht an
+ * der Grenze ihrer Wohnstufe der Güterstaffel, weil das Wachstumsgut der nächsten
+ * Stufe nicht voll gedeckt ist (Umsetzungskonzept/38).
  */
-export type PopulationGrowthState = 'Shrinking' | 'Holding' | 'Growing' | 'Overcrowded' | 'FoodLimited';
+export type PopulationGrowthState = 'Shrinking' | 'Holding' | 'Growing' | 'Overcrowded' | 'FoodLimited' | 'GoodsLimited';
 
 /** Vorschau für den nächsten Ausbauschritt EINES Gebäudetyps auf einer Kolonie. */
 export interface BuildingUpgradePreview {
@@ -45,9 +47,15 @@ export interface BuildingUpgradePreview {
  * verloren geht – kein Faktor darf dem Spieler verborgen bleiben.
  */
 export interface ColonySpeedBreakdown {
+  /** Gesamtbevölkerung – Arbeiter plus Akademiker. */
   population: number;
-  /** Verfügbare Arbeitskräfte = Bevölkerung. Kein Tempo-Multiplikator, sondern eine Obergrenze je Fertigung. */
+  /** Verfügbare Arbeitskräfte = die Arbeiter (ohne Akademiker, Umsetzungskonzept/38). Kein Tempo-Multiplikator, sondern eine Obergrenze je Fertigung. */
   availableWorkers: number;
+  academics: number;
+  /** Bezahlte Akademikerplätze des Forschungszentrums. */
+  researchCapacity: number;
+  /** Lohn je Einwohner-Arbeitsstunde – für die Erklärtexte der Auftragsvorschau. */
+  wagePerWorkHour: number;
   industryLevel: number;
   buildingSpeedFactor: number;
   blackout: boolean;

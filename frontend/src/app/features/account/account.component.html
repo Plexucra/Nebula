@@ -21,10 +21,17 @@
         <span class="hint">— reicht noch rund {{ (wallet()?.balance ?? 0) / -flowPerHour() | number:'1.0-0' }} Spielstunden</span>
       }
     </div>
-    <p class="hint">Credits kreisen zwischen Ihnen und Ihrer Bevölkerung: Sie zahlen Löhne und Unterhalt,
-      die Bevölkerung kauft dafür Ihre Waren. Wirklich neues Geld entsteht nur, wenn eine Kolonie über ihren
+    <p class="hint">Credits kreisen zwischen Ihnen und Ihrer Bevölkerung: Sie zahlen Löhne je Arbeitsstunde beim Start
+      jedes Auftrags, Forschungsgehälter und Unterhalt, die Bevölkerung kauft dafür über ihre Gebote am eigenen
+      Handelsposten Ihre Waren. Wirklich neues Geld entsteht nur, wenn eine Kolonie über ihren
       bisherigen Höchststand hinauswächst. Einmal pro Spieltag zieht der galaktische Ausgleichsfonds zudem
       einen kleinen Anteil großer Vermögen ein und verteilt ihn pro Kopf an alle Kolonien.</p>
+    <div class="divider"></div>
+    <span class="eyebrow">Forschungsniveau</span>
+    <div class="balance-flow"><span class="mono">{{ researchLevel() | number:'1.0-0' }}</span> Akademiker in allen Kolonien</div>
+    <p class="hint">Akademiker entstehen in bezahlten Plätzen eines Forschungszentrums, sobald ihre höherwertigen Konsumgüter
+      versorgt sind. Ihre Zahl über alle Kolonien ist das Forschungsniveau – ein Stand, der gehalten werden muss; das
+      Forschungsmodul, das darauf aufbaut, folgt.</p>
   </div>
 </div>
 

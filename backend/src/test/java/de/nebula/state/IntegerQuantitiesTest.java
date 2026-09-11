@@ -145,16 +145,29 @@ class IntegerQuantitiesTest {
     assertTrue(ColonyCommands.foodCoverage(b.state(), b.colonyId()) < 1.0, "Danach ist die Deckung weg");
   }
 
-  /** Notkauf: fällt der Vorrat unter einen Tag und eine Order erscheint, kauft die Bevölkerung sofort. */
+  /**
+   * Gebote statt Notkauf (Umsetzungskonzept/38): die Bevölkerung stellt stehende
+   * Kauforders; eine Verkaufsorder zum oder unter dem Gebot kreuzt sofort und
+   * füllt den Vorrat, eine darüber bleibt liegen.
+   */
   @Test
-  void aNewOrderTriggersAnEmergencyPurchaseWhenTheStockIsLow() {
+  void aSellOrderAtOrBelowThePopulationBidFillsTheStockImmediately() {
     Bootstrapped b = newWorld();
     Colony home = ColonyCommands.colony(b.state(), b.colonyId());
-    b.state().marketOrders.removeIf(o -> o.planetId != null);
+    b.state().marketOrders.removeIf(o -> o.planetId != null && o.populationColonyId == null);
     population(b).stock.clear();
+    Economy.refreshPopulationBids(b.state(), b.ids(), home);
+    double bid = MarketCommands.populationBids(b.state(), b.colonyId()).stream()
+        .filter(o -> o.productTypeId.equals(GameConstants.FOOD_PRODUCT_ID)).mapToDouble(o -> o.limitPrice).findFirst().orElse(0);
+    assertTrue(bid > 0, "Ohne Vorrat steht ein Gebot für Grundnahrung");
+
     Warehouse.add(b.state(), b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 500);
-    MarketCommands.createSellOrderFromColony(b.state(), b.ids(), home.ownerId, b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 200, 60, true);
+    MarketCommands.createSellOrderFromColony(b.state(), b.ids(), home.ownerId, b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 200, bid * 3, true);
+    assertEquals(0, population(b).stock.getOrDefault(GameConstants.FOOD_PRODUCT_ID, 0.0), 1e-9,
+        "Eine Order über dem Gebot verkauft nichts – die Bevölkerung zahlt nicht jeden Preis");
+
+    MarketCommands.createSellOrderFromColony(b.state(), b.ids(), home.ownerId, b.colonyId(), GameConstants.FOOD_PRODUCT_ID, 200, bid, true);
     double food = population(b).stock.getOrDefault(GameConstants.FOOD_PRODUCT_ID, 0.0);
-    assertTrue(food > 0, "Die Order am eigenen Posten löst den Notkauf aus, Vorrat war " + food);
+    assertTrue(food > 0, "Eine Order zum Gebot kreuzt sofort, Vorrat war " + food);
   }
 }

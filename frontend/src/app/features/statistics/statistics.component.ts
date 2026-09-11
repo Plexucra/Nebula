@@ -16,11 +16,19 @@ interface ColonyRow {
   blackout: Signal<boolean>;
 }
 
-/** Beschriftung der Deckungsanzeige – reine Oberflächentexte; WELCHE Güter und in welcher Reihenfolge, sagt `CONSUMER_GOODS`. */
-const COVERAGE_LABELS: Record<Id, { short: string; label: string }> = {
-  p_grundnahrung: { short: 'N', label: 'Grundnahrung' },
-  p_grundmedizin: { short: 'M', label: 'Grundmedizin' },
-  p_unterhaltungselektronik: { short: 'E', label: 'Unterhaltungselektronik' },
+/**
+ * Kürzel der Deckungsanzeige – reine Oberflächentexte; WELCHE Güter und in
+ * welcher Reihenfolge, sagt `CONSUMER_GOODS` (die Güterstaffel aus
+ * Umsetzungskonzept/38). Güter ohne eigenes Kürzel bekommen die Anfangsbuchstaben ihres Katalognamens.
+ */
+const COVERAGE_SHORT: Record<Id, string> = {
+  p_grundnahrung: 'N',
+  p_grundmedizin: 'M',
+  p_grundkleidung: 'K',
+  p_hygienewaren: 'H',
+  p_unterhaltungselektronik: 'E',
+  p_haushaltswaren: 'Hw',
+  p_erweiterte_medizin: 'M+',
 };
 
 @Component({
@@ -67,10 +75,18 @@ export class StatisticsComponent {
     blackout: this.api.isBlackout(colony.id),
   }));
 
-  protected readonly coverageGoods: { id: Id; short: string; label: string }[] =
-    CONSUMER_GOODS.map(id => ({ id, ...(COVERAGE_LABELS[id] ?? { short: '?', label: id }) }));
-  /** Auflösung der Ein-Buchstaben-Kürzel – sie standen vorher ohne jede Legende in der Tabelle. */
-  protected readonly coverageLegend = this.coverageGoods.map(g => `${g.short} = ${g.label}`).join(', ');
+  /** Nur die Güter, die mindestens eine eigene Kolonie gerade nachfragt – die Staffel hat elf, eine junge Kolonie braucht zwei. */
+  protected readonly coverageGoods = computed(() => {
+    const demanded = new Set<Id>();
+    for (const row of this.colonyRows) for (const id of Object.keys(row.coverage())) demanded.add(id);
+    return CONSUMER_GOODS.filter(id => demanded.has(id)).map(id => ({
+      id,
+      short: COVERAGE_SHORT[id] ?? this.productName(id).replace(/[^A-ZÄÖÜ]/g, '').slice(0, 2),
+      label: this.productName(id),
+    }));
+  });
+  /** Auflösung der Kürzel – sie standen vorher ohne jede Legende in der Tabelle. */
+  protected readonly coverageLegend = computed(() => this.coverageGoods().map(g => `${g.short} = ${g.label}`).join(', '));
 
   protected productName(id: Id): string {
     return this.api.productTypes().find(p => p.id === id)?.name ?? id;

@@ -22,6 +22,12 @@ public class ChainPlan {
    * die bei mehrstufigen Ketten (z. B. Grundnahrung) sonst fehlt.
    */
   public double workersBoundPerHour;
+  /**
+   * Löhne des Auftrags in Credits (Umsetzungskonzept/38_...md, Teil B):
+   * {@code totalWorkHours / productionSpeedMultiplier × wagePerWorkHour}, beim
+   * Start vom Kommandanten ins Bevölkerungs-Wallet gebucht.
+   */
+  public double wageCredits;
 
   /** Platzhalter für Aufträge, die noch nicht gestartet sind – der verbindliche Plan entsteht erst beim Start. */
   public static final ChainPlan EMPTY = new ChainPlan(0, List.of(), true);
@@ -30,15 +36,16 @@ public class ChainPlan {
   }
 
   public ChainPlan(double totalHours, List<ChainPlanStep> steps, boolean feasible) {
-    this(totalHours, steps, feasible, 0, 0);
+    this(totalHours, steps, feasible, 0, 0, 0);
   }
 
   public ChainPlan(double totalHours, List<ChainPlanStep> steps, boolean feasible, double totalWorkHours,
-                    double workersBoundPerHour) {
+                    double workersBoundPerHour, double wageCredits) {
     this.totalHours = totalHours;
     this.steps = steps;
     this.feasible = feasible;
     this.totalWorkHours = totalWorkHours;
     this.workersBoundPerHour = workersBoundPerHour;
+    this.wageCredits = wageCredits;
   }
 }

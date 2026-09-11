@@ -129,6 +129,62 @@ public final class Formulas {
   }
 
   /**
+   * Löhne für {@code catalogWorkHours} Katalog-Arbeitsstunden
+   * (Umsetzungskonzept/38_...md, Teil B). Die Katalogstunden stehen im
+   * Maßstab der ungestauchten Fertigung; {@code PRODUCTION_SPEED_MULTIPLIER}
+   * ist die Produktivität eines Einwohners (so viele Katalogstunden je
+   * Spielstunde). Bezahlt werden Einwohner-Stunden: eine voll beschäftigte
+   * Kolonie zahlt damit {@code Einwohner × Lohnsatz} je Spielstunde – genau
+   * die frühere Kopfpauschale, nur jetzt an die Arbeit gebunden.
+   */
+  public static double wageFor(double catalogWorkHours) {
+    return catalogWorkHours / GameConstants.PRODUCTION_SPEED_MULTIPLIER * GameConstants.WAGE_PER_WORK_HOUR;
+  }
+
+  /** Gehalt EINES Akademikers je Spieltag: 24 bezahlte Stunden zum Lohnsatz (Umsetzungskonzept/38_...md, Teil D). */
+  public static double academicWagePerDay() {
+    return GameConstants.GAME_DAY_HOURS * GameConstants.WAGE_PER_WORK_HOUR;
+  }
+
+  // --- Güterstaffel und Akademiker (Umsetzungskonzept/38_...md, Teil D) ------
+
+  /**
+   * Wohnstufe der Güterstaffel für diese Gesamtbevölkerung: die kleinste
+   * Stufe, deren Grenze {@code capacityPerLevel × factor^(Stufe−1)} die
+   * Bevölkerung nicht überschreitet (1 bis 20 000, 2 bis 40 000, ...). Nie
+   * kleiner als 1.
+   */
+  public static int consumerStage(double population, double capacityPerLevel, double factor) {
+    if (population <= capacityPerLevel || capacityPerLevel <= 0 || factor <= 1) return 1;
+    return 1 + (int) Math.ceil(Math.log(population / capacityPerLevel) / Math.log(factor) - 1e-9);
+  }
+
+  /** Einwohnergrenze einer Wohnstufe der Staffel – dieselbe Kurve wie die Wohnkapazität. */
+  public static double consumerStageCap(int stage, double capacityPerLevel, double factor) {
+    return housingCapacity(capacityPerLevel, stage);
+  }
+
+  /**
+   * Zuwachs der Akademiker je Spielstunde – logistisch gegen den Deckel, mit
+   * einem Startterm aus den Arbeitern, weil ein Bestand von 0 sonst nie
+   * anwächst. Negativ (Rückkehr des Überhangs), wenn der Deckel unter dem
+   * Bestand liegt. Nur bei ausreichendem Akademiker-Lebensstandard aufrufen;
+   * die Schrumpfung bei schlechter Versorgung rechnet {@link #academicShrinkDelta}.
+   */
+  public static double academicGrowthDelta(double academics, double workers, double cap) {
+    if (academics > cap) return -(academics - cap) * GameConstants.ACADEMIC_RETURN_RATE_PER_HOUR;
+    if (cap <= 0) return 0;
+    double seed = workers * GameConstants.ACADEMIC_SEED_SHARE_OF_WORKERS;
+    return POPULATION_BASE_GROWTH_RATE_PER_HOUR * (academics + seed) * (1 - academics / cap);
+  }
+
+  /** Rückgang der Akademiker je Spielstunde bei einem Lebensstandard unter {@link #LIVING_STANDARD_SHRINK_BELOW_PCT} – dieselbe Kurve wie bei den Arbeitern. */
+  public static double academicShrinkDelta(double academics, double academicStandardPct) {
+    return -academics * POPULATION_SHRINK_RATE_PER_HOUR
+        * (LIVING_STANDARD_SHRINK_BELOW_PCT - academicStandardPct) / LIVING_STANDARD_SHRINK_BELOW_PCT;
+  }
+
+  /**
    * Produktionsanlagen-Tempo (Industriekomplex/Werft/Ausbildungszentrum):
    * linear zur Stufe – Stufe 2 ist doppelt so schnell wie Stufe 1, Stufe 10
    * zehnmal so schnell. Stufe 0 (kein Gebäude) blockiert Produktion komplett.
@@ -241,9 +297,28 @@ public final class Formulas {
    */
   public static de.nebula.model.PopulationGrowthState populationGrowthState(double population, double capacity,
                                                                             double standardOfLivingPct, double foodCoverage) {
+    return populationGrowthState(population, capacity, capacity, standardOfLivingPct, foodCoverage);
+  }
+
+  /**
+   * Wie oben, mit dem Deckel der Güterstaffel (Umsetzungskonzept/38_...md,
+   * Teil D): {@code goodsCap} ist die Einwohnergrenze, die das fehlende
+   * Wachstumsgut setzt (gleich {@code capacity}, wenn es gedeckt ist). Greift
+   * der Staffeldeckel vor dem Wohnraum, steht die Kolonie als
+   * {@code GoodsLimited} – sie hält, sie schrumpft nicht.
+   */
+  public static final double GOODS_CAP_REACHED_TOLERANCE = 0.01;
+
+  public static de.nebula.model.PopulationGrowthState populationGrowthState(double population, double capacity, double goodsCap,
+                                                                            double standardOfLivingPct, double foodCoverage) {
     if (population >= capacity) return de.nebula.model.PopulationGrowthState.Overcrowded;
     if (standardOfLivingPct < LIVING_STANDARD_SHRINK_BELOW_PCT) return de.nebula.model.PopulationGrowthState.Shrinking;
     if (foodCoverage < FOOD_COVERAGE_FOR_GROWTH) return de.nebula.model.PopulationGrowthState.FoodLimited;
+    // Die logistische Bremse läuft nur asymptotisch auf den Deckel zu, daher
+    // gilt die Stufengrenze schon ab dem letzten Prozent als erreicht.
+    if (goodsCap < capacity && population >= goodsCap * (1 - GOODS_CAP_REACHED_TOLERANCE)) {
+      return de.nebula.model.PopulationGrowthState.GoodsLimited;
+    }
     if (standardOfLivingPct < LIVING_STANDARD_GROWTH_FROM_PCT) return de.nebula.model.PopulationGrowthState.Holding;
     return de.nebula.model.PopulationGrowthState.Growing;
   }
@@ -282,16 +357,30 @@ public final class Formulas {
    */
   public static double populationGrowthDelta(double population, double capacity, double standardOfLivingPct,
                                              double securityPct, double foodCoverage) {
+    return populationGrowthDelta(population, capacity, capacity, standardOfLivingPct, securityPct, foodCoverage);
+  }
+
+  /**
+   * Wie oben, mit dem Deckel der Güterstaffel: die logistische Bremse rechnet
+   * gegen {@code min(Wohnraum, Staffeldeckel)}, die Kolonie läuft also weich
+   * auf die Stufengrenze zu und steht dort ({@code GoodsLimited}), statt sie
+   * zu überschießen.
+   */
+  public static double populationGrowthDelta(double population, double capacity, double goodsCap, double standardOfLivingPct,
+                                             double securityPct, double foodCoverage) {
+    double effectiveCap = Math.min(capacity, goodsCap);
     double logistic = POPULATION_BASE_GROWTH_RATE_PER_HOUR * population
-        * (capacity > 0 ? 1 - population / capacity : -1) * growthConditionFactor(standardOfLivingPct, securityPct);
-    return switch (populationGrowthState(population, capacity, standardOfLivingPct, foodCoverage)) {
+        * (effectiveCap > 0 ? 1 - population / effectiveCap : -1) * growthConditionFactor(standardOfLivingPct, securityPct);
+    return switch (populationGrowthState(population, capacity, goodsCap, standardOfLivingPct, foodCoverage)) {
       case Overcrowded -> logistic; // Klammerterm ist hier negativ
       case Shrinking -> -population * POPULATION_SHRINK_RATE_PER_HOUR
           * (LIVING_STANDARD_SHRINK_BELOW_PCT - standardOfLivingPct) / LIVING_STANDARD_SHRINK_BELOW_PCT;
-      // Der Nahrungsdeckel hält die Bevölkerung, er tötet sie nicht: das
-      // Schrumpfen bei echtem Mangel läuft weiter über den Lebensstandard.
+      // Nahrungs- und Staffeldeckel halten die Bevölkerung, sie töten sie nicht:
+      // das Schrumpfen bei echtem Mangel läuft weiter über den Lebensstandard.
       case FoodLimited, Holding -> 0;
-      case Growing -> logistic;
+      // An der Stufengrenze kriecht die Zahl noch bis zum Deckel (die Bremse
+      // ist dort praktisch null), darüber steht sie.
+      case GoodsLimited, Growing -> Math.max(0, logistic);
     };
   }
 

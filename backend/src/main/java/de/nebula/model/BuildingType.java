@@ -18,6 +18,8 @@ public class BuildingType {
   public double upkeepPerLevel;
   /** Für Housing: Wohnkapazität pro Level. {@code null} sonst. */
   public Integer housingCapacityPerLevel;
+  /** Für Research: bezahlte Akademikerplätze auf Stufe 1, je Stufe verdoppelt (Umsetzungskonzept/38_...md). {@code null} sonst. */
+  public Integer researchCapacityPerLevel;
   /** Baustoffbedarf je Ausbau, siehe {@link BuildingMaterial}. */
   public List<BuildingMaterial> materials;
 }

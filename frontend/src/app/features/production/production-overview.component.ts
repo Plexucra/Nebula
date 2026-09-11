@@ -180,10 +180,11 @@ export class ProductionOverviewComponent {
     return Math.min(100, Math.max(0, ((this.clock.now() - entry.startedAt) / total) * 100));
   }
 
-  protected queueStatusLabel(entry: { status: string }): string {
+  protected queueStatusLabel(entry: { status: string; stoppedReasonCode?: number | null }): string {
     switch (entry.status) {
       case 'running': return 'läuft';
-      case 'stopped': return 'gestoppt';
+      // 504: unter die Mindestdauer gefallen – Fortsetzen hilft nicht, nur größer neu einreihen.
+      case 'stopped': return entry.stoppedReasonCode === 504 ? 'Los zu klein' : 'gestoppt';
       case 'done': return 'fertig';
       default: return 'wartet';
     }

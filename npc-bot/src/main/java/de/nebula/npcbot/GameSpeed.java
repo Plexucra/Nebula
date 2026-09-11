@@ -25,6 +25,10 @@ final class GameSpeed {
     return (long) (gameHours * REAL_MS_PER_GAME_HOUR);
   }
 
-  /** Lohn je Einwohner und Spielstunde – dieselbe Quelle wie {@code GameConstants.WAGE_PER_CAPITA_PER_HOUR} im Backend. */
-  static final double WAGE_PER_CAPITA_PER_GAME_HOUR = SharedConstants.number("wagePerCapitaPerGameHour");
+  /**
+   * Lohn je Einwohner-Arbeitsstunde (Umsetzungskonzept/38) – dieselbe Quelle wie
+   * {@code GameConstants.WAGE_PER_WORK_HOUR} im Backend. Eine voll beschäftigte
+   * Kolonie zahlt Einwohner × diesen Satz je Spielstunde.
+   */
+  static final double WAGE_PER_WORK_HOUR = SharedConstants.number("wagePerWorkHour");
 }

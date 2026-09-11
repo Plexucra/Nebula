@@ -57,8 +57,8 @@ final class Economy {
   /** Höchstmenge Soldaten bzw. Drohnen je Ausbildungsauftrag. */
   private static final int RECRUIT_MAX_BATCH = 250;
   private static final double ELECTRONICS_IMPORT_MIN_WALLET = 20000;
-  /** Preis der Start-Nahrungsorder (WorldSeed.STARTER_SELL_ORDER_PRICE, seit Gesamttest B1: 60 Cr), falls keine mehr existiert. */
-  private static final double DEFAULT_CONSUMER_PRICE = 60;
+  /** Rückfallpreis ohne Gebot der Bevölkerung (WorldSeed.STARTER_SELL_ORDER_PRICE, seit Umsetzungskonzept/38: 20 Cr). */
+  private static final double DEFAULT_CONSUMER_PRICE = 20;
   /** Spezialware nicht endlos stapeln: oberhalb dieses Vielfachen der Reserve ruht die Charge. */
   private static final double SPECIALTY_STOCK_CAP_FACTOR = 10;
   private static final Pattern MISSING = Pattern.compile("(p_[a-z_]+) \\((\\d+) benötigt, (\\d+) vorhanden\\)");
@@ -86,12 +86,8 @@ final class Economy {
   private final Map<String, String> energyGuardLogged = new HashMap<>();
   private static final int REORDER_COOLDOWN_TICKS = 6;
   private final Map<String, Integer> lastPriceChangeTick = new HashMap<>();
-  private static final int PRICE_COOLDOWN_TICKS = 8;
-  private static final double MIN_CONSUMER_PRICE = 15;
-  /** Ab diesem Guthaben der Bevölkerung gilt sie als kaufkräftig genug für höhere Preise. */
-  private static final double RICH_POPULATION_WALLET = 20000;
-  /** Obergrenze der Preisspirale, gemessen am Startpreis (60 Cr). */
-  private static final double MAX_PRICE_FACTOR = 6;
+  /** Die Bevölkerung stellt ihre Gebote einmal je Spieltag neu (15 s Realzeit bei Tempo 4) – öfter umpreisen bringt nichts. */
+  private static final int PRICE_COOLDOWN_TICKS = 2;
   /** Reserve (Spielstunden Verbrauch), die nach Abzug des Kettenbedarfs im Lager bleiben muss. */
   private static final double GUARD_RESERVE_HOURS = 240;
 
@@ -302,10 +298,28 @@ final class Economy {
       prioritizeElerium(h, queue, perHour);
     }
     for (JsonNode q : queue) {
-      if ("stopped".equals(text(q, "status"))) {
-        cancelProduction(id, text(q, "id"));
-        bot.monitor.log(h.name() + ": angehaltenen Auftrag " + text(q, "productTypeId") + " verworfen (Vorprodukte fehlten ohne Auto-Produktion)");
+      if (!"stopped".equals(text(q, "status"))) continue;
+      int code = q.path("stoppedReasonCode").asInt();
+      if (code == 509) {
+        // Löhne nicht bezahlbar (Umsetzungskonzept/38): der Auftrag bleibt stehen und wird
+        // fortgesetzt, sobald das Guthaben reicht – verwerfen und neu bestellen liefe im Kreis.
+        double wages = Json.dbl(q.path("plan"), "wageCredits");
+        if (bot.world.wallet() >= wages + 1) {
+          try {
+            bot.call("resumeProduction", Map.of("colonyId", id, "entryId", text(q, "id")));
+            bot.monitor.log(h.name() + ": Auftrag " + text(q, "productTypeId") + " nach Lohnstopp fortgesetzt (" + (long) wages + " Cr Löhne)");
+            bot.world.invalidate("productionQueue", "wallet");
+          } catch (CommandException e) {
+            bot.monitor.log(h.name() + ": Fortsetzen nach Lohnstopp abgelehnt: " + e.getMessage());
+          }
+        }
+        continue;
       }
+      cancelProduction(id, text(q, "id"));
+      // 504 = seit dem Einreihen unter die Mindestdauer gefallen (Industrie ausgebaut); die
+      // Nachbestellung im nächsten Takt hebt die Menge über raiseToMinimum wieder an.
+      String reason = code == 504 ? "Los unter der Mindestdauer" : "Vorprodukte fehlten ohne Auto-Produktion";
+      bot.monitor.log(h.name() + ": angehaltenen Auftrag " + text(q, "productTypeId") + " verworfen (" + reason + ")");
     }
     if (h.eleriumHours() < ELERIUM_SHOPPING_BELOW_HOURS) {
       shopping.merge(Catalog.ELERIUM, Math.max(5, Math.ceil(perHour * 240 - bot.world.stock(id, Catalog.ELERIUM))), Double::sum);
@@ -368,7 +382,8 @@ final class Economy {
         if (!Json.isNull(bundled) && bundled.isObject()) {
           Map<String, Double> products = new LinkedHashMap<>();
           bundled.fields().forEachRemaining(e -> products.put(e.getKey(), e.getValue().asDouble()));
-          bot.call("queueProductionBundle", Map.of("colonyId", id, "products", products, "autoProduceMissing", true, "requeueOnComplete", false));
+          bot.call("queueProductionBundle", Map.of("colonyId", id, "products", products, "autoProduceMissing", true, "requeueOnComplete", false,
+              "raiseToMinimum", true));
         } else {
           queueProduction(id, text(q, "productTypeId"), Json.dbl(q, "quantity"), Json.bool(q, "requeueOnComplete"));
         }
@@ -416,15 +431,13 @@ final class Economy {
   }
 
   /**
-   * Die Bevölkerung kauft AUSSCHLIESSLICH aus Verkaufsorders am EIGENEN
-   * Handelsposten der Kolonie, einmal je Spieltag mit Vorrat für sieben Tage
-   * ({@code Economy.purchase}, Umsetzungskonzept/36); die Startausstattung legt seit
-   * Umsetzungskonzept/20 nur noch für Grundnahrung eine Auto-Relist-Order an.
-   * Ohne eigene Orders für Medizin (und Elektronik) bleibt deren Versorgung
-   * dauerhaft 0, der Lebensstandard klemmt bei 50 %, die Bevölkerung wächst
-   * nicht – und damit entsteht kein neues Geld. Deshalb legt der Bot für jedes
-   * Grundbedarfsgut eine dauerhaft nachfüllende Order zum Preis der
-   * Start-Nahrungsorder an (eine eroberte/gegründete Kolonie hat gar keine).
+   * Die Bevölkerung kauft AUSSCHLIESSLICH über ihre Gebote am EIGENEN
+   * Handelsposten der Kolonie (Umsetzungskonzept/38): je Gut ein stehendes
+   * Gebot aus ihrem Tagesbudget, das eine Verkaufsorder zum oder unter dem
+   * Gebot sofort kreuzt. Die Startausstattung legt seit Umsetzungskonzept/20
+   * nur für Grundnahrung eine Auto-Relist-Order an; deshalb legt der Bot für
+   * jedes Grundbedarfsgut eine dauerhaft nachfüllende Order ZUM GEBOT an
+   * (Rückfall {@link #DEFAULT_CONSUMER_PRICE}, wenn gerade keines steht).
    */
   private void ensureLocalSellOrders(Health h) {
     String id = h.colonyId();
@@ -432,24 +445,23 @@ final class Economy {
     String systemId = text(colony, "systemId");
     if (systemId == null) return;
     Set<String> covered = new HashSet<>();
-    double referencePrice = 0;
     for (JsonNode o : bot.world.sellOrders(systemId)) {
       if (!Json.eq(text(o, "sourceColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
       covered.add(text(o, "productTypeId"));
-      if (Json.eq(text(o, "productTypeId"), Catalog.FOOD)) referencePrice = Json.dbl(o, "limitPrice");
     }
-    if (referencePrice <= 0) referencePrice = DEFAULT_CONSUMER_PRICE;
     adjustPrices(h, systemId);
     for (String good : List.of(Catalog.FOOD, Catalog.MEDICINE, Catalog.ELECTRONICS)) {
       if (covered.contains(good)) continue;
       double stock = Math.floor(bot.world.stock(id, good));
       double qty = Math.min(stock, reserveQty(h.population(), good));
       if (qty < 1) continue;
+      double bid = bot.world.populationBid(id, good);
+      double price = bid > 0 ? bid : DEFAULT_CONSUMER_PRICE;
       try {
-        bot.call("createSellOrder", Map.of("colonyId", id, "productTypeId", good, "quantity", qty, "pricePerUnit", referencePrice, "autoRelist", true));
-        bot.monitor.event("SELL_ORDER_CREATED", h.name() + ": lokale Dauer-Verkaufsorder " + good + " x" + (long) qty + " @ " + referencePrice
-            + " für die eigene Bevölkerung", "colonyId", id, "product", good, "qty", qty, "price", referencePrice);
-        bot.world.invalidate("sellOrders", "warehouse");
+        bot.call("createSellOrder", Map.of("colonyId", id, "productTypeId", good, "quantity", qty, "pricePerUnit", price, "autoRelist", true));
+        bot.monitor.event("SELL_ORDER_CREATED", h.name() + ": lokale Dauer-Verkaufsorder " + good + " x" + (long) qty + " @ " + price
+            + (bid > 0 ? " (Gebot der Bevölkerung)" : " (Rückfallpreis)"), "colonyId", id, "product", good, "qty", qty, "price", price);
+        bot.world.invalidate("sellOrders", "warehouse", "hubOrders");
       } catch (CommandException e) {
         bot.monitor.log(h.name() + ": Verkaufsorder " + good + " abgelehnt: " + e.getMessage());
       }
@@ -457,58 +469,32 @@ final class Economy {
   }
 
   /**
-   * Preispolitik. Die Bevölkerung kauft nur, was ihr Budget hergibt
-   * (Tageseinkauf, {@code Economy.buyAtOwnPost} im Backend); ihr Einkommen sind Löhne und
-   * Unterhalt (rund 0,02 Cr je Kopf und Stunde) plus die Geldschöpfung beim
-   * Wachstum. Ein Preis von 450 Cr je Stück (der frühere Startpreis) ist dagegen nur bezahlbar,
-   * solange die Kolonie wächst – im Testlauf fiel jede Kolonie bei rund 10 000
-   * Einwohnern in die Hungersnot, während der Kommandant auf 50 000 Cr saß.
-   * Weil der Erlös bei budgetgebundenen Käufern gleich bleibt (Budget ×
-   * 1 statt weniger Stück × höherer Preis), ist ein niedrigerer Preis für den
-   * Bot kostenlos: Versorgung unter 85 % senkt den Preis um 30 %, Versorgung
-   * am Anschlag hebt ihn um 15 % – mit Abkühlzeit, damit die Glättung der
-   * Versorgungslage nachkommt.
+   * Preispolitik (Umsetzungskonzept/38): der Bot verkauft ins Gebot. Die
+   * Bevölkerung stellt je Gut ein Gebot aus ihrem Tagesbudget; eine
+   * Verkaufsorder darüber verkauft nichts, eine darunter verschenkt die
+   * Differenz nicht (Ausführung zum Preis der älteren Order, also des
+   * Gebots). Jede eigene Dauerorder wird deshalb auf das aktuelle Gebot
+   * gesetzt, sobald es sich bewegt. Das frühere Preisband nach Deckung
+   * entfällt – die Bevölkerung sagt jetzt selbst, was sie zahlen kann.
    */
   private void adjustPrices(Health h, String systemId) {
     String id = h.colonyId();
-    JsonNode coverage = bot.world.consumptionCoverage(id);
     for (JsonNode o : bot.world.sellOrders(systemId)) {
       if (!Json.eq(text(o, "sourceColonyId"), id) || !Json.bool(o, "autoRelist")) continue;
       String good = text(o, "productTypeId");
       if (!Catalog.CONSUMER_NEED_PER_CAPITA_PER_HOUR.containsKey(good)) continue;
       String key = id + ":" + good;
       if (bot.tickNo - lastPriceChangeTick.getOrDefault(key, -1000) < PRICE_COOLDOWN_TICKS) continue;
-      double cov = Json.dbl(coverage, good, -1);
-      if (cov < 0 || h.population() < 20) continue;
+      double bid = bot.world.populationBid(id, good);
+      if (bid <= 0) continue;
       double price = Json.dbl(o, "limitPrice");
-      double newPrice = price;
-      if (cov < 0.9 && Json.dbl(o, "remainingQuantity") > 0) newPrice = Math.max(MIN_CONSUMER_PRICE, Math.round(price * 0.7));
-      else if (cov >= 1.45 && price < DEFAULT_CONSUMER_PRICE) newPrice = Math.min(DEFAULT_CONSUMER_PRICE, Math.round(price * 1.15));
-      else if (cov >= 1.05 && bot.world.populationWallet(id) > RICH_POPULATION_WALLET && price < DEFAULT_CONSUMER_PRICE * MAX_PRICE_FACTOR) {
-        // Gut versorgte (Deckung über 105 %) und kaufkräftige Bevölkerung: Der
-        // Kommandant verkauft zu billig. Im Testlauf lagen 151 000 Cr im
-        // Bevölkerungs-Wallet, während der Bot selbst mit 765 Cr auf der Stelle
-        // trat und deshalb nie die 16 000 Cr Kolonistenprämie für ein
-        // Kolonisationsschiff zusammenbekam.
-        //
-        // Angehoben wird nur aus dem Überfluss heraus, gesenkt schon unter 90 %:
-        // Ein zu hoher Preis würde die eigene Kolonie aushungern (mit einem
-        // schärferen Band standen 19 von 20 Bots in FAMINE, während ihre Konten
-        // auf 200 000 Cr wuchsen).
-        newPrice = Math.min(DEFAULT_CONSUMER_PRICE * MAX_PRICE_FACTOR, Math.round(price * 1.2));
-      }
-      if (newPrice == price) continue;
+      if (Math.abs(price - bid) < 0.01) continue;
       try {
-        bot.call("cancelSellOrder", Map.of("orderId", text(o, "id")));
-        bot.world.invalidate("warehouse", "sellOrders");
-        double qty = Math.floor(Math.min(bot.world.stock(id, good), Math.max(20, reserveQty(h.population(), good))));
-        if (qty >= 1) {
-          bot.call("createSellOrder", Map.of("colonyId", id, "productTypeId", good, "quantity", qty, "pricePerUnit", newPrice, "autoRelist", true));
-        }
+        bot.call("updateSellOrderPrice", Map.of("orderId", text(o, "id"), "pricePerUnit", bid));
         lastPriceChangeTick.put(key, bot.tickNo);
-        bot.monitor.event("PRICE_ADJUSTED", h.name() + ": " + good + " " + (long) price + " -> " + (long) newPrice + " Cr (Versorgung "
-            + Math.round(cov * 100) + " %)", "colonyId", id, "product", good, "from", price, "to", newPrice, "coverage", cov);
-        bot.world.invalidate("sellOrders", "warehouse");
+        bot.monitor.event("PRICE_ADJUSTED", h.name() + ": " + good + " " + price + " -> " + bid + " Cr (Gebot der Bevölkerung)",
+            "colonyId", id, "product", good, "from", price, "to", bid);
+        bot.world.invalidate("sellOrders", "warehouse", "hubOrders", "wallet");
       } catch (CommandException e) {
         bot.monitor.log(h.name() + ": Preisänderung " + good + " abgelehnt: " + e.getMessage());
       }
@@ -626,7 +612,8 @@ final class Economy {
     }
     if (!energyGuard(h, products, "Baustoffe " + products.keySet())) return true;
     try {
-      bot.call("queueProductionBundle", Map.of("colonyId", h.colonyId(), "products", products, "autoProduceMissing", true, "requeueOnComplete", false));
+      bot.call("queueProductionBundle", Map.of("colonyId", h.colonyId(), "products", products, "autoProduceMissing", true, "requeueOnComplete", false,
+          "raiseToMinimum", true));
       already.addAll(products.keySet());
       bot.monitor.log(h.name() + ": Baustoffe gebündelt eingereiht: " + products);
     } catch (CommandException e) {
@@ -759,8 +746,10 @@ final class Economy {
 
   private void queueProduction(String colonyId, String productTypeId, double quantity, boolean requeue) {
     try {
+      // raiseToMinimum: der Server hebt Aufträge unter der Mindestdauer (10 Spielminuten)
+      // selbst auf die Mindestmenge an, statt sie abzulehnen.
       bot.call("queueProduction", Map.of("colonyId", colonyId, "productTypeId", productTypeId, "quantity", Math.floor(quantity),
-          "autoProduceMissing", true, "requeueOnComplete", requeue));
+          "autoProduceMissing", true, "requeueOnComplete", requeue, "raiseToMinimum", true));
       bot.world.invalidate("productionQueue");
     } catch (CommandException e) {
       bot.monitor.log("Produktionsauftrag " + productTypeId + " abgelehnt: " + e.getMessage());

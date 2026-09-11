@@ -1,5 +1,12 @@
 # 20. Startproduktion, Arbeitskräfte-Aggregat, Spielerrollen und Produktkategorien
 
+> **Stand 11.9.2026, Umsetzungskonzept/38:** die Kategorie `MilitaryEquipment`
+> (Infanterieausrüstung, Schwere Bodenausrüstung, Infanteriepaket, Schweres
+> Truppenpaket) ist aus `ConsumerGood` herausgelöst, Trinkwasserration und
+> Standardnahrung sind gestrichen. Die Kategoriesummen unten (187 Produkte,
+> 26 Konsumgüter) beschreiben den Stand vor Konzept 38; heute sind es 186
+> Produkte, davon 20 Konsumgüter und 4 Militärausrüstungen.
+
 Vier voneinander unabhängige Änderungen, in einem Zug umgesetzt: die Startproduktion
 bootstrappt jetzt nur noch Grundnahrung statt zweier Konsumgüter, der aufklappbare
 Auftrags-Detailbereich zeigt den aggregierten Arbeitskräftebedarf eines ganzen Auftrags

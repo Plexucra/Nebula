@@ -1,0 +1,3 @@
+# Laufzeit-Logs der Bot-Armee und des Observers. Das Live-Spiel schreibt laufend
+# hinein (11.9.2026: 800 MB) – ein "git add -A" hätte sie in die Historie gebracht.
+/logs/

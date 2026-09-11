@@ -136,10 +136,10 @@ public class GameSocket {
   private static final Set<String> READ_ONLY = Set.of(
       "players", "serverTime", "productTypes", "buildingTypes", "shipTypes", "groundUnitTypes",
       "colonies", "coloniesInSystem", "colony", "colonyStats", "population", "moneySupplyState", "populationWallet",
-      "consumptionCoverage", "populationSupply", "colonySpeedBreakdown", "populationTrend", "transactions", "treasuryFlowPerHour",
+      "consumptionCoverage", "populationSupply", "colonySpeedBreakdown", "populationTrend", "transactions", "treasuryFlowPerHour", "researchLevel",
       "planet", "planetsInSystem", "colonizations", "supplyInventory",
       "buildings", "buildSlots", "housingCapacity", "powerCoverage", "isBlackout", "powerUpkeepPerHour", "energyStorage",
-      "warehouse", "specializations", "productionQueue", "previewProductionChain",
+      "warehouse", "specializations", "productionQueue", "previewProductionChain", "minimumProductionQuantity",
       "wallet", "sellOrders", "hubDepot", "hubOrders", "universeStats", "victory",
       "notifications", "unreadNotificationCount", "inbox", "sentMessages", "unreadMessageCount",
       "fleets", "allFleets", "fleetsInSystem", "fleet", "fleetPresence", "shipyardQueue", "fleetTroopCapacity",
@@ -190,6 +190,7 @@ public class GameSocket {
       case "populationTrend" -> de.nebula.state.PopulationHistory.trend(state, text(payload, "colonyId"));
       case "transactions" -> GameQueries.transactionsForPlayer(state, requirePlayerId());
       case "treasuryFlowPerHour" -> Economy.treasuryFlowPerHour(state, requirePlayerId());
+      case "researchLevel" -> Economy.researchLevel(state, requirePlayerId());
       case "transfer" -> throw new CommandException(
           "Noch kein anderer Kommandant \"" + text(payload, "toPlayerName") + "\" erreichbar – Mehrspieler folgt in einer späteren Ausbaustufe.");
       case "planet" -> ColonyCommands.planetForPlayer(state, text(payload, "id"), currentPlayerId());
@@ -242,18 +243,24 @@ public class GameSocket {
       case "productionQueue" -> ProductionCommands.productionQueueFor(state, text(payload, "colonyId"));
       case "previewProductionChain" -> ProductionCommands.previewProductionChain(state, text(payload, "colonyId"),
           text(payload, "productTypeId"), payload.path("quantity").asDouble());
+      // Kleinste Stückzahl, die die Mindestdauer eines Auftrags erreicht (Vorschau "Auftrag zu klein").
+      case "minimumProductionQuantity" -> ProductionCommands.minimumProductionQuantity(state, text(payload, "colonyId"),
+          text(payload, "productTypeId"));
+      // raiseToMinimum (optional, Standard false): zu kleine Aufträge anheben statt ablehnen – für Bots.
       case "queueProduction" -> {
         ProductionCommands.queueProduction(state, ids, requirePlayerId(), text(payload, "colonyId"),
             text(payload, "productTypeId"), payload.path("quantity").asDouble(),
-            payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false));
+            payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false),
+            payload.path("raiseToMinimum").asBoolean(false));
         yield null;
       }
-      // body: { colonyId, products: { productTypeId: quantity, ... }, autoProduceMissing, requeueOnComplete } –
+      // body: { colonyId, products: { productTypeId: quantity, ... }, autoProduceMissing, requeueOnComplete, raiseToMinimum } –
       // mehrere direkt benötigte Baustoffe als EIN Auftrag, siehe ProductionCommands.queueProductionBundle.
       case "queueProductionBundle" -> {
         ProductionCommands.queueProductionBundle(state, ids, requirePlayerId(), text(payload, "colonyId"),
             productMap(payload.path("products")),
-            payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false));
+            payload.path("autoProduceMissing").asBoolean(false), payload.path("requeueOnComplete").asBoolean(false),
+            payload.path("raiseToMinimum").asBoolean(false));
         yield null;
       }
       case "moveProductionEntry" -> {

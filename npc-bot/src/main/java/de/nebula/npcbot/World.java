@@ -323,6 +323,25 @@ final class World {
     return Json.dbl(q("populationWallet", Map.of("colonyId", colonyId)), "balance");
   }
 
+  /**
+   * Stehendes Gebot der Bevölkerung dieser Kolonie für ein Gut
+   * (Umsetzungskonzept/38, {@code MarketOrder.populationColonyId}) – der Preis,
+   * zu dem der Bot verkauft. −1 ohne Gebot (Vorrat voll oder kein Budget).
+   */
+  double populationBid(String colonyId, String productTypeId) {
+    JsonNode colony = colony(colonyId);
+    if (Json.isNull(colony)) return -1;
+    Map<String, Object> args = new java.util.HashMap<>();
+    args.put("systemId", text(colony, "systemId"));
+    args.put("planetId", text(colony, "planetId"));
+    for (JsonNode o : list(q("hubOrders", args))) {
+      if (!Json.eq(text(o, "populationColonyId"), colonyId) || !Json.eq(text(o, "productTypeId"), productTypeId)) continue;
+      if (Json.dbl(o, "remainingQuantity") <= 0) continue;
+      return Json.dbl(o, "limitPrice");
+    }
+    return -1;
+  }
+
   // --- Flotten ------------------------------------------------------------------
 
   List<JsonNode> ownFleets() {

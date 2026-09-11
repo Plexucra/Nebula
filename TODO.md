@@ -2,14 +2,6 @@
 
 ## Offen
 
-- [ ] Als Schutz vor überflutung mit Events dürfen Produktionsaufträge nicht eingestellt 
-  werden, die weniger als 10 Minuten Spielzeit andauern. Fehlermeldung kann dann auf fehlende 
-  effizienz / Serienproduktion von zu kleinen Aufträgen hinweisen und angeben wie viele Stückzahl 
-  mindestens anzugeben sind. Dies muss auch Aufträge stoppen die bereits zu einer Zeit 
-  eingereiht wurden, als die Bauzeit noch über 10 Minuten war.
-- [ ] Bebauung ist sehr unübersichtlich geworden in der UI. Ich möchte für jede Bebauung 
-  ein Bild ergänzt haben und die Inhalte einer Bebauung besser Strukturiert haben.
-  Also z.b. Bereiche Bild / Stufe / Informationen / Ausbau pro Bebauung. Und die Einträge noch stärker voneinander abgegrenzt.
 - [ ] **Kennwortschutz und Reset-Knopf** (F14/F15): die Anmeldung ist
   kennwortlos, der Reset-Knopf für jeden sichtbar. Für einen LAN-Abend mit
   mehreren Personen riskant. Eigenes Thema, bewusst nicht Teil von Konzept 34.
@@ -38,18 +30,6 @@
   Werte springen im Spiel wirklich einmal am Tag, eine geglättete Anzeige
   zeigte einen Verlauf, den es nicht gibt.*
 
-- [ ] **Startpreis 60 Cr – Entscheidung** (Review 11.9.2026 §3.2): steht in
-  `WorldSeed.STARTER_SELL_ORDER_PRICE` und im Bot
-  (`Economy.DEFAULT_CONSUMER_PRICE`); mit dem gedrittelten Lohn liegt das
-  Gleichgewicht bei rund 17 Cr. **Achtung Kopplung:** das Preisband des Bots
-  hängt am Default – Obergrenze `DEFAULT × MAX_PRICE_FACTOR (6)`, Untergrenze
-  fest `MIN_CONSUMER_PRICE = 15`, Schritte ×0,7 / ×1,15 / ×1,2. Mit Default 20
-  fiele der Abschlag auf 14 → 15 gekappt, die Preissenkung liefe ins Leere.
-  Wer die Zahl verschiebt, zieht Untergrenze und Faktor mit. Alternative
-  ohne neues Literal: seit 11.9. stehen Lohn UND Pro-Kopf-Bedarfe in
-  `shared/game-constants.json` – WorldSeed und Bot können den Startpreis als
-  `wagePerCapitaPerGameHour / Σ consumerNeedPerCapitaPerGameHour` (≈ 17 Cr)
-  ableiten. Offen: 60 bewusst über dem Gleichgewicht (Anreiz) oder ableiten?
 - [ ] **Invasionsdauer unter Live-Balance** (Gesamttest 11.9.2026 B2):
   2 000 Soldaten je Landung, 27 Plätze je Transporter, 6 Spieltage je
   Werftcharge – Eroberungen kommen erst nach Stunden Realzeit.
@@ -58,6 +38,54 @@
   Entscheidung, keine Reparatur.
 
 ## Erledigt
+
+- [x] ~~Gehälter je Arbeitsstunde, Kauforders der Bevölkerung, Arbeiter und
+  Akademiker, Forschungszentrum~~ – 11.9.2026, Konzept 38. Produktion kostet
+  beim Start Löhne (`ChainPlan.wageCredits`, Code 509 ohne Guthaben), die
+  Kopfpauschale entfällt; die Bevölkerung stellt stehende Kauforders aus
+  ihrem Tagesbudget (`MarketOrder.populationColonyId`), Tageseinkauf und
+  Notkauf sind weg; Güterstaffel je Wohnstufe mit Wachstumsgut
+  (`GoodsLimited`); Akademiker (`Population.academics`) in bezahlten Plätzen
+  des Forschungszentrums (`b_research`), Forschungsniveau als Abfrage;
+  Trinkwasserration und Standardnahrung gestrichen, Militärausrüstung als
+  eigene Kategorie; Startpreis 20 Cr (der frühere offene Punkt „Startpreis
+  60" ist damit entschieden: die Bevölkerung setzt den Preis). Bots verkaufen
+  ins Gebot. Tests: `WagesAndBidsTest`, `PopulationClassesTest`.
+
+- [x] ~~Mindestdauer für Produktionsaufträge, Bebauung als Karten mit Bild~~ –
+  11.9.2026.
+  - **Mindestdauer 10 Spielminuten** (`minProductionOrderGameMinutes` in
+    `shared/game-constants.json`, bei Tempo 4 rund 0,1 s Realzeit): kürzere
+    Aufträge lehnt `queueProduction`/`queueProductionBundle` ab; die Meldung
+    nennt Dauer, den Hinweis auf ineffiziente Kleinstlose und die
+    Mindeststückzahl (bei Bündeln je Baustoff). Die Oberfläche zeigt das schon
+    in der Vorschau („Los zu klein", Knopf „Auf N Stück erhöhen", Einreihen
+    gesperrt; neue Abfrage `minimumProductionQuantity`). Ein wartender Auftrag,
+    der beim Start darunter fällt (Industrie ausgebaut, Spezialisierung
+    gestiegen), wird mit Code 504 gestoppt, samt Benachrichtigung mit
+    Mindestmenge; die Warteschlange läuft mit dem nächsten weiter,
+    „Fortsetzen" erklärt statt still neu zu stoppen. **Vom System angelegte
+    Aufträge werden angehoben statt abgelehnt**, mit Puffer auf die doppelte
+    Mindestdauer (genau auf die Mindestmenge angehoben, stoppten im Browsertest
+    zwei wartende Startaufträge vor ihrem Start, weil die Kolonie inzwischen
+    schneller fertigte): Startaufträge (vorher 3 Stück
+    Elerium bzw. 42 Grundnahrung – bei Industrie 5 nach Sekunden fertig),
+    „Fehlende Baustoffe produzieren" (im Verhältnis, Rest bleibt im Lager), das
+    Neu-Einreihen eines Dauerauftrags nach Fertigstellung und Bot-Aufträge
+    (`raiseToMinimum: true`). Werft und Ausbildungszentrum sind nicht
+    betroffen. Test: `MinimumOrderDurationTest`; e2e prüft Ablehnung und
+    Mindestmenge.
+  - **Bebauung:** jede Bebauung ist eine eigene Karte mit Kopfzeile (Name,
+    Zweck, Ausbau-/Blackout-Marke), Farbkante je Kategorie und vier Bereichen
+    Bild / Stufe / Informationen / Ausbau; Baustoffe als Tabelle Bedarf/Lager,
+    Ausbaufortschritt als Balken. Bilder: Fotos aus `/Bilder`, für das Web
+    verkleinert (`frontend/public/buildings/<id>.jpg`, 1180 × 800, je unter
+    300 KB), in einem einheitlichen Rahmen von 600 × 400 links, daneben Stufe
+    und Informationen, darunter der Ausbau in drei Spalten (Eckdaten,
+    Baustoffe, Hinweise/Knöpfe). Schmale Karten stapeln per Container-Abfrage,
+    das Bild bleibt 400 px hoch. Planetare Abwehr hat noch kein Foto und zeigt
+    die gezeichnete Grafik `b_defense.svg` im selben Rahmen. Ungebaute Gebäude
+    gedämpft. Stil-Budget je Komponente auf 12 kB angehoben.
 
 - [x] ~~Regelzahlen nach `/shared`, Treibstoffzahlen vom Server, Bot-Befunde,
   Oberflächen-Kleinigkeiten, `logs/` aus Git~~ – 11.9.2026, aus den

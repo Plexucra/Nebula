@@ -45,7 +45,9 @@ public final class GameStateSeeder {
     state.marketOrders.addAll(seed.sellOrders);
     // Start-Auftragsliste kommt direkt über addAll herein statt über
     // queueProduction, das sonst automatisch den nächsten wartenden Eintrag
-    // anstößt – deshalb hier manuell nachholen (siehe TS `hydrate`).
+    // anstößt – deshalb hier manuell nachholen (siehe TS `hydrate`). Dasselbe
+    // gilt für die Mindestdauer: die Startmengen erst am fertigen Zustand anheben.
+    for (var entry : seed.productionQueue) ProductionCommands.raiseToMinimum(state, entry);
     for (String colonyId : seed.productionQueue.stream().map(e -> e.colonyId).distinct().toList()) {
       ProductionCommands.tryStartNextProductionEntry(state, ids, colonyId);
     }
@@ -89,6 +91,7 @@ public final class GameStateSeeder {
     state.fleets.addAll(seed.fleets);
     state.groundForceGroups.add(seed.groundForceGroup);
     state.marketOrders.addAll(seed.sellOrders);
+    for (var entry : seed.productionQueue) ProductionCommands.raiseToMinimum(state, entry);
     ProductionCommands.tryStartNextProductionEntry(state, ids, seed.colony.id);
     Economy.startColonyRhythm(state, ids, seed.colony);
     // Eine neue Partei mit Kolonien – die Siegprüfung hängt an genau solchen Übergängen, nicht am Tick.

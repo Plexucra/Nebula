@@ -11,6 +11,7 @@ import de.nebula.model.MarketOrder;
 import de.nebula.model.MarketOrderSide;
 import de.nebula.model.NotificationType;
 import de.nebula.model.Player;
+import de.nebula.model.Population;
 import de.nebula.model.ProductCategory;
 import de.nebula.model.ProductType;
 import de.nebula.model.StarSystem;
@@ -34,10 +35,12 @@ import java.util.Objects;
  *   <li><b>Planetarer Handelsposten</b> ({@code planetId} gesetzt): die
  *       Einrichtung des Planeten, genutzt von allen Kolonien darauf und von
  *       allen dort gelandeten Flotten. Handel zwischen zwei Kommandanten nur
- *       mit Handelsvertrag (Konzept 05 §14, geprüft im Matching); die
- *       Bevölkerung einer Kolonie kauft aus der Verkaufsseite nur bei ihrem
- *       eigenen Kommandanten oder dessen Handelsvertragspartnern
- *       ({@code Economy}). Keine Handelsgilde-Orders.</li>
+ *       mit Handelsvertrag (Konzept 05 §14, geprüft im Matching). Die
+ *       Bevölkerung einer Kolonie stellt hier ihre Kauforders
+ *       ({@link MarketOrder#populationColonyId}, Umsetzungskonzept/38): mit
+ *       dem eigenen Kommandanten als Eigentümer (dieselbe Vertragsregel),
+ *       Escrow aus dem Bevölkerungs-Wallet, Ware in den Vorrat. Keine
+ *       Handelsgilde-Orders.</li>
  * </ul>
  *
  * <p>Depot je Kommandant und Ort ({@link Depot}); wer eine Kolonie auf dem
@@ -185,7 +188,6 @@ public final class MarketCommands {
 
     if (planetId == null) ensureMarketMaker(state, ids, systemId, productTypeId);
     matchOrders(state, ids, systemId, planetId, productTypeId);
-    if (planetId != null) emergencyPurchases(state, ids, planetId, productTypeId);
   }
 
   /** "Anbieten" im Lager einer eigenen Kolonie – die Order landet am Posten ihres Planeten. */
@@ -274,6 +276,9 @@ public final class MarketCommands {
     if (order.ownerId == null || !order.ownerId.equals(player.id)) {
       throw new CommandException("Diese Order gehört einem anderen Kommandanten.");
     }
+    if (order.populationColonyId != null) {
+      throw new CommandException("Das Gebot der Bevölkerung lässt sich nicht zurückziehen – sie stellt es an jedem Kolonietag neu.");
+    }
     refundAndRemove(state, order);
   }
 
@@ -288,6 +293,9 @@ public final class MarketCommands {
     MarketOrder order = find(state, orderId);
     if (order == null) throw new CommandException("Unbekannte Order.");
     if (!playerId.equals(order.ownerId)) throw new CommandException("Diese Order gehört einem anderen Kommandanten.");
+    if (order.populationColonyId != null) {
+      throw new CommandException("Das Gebot der Bevölkerung lässt sich nicht umpreisen – verkaufen Sie zum Gebot oder darunter.");
+    }
     if (order.side == MarketOrderSide.Buy) {
       Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, playerId);
       double newEscrow = round2(order.remainingQuantity * pricePerUnit);
@@ -297,9 +305,8 @@ public final class MarketCommands {
       order.escrowedCredits = newEscrow;
     }
     order.limitPrice = pricePerUnit;
+    // Ein gesenkter Preis ist der häufigste Grund, warum das Gebot der Bevölkerung jetzt kreuzt.
     matchOrders(state, ids, order.systemId, order.planetId, order.productTypeId);
-    // Ein gesenkter Preis ist der häufigste Grund, warum eine knappe Bevölkerung jetzt kaufen kann.
-    if (order.planetId != null && order.side == MarketOrderSide.Sell) emergencyPurchases(state, ids, order.planetId, order.productTypeId);
   }
 
   /**
@@ -334,7 +341,10 @@ public final class MarketCommands {
   private static void refundAndRemove(GameState state, MarketOrder order) {
     if (order.ownerId != null) {
       if (order.side == MarketOrderSide.Buy) {
-        Wallet wallet = GameQueries.findWallet(state, WalletOwnerType.Player, order.ownerId);
+        // Bevölkerungsgebot: das Escrow stammt aus dem Bevölkerungs-Wallet der Kolonie (Umsetzungskonzept/38).
+        Wallet wallet = order.populationColonyId != null
+            ? GameQueries.findWallet(state, WalletOwnerType.Population, order.populationColonyId)
+            : GameQueries.findWallet(state, WalletOwnerType.Player, order.ownerId);
         if (wallet != null && order.escrowedCredits > 0) wallet.balance += order.escrowedCredits;
       } else if (order.remainingQuantity > 0) {
         returnGoods(state, order, order.remainingQuantity);
@@ -365,9 +375,9 @@ public final class MarketCommands {
   /**
    * Zieht {@code quantity} aus einer Verkaufs-Order, zahlt den Verkäufer und
    * liefert an den Käufer. Gemeinsamer Kern für Kauf-Orders ({@link #execute}),
-   * den Sofortkauf ({@link #buyFromOrder}) und den Tageseinkauf der Bevölkerung
-   * ({@code Economy}, {@code buyerId == null}: die Ware geht in ihren Vorrat,
-   * {@code fromWalletId} ist das Bevölkerungs-Wallet).
+   * den Sofortkauf ({@link #buyFromOrder}) und die Gebote der Bevölkerung
+   * ({@code buyerId == null}: die Ware geht in ihren Vorrat, den der Aufrufer
+   * füllt; das Geld stammt aus dem Escrow, {@code fromWalletId} ist null).
    *
    * <p>Erreicht die Restmenge 0 und ist {@code autoRelist} gesetzt, wird SOFORT
    * aus der Quelle nachgelegt; reicht die nicht, bleibt die Order "schlafend"
@@ -477,11 +487,61 @@ public final class MarketCommands {
     order.createdAt = Clock.now();
   }
 
-  /** Notkauf aller Kolonien auf dem Planeten, deren Vorrat an diesem Gut knapp ist. */
-  private static void emergencyPurchases(GameState state, IdGenerator ids, String planetId, String productTypeId) {
-    for (Colony c : state.colonies) {
-      if (c.planetId.equals(planetId)) Economy.emergencyPurchase(state, ids, c.id, productTypeId);
+  /**
+   * Matching am Posten der Kolonie nach einem Lagerzugang mit Id-Generator
+   * (Fertigstellung): das Einlagern hat eine schlafende Dauerorder geweckt
+   * ({@code Warehouse.addRaw}), und das stehende Gebot der Bevölkerung soll
+   * sofort kreuzen, nicht erst am nächsten Kolonietag (Umsetzungskonzept/38).
+   */
+  public static void matchColonyPost(GameState state, IdGenerator ids, String colonyId, String productTypeId) {
+    Colony colony = ColonyCommands.colony(state, colonyId);
+    if (colony != null) matchOrders(state, ids, colony.systemId, colony.planetId, productTypeId);
+  }
+
+  // --- Gebote der Bevölkerung (Umsetzungskonzept/38, Teil C) -----------------
+
+  /**
+   * Stellt ein Gebot der Bevölkerung von {@code colony}: Escrow aus dem
+   * Bevölkerungs-Wallet, Eigentümer ist der Kommandant der Kolonie (Vertragsregel),
+   * markiert über {@code populationColonyId}. Kein Zugangs- oder Guthabenfehler
+   * nach außen – wer das Budget rechnet, ist {@code Economy}; reicht das Wallet
+   * wider Erwarten nicht, wird die Menge gekürzt.
+   */
+  public static void createPopulationBid(GameState state, IdGenerator ids, Colony colony, String productTypeId,
+                                         double quantity, double limitPrice) {
+    quantity = Math.floor(quantity);
+    limitPrice = round2(limitPrice);
+    if (quantity < 1 || limitPrice < 0.01) return;
+    Wallet popWallet = GameQueries.findWallet(state, WalletOwnerType.Population, colony.id);
+    if (popWallet == null) return;
+    double cost = round2(quantity * limitPrice);
+    if (cost > popWallet.balance + 1e-9) {
+      quantity = Math.floor(popWallet.balance / limitPrice);
+      if (quantity < 1) return;
+      cost = round2(quantity * limitPrice);
     }
+    popWallet.balance -= cost;
+    Player owner = GameQueries.requirePlayer(state, colony.ownerId);
+    MarketOrder order = newOrder(state, ids, colony.systemId, colony.planetId, productTypeId, MarketOrderSide.Buy, owner, limitPrice, quantity);
+    order.ownerName = "Bevölkerung von " + colony.name;
+    order.escrowedCredits = cost;
+    order.populationColonyId = colony.id;
+    state.marketOrders.add(order);
+    matchOrders(state, ids, colony.systemId, colony.planetId, productTypeId);
+  }
+
+  /** Zieht alle Gebote der Bevölkerung dieser Kolonie zurück – das Escrow geht ins Bevölkerungs-Wallet. */
+  public static void cancelPopulationBids(GameState state, String colonyId) {
+    for (MarketOrder o : new ArrayList<>(state.marketOrders)) {
+      if (colonyId.equals(o.populationColonyId)) refundAndRemove(state, o);
+    }
+  }
+
+  /** Offene Gebote der Bevölkerung dieser Kolonie. */
+  public static List<MarketOrder> populationBids(GameState state, String colonyId) {
+    List<MarketOrder> out = new ArrayList<>();
+    for (MarketOrder o : state.marketOrders) if (colonyId.equals(o.populationColonyId) && o.remainingQuantity > 0) out.add(o);
+    return out;
   }
 
   // --- Matching ----------------------------------------------------------------
@@ -541,7 +601,10 @@ public final class MarketCommands {
     for (MarketOrder bid : bids) {
       for (MarketOrder ask : asks) {
         if (bid.limitPrice + 1e-9 < ask.limitPrice) break; // asks aufsteigend sortiert: ab hier kreuzt nichts mehr für DIESES Gebot
-        if (Objects.equals(bid.ownerId, ask.ownerId)) continue; // eigene Gegenposition (auch Handelsgilde vs. Handelsgilde) überspringen
+        // Eigene Gegenposition (auch Handelsgilde vs. Handelsgilde) überspringen – AUSSER beim Gebot
+        // der Bevölkerung: ihr eigener Kommandant ist ihr Hauptlieferant (Umsetzungskonzept/38).
+        if (bid.populationColonyId == null && Objects.equals(bid.ownerId, ask.ownerId)) continue;
+        if (ask.populationColonyId != null) continue; // Bevölkerung verkauft nie
         if (!mayTrade(state, planetId, bid.ownerId, ask.ownerId)) continue; // Posten: nur mit Handelsvertrag
         return execute(state, ids, bid, ask);
       }
@@ -574,7 +637,14 @@ public final class MarketCommands {
 
     // Der Käufer wurde bereits beim Einstellen ins Escrow belastet, deshalb kein Wallet
     // auf der Zahlerseite – sonst würde derselbe Betrag zweimal abgezogen.
-    settleAsk(state, ids, ask, qty, cost, null, bid.ownerId);
+    if (bid.populationColonyId != null) {
+      // Gebot der Bevölkerung: Ware in ihren Vorrat, Buchung als Konsum (Umsetzungskonzept/38).
+      settleAsk(state, ids, ask, qty, cost, null, null);
+      Population population = ColonyCommands.population(state, bid.populationColonyId);
+      if (population != null) population.stock.merge(ask.productTypeId, qty, Double::sum);
+    } else {
+      settleAsk(state, ids, ask, qty, cost, null, bid.ownerId);
+    }
     // ask.ownerId == null (Handelsgilde verkauft): Ware wird konjuriert, kein Depot-Abbuchen nötig.
 
     bid.escrowedCredits = Math.max(0, bid.escrowedCredits - cost);

@@ -66,7 +66,7 @@ export interface GameApi {
   colonyStats(id: Id): Signal<PlanetStats | undefined>;
   /** Deckung (0..1,5, 1 = Bedarf exakt gedeckt) je Grundkonsumgut des letzten Kolonietags – Diagnosewert für die Statistik-Seite. */
   consumptionCoverage(colonyId: Id): Signal<Record<Id, number>>;
-  /** Vorrat, Tagesbedarf, Reichweite je Grundkonsumgut und der nächste Tageseinkauf (Umsetzungskonzept/36). */
+  /** Vorrat, Tagesbedarf, Reichweite, Gebot und Brief je Konsumgut, dazu Arbeiter, Akademiker, Staffel und Budget (Umsetzungskonzept/36 und 38). */
   populationSupply(colonyId: Id): Signal<PopulationSupply | null>;
   /**
    * Fertig berechnete Aufschlüsselung ALLER Produktionstempo-Faktoren dieser
@@ -147,6 +147,8 @@ export interface GameApi {
    * Neuer-Auftrag-Formular und beim Aufklappen eines wartenden Eintrags.
    */
   previewProductionChain(colonyId: Id, productTypeId: Id, quantity: number): Promise<ChainPlan>;
+  /** Kleinste Stückzahl, mit der ein Auftrag die Mindestdauer (`MIN_PRODUCTION_ORDER_GAME_MINUTES`) erreicht. */
+  minimumProductionQuantity(colonyId: Id, productTypeId: Id): Promise<number>;
   /** "Fortsetzen"-Button: prüft einen angehaltenen Auftrag erneut und startet ihn, falls jetzt ausführbar. */
   resumeProduction(colonyId: Id, entryId: Id): Promise<void>;
   /** Bei laufendem Auftrag anteilige Gutschrift nach verstrichener Zeit (abgerundet je Schritt), siehe Dokument §4. */
@@ -176,6 +178,8 @@ export interface GameApi {
    * Bankrott unsichtbar bleibt – steht in der Kopfzeile neben dem Guthaben.
    */
   treasuryFlowPerHour(): Signal<number>;
+  /** Forschungsniveau des Kommandanten: die Akademiker aller seiner Kolonien (Umsetzungskonzept/38). */
+  researchLevel(): Signal<number>;
   transfer(toPlayerName: string, amount: number): Promise<void>;
 
   // --- Flotten ------------------------------------------------------------

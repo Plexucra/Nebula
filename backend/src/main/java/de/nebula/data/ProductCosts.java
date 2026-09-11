@@ -10,15 +10,13 @@ import java.util.Map;
 /**
  * Rekursive Produktionskosten-Schätzung, ausschließlich als Preisanker für
  * den Market-Maker der Handelsgilde-Stationen (Umsetzungskonzept/22_...md).
- * Das Spiel selbst kennt sonst KEINEN Credit-Preis für Rohstoffe/Baustoffe/
- * Schiffsmodule – Produktion kostet nur Arbeitsstunden
- * ({@code ProductType.workHoursPerUnit}), keine Credits (siehe
- * {@code ProductionCommands}, {@code ChainPlanner}). Diese Klasse rechnet die
- * Arbeitsstunden trotzdem in einen Credit-Wert um, indem sie denselben
- * Lohnsatz ansetzt, den die Bevölkerung tatsächlich verdient
- * ({@code GameConstants.WAGE_PER_CAPITA_PER_HOUR} aus
- * {@code shared/game-constants.json}) – ein reines Rechenmodell, keine
- * zusätzliche Geldbewegung im Spiel.
+ * Seit Umsetzungskonzept/38_...md kostet Produktion tatsächlich Löhne
+ * ({@code Formulas.wageFor}: Katalog-Arbeitsstunden durch die Produktivität
+ * {@code productionSpeedMultiplier} mal Lohnsatz). Diese Klasse rechnet
+ * dagegen mit den UNGESTAUCHTEN Katalog-Arbeitsstunden – bewusst: sie
+ * liefert nur RELATIVE Preise (welches Gut teurer ist als welches) für die
+ * Handelsgilde-Orders und die Gewichtung der Bevölkerungsgebote, keine
+ * Geldbewegung im Spiel.
  *
  * <p>{@code kosten(p) = workHoursPerUnit(p) × Lohn + Σ Rezeptmenge × kosten(Eingang)},
  * rekursiv bis zu den Rohstoffen (leeres Rezept). Ergebnisse werden
@@ -30,7 +28,7 @@ public final class ProductCosts {
   }
 
   /** Derselbe Lohnsatz wie in {@code Economy} – eine Quelle ({@code shared/game-constants.json}), keine zweite Ablage mehr. */
-  private static final double WAGE_PER_POPULATION_PER_GAME_HOUR = GameConstants.WAGE_PER_CAPITA_PER_HOUR;
+  private static final double WAGE_PER_POPULATION_PER_GAME_HOUR = GameConstants.WAGE_PER_WORK_HOUR;
 
   private static final Map<String, Double> CACHE = new HashMap<>();
 

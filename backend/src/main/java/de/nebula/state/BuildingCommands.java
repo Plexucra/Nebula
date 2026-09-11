@@ -46,6 +46,11 @@ public final class BuildingCommands {
     return type.category == BuildingCategory.Infrastructure;
   }
 
+  /** Gebäude, deren Kapazität sich je Stufe verdoppelt – Wohnkomplex und Forschungszentrum (Umsetzungskonzept/38): Kosten und Baustoffe verdoppeln mit. */
+  static boolean isDoubling(BuildingType type) {
+    return type.category == BuildingCategory.Housing || type.category == BuildingCategory.Research;
+  }
+
   /** Stufe inklusive laufendem Ausbau – ein bereits beauftragter Ausbau belegt seinen Platz sofort. */
   private static int committedLevel(Building b) {
     return b.level + (b.pendingOrder != null ? 1 : 0);
@@ -135,8 +140,8 @@ public final class BuildingCommands {
       hours = Formulas.infrastructureUpgradeHours(type.baseHoursPerLevel, planetTotal);
       materialLevel = planetTotal + 1;
     } else {
-      // Wohnkomplex: Kapazität verdoppelt sich je Stufe, Credits/Baustoffe deshalb ebenfalls.
-      credits = type.category == BuildingCategory.Housing
+      // Wohnkomplex und Forschungszentrum: Kapazität verdoppelt sich je Stufe, Credits/Baustoffe deshalb ebenfalls.
+      credits = isDoubling(type)
           ? Formulas.housingUpgradeCost(type.baseCostPerLevel, fromLevel)
           : Formulas.buildingUpgradeCost(type.baseCostPerLevel, fromLevel);
       hours = Formulas.buildingUpgradeHours(type.baseHoursPerLevel, fromLevel);
@@ -147,7 +152,7 @@ public final class BuildingCommands {
       if (materialLevel < m.fromLevel) continue;
       MaterialRequirement req = new MaterialRequirement();
       req.productTypeId = m.productTypeId;
-      req.required = type.category == BuildingCategory.Housing
+      req.required = isDoubling(type)
           ? Formulas.housingMaterialQuantity(m.baseQuantity, materialLevel)
           : Formulas.buildingMaterialQuantity(m.baseQuantity, materialLevel);
       req.available = stockOf.apply(m.productTypeId);
@@ -180,6 +185,10 @@ public final class BuildingCommands {
    * eine richtige Reihenfolge, und die Oberfläche verriet sie nirgends – der
    * Bündelauftrag macht die Reihenfolge irrelevant.</p>
    *
+   * <p>Fehlt nur wenig, wäre der Auftrag kürzer als die Mindestdauer eines
+   * Produktionsauftrags; dann werden alle Mengen im gleichen Verhältnis
+   * angehoben – der Überschuss bleibt im Lager für den nächsten Ausbau.</p>
+   *
    * @return die eingereihten Mengen je Baustoff (leer, wenn nichts fehlt)
    */
   public static Map<String, Double> queueMissingMaterials(GameState state, IdGenerator ids, String playerId,
@@ -196,8 +205,7 @@ public final class BuildingCommands {
     if (demand.isEmpty()) {
       throw new CommandException("Für den nächsten Ausbau von " + type.name + " sind alle Baustoffe vorhanden.");
     }
-    ProductionCommands.queueProductionBundleCore(state, ids, colonyId, demand, true, false);
-    return demand;
+    return ProductionCommands.queueProductionBundleCore(state, ids, colonyId, demand, true, false, true);
   }
 
   public static void queueBuilding(GameState state, IdGenerator ids, String playerId, String colonyId, String buildingTypeId) {
@@ -341,7 +349,7 @@ public final class BuildingCommands {
         throw new CommandException("Rückbau nicht möglich: die bestehenden Gebäude brauchen diese Bebauungsplätze.");
       }
     }
-    double refund = Math.round(0.5 * (type.category == BuildingCategory.Housing
+    double refund = Math.round(0.5 * (isDoubling(type)
         ? Formulas.housingUpgradeCost(type.baseCostPerLevel, building.level - 1)
         : Formulas.buildingUpgradeCost(type.baseCostPerLevel, building.level - 1)));
     building.level -= 1;

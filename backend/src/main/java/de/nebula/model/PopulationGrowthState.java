@@ -10,5 +10,11 @@ public enum PopulationGrowthState {
    * Kolonie stehen bleibt – die Wohnkapazität ließe 20 000 zu, der Acker aber
    * nur 6 000.
    */
-  FoodLimited
+  FoodLimited,
+  /**
+   * Die Kolonie steht an der Grenze ihrer Wohnstufe der Güterstaffel
+   * (Umsetzungskonzept/38_...md, Teil D): das Wachstumsgut der nächsten Stufe
+   * ist nicht voll gedeckt, der Wohnraum ließe mehr zu.
+   */
+  GoodsLimited
 }

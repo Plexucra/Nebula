@@ -31,7 +31,7 @@
             <span class="hint">Als Nächstes:</span>
             <span class="product-image small">{{ productIcon(next.productTypeId) }}</span>
             <span>{{ productName(next.productTypeId) }} × {{ next.quantity }}</span>
-            @if (next.status === 'stopped') { <span class="tag warn">angehalten</span> }
+            @if (next.status === 'stopped') { <span class="tag warn">{{ next.stoppedReasonCode === 504 ? 'Los zu klein' : 'angehalten' }}</span> }
           </div>
         }
 
@@ -175,7 +175,7 @@
                         <span class="tag" [class.good]="entry.status === 'running'" [class.warn]="entry.status === 'stopped'">
                           {{ queueStatusLabel(entry) }} · {{ entry.quantity }} Stk.
                         </span>
-                        @if (entry.status === 'stopped') {
+                        @if (entry.status === 'stopped' && entry.stoppedReasonCode !== 504) {
                           <button class="ghost small" type="button" [disabled]="busy() === row.colonyId" (click)="resumeHere(row.colonyId, entry.id)">Fortsetzen</button>
                         }
                         <button class="ghost small danger" type="button" [disabled]="busy() === row.colonyId" (click)="cancelHere(row.colonyId, entry.id)">Abbrechen</button>

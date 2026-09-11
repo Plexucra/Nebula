@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" role="img" aria-label="Planetare Abwehr">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="75%">
+      <stop offset="0" stop-color="#1c0a10"/>
+      <stop offset="1" stop-color="#06080f"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff4d5e" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ff4d5e" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="160" height="110" fill="url(#bg)"/>
+  <!-- Schildkuppel -->
+  <path d="M14 90 A66 62 0 0 1 146 90 Z" fill="url(#shield)"/>
+  <path d="M14 90 A66 62 0 0 1 146 90" fill="none" stroke="#ff4d5e" stroke-width="1" stroke-dasharray="4 3" filter="url(#glow)"/>
+  <path d="M34 90 A46 42 0 0 1 126 90" fill="none" stroke="#ff4d5e" stroke-width="0.5" stroke-opacity="0.35"/>
+  <!-- Bunker und Geschütz -->
+  <g stroke="#ff4d5e" stroke-width="1.2" fill="#140810" filter="url(#glow)">
+    <path d="M50 90 L58 72 H102 L110 90 Z"/>
+    <path d="M66 72 A14 12 0 0 1 94 72 Z"/>
+    <path d="M86 62 L118 40 L121 44 L90 66 Z"/>
+    <path d="M84 66 L112 52 L114 55 L87 69 Z"/>
+  </g>
+  <g fill="#ff4d5e">
+    <rect x="62" y="80" width="8" height="3" opacity="0.8"/><rect x="76" y="80" width="8" height="3" opacity="0.4"/><rect x="90" y="80" width="8" height="3" opacity="0.8"/>
+  </g>
+  <!-- Mündungsfeuer -->
+  <g filter="url(#glow)">
+    <circle cx="121" cy="40" r="2.2" fill="#ffab3d"/>
+    <path d="M124 38 L136 30" stroke="#ffab3d" stroke-width="1" stroke-dasharray="3 2"/>
+  </g>
+  <path d="M6 90 H154" stroke="#ff4d5e" stroke-width="1.2" filter="url(#glow)"/>
+</svg>

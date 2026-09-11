@@ -8,11 +8,14 @@ package de.nebula.model;
  * einmalig verbaut als auch laufend verbraucht. {@code ShipModule} (seit
  * Umsetzungskonzept/20_...md aus {@code BuildingMaterial} herausgelöst): die
  * je Schiffstyp einmal produzierten Baugruppen, ausschließlich Eingang von
- * {@code Ship}-Rezepten. Die frühere Kategorie {@code Facility} (planetare
- * Anlagen als Produkte) wurde mit Umsetzungskonzept/17_...md entfernt – sie
- * war nie an das Gebäudesystem angebunden; Gebäude kosten jetzt stattdessen
- * Baustoffe.
+ * {@code Ship}-Rezepten. {@code MilitaryEquipment} (seit
+ * Umsetzungskonzept/38_...md aus {@code ConsumerGood} herausgelöst):
+ * Infanterie- und Bodenausrüstung samt Truppenpaketen – Zutaten der
+ * Bodeneinheiten, keine Konsumgüter der Bevölkerung. Die frühere Kategorie
+ * {@code Facility} (planetare Anlagen als Produkte) wurde mit
+ * Umsetzungskonzept/17_...md entfernt – sie war nie an das Gebäudesystem
+ * angebunden; Gebäude kosten jetzt stattdessen Baustoffe.
  */
 public enum ProductCategory {
-  Ship, GroundUnit, ConsumerGood, BuildingMaterial, ShipModule, RawResource, EnergyModule
+  Ship, GroundUnit, ConsumerGood, BuildingMaterial, ShipModule, RawResource, EnergyModule, MilitaryEquipment
 }

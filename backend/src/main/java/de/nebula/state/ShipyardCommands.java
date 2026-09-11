@@ -126,6 +126,8 @@ public final class ShipyardCommands {
       throw new CommandException("Nicht genug Credits für die Kolonistenprämie: " + (long) premium + " Cr nötig.");
     }
     population.currentCount -= colonists;
+    // Kolonisten sind Arbeiter (Umsetzungskonzept/38, Teil D: das Schiff bringt keine Akademiker mit).
+    population.academics = Math.min(population.academics, population.currentCount);
     // Die Prämie geht an die Bevölkerung der BAU-Kolonie, wo die Kolonisten bis zum
     // Auslaufen leben – bewusste Vereinfachung gegenüber einer Prämie, die als
     // Startkapital der neuen Kolonie mitreist (Geld bleibt so im Kreislauf).
@@ -175,9 +177,19 @@ public final class ShipyardCommands {
               + ProductCatalog.find(entry.shipProductTypeId).name + "\" vorhanden.", entry.colonyId, null);
       return;
     }
+    // Löhne je Arbeitsstunde (Umsetzungskonzept/38, Teil B) – auch die Werft zahlt.
+    String label = (long) entry.quantity + " × " + ProductCatalog.find(entry.shipProductTypeId).name;
+    if (!Wages.affordable(state, entry.colonyId, plan)) {
+      entry.plan = plan;
+      entry.status = ProductionQueueStatus.stopped;
+      entry.stoppedReasonCode = Notifications.CODE_WAGES_UNPAID;
+      Wages.notifyUnpaid(state, ids, entry.colonyId, plan, label, "Werft-Warteschlange");
+      return;
+    }
     for (ChainPlanStep step : plan.steps) {
       if (step.quantityFromWarehouse > 0) Warehouse.add(state, entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
     }
+    Wages.pay(state, ids, entry.colonyId, plan, label);
     long startedAt = Clock.now();
     long endsAt = startedAt + (long) Clock.hoursToMs(plan.totalHours);
     entry.plan = plan;

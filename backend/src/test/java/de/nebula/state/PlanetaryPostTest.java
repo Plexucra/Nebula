@@ -28,7 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Der Planetare Handelsposten als Orderbuch wie an der Station
  * (Umsetzungskonzept/37): Zugang über Kolonie oder gelandete Flotte, Depot
  * für Fremde, Lager für die eigene Kolonie, Handelsvertrag im Matching, die
- * Bevölkerung kauft nur beim eigenen Kommandanten oder bei Vertragspartnern.
+ * Bevölkerung kauft über ihre Gebote (Umsetzungskonzept/38) nur beim eigenen
+ * Kommandanten oder bei Vertragspartnern.
  */
 class PlanetaryPostTest {
 
@@ -96,8 +97,8 @@ class PlanetaryPostTest {
     double bertBefore = wallet(a, a.bId()).balance;
     double annaBefore = wallet(a, a.aId()).balance;
 
-    // Annas Startorder liegt bei 60 Cr; Bert unterbietet – ohne Vertrag bleibt seine Order für die Bevölkerung unsichtbar.
-    MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 30, false);
+    // Annas Startorder liegt bei 20 Cr; Bert unterbietet – ohne Vertrag bleibt seine Order für die Bevölkerung unsichtbar.
+    MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 10, false);
     assertEquals(0, FleetCargo.qty(fleet, GameConstants.FOOD_PRODUCT_ID), 1e-9, "Fracht ist in der Order gebunden");
     MarketOrder berts = post(a).stream().filter(o -> a.bId().equals(o.ownerId)).findFirst().orElseThrow();
     assertEquals(null, berts.sourceColonyId, "ohne Kolonie auf dem Planeten speist sich die Order aus dem Depot");
@@ -117,7 +118,7 @@ class PlanetaryPostTest {
     double bertBefore = wallet(a, a.bId()).balance;
 
     // Mit Vertrag ist Berts günstigere Order die erste Wahl der Bevölkerung.
-    MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 30, false);
+    MarketCommands.createSellOrderFromFleet(a.state(), a.ids(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 100, 10, false);
     MarketOrder berts = post(a).stream().filter(o -> a.bId().equals(o.ownerId)).findFirst().orElseThrow();
 
     ColonyCommands.population(a.state(), a.home().id).stock.clear();
@@ -132,7 +133,7 @@ class PlanetaryPostTest {
     Fleet fleet = bertsFreighterAtAnnasHome(a, 0);
     double annaBefore = wallet(a, a.aId()).balance;
 
-    // Berts Gebot kreuzt Annas Startorder (60 Cr) preislich – ohne Vertrag bleibt es liegen.
+    // Berts Gebot kreuzt Annas Startorder (20 Cr) preislich – ohne Vertrag bleibt es liegen.
     MarketCommands.createBuyOrder(a.state(), a.ids(), a.bId(), a.home().systemId, a.home().planetId, GameConstants.FOOD_PRODUCT_ID, 10, 80);
     MarketOrder bid = post(a).stream().filter(o -> a.bId().equals(o.ownerId)).findFirst().orElseThrow();
     assertEquals(10, bid.remainingQuantity, 1e-9, "ohne Handelsvertrag kein Matching am Posten");
@@ -142,7 +143,7 @@ class PlanetaryPostTest {
     assertFalse(post(a).stream().anyMatch(o -> a.bId().equals(o.ownerId)), "mit Vertrag ist das Gebot ausgeführt");
     assertEquals(10, Depot.qty(a.state(), a.home().systemId, a.home().planetId, a.bId(), GameConstants.FOOD_PRODUCT_ID), 1e-9,
         "Bert hat keine Kolonie hier – die Ware liegt in seinem Depot am Posten");
-    assertEquals(annaBefore + 600, wallet(a, a.aId()).balance, 0.01, "zum Preis der ruhenden Order (60), nicht zum Limit (80)");
+    assertEquals(annaBefore + 200, wallet(a, a.aId()).balance, 0.01, "zum Preis der ruhenden Order (20), nicht zum Limit (80)");
 
     // Anna kauft Berts Depotware zurück: mit Vertrag erlaubt, Lieferung ins Lager ihrer Kolonie.
     FleetCommands.loadCargoFromHubDepot(a.state(), a.bId(), fleet.id, GameConstants.FOOD_PRODUCT_ID, 10);

@@ -59,6 +59,8 @@ public final class Notifications {
   // --- Problem (5xx) ------------------------------------------------------
   /** Produktionswarteschlange mangels Vorprodukten angehalten. */
   public static final int CODE_QUEUE_STOPPED = 503;
+  /** Produktionsauftrag gestoppt, weil er kürzer als die Mindestdauer wäre ({@code GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS}). */
+  public static final int CODE_ORDER_TOO_SMALL = 504;
   /** Grundbedarfsgut nicht am Systemmarkt zu bekommen. */
   public static final int CODE_SUPPLY_GAP = 505;
   /** Energieausfall: die Infrastruktur bekommt kein Elerium mehr. */
@@ -67,6 +69,8 @@ public final class Notifications {
   public static final int CODE_TREASURY_EMPTY = 507;
   /** Die Heimatwelt ist gefallen (Umsetzungskonzept/34_...md, §J 9) – der Kommandant bleibt im Spiel. */
   public static final int CODE_HOMEWORLD_LOST = 508;
+  /** Auftrag gestoppt: die Löhne sind nicht bezahlbar (Umsetzungskonzept/38_...md, Teil B). */
+  public static final int CODE_WAGES_UNPAID = 509;
 
   /**
    * Beschriftung des Links einer Benachrichtigung. Vorher stand im Frontend
@@ -81,7 +85,7 @@ public final class Notifications {
            CODE_TREATY_REJECTED, CODE_TREATY_TERMINATION_REQUESTED, CODE_TREATY_ENDED -> "Diplomatie öffnen";
       case CODE_FLEET_ARRIVED -> "Flotte öffnen";
       case CODE_SELL_ORDER_SOLD_OUT -> "Handel öffnen";
-      case CODE_TREASURY_LOW, CODE_TREASURY_EMPTY -> "Konto öffnen";
+      case CODE_TREASURY_LOW, CODE_TREASURY_EMPTY, CODE_WAGES_UNPAID -> "Konto öffnen";
       case CODE_VICTORY -> "Statistiken öffnen";
       case CODE_HOMEWORLD_LOST -> "Flotten öffnen";
       default -> "Kolonie öffnen";

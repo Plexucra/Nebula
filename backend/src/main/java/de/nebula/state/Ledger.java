@@ -23,7 +23,16 @@ public final class Ledger {
     if (amount <= 0) return;
     for (Wallet w : state.wallets) {
       if (fromWalletId != null && w.id.equals(fromWalletId)) w.balance -= amount;
-      if (toWalletId != null && w.id.equals(toWalletId)) w.balance += amount;
+      if (toWalletId != null && w.id.equals(toWalletId)) {
+        w.balance += amount;
+        // Einkommen der Bevölkerung (Umsetzungskonzept/38, Teil C): jeder Zufluss ins
+        // Bevölkerungs-Wallet – Löhne, Unterhalt, Ausbau, Wachstumsgeld, Ausgleichsfonds –
+        // zählt für das Tagesbudget ihrer Gebote. Escrow-Erstattungen laufen nicht
+        // über den Ledger und zählen deshalb nicht doppelt.
+        if (w.ownerType == de.nebula.model.WalletOwnerType.Population) {
+          state.populationInflowSinceLastDay.merge(w.ownerId, amount, Double::sum);
+        }
+      }
     }
     Transaction tx = new Transaction();
     tx.id = ids.next("tx");

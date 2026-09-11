@@ -48,4 +48,14 @@ public class MarketOrder {
   public boolean autoRelist;
   /** Kolonie auf dem Planeten, aus deren Lager diese Verkaufs-Order gespeist ist; {@code null} = aus dem Depot. */
   public String sourceColonyId;
+  /**
+   * Gebot der BEVÖLKERUNG dieser Kolonie (Umsetzungskonzept/38_...md, Teil C),
+   * nur Kauf-Orders am Posten ihres Planeten. {@code ownerId} ist dabei der
+   * Kommandant der Kolonie, damit die Vertragsregel des Postens unverändert
+   * greift; Escrow und Erstattung laufen über das Bevölkerungs-Wallet, die
+   * Ware geht in den Vorrat ({@code Population.stock}). Der Kommandant kann
+   * das Gebot weder zurückziehen noch umpreisen – die Bevölkerung stellt es
+   * an jedem Kolonietag neu. {@code null} = normale Order.
+   */
+  public String populationColonyId;
 }

@@ -61,6 +61,12 @@ export interface ChainPlan {
    * `ChainPlanStep.workersBoundPerHour` je Schritt.
    */
   workersBoundPerHour: number;
+  /**
+   * Löhne des Auftrags in Credits (Umsetzungskonzept/38): Arbeitsstunden durch
+   * die Produktivität mal Lohnsatz, beim Start vom Kommandanten ins
+   * Bevölkerungs-Wallet gebucht – ohne Guthaben startet der Auftrag nicht.
+   */
+  wageCredits: number;
 }
 
 export type ProductionQueueStatus = 'queued' | 'running' | 'stopped' | 'done';

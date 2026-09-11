@@ -72,6 +72,8 @@ export class AccountComponent {
    * ob das Konto wächst oder leerläuft.
    */
   protected readonly flowPerHour = this.api.treasuryFlowPerHour();
+  /** Forschungsniveau: die Akademiker aller eigenen Kolonien (Umsetzungskonzept/38). */
+  protected readonly researchLevel = this.api.researchLevel();
   protected isIncome(toWalletId: string | null): boolean {
     return toWalletId === this.wallet()?.id;
   }

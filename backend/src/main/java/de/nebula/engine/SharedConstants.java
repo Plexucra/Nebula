@@ -106,9 +106,12 @@ public final class SharedConstants {
     return ROOT.path("npcMailRetentionRealMinutes").asDouble();
   }
 
-  /** Lohn je Einwohner und Spielstunde – Preisanker und Kaufkraftquelle der Bevölkerung zugleich. */
-  public static double wagePerCapitaPerGameHour() {
-    return ROOT.path("wagePerCapitaPerGameHour").asDouble();
+  /**
+   * Lohn je Einwohner-Arbeitsstunde (Umsetzungskonzept/38_...md, Teil B) –
+   * Preisanker und Kaufkraftquelle der Bevölkerung zugleich.
+   */
+  public static double wagePerWorkHour() {
+    return positive("wagePerWorkHour");
   }
   // --- Ende REALZEIT-AUSNAHME ---------------------------------------------
 
@@ -177,9 +180,9 @@ public final class SharedConstants {
     return ROOT.path("populationStockTargetDays").asDouble();
   }
 
-  /** Unter so vielen Tagen Vorrat löst eine neue Order am eigenen Handelsposten einen Notkauf aus. */
-  public static double populationEmergencyPurchaseBelowDays() {
-    return ROOT.path("populationEmergencyPurchaseBelowDays").asDouble();
+  /** Kauforders der Bevölkerung (Umsetzungskonzept/38): Glättung des Einkommens in Spieltagen. */
+  public static double populationIncomeSmoothingDays() {
+    return positive("populationIncomeSmoothingDays");
   }
 
   /** Faktor, um den sich Wohnkapazität, Credits und Baustoffe je Wohnkomplex-Stufe vervielfachen. */
@@ -240,12 +243,38 @@ public final class SharedConstants {
   }
 
   /**
-   * Grundbedarf je Einwohner und Spielstunde, in der Reihenfolge der Datei –
-   * die ist zugleich die Einkaufsreihenfolge des Tageseinkaufs.
+   * Güterstaffel der Arbeiter: Bedarf je Einwohner und Spielstunde, in der
+   * Reihenfolge der Datei – Eintrag i wird ab Wohnstufe i Pflicht, die
+   * Reihenfolge ist zugleich Einkaufsreihenfolge und Vorrang der Gebote
+   * (Umsetzungskonzept/38_...md, Teil D).
    */
   public static Map<String, Double> consumerNeedPerCapitaPerGameHour() {
-    JsonNode node = ROOT.path("consumerNeedPerCapitaPerGameHour");
-    if (!node.isObject() || node.isEmpty()) throw new IllegalStateException("consumerNeedPerCapitaPerGameHour fehlt oder ist leer");
+    return numberMap("consumerNeedPerCapitaPerGameHour");
+  }
+
+  /** Zusatzbedarf der Akademiker je Kopf und Spielstunde, Reihenfolge = Zentrumsstufe (Umsetzungskonzept/38_...md, Teil D). */
+  public static Map<String, Double> academicNeedPerCapitaPerGameHour() {
+    return numberMap("academicNeedPerCapitaPerGameHour");
+  }
+
+  /** So viele Einträge der Akademikertabelle gehören zur Zentrumsstufe 1, jeder weitere zur nächsten Stufe. */
+  public static int academicBaseGoodsCount() {
+    return (int) positive("academicBaseGoodsCount");
+  }
+
+  /** Startterm der Akademiker-Nachfrage und des Zuwachses als Anteil der Arbeiter. */
+  public static double academicSeedShareOfWorkers() {
+    return positive("academicSeedShareOfWorkers");
+  }
+
+  /** Rückkehr des Akademiker-Überhangs zu den Arbeitern je Spielstunde. */
+  public static double academicReturnRatePerHour() {
+    return positive("academicReturnRatePerHour");
+  }
+
+  private static Map<String, Double> numberMap(String key) {
+    JsonNode node = ROOT.path(key);
+    if (!node.isObject() || node.isEmpty()) throw new IllegalStateException(key + " fehlt oder ist leer");
     Map<String, Double> out = new LinkedHashMap<>();
     node.fields().forEachRemaining(e -> out.put(e.getKey(), e.getValue().asDouble()));
     return Collections.unmodifiableMap(out);
@@ -254,6 +283,11 @@ public final class SharedConstants {
   /** Wachstumsgeld je neuem Einwohner, zugleich Grundlage der Kolonistenprämie. */
   public static double creditsPerNewInhabitant() {
     return ROOT.path("creditsPerNewInhabitant").asDouble();
+  }
+
+  /** Mindestdauer eines Produktionsauftrags in Spielminuten (Schutz vor einer Ereignisflut). */
+  public static double minProductionOrderGameMinutes() {
+    return ROOT.path("minProductionOrderGameMinutes").asDouble();
   }
 
   /** Rekrutierung nur bei einer Loyalität ÜBER diesem Wert. */

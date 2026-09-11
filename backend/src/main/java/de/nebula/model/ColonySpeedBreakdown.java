@@ -18,14 +18,21 @@ import java.util.Map;
  * können, der seine strategische Entscheidung beeinflusst.</p>
  */
 public class ColonySpeedBreakdown {
+  /** Gesamtbevölkerung – Arbeiter plus Akademiker. */
   public double population;
   /**
-   * Verfügbare Arbeitskräfte = Bevölkerung der Kolonie (Umsetzungskonzept/19_...md).
-   * Anders als früher ist das KEIN Tempo-Multiplikator mehr, sondern eine
-   * produktspezifische Obergrenze: bindet eine Fertigung mehr Arbeitskräfte je
-   * Stunde als vorhanden sind, läuft sie entsprechend langsamer.
+   * Verfügbare Arbeitskräfte = die ARBEITER der Kolonie (Umsetzungskonzept/19_...md;
+   * seit Umsetzungskonzept/38_...md ohne die Akademiker). Anders als früher
+   * ist das KEIN Tempo-Multiplikator mehr, sondern eine produktspezifische
+   * Obergrenze: bindet eine Fertigung mehr Arbeitskräfte je Stunde als
+   * vorhanden sind, läuft sie entsprechend langsamer.
    */
   public double availableWorkers;
+  public double academics;
+  /** Bezahlte Akademikerplätze des Forschungszentrums (Umsetzungskonzept/38_...md). */
+  public double researchCapacity;
+  /** Lohn je Einwohner-Arbeitsstunde – für die Erklärtexte der Auftragsvorschau. */
+  public double wagePerWorkHour;
   public int industryLevel;
   /** Tempofaktor des Industriekomplexes (linear zur Stufe, siehe {@code Formulas.buildingLevelSpeedFactor}). */
   public double buildingSpeedFactor;

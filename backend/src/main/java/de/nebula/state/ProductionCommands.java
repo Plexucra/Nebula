@@ -3,6 +3,7 @@ package de.nebula.state;
 import de.nebula.data.ProductCatalog;
 import de.nebula.engine.Clock;
 import de.nebula.engine.Formulas;
+import de.nebula.engine.GameConstants;
 import de.nebula.model.ChainPlan;
 import de.nebula.model.ChainPlanStep;
 import de.nebula.model.ProductCategory;
@@ -15,8 +16,10 @@ import de.nebula.model.WarehouseEntry;
 import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
 /**
  * 1:1-Portierung der Produktions-Sektion (sequentielle Warteschlange) aus
@@ -76,19 +79,25 @@ public final class ProductionCommands {
     state.productionQueue.set(b, entry);
   }
 
+  /**
+   * @param raiseToMinimum {@code true}: ein Auftrag unter der Mindestdauer
+   *     ({@link GameConstants#MIN_PRODUCTION_ORDER_GAME_HOURS}) wird auf die Mindestmenge angehoben
+   *     statt abgelehnt – für Aufrufer ohne Mensch davor (Bots).
+   */
   public static void queueProduction(GameState state, IdGenerator ids, String playerId, String colonyId,
                                       String productTypeId, double quantity, boolean autoProduceMissing,
-                                      boolean requeueOnComplete) {
+                                      boolean requeueOnComplete, boolean raiseToMinimum) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
-    queueProductionCore(state, ids, colonyId, productTypeId, quantity, autoProduceMissing, requeueOnComplete);
+    queueProductionCore(state, ids, colonyId, productTypeId, quantity, autoProduceMissing, requeueOnComplete, raiseToMinimum);
   }
 
   /** Ungeprüfter Kern von {@link #queueProduction} – für eine künftige NPC-KI gedacht (siehe TS-Original). */
   public static void queueProductionCore(GameState state, IdGenerator ids, String colonyId, String productTypeId,
-                                          double quantity, boolean autoProduceMissing, boolean requeueOnComplete) {
+                                          double quantity, boolean autoProduceMissing, boolean requeueOnComplete,
+                                          boolean raiseToMinimum) {
     LinkedHashMap<String, Double> demand = new LinkedHashMap<>();
     demand.put(productTypeId, quantity);
-    queueProductionBundleCore(state, ids, colonyId, demand, autoProduceMissing, requeueOnComplete);
+    queueProductionBundleCore(state, ids, colonyId, demand, autoProduceMissing, requeueOnComplete, raiseToMinimum);
   }
 
   /**
@@ -100,15 +109,33 @@ public final class ProductionCommands {
    */
   public static void queueProductionBundle(GameState state, IdGenerator ids, String playerId, String colonyId,
                                             Map<String, Double> products, boolean autoProduceMissing,
-                                            boolean requeueOnComplete) {
+                                            boolean requeueOnComplete, boolean raiseToMinimum) {
     GameQueries.requireOwnColony(state, playerId, colonyId);
-    queueProductionBundleCore(state, ids, colonyId, products, autoProduceMissing, requeueOnComplete);
+    queueProductionBundleCore(state, ids, colonyId, products, autoProduceMissing, requeueOnComplete, raiseToMinimum);
   }
 
-  /** Ungeprüfter Kern von {@link #queueProductionBundle} – für eine künftige NPC-KI gedacht. */
+  /** Wie {@link #queueProductionBundleCore(GameState, IdGenerator, String, Map, boolean, boolean, boolean)}, ohne Anheben. */
   public static void queueProductionBundleCore(GameState state, IdGenerator ids, String colonyId,
                                                 Map<String, Double> products, boolean autoProduceMissing,
                                                 boolean requeueOnComplete) {
+    queueProductionBundleCore(state, ids, colonyId, products, autoProduceMissing, requeueOnComplete, false);
+  }
+
+  /**
+   * Ungeprüfter Kern von {@link #queueProductionBundle} – für eine künftige NPC-KI gedacht.
+   *
+   * <p>Mindestdauer (TODO 11.9.2026): Aufträge, die kürzer als
+   * {@link GameConstants#MIN_PRODUCTION_ORDER_GAME_HOURS} liefen, werden abgelehnt – die Meldung
+   * nennt die Mindestmenge. Grund ist die Flut von Fertigstellungsereignissen, die eine Serie
+   * winziger Aufträge (vor allem mit „Nach Erfolg erneut einreihen") auslöst. Mit
+   * {@code raiseToMinimum} wird der Auftrag stattdessen angehoben, und zwar mit Puffer auf
+   * {@link #SYSTEM_RAISE_HEADROOM} × Mindestdauer.</p>
+   *
+   * @return die tatsächlich eingereihten Mengen je Produkt
+   */
+  public static Map<String, Double> queueProductionBundleCore(GameState state, IdGenerator ids, String colonyId,
+                                                              Map<String, Double> products, boolean autoProduceMissing,
+                                                              boolean requeueOnComplete, boolean raiseToMinimum) {
     if (products.isEmpty()) throw new CommandException("Mindestens ein Produkt erforderlich.");
     LinkedHashMap<String, Double> normalized = new LinkedHashMap<>();
     for (Map.Entry<String, Double> e : products.entrySet()) {
@@ -125,13 +152,19 @@ public final class ProductionCommands {
     if (GameQueries.getBuildingLevel(state, colonyId, "b_industry") < 1) {
       throw new CommandException("Ohne Industriekomplex ist keine Fertigung möglich.");
     }
-    Map.Entry<String, Double> first = normalized.entrySet().iterator().next();
+    Map<String, Double> order = normalized;
+    if (raiseToMinimum) {
+      order = raisedWithHeadroom(state, colonyId, normalized);
+    } else {
+      double hours = ChainPlanner.planChain(state, colonyId, normalized, "b_industry").totalHours;
+      if (hours < GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS) {
+        throw new CommandException(tooSmallMessage(normalized, hours, raisedToMinimum(state, colonyId, normalized)));
+      }
+    }
     ProductionQueueEntry entry = new ProductionQueueEntry();
     entry.id = ids.next("pq");
     entry.colonyId = colonyId;
-    entry.productTypeId = first.getKey();
-    entry.quantity = first.getValue();
-    entry.bundledProducts = normalized.size() > 1 ? normalized : null;
+    applyQuantities(entry, order, order.size() > 1);
     entry.autoProduceMissing = autoProduceMissing;
     entry.requeueOnComplete = requeueOnComplete;
     entry.status = ProductionQueueStatus.queued;
@@ -141,6 +174,107 @@ public final class ProductionCommands {
     entry.endsAt = null;
     state.productionQueue.add(entry);
     tryStartNextProductionEntry(state, ids, colonyId);
+    return order;
+  }
+
+  // --- Mindestdauer ------------------------------------------------------------
+
+  /**
+   * Puffer für Aufträge, die das System selbst anhebt (Startaufträge, Neu-Einreihen eines
+   * Dauerauftrags, „Fehlende Baustoffe produzieren", Bots mit {@code raiseToMinimum}): doppelte
+   * Mindestdauer. Genau auf die Mindestmenge angehoben, fielen wartende Startaufträge im
+   * Browsertest vor ihrem Start schon wieder darunter – die Kolonie wächst, die Spezialisierung
+   * steigt, jede Fertigung wird schneller – und ein neuer Kommandant fand zwei gestoppte
+   * Daueraufträge vor.
+   */
+  static final double SYSTEM_RAISE_HEADROOM = 2;
+
+  /** Kleinste Stückzahl eines Einzelauftrags, die die Mindestdauer erreicht – für Vorschau und Bots. */
+  public static double minimumProductionQuantity(GameState state, String colonyId, String productTypeId) {
+    ProductCatalog.find(productTypeId);
+    return raisedToMinimum(state, colonyId, Map.of(productTypeId, 1.0)).get(productTypeId);
+  }
+
+  /**
+   * Kleinste Mengen, mit denen ein Auftrag die Mindestdauer
+   * {@link GameConstants#MIN_PRODUCTION_ORDER_GAME_HOURS} erreicht: alle Produkte mit DEMSELBEN
+   * Faktor hochskaliert (ein Bündel bleibt im Verhältnis), ganze Stücke. Unverändert, wenn der
+   * Auftrag schon lang genug ist.
+   *
+   * <p>Bisektion über den Faktor. Die Dauer wächst monoton mit der Menge (der Lagerabzug ist
+   * durch den Bestand gedeckelt), und beim Faktor {@code Mindestdauer / Stunden der
+   * Wurzelschritte} reichen schon die Wurzelschritte allein – die deckt der Planer nie aus dem
+   * Lager, ihre Dauer wächst also linear mit.</p>
+   */
+  public static Map<String, Double> raisedToMinimum(GameState state, String colonyId, Map<String, Double> demand) {
+    return raisedTo(state, colonyId, demand, GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS);
+  }
+
+  /** Wie {@link #raisedToMinimum}, aber auf {@link #SYSTEM_RAISE_HEADROOM} × Mindestdauer – für Aufträge, die das System anhebt. */
+  static Map<String, Double> raisedWithHeadroom(GameState state, String colonyId, Map<String, Double> demand) {
+    return raisedTo(state, colonyId, demand, GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS * SYSTEM_RAISE_HEADROOM);
+  }
+
+  private static Map<String, Double> raisedTo(GameState state, String colonyId, Map<String, Double> demand, double min) {
+    ChainPlan plan = ChainPlanner.planChain(state, colonyId, demand, "b_industry");
+    if (plan.totalHours >= min) return demand;
+    double rootHours = 0;
+    for (ChainPlanStep s : plan.steps) if (s.isRoot) rootHours += s.hours;
+    if (rootHours <= 0) return demand;
+    double lo = 1;
+    double hi = Math.max(1, min / rootHours) * (1 + 1e-9);
+    for (int i = 0; i < 60 && hi - lo > 1e-9 * hi; i++) {
+      double mid = (lo + hi) / 2;
+      if (ChainPlanner.planChain(state, colonyId, scaled(demand, mid), "b_industry").totalHours >= min) hi = mid;
+      else lo = mid;
+    }
+    return scaled(demand, hi);
+  }
+
+  private static Map<String, Double> scaled(Map<String, Double> demand, double factor) {
+    LinkedHashMap<String, Double> out = new LinkedHashMap<>();
+    for (Map.Entry<String, Double> e : demand.entrySet()) out.put(e.getKey(), Math.ceil(e.getValue() * factor));
+    return out;
+  }
+
+  /** Die Wurzelprodukte eines Auftrags samt Menge – Einzelauftrag oder Bündel. */
+  private static Map<String, Double> demandOf(ProductionQueueEntry entry) {
+    if (entry.bundledProducts != null) return entry.bundledProducts;
+    LinkedHashMap<String, Double> demand = new LinkedHashMap<>();
+    demand.put(entry.productTypeId, entry.quantity);
+    return demand;
+  }
+
+  private static void applyQuantities(ProductionQueueEntry entry, Map<String, Double> quantities, boolean bundled) {
+    Map.Entry<String, Double> first = quantities.entrySet().iterator().next();
+    entry.productTypeId = first.getKey();
+    entry.quantity = first.getValue();
+    entry.bundledProducts = bundled ? quantities : null;
+  }
+
+  /**
+   * Hebt einen Auftrag, den das System selbst anlegt (Startaufträge aus dem WorldSeed, die am
+   * Befehl vorbei in die Warteschlange kommen), auf die Mindestmenge an.
+   */
+  public static void raiseToMinimum(GameState state, ProductionQueueEntry entry) {
+    applyQuantities(entry, raisedWithHeadroom(state, entry.colonyId, demandOf(entry)), entry.bundledProducts != null);
+  }
+
+  private static String quantityLabel(Map<String, Double> demand) {
+    return demand.entrySet().stream()
+        .map(e -> (long) (double) e.getValue() + " × " + ProductCatalog.find(e.getKey()).name)
+        .collect(Collectors.joining(", "));
+  }
+
+  static String tooSmallMessage(Map<String, Double> demand, double hours, Map<String, Double> minimum) {
+    String need = minimum.size() == 1
+        ? "Mindestens " + (long) (double) minimum.values().iterator().next() + " Stück einreihen."
+        : "Mindestmengen für dieses Bündel: " + quantityLabel(minimum) + ".";
+    return "Auftrag zu klein: " + quantityLabel(demand) + " wäre nach "
+        + String.format(Locale.GERMAN, "%.1f", hours * 60) + " Spielminuten fertig. Aufträge unter "
+        + String.format(Locale.GERMAN, "%.0f", GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS * 60)
+        + " Spielminuten nimmt der Industriekomplex nicht an – eine Serie von Kleinstaufträgen rüstet die "
+        + "Anlagen für jedes Los neu und ist ineffizient, größere Lose fertigen dieselbe Menge ohne Leerlauf. " + need;
   }
 
   /**
@@ -158,6 +292,15 @@ public final class ProductionCommands {
     GameQueries.requireOwnColony(state, playerId, colonyId);
     ProductionQueueEntry entry = find(state, colonyId, entryId);
     if (entry == null || entry.status != ProductionQueueStatus.stopped) return;
+    if (entry.stoppedReasonCode != null && entry.stoppedReasonCode == Notifications.CODE_ORDER_TOO_SMALL) {
+      // Ein zu kleiner Auftrag wird durch Fortsetzen nicht größer – Grund nennen statt still wieder zu stoppen.
+      Map<String, Double> demand = demandOf(entry);
+      double hours = ChainPlanner.planChain(state, colonyId, demand, "b_industry").totalHours;
+      if (hours < GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS) {
+        throw new CommandException(tooSmallMessage(demand, hours, raisedToMinimum(state, colonyId, demand))
+            + " Den Auftrag abbrechen und mit größerer Menge neu einreihen.");
+      }
+    }
     entry.status = ProductionQueueStatus.queued;
     entry.stoppedReasonCode = null;
     tryStartNextProductionEntry(state, ids, colonyId);
@@ -227,14 +370,20 @@ public final class ProductionCommands {
     List<ProductionQueueEntry> queue = productionQueueFor(state, colonyId);
     for (ProductionQueueEntry e : queue) if (e.status == ProductionQueueStatus.running) return;
     for (ProductionQueueEntry e : queue) {
-      if (e.status == ProductionQueueStatus.queued) {
-        startProductionEntry(state, ids, e);
-        return;
-      }
+      if (e.status != ProductionQueueStatus.queued) continue;
+      if (startProductionEntry(state, ids, e)) return;
+      // Fehlende Vorprodukte halten die Warteschlange an wie bisher. Ein zu kleiner Auftrag
+      // wird durch Warten dagegen nicht größer – dann darf der nächste ran.
+      if (e.stoppedReasonCode == null || e.stoppedReasonCode != Notifications.CODE_ORDER_TOO_SMALL) return;
     }
   }
 
-  private static void startProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
+  /**
+   * @return {@code true}, wenn der Auftrag läuft; {@code false}, wenn er gestoppt wurde
+   *     (Vorprodukte fehlen oder er ist inzwischen kürzer als die Mindestdauer – etwa weil der
+   *     Industriekomplex seit dem Einreihen ausgebaut wurde)
+   */
+  private static boolean startProductionEntry(GameState state, IdGenerator ids, ProductionQueueEntry entry) {
     ChainPlan plan = entry.bundledProducts != null
         ? ChainPlanner.planChain(state, entry.colonyId, entry.bundledProducts, "b_industry")
         : ChainPlanner.planChain(state, entry.colonyId, entry.productTypeId, entry.quantity, "b_industry");
@@ -247,11 +396,32 @@ public final class ProductionCommands {
           : ProductCatalog.find(entry.productTypeId).name;
       Notifications.notify(state, ids, de.nebula.model.NotificationType.Problem, Notifications.CODE_QUEUE_STOPPED,
           "Produktionswarteschlange angehalten: nicht genug Vorprodukte für \"" + label + "\" vorhanden.", entry.colonyId, null);
-      return;
+      return false;
+    }
+    if (plan.totalHours < GameConstants.MIN_PRODUCTION_ORDER_GAME_HOURS) {
+      Map<String, Double> demand = demandOf(entry);
+      entry.plan = plan;
+      entry.status = ProductionQueueStatus.stopped;
+      entry.stoppedReasonCode = Notifications.CODE_ORDER_TOO_SMALL;
+      Notifications.notify(state, ids, de.nebula.model.NotificationType.Problem, Notifications.CODE_ORDER_TOO_SMALL,
+          "Produktionsauftrag gestoppt. " + tooSmallMessage(demand, plan.totalHours, raisedToMinimum(state, entry.colonyId, demand))
+              + " Den gestoppten Auftrag abbrechen und neu einreihen.", entry.colonyId, null);
+      return false;
+    }
+    // Löhne je Arbeitsstunde (Umsetzungskonzept/38, Teil B): ohne Guthaben startet nichts –
+    // geprüft VOR dem Lagerabzug, gebucht danach.
+    String label = quantityLabel(demandOf(entry));
+    if (!Wages.affordable(state, entry.colonyId, plan)) {
+      entry.plan = plan;
+      entry.status = ProductionQueueStatus.stopped;
+      entry.stoppedReasonCode = Notifications.CODE_WAGES_UNPAID;
+      Wages.notifyUnpaid(state, ids, entry.colonyId, plan, label, "Produktionswarteschlange");
+      return false;
     }
     for (ChainPlanStep step : plan.steps) {
       if (step.quantityFromWarehouse > 0) Warehouse.add(state, entry.colonyId, step.productTypeId, -step.quantityFromWarehouse);
     }
+    Wages.pay(state, ids, entry.colonyId, plan, label);
     long startedAt = Clock.now();
     long endsAt = startedAt + (long) Clock.hoursToMs(plan.totalHours);
     entry.plan = plan;
@@ -259,6 +429,7 @@ public final class ProductionCommands {
     entry.startedAt = startedAt;
     entry.endsAt = endsAt;
     GameEvents.schedule(state, GameEventType.PRODUCTION_COMPLETED, entry.id, endsAt);
+    return true;
   }
 
   /** Ereignis {@code PRODUCTION_COMPLETED} – veraltet, wenn der Auftrag nicht mehr läuft oder ein anderes Ende trägt. */
@@ -275,13 +446,13 @@ public final class ProductionCommands {
     if (entry.bundledProducts != null) {
       for (Map.Entry<String, Double> e : entry.bundledProducts.entrySet()) {
         Warehouse.add(state, entry.colonyId, e.getKey(), e.getValue());
-        Economy.emergencyPurchase(state, ids, entry.colonyId, e.getKey());
+        MarketCommands.matchColonyPost(state, ids, entry.colonyId, e.getKey());
       }
     } else {
       Warehouse.add(state, entry.colonyId, entry.productTypeId, entry.quantity);
       // Das Einlagern hat eine schlafende Dauerorder nachgefüllt (Warehouse.addRaw);
-      // eine knappe Bevölkerung kauft daraus sofort (Umsetzungskonzept/36).
-      Economy.emergencyPurchase(state, ids, entry.colonyId, entry.productTypeId);
+      // das stehende Gebot der Bevölkerung kreuzt damit sofort (Umsetzungskonzept/38).
+      MarketCommands.matchColonyPost(state, ids, entry.colonyId, entry.productTypeId);
     }
     Specializations.registerProducedChain(state, entry.colonyId, entry.plan);
     state.productionQueue.remove(entry);
@@ -289,9 +460,10 @@ public final class ProductionCommands {
       ProductionQueueEntry fresh = new ProductionQueueEntry();
       fresh.id = ids.next("pq");
       fresh.colonyId = entry.colonyId;
-      fresh.productTypeId = entry.productTypeId;
-      fresh.quantity = entry.quantity;
-      fresh.bundledProducts = entry.bundledProducts;
+      // Der Dauerauftrag wächst mit, wenn er inzwischen unter die Mindestdauer fiele (Industrie
+      // ausgebaut, Spezialisierung gestiegen) – sonst stoppte er nach jedem Ausbau beim nächsten
+      // Umlauf und müsste von Hand neu eingereiht werden.
+      applyQuantities(fresh, raisedWithHeadroom(state, entry.colonyId, demandOf(entry)), entry.bundledProducts != null);
       fresh.autoProduceMissing = entry.autoProduceMissing;
       fresh.requeueOnComplete = true;
       fresh.status = ProductionQueueStatus.queued;

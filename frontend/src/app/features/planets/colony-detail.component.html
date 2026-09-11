@@ -131,127 +131,185 @@
             }
           }
           @for (bt of buildingTypes; track bt.id) {
-              <div class="building-row">
-                <div class="building-info">
-                  <strong>{{ bt.name }}</strong>
-                  @if (bt.category === 'Infrastructure' && powerCoverage() < 0.999) {
-                    <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Stabilisiertes Elerium</span>
+            @let level = buildingLevel(bt.id);
+            @let building = buildingFor(bt.id);
+            <!-- Eine Karte je Gebäude mit vier festen Bereichen – Bild, Stufe,
+                 Informationen, Ausbau – statt einer Zeile, in der Beschreibung,
+                 Kennzahlen, Baustoffe und Knöpfe ineinanderliefen. -->
+            <article class="building-card" [attr.data-cat]="bt.category" [class.unbuilt]="level === 0" [class.upgrading]="!!building?.pendingOrder">
+              <header class="bc-head">
+                <h3>{{ bt.name }}</h3>
+                <span class="bc-category">{{ categoryLabel(bt.category) }}</span>
+                @if (building?.pendingOrder; as order) { <span class="tag warn">Ausbau → Stufe {{ order.targetLevel }}</span> }
+                @if (bt.category === 'Infrastructure' && powerCoverage() < 0.999) {
+                  <span class="tag warn">Blackout {{ powerCoverage() * 100 | number:'1.0-0' }}% – zu wenig Stabilisiertes Elerium</span>
+                }
+              </header>
+              <div class="bc-body">
+                <div class="bc-image">
+                  <img [src]="buildingImage(bt.id)" [alt]="bt.name" [class.is-graphic]="!hasBuildingPhoto(bt.id)"
+                       width="600" height="400" loading="lazy" decoding="async" />
+                </div>
+
+                <section class="bc-level">
+                  <span class="eyebrow">Stufe</span>
+                  <span class="mono bc-level-value">{{ level }}</span>
+                  @if (building?.pendingOrder; as order) {
+                    <span class="mono bc-level-next">→ {{ order.targetLevel }}</span>
+                  } @else if (level === 0) {
+                    <span class="hint">nicht gebaut</span>
                   }
-                  <span class="hint">{{ bt.description }}</span>
-                  @if (bt.category === 'Infrastructure' && buildingLevel(bt.id) > 0) {
-                    <span class="hint mono power-upkeep-hint">Verbrauch {{ powerUpkeepPerHour() | number:'1.3-4' }} Stabilisiertes Elerium/h · Lager {{ stockOf('p_elerium_stabil') | number:'1.0-2' }}</span>
-                    @if (energyStorage(); as es) {
-                      <div class="energy-storage">
-                        <span class="eyebrow">Energiespeicher</span>
-                        <span class="hint mono">
-                          Vorrat {{ es.stored | number:'1.0-0' }} / {{ es.reserveTarget | number:'1.0-0' }} Stabilisiertes Elerium
-                          @if (es.storedCoverageGameHours !== null) { · reicht {{ es.storedCoverageGameHours / 24 | number:'1.0-1' }} Tage }
-                          @if (es.automatic) { · automatisch ({{ es.defaultTarget | number:'1.0-0' }} = 10 Tage Verbrauch der aktuellen Stufe) } @else { · fest eingestellt (automatisch wären {{ es.defaultTarget | number:'1.0-0' }}) }
-                        </span>
-                        <span class="hint">Eintreffendes Stabilisiertes Elerium füllt zuerst den Speicher; nur er versorgt die Infrastruktur zuerst, Produktionsketten sehen ausschließlich das Lager. Wird die Vorhaltemenge gesenkt, geht der Überschuss ins Lager.</span>
-                        <div class="energy-storage-form">
-                          <label>Vorhaltemenge
-                            <input type="number" min="0" step="1" [(ngModel)]="energyReserveDraft" [placeholder]="es.reserveTarget | number:'1.0-0'" [disabled]="busy() === 'energy-reserve'" />
-                          </label>
-                          <button type="button" class="btn small" (click)="applyEnergyReserve()" [disabled]="busy() === 'energy-reserve'">Übernehmen</button>
-                          @if (!es.automatic) {
-                            <button type="button" class="btn small ghost" (click)="resetEnergyReserveToAutomatic()" [disabled]="busy() === 'energy-reserve'">Automatisch</button>
+                </section>
+
+                <section class="bc-info">
+                  <span class="eyebrow">Informationen</span>
+                  <p class="bc-desc">{{ bt.description }}</p>
+                  <dl class="bc-facts">
+                    @if (bt.category === 'Infrastructure') {
+                      @if (slots(); as sl) {
+                        <dt>Bebauungsplätze</dt><dd>{{ sl.total }} geliefert · {{ sl.used }} belegt · {{ sl.free }} frei</dd>
+                        <dt>Planetweit</dt><dd>{{ sl.planetInfrastructureTotal }} / {{ sl.planetInfrastructureMax }} Stufen <span class="hint">– die Kosten steigen mit der Summe aller Kolonien des Planeten</span></dd>
+                      }
+                      @if (level > 0) {
+                        <dt>Verbrauch</dt><dd>{{ powerUpkeepPerHour() | number:'1.3-4' }} Stabilisiertes Elerium/h</dd>
+                        <dt>Lager</dt><dd>{{ stockOf('p_elerium_stabil') | number:'1.0-2' }} Stabilisiertes Elerium</dd>
+                      }
+                    }
+                    @if (bt.category === 'Housing' && speedBreakdown(); as sb) {
+                      <dt>Wohnkapazität</dt><dd>{{ sb.housingCapacity | number:'1.0-0' }} <span class="hint">– jede Stufe verdoppelt sie</span></dd>
+                    }
+                    @if (bt.category === 'Research' && speedBreakdown(); as sb) {
+                      <dt>Forschungsplätze</dt><dd>{{ sb.researchCapacity | number:'1.0-0' }} <span class="hint">– jede Stufe verdoppelt sie</span></dd>
+                      <dt>Akademiker</dt><dd>{{ sb.academics | number:'1.0-0' }} <span class="hint">– jeder kostet {{ sb.wagePerWorkHour * 24 | number:'1.2-2' }} Cr Gehalt je Spieltag, Details im Tab Bevölkerung</span></dd>
+                    }
+                    @if (bt.category === 'ProductionFacility') {
+                      <dt>Produktionstempo</dt><dd>{{ productionSpeedPct(bt.id) | number:'1.0-0' }} % <span class="hint">– nächste Stufe {{ nextProductionSpeedPct(bt.id) | number:'1.0-0' }} %</span></dd>
+                    }
+                    <dt>Unterhalt</dt><dd>{{ currentUpkeep(bt) | number:'1.0-1' }} Cr/h</dd>
+                  </dl>
+
+                  @if (bt.category === 'Infrastructure' && level > 0 && energyStorage(); as es) {
+                    <div class="bc-sub energy-storage">
+                      <span class="eyebrow">Energiespeicher</span>
+                      <span class="hint mono">
+                        Vorrat {{ es.stored | number:'1.0-0' }} / {{ es.reserveTarget | number:'1.0-0' }} Stabilisiertes Elerium
+                        @if (es.storedCoverageGameHours !== null) { · reicht {{ es.storedCoverageGameHours / 24 | number:'1.0-1' }} Tage }
+                        @if (es.automatic) { · automatisch ({{ es.defaultTarget | number:'1.0-0' }} = 10 Tage Verbrauch der aktuellen Stufe) } @else { · fest eingestellt (automatisch wären {{ es.defaultTarget | number:'1.0-0' }}) }
+                      </span>
+                      <span class="hint">Eintreffendes Stabilisiertes Elerium füllt zuerst den Speicher; nur er versorgt die Infrastruktur zuerst, Produktionsketten sehen ausschließlich das Lager. Wird die Vorhaltemenge gesenkt, geht der Überschuss ins Lager.</span>
+                      <div class="energy-storage-form">
+                        <label>Vorhaltemenge
+                          <input type="number" min="0" step="1" [(ngModel)]="energyReserveDraft" [placeholder]="es.reserveTarget | number:'1.0-0'" [disabled]="busy() === 'energy-reserve'" />
+                        </label>
+                        <button type="button" class="btn small" (click)="applyEnergyReserve()" [disabled]="busy() === 'energy-reserve'">Übernehmen</button>
+                        @if (!es.automatic) {
+                          <button type="button" class="btn small ghost" (click)="resetEnergyReserveToAutomatic()" [disabled]="busy() === 'energy-reserve'">Automatisch</button>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  @if (bt.category === 'PlanetaryDefense' && level > 0) {
+                    <!-- Die Abwehr steht in der Bebauungsliste statt in einem eigenen
+                         Tab für eine einzige Zeile – sie ist ein Gebäude mit
+                         Bebauungsplatz wie die anderen auch. -->
+                    <div class="bc-sub">
+                      <span class="eyebrow">Abwehrstatus</span>
+                      @switch (building?.activationState) {
+                        @case ('Active') {
+                          <div class="bc-inline">
+                            <span class="tag good">Abwehr aktiv</span>
+                            <button class="ghost small" (click)="deactivateDefense(building!.id)">Deaktivieren</button>
+                          </div>
+                        }
+                        @case ('Activating') {
+                          <div class="bc-inline">
+                            <span class="tag warn">Aktivierung läuft</span>
+                            <span class="mono">{{ countdown((building?.activationCompletesAt ?? 0) - clock.now()) }}</span>
+                          </div>
+                        }
+                        @default {
+                          <div class="bc-inline">
+                            <span class="tag warn">Abwehr inaktiv</span>
+                            <button class="small" (click)="activateDefense(building!.id)" [disabled]="busy() === 'activate:' + building?.id">Aktivieren (12h Anlaufzeit)</button>
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+                </section>
+
+                <section class="bc-upgrade">
+                  <span class="eyebrow">Ausbau</span>
+                  @if (building?.pendingOrder; as order) {
+                    <div class="bc-progress">
+                      <span>Stufe {{ order.targetLevel }} fertig in <strong class="mono">{{ countdown(order.completesAt - clock.now()) }}</strong></span>
+                      <div class="stat-bar"><span [style.width.%]="buildingProgressPct(order)"></span></div>
+                      <div class="bc-actions">
+                        <button class="ghost small" (click)="cancelBuilding(building!.id)" [disabled]="busy() === 'cancel:' + building!.id">Abbrechen</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <!-- Drei Zellen über die volle Kartenbreite: Eckdaten, Baustoffe,
+                         Hinweise und Knöpfe – schmal gestapelt (Container-Abfrage). -->
+                    <div class="bc-upgrade-grid">
+                      <dl class="bc-facts">
+                        <dt>Ziel</dt><dd>Stufe {{ level + 1 }}</dd>
+                        <dt>Kosten</dt><dd>{{ upgradeCost(bt) | number:'1.0-0' }} Cr</dd>
+                        <dt>Dauer</dt><dd>{{ upgradeHours(bt) | number:'1.1-1' }} h</dd>
+                        @if (bt.category !== 'Infrastructure') { <dt>Platz</dt><dd>1 Bebauungsplatz</dd> }
+                        <!-- Laufender Unterhalt: die Zahl, die beim Ausbau vorher fehlte. -->
+                        @if (additionalUpkeep(bt) > 0) { <dt>Unterhalt danach</dt><dd>{{ currentUpkeep(bt) + additionalUpkeep(bt) | number:'1.0-1' }} Cr/h</dd> }
+                      </dl>
+                      <div class="bc-materials">
+                        @if (upgradeMaterials(bt).length > 0) {
+                          <div class="bc-material bc-material-head"><span>Baustoff</span><span>Bedarf</span><span>Lager</span></div>
+                          @for (m of upgradeMaterials(bt); track m.productTypeId) {
+                            <div class="bc-material material" [class.bad]="m.available < m.required" [class.good]="m.available >= m.required">
+                              <span>{{ productName(m.productTypeId) }}</span>
+                              <span class="mono">{{ m.required | number:'1.0-0' }}</span>
+                              <span class="mono">{{ m.available | number:'1.0-0' }}</span>
+                            </div>
+                          }
+                        } @else {
+                          <p class="hint bc-note">Keine Baustoffe nötig.</p>
+                        }
+                      </div>
+                      <div class="bc-upgrade-actions">
+                        <!-- Eleriumverbrauch der Infrastruktur: wächst überlinear mit der Stufe
+                             und ist der häufigste Weg in den Blackout (Umsetzungskonzept/34, F4/F5). -->
+                        @if (eleriumAfterUpgrade(bt) > 0) {
+                          <p class="hint mono bc-note" [class.bad]="eleriumUpgradeWarning(bt)">
+                            Elerium {{ eleriumPerHour() | number:'1.0-3' }}/h → {{ eleriumAfterUpgrade(bt) | number:'1.0-3' }}/h nach dem Ausbau ·
+                            Vorrat reicht dann {{ eleriumHoursLeftAfterUpgrade(bt) | number:'1.0-0' }} Spielstunden
+                            @if (eleriumUpgradeWarning(bt)) { — zu wenig für die vorgehaltene Reserve: ohne mehr Eleriumnachschub endet der Ausbau im Blackout }
+                          </p>
+                        }
+                        @if (upgradeBlockedReason(bt); as reason) { <p class="hint bad bc-note">{{ reason }}</p> }
+                        <div class="bc-actions">
+                          <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || !upgradeAffordable(bt)">
+                            {{ busy() === 'build:' + bt.id ? 'Beauftrage…' : (level === 0 ? 'Bauen' : 'Ausbauen') }}
+                          </button>
+                          @if (missingMaterials(bt).length > 0) {
+                            <!-- EIN Bündelauftrag statt mehrerer Einzelaufträge: Baustoffe,
+                                 die Vorprodukte voneinander sind, nehmen sich sonst
+                                 gegenseitig den Lagerbestand weg. -->
+                            <button class="small" (click)="produceMissingMaterials(bt.id)"
+                                    [disabled]="busy() === 'materials:' + bt.id"
+                                    title="Reiht alle fehlenden Baustoffe als EINEN Auftrag ein – so verbrauchen sie sich nicht gegenseitig. Kleine Mengen werden auf die Mindestdauer eines Produktionsauftrags angehoben, der Rest bleibt im Lager.">
+                              {{ busy() === 'materials:' + bt.id ? 'Reihe ein…' : 'Fehlende Baustoffe produzieren' }}
+                            </button>
+                          }
+                          @if (level > 0) {
+                            <button class="ghost small danger" (click)="demolish(building!.id)" [disabled]="busy() === 'demolish:' + building?.id">Rückbau (50%)</button>
                           }
                         </div>
                       </div>
-                    }
+                    </div>
                   }
-                  @if (bt.category === 'Infrastructure' && slots(); as sl) {
-                    <span class="hint mono">Liefert {{ sl.total }} Bebauungsplätze · planetweit {{ sl.planetInfrastructureTotal }} / {{ sl.planetInfrastructureMax }} (Kosten steigen mit der Summe aller Kolonien des Planeten)</span>
-                  }
-                  @if (bt.category === 'Housing' && speedBreakdown(); as sb) {
-                    <span class="hint mono">Wohnkapazität {{ sb.housingCapacity | number:'1.0-0' }} · jede Stufe verdoppelt sie</span>
-                  }
-                  @if (bt.category === 'ProductionFacility') {
-                    <span class="hint mono">
-                      Produktionstempo: {{ productionSpeedPct(bt.id) | number:'1.0-0' }}%
-                      (nächste Stufe: {{ nextProductionSpeedPct(bt.id) | number:'1.0-0' }}%)
-                    </span>
-                  }
-                </div>
-                <div class="building-level">
-                  <span class="eyebrow">Stufe</span>
-                  <span class="mono big">{{ buildingLevel(bt.id) }}</span>
-                </div>
-                @if (buildingFor(bt.id)?.pendingOrder; as order) {
-                  <div class="building-progress">
-                    <span class="tag warn">Ausbau → Stufe {{ order.targetLevel }}</span>
-                    <span class="mono">{{ countdown(order.completesAt - clock.now()) }}</span>
-                    <button class="ghost small" (click)="cancelBuilding(buildingFor(bt.id)!.id)" [disabled]="busy() === 'cancel:' + buildingFor(bt.id)!.id">Abbrechen</button>
-                  </div>
-                } @else {
-                  <div class="building-actions">
-                    <span class="hint mono">Stufe {{ buildingLevel(bt.id) + 1 }}: {{ upgradeCost(bt) | number:'1.0-0' }} Cr · {{ upgradeHours(bt) | number:'1.1-1' }}h{{ bt.category !== 'Infrastructure' ? ' · 1 Platz' : '' }}</span>
-                    @for (m of upgradeMaterials(bt); track m.productTypeId) {
-                      <span class="hint mono material" [class.bad]="m.available < m.required" [class.good]="m.available >= m.required">
-                        {{ productName(m.productTypeId) }} {{ m.required | number:'1.0-0' }} <span class="hint">(Lager {{ m.available | number:'1.0-0' }})</span>
-                      </span>
-                    }
-                    <!-- Laufender Unterhalt: die Zahl, die beim Ausbau vorher fehlte. -->
-                    <span class="hint mono upkeep">
-                      Unterhalt {{ currentUpkeep(bt) | number:'1.0-1' }} Cr/h
-                      @if (additionalUpkeep(bt) > 0) { · nach dem Ausbau {{ currentUpkeep(bt) + additionalUpkeep(bt) | number:'1.0-1' }} Cr/h }
-                    </span>
-                    <!-- Eleriumverbrauch der Infrastruktur: wächst überlinear mit der Stufe
-                         und ist der häufigste Weg in den Blackout (Umsetzungskonzept/34, F4/F5). -->
-                    @if (eleriumAfterUpgrade(bt) > 0) {
-                      <span class="hint mono upkeep" [class.bad]="eleriumUpgradeWarning(bt)">
-                        Elerium {{ eleriumPerHour() | number:'1.0-3' }}/h → {{ eleriumAfterUpgrade(bt) | number:'1.0-3' }}/h nach dem Ausbau ·
-                        Vorrat reicht dann {{ eleriumHoursLeftAfterUpgrade(bt) | number:'1.0-0' }} Spielstunden
-                        @if (eleriumUpgradeWarning(bt)) { — zu wenig für die vorgehaltene Reserve: ohne mehr Eleriumnachschub endet der Ausbau im Blackout }
-                      </span>
-                    }
-                    @if (upgradeBlockedReason(bt); as reason) { <span class="hint bad">{{ reason }}</span> }
-                    <button class="small" (click)="upgradeBuilding(bt.id)" [disabled]="busy() === 'build:' + bt.id || !upgradeAffordable(bt)">
-                      {{ busy() === 'build:' + bt.id ? 'Beauftrage…' : 'Ausbauen' }}
-                    </button>
-                    @if (missingMaterials(bt).length > 0) {
-                      <!-- EIN Bündelauftrag statt mehrerer Einzelaufträge: Baustoffe,
-                           die Vorprodukte voneinander sind, nehmen sich sonst
-                           gegenseitig den Lagerbestand weg. -->
-                      <button class="small" (click)="produceMissingMaterials(bt.id)"
-                              [disabled]="busy() === 'materials:' + bt.id"
-                              title="Reiht alle fehlenden Baustoffe als EINEN Auftrag ein – so verbrauchen sie sich nicht gegenseitig.">
-                        {{ busy() === 'materials:' + bt.id ? 'Reihe ein…' : 'Fehlende Baustoffe produzieren' }}
-                      </button>
-                    }
-                    @if (buildingLevel(bt.id) > 0) {
-                      <button class="ghost small danger" (click)="demolish(buildingFor(bt.id)!.id)" [disabled]="busy() === 'demolish:' + buildingFor(bt.id)?.id">Rückbau (50%)</button>
-                    }
-                  </div>
-                }
-                @if (bt.category === 'PlanetaryDefense' && buildingLevel(bt.id) > 0) {
-                  <!-- Die Abwehr steht jetzt in der Bebauungsliste statt in einem
-                       eigenen Tab für eine einzige Zeile – sie ist ein Gebäude
-                       mit Bebauungsplatz wie die anderen auch, und ihr Name
-                       fehlte im alten Tab sogar ganz. -->
-                  @switch (buildingFor(bt.id)?.activationState) {
-                    @case ('Active') {
-                      <div class="building-progress">
-                        <span class="tag good">Abwehr aktiv</span>
-                        <button class="ghost small" (click)="deactivateDefense(buildingFor(bt.id)!.id)">Deaktivieren</button>
-                      </div>
-                    }
-                    @case ('Activating') {
-                      <div class="building-progress">
-                        <span class="tag warn">Aktivierung läuft</span>
-                        <span class="mono">{{ countdown((buildingFor(bt.id)?.activationCompletesAt ?? 0) - clock.now()) }}</span>
-                      </div>
-                    }
-                    @default {
-                      <div class="building-progress">
-                        <span class="tag warn">Abwehr inaktiv</span>
-                        <button class="small" (click)="activateDefense(buildingFor(bt.id)!.id)" [disabled]="busy() === 'activate:' + buildingFor(bt.id)?.id">Aktivieren (12h Anlaufzeit)</button>
-                      </div>
-                    }
-                  }
-                }
+                </section>
               </div>
+            </article>
           }
         </div>
       </div>
@@ -273,7 +331,12 @@
             <div class="speed-factor-row">
               <span>Verfügbare Arbeitskräfte</span>
               <span class="mono">{{ speed.availableWorkers | number:'1.0-0' }}</span>
-              <span class="hint">(die Einwohner der Kolonie – sie beschleunigen nichts, können eine Fertigung aber ausbremsen, wenn sie zu wenige sind)</span>
+              <span class="hint">(die Arbeiter der Kolonie ohne die Akademiker – sie beschleunigen nichts, können eine Fertigung aber ausbremsen, wenn sie zu wenige sind)</span>
+            </div>
+            <div class="speed-factor-row">
+              <span>Löhne</span>
+              <span class="mono">{{ speedBreakdown()?.wagePerWorkHour | number:'1.4-4' }} Cr/h</span>
+              <span class="hint">(je Einwohner-Arbeitsstunde, beim Start jedes Auftrags vom Konto ins Bevölkerungs-Wallet – ohne Guthaben startet der Auftrag nicht)</span>
             </div>
             <div class="speed-factor-row">
               <span>Industriekomplex Stufe {{ speed.industryLevel }}</span>
@@ -301,8 +364,19 @@
             <label class="checkbox-inline" title="Reiht denselben Auftrag nach Fertigstellung automatisch erneut ans Ende der Warteschlange ein.">
               <input type="checkbox" [(ngModel)]="newProductionRequeue" /> Nach Erfolg erneut einreihen
             </label>
-            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1">Auftrag einreihen</button>
+            <button class="primary small" (click)="submitProduction()" [disabled]="busy() === 'production' || buildingLevel('b_industry') < 1 || newOrderMinimumQty() !== null">Auftrag einreihen</button>
           </div>
+          @if (newOrderMinimumQty(); as minQty) {
+            <!-- Mindestdauer (TODO 11.9.2026): der Server nimmt Aufträge unter
+                 dieser Dauer nicht an – hier schon vor dem Klick sichtbar. -->
+            <div class="alert-banner warn">
+              <strong>Los zu klein</strong>
+              <span>{{ newProductionQty }} Stück wären nach {{ (newOrderPreview()?.totalHours ?? 0) * 60 | number:'1.0-1' }} Spielminuten fertig.
+                Aufträge unter {{ minOrderGameMinutes }} Spielminuten nimmt der Industriekomplex nicht an – eine Serie von Kleinstaufträgen
+                rüstet die Anlagen für jedes Los neu und ist ineffizient. Mindestens <strong>{{ minQty | number:'1.0-0' }} Stück</strong> einreihen.</span>
+              <button type="button" class="small" (click)="raiseNewOrderToMinimum()">Auf {{ minQty | number:'1.0-0' }} Stück erhöhen</button>
+            </div>
+          }
 
           <div class="chain-plan new-order-preview">
             @if (newOrderPreviewLoading()) {
@@ -313,7 +387,7 @@
                    Arbeitsaufwand der ganzen Kette. Als "Arbeitskräfte" beschriftet
                    suggerierte sie, man bräuchte eine Million Einwohner. Dazu die
                    vorhandene Bevölkerung als Bezugsgröße. -->
-              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ preview.workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden bei {{ population()?.currentCount ?? 0 | number:'1.0-0' }} Einwohnern @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
+              <span class="hint">Prognose unter aktuellem Lagerbestand — Gesamtdauer: {{ preview.totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ preview.workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden bei {{ speedBreakdown()?.availableWorkers ?? 0 | number:'1.0-0' }} Arbeitern · Löhne: <strong class="mono">{{ preview.wageCredits | number:'1.0-2' }} Cr</strong> beim Start @if (!preview.feasible) { · <span class="hint warn">ohne "automatisch mitproduzieren" nicht ausführbar</span> }</span>
               @for (step of preview.steps; track step.productTypeId) {
                 <div class="chain-step">
                   <span>{{ productName(step.productTypeId) }}</span>
@@ -347,9 +421,15 @@
                   <div class="stat-bar"><span [style.width.%]="queueProgressPct(entry)"></span></div>
                   <span class="mono">
                     @if (entry.status === 'running') { {{ countdown(entry.endsAt! - clock.now()) }} }
+                    @else if (entry.status === 'stopped' && entry.stoppedReasonCode === ORDER_TOO_SMALL_CODE) {
+                      <span class="hint" title="Seit dem Einreihen unter die Mindestdauer gefallen – etwa weil der Industriekomplex ausgebaut wurde. Abbrechen und mit größerer Menge neu einreihen; die Mindestmenge steht in der Benachrichtigung.">unter {{ minOrderGameMinutes }} Spielminuten</span>
+                    }
+                    @else if (entry.status === 'stopped' && entry.stoppedReasonCode === WAGES_UNPAID_CODE) {
+                      <span class="hint" title="Die Löhne des Auftrags übersteigen das Guthaben. Sobald genug Credits da sind, prüft Fortsetzen erneut.">Löhne nicht bezahlbar</span>
+                    }
                     @else if (entry.status === 'stopped') { Code {{ entry.stoppedReasonCode }} }
                   </span>
-                  @if (entry.status === 'stopped') {
+                  @if (entry.status === 'stopped' && entry.stoppedReasonCode !== ORDER_TOO_SMALL_CODE) {
                     <button class="ghost small" (click)="resumeProduction(entry.id); $event.stopPropagation()">Fortsetzen</button>
                   }
                   @if (entry.status !== 'running') {
@@ -367,7 +447,7 @@
                     @if (entry.status !== 'running' && queuePreviewLoading() === entry.id) {
                       <span class="hint calculating">Wird berechnet…</span>
                     } @else {
-                      <span class="hint">{{ entry.status === 'running' ? 'Gesamtdauer' : 'Prognose unter aktuellem Lagerbestand — Gesamtdauer' }}: {{ planFor(entry).totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ planFor(entry).workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden</span>
+                      <span class="hint">{{ entry.status === 'running' ? 'Gesamtdauer' : 'Prognose unter aktuellem Lagerbestand — Gesamtdauer' }}: {{ planFor(entry).totalHours | number:'1.1-1' }} h · Arbeitsaufwand: {{ planFor(entry).workersBoundPerHour | number:'1.0-0' }} Arbeitsstunden · Löhne: {{ planFor(entry).wageCredits | number:'1.0-2' }} Cr</span>
                       @if (entry.status === 'running') {
                         <span class="hint">Der Fertigstellungstermin steht seit Auftragsstart fest — spätere Änderungen an Bevölkerung, Spezialisierung oder Anlagenausbau verschieben ihn nicht mehr.</span>
                       }
@@ -587,6 +667,10 @@
             </div>
             <div class="stat-bar big"><span [style.width.%]="capacityUsagePct() > 100 ? 100 : capacityUsagePct()"></span></div>
             <dl class="fact-list">
+              @if (populationSupply(); as supply) {
+                <div><dt>Arbeiter</dt><dd class="mono">{{ supply.workers | number:'1.0-0' }} <span class="hint">(die Arbeitskraft der Kolonie)</span></dd></div>
+                <div><dt>Akademiker</dt><dd class="mono">{{ supply.academics | number:'1.0-0' }} <span class="hint">(keine Arbeitskraft – forschen in bezahlten Plätzen des Forschungszentrums)</span></dd></div>
+              }
               <div><dt>Wohnkapazität</dt><dd class="mono">{{ housingCapacity() | number:'1.0-0' }} Plätze <span class="hint">({{ capacityUsagePct() | number:'1.0-1' }}% belegt)</span></dd></div>
               <div><dt>Energieversorgung</dt><dd class="mono" [class.warn]="powerCoverage() < 0.999 && powerCoverage() >= 0.5" [class.bad]="powerCoverage() < 0.5">{{ powerCoverage() * 100 | number:'1.0-0' }}%
                 <span class="hint">(die Infrastruktur zieht dafür laufend Stabilisiertes Elerium aus dem Lager)</span></dd></div>
@@ -607,25 +691,59 @@
         </div>
 
         <div class="panel corner-frame span-2">
-          <div class="panel-header"><h2>Versorgung und Vorrat</h2></div>
+          <div class="panel-header"><h2>Güterstaffel und Akademiker</h2></div>
           <div class="panel-body">
-            <!-- Tageseinkauf (Umsetzungskonzept/36): einmal je Spieltag kauft die
-                 Bevölkerung am eigenen Handelsposten und füllt ihren Vorrat auf.
-                 Sichtbar wird damit, was vorher nur eine Prozentzahl war: wie
-                 lange die Kolonie ohne Nachschub auskommt. -->
+            <!-- Umsetzungskonzept/38: je Wohnstufe ein weiteres Pflichtgut; das
+                 nächste Gut ist das Wachstumsgut und deckelt das Wachstum.
+                 Akademiker entstehen nur in bezahlten Plätzen des
+                 Forschungszentrums, wenn ihre Güter versorgt sind. -->
+            @if (populationSupply(); as supply) {
+              <dl class="fact-list">
+                <div><dt>Wohnstufe der Staffel</dt><dd class="mono">{{ supply.consumerStage }} <span class="hint">– bis {{ supply.consumerStageCap | number:'1.0-0' }} Einwohner; jede Stufe verlangt ein weiteres Pflichtgut</span></dd></div>
+                <div><dt>Wachstumsgut</dt><dd>
+                  @if (supply.growthGoodId) {
+                    {{ productName(supply.growthGoodId) }}
+                    @if (supply.growthGoodCovered) { <span class="tag good">versorgt – der Wohnraum begrenzt</span> }
+                    @else { <span class="tag warn">nicht voll gedeckt – die Kolonie wächst nicht über {{ supply.consumerStageCap | number:'1.0-0' }} hinaus</span> }
+                  } @else { <span class="hint">keines mehr – nur noch der Wohnraum begrenzt</span> }
+                </dd></div>
+                <div><dt>Forschungsplätze</dt><dd class="mono">{{ supply.researchCapacity | number:'1.0-0' }}
+                  <span class="hint">@if (supply.researchLevel > 0) { (Forschungszentrum Stufe {{ supply.researchLevel }}) } @else { (kein Forschungszentrum – ohne Plätze keine Akademiker) }</span></dd></div>
+                <div><dt>Deckel der Akademiker</dt><dd class="mono">{{ supply.academicCap | number:'1.0-0' }}
+                  <span class="hint">(Kapazität der höchsten Zentrumsstufe, deren Güter alle voll gedeckt sind)</span></dd></div>
+                <div><dt>Lebensstandard der Akademiker</dt><dd class="mono">{{ supply.academicStandardOfLivingPct | number:'1.0-0' }}%
+                  <span class="hint">(aus allen ihren Gütern; unter 30 % gehen sie zurück zu den Arbeitern, ab 50 % kommen neue)</span></dd></div>
+              </dl>
+              <p class="hint">Akademiker kommen aus der Arbeiterschaft, sobald ein Forschungszentrum steht und ihre höherwertigen Konsumgüter versorgt sind.
+                Sie zählen nicht als Arbeitskraft, kosten je Spieltag 24 Stunden Lohn und bilden über alle Kolonien das
+                <strong>Forschungsniveau</strong> ({{ researchLevel() | number:'1.0-0' }} Akademiker insgesamt). Unbezahlte Akademiker gibt es nicht.</p>
+            }
+          </div>
+        </div>
+
+        <div class="panel corner-frame span-2">
+          <div class="panel-header"><h2>Versorgung, Vorrat und Gebote</h2></div>
+          <div class="panel-body">
+            <!-- Kauforders der Bevölkerung (Umsetzungskonzept/38): sie stellt je
+                 Gut ein stehendes Gebot aus ihrem Tagesbudget und hält einen
+                 Vorrat. Sichtbar wird, was sie zahlen kann und wie lange die
+                 Kolonie ohne Nachschub auskommt. -->
             @if (populationSupply(); as supply) {
               <p class="hint">
-                Die Bevölkerung kauft einmal je Spieltag am eigenen Handelsposten dieser Kolonie und hält einen Vorrat von
-                {{ supply.targetDays | number:'1.0-0' }} Tagesbedarfen je Gut. Fällt der Vorrat unter {{ supply.emergencyBelowDays | number:'1.0-0' }} Tag,
-                kauft sie sofort, sobald eine Order erscheint.
-                @if (supply.nextPurchaseAt > 0) { Nächster Tageseinkauf in <strong>{{ countdown(supply.nextPurchaseAt - clock.now()) }}</strong>. }
+                Die Bevölkerung stellt am eigenen Handelsposten Kauforders für alles, was ihr bis zum Vorrat von
+                {{ supply.targetDays | number:'1.0-0' }} Tagesbedarfen fehlt – Grundgüter zuerst, das Limit aus Einkommen und Guthaben.
+                Eine Verkaufsorder zum oder unter dem Gebot kreuzt sofort; eine darüber verkauft nichts.
+                @if (supply.nextPurchaseAt > 0) { Neue Gebote in <strong>{{ countdown(supply.nextPurchaseAt - clock.now()) }}</strong>. }
               </p>
               @for (g of supply.goods; track g.productTypeId) {
-                <div class="wh-row" [class.bad]="g.daysLeft < supply.emergencyBelowDays" [class.warn]="g.daysLeft >= supply.emergencyBelowDays && g.daysLeft < 3">
-                  <strong>{{ g.name }}</strong>
+                <div class="wh-row" [class.bad]="g.daysLeft < 1" [class.warn]="g.daysLeft >= 1 && g.daysLeft < 3">
+                  <strong>{{ g.name }} <span class="tag small-tag" [class.good]="g.group === 'Essential'" [class.warn]="g.group === 'Growth'">{{ groupLabel(g.group) }}</span></strong>
                   <span class="mono">{{ g.stock | number:'1.0-0' }} Stück</span>
-                  <span class="hint">Bedarf {{ g.dailyNeed | number:'1.1-1' }} je Tag · reicht {{ supplyDays(g.daysLeft) }}@if (g.coverage !== null) { · Deckung {{ g.coverage * 100 | number:'1.0-0' }} %}</span>
+                  <span class="hint">Bedarf {{ g.dailyNeed | number:'1.1-1' }} je Tag · reicht {{ supplyDays(g.daysLeft) }}@if (g.coverage !== null) { · Deckung {{ g.coverage * 100 | number:'1.0-0' }} %}
+                    @if (g.bidPrice !== null) { · Gebot {{ g.bidQuantity | number:'1.0-0' }} × {{ g.bidPrice | number:'1.0-2' }} Cr }
+                    @if (g.askPrice !== null) { · Brief ab {{ g.askPrice | number:'1.0-2' }} Cr }</span>
                   @if (!g.orderAvailable) { <span class="tag warn">keine Order am Handelsposten</span> }
+                  @else if (g.bidPrice !== null && g.askPrice !== null && g.askPrice > g.bidPrice) { <span class="tag warn">Brief über dem Gebot</span> }
                 </div>
               }
             } @else {
@@ -644,7 +762,13 @@
           <div class="panel-header"><h2>Bevölkerungs-Wallet</h2></div>
           <div class="panel-body">
             <div class="big-stat"><span class="mono value">{{ popWallet()?.balance ?? 0 | number:'1.0-0' }}</span><span class="hint">Credits</span></div>
-            <p class="hint">Kaufkraft der Kolonialbevölkerung – gespeist aus Löhnen und Bevölkerungswachstum, ausgegeben beim Tageseinkauf für Konsumgüter am eigenen Handelsposten.</p>
+            @if (populationSupply(); as supply) {
+              <dl class="fact-list">
+                <div><dt>Einkommen</dt><dd class="mono">{{ supply.dailyIncome | number:'1.0-0' }} Cr je Spieltag <span class="hint">(Löhne, Gehälter, Unterhalt, Wachstumsgeld – geglättet)</span></dd></div>
+                <div><dt>Tagesbudget</dt><dd class="mono">{{ supply.dailyBudget | number:'1.0-0' }} Cr <span class="hint">(Einkommen plus ein Siebtel des Guthabens – daraus bietet sie)</span></dd></div>
+              </dl>
+            }
+            <p class="hint">Kaufkraft der Kolonialbevölkerung – gespeist aus Löhnen je Arbeitsstunde, Forschungsgehältern, Unterhalt und Bevölkerungswachstum; ausgegeben über ihre Gebote für Konsumgüter am eigenen Handelsposten. Was in Geboten gebunden ist, steht hier nicht mehr.</p>
           </div>
         </div>
         <div class="panel corner-frame">
@@ -721,10 +845,21 @@
             <span class="eyebrow">Kauf-Orders (Gebote)</span>
             @for (o of postBids(); track o.id) {
               <div class="order-row">
-                <span>{{ productName(o.productTypeId) }}</span>
+                <span>{{ productName(o.productTypeId) }} @if (isPopulationBid(o)) { <span class="tag small-tag">Bevölkerung</span> }</span>
                 <span class="mono">{{ o.remainingQuantity }} × {{ o.limitPrice | number:'1.0-2' }} Cr</span>
-                <span class="hint">{{ o.ownerId === playerId() ? 'eigenes Gebot' : o.ownerName }}</span>
-                @if (o.ownerId === playerId()) {
+                <span class="hint">{{ isPopulationBid(o) ? o.ownerName : (o.ownerId === playerId() ? 'eigenes Gebot' : o.ownerName) }}</span>
+                @if (isPopulationBid(o)) {
+                  <!-- Umsetzungskonzept/38: das Gebot der Bevölkerung stellt sie an jedem Kolonietag neu –
+                       der Kommandant verkauft hinein, zurückziehen oder umpreisen kann er es nicht. -->
+                  @if (isOwnColony() && canTradeWith(o.ownerId)) {
+                    <div class="buy-controls">
+                      <input type="number" min="1" [max]="o.remainingQuantity" [ngModel]="sellQtyFor(o)" (ngModelChange)="sellDraftQty[o.id] = $event" title="Menge aus dem Lager" />
+                      <button class="primary small" (click)="sellIntoBid(o)" [disabled]="busy() === ('sell:' + o.id) || sellQtyFor(o) <= 0">Verkaufen</button>
+                    </div>
+                  } @else if (!canTradeWith(o.ownerId)) {
+                    <a class="hint small-tag" routerLink="/diplomatie">Handelsvertrag erforderlich</a>
+                  }
+                } @else if (o.ownerId === playerId()) {
                   @if (priceDraft[o.id] !== undefined) {
                     <span class="price-edit">
                       <input type="number" min="0" step="0.5" [(ngModel)]="priceDraft[o.id]" (keyup.enter)="submitPrice(o.id)" />
